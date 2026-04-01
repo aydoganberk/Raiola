@@ -1,26 +1,54 @@
-# codex-workflow README
+# codex-workflow skill
 
-`codex-workflow`, repo icindeki cok-seansli veya milestone bazli isleri ayni kontrol duzlemiyle surdurmek icin yazilmis bir skill'dir.
-Varsayilan akisin yerine gecmez. Kullanici workflow, milestone, handoff, closeout veya named workstream istemediyse normal task akisi tercih edilir.
+`codex-workflow` is a repo-local Codex skill for running multi-session, milestone-based work with a consistent control plane.
 
-## Ne zaman kullan
+It does not replace the default coding flow. If the user did not explicitly ask for workflow, milestone, handoff, closeout, or named workstream discipline, normal task execution should continue without activating this skill.
 
-- Is birden fazla seansa yayilacaksa
-- Handoff, resume veya closeout disiplini isteniyorsa
-- Validation contract, carryforward veya seed takibi gerekiyorsa
-- Ayrik bir `docs/<workstream>/` root'u ile ilerlemek gerekiyorsa
+For repo-level setup and installation, see the root [`README.md`](../README.md).
 
-## Ne zaman kullanma
+## When to use this skill
 
-- Tek adimlik duz bir bugfix veya ufak refactor ise
-- Kullanici explicit workflow istemediyse
-- Workflow dosyalarini guncellemek istenmiyorsa
+Use it when:
 
-## Ilk 60 saniye
+- the work will span multiple sessions
+- you need explicit handoff or resume support
+- you want milestone-level planning and closeout
+- you need a validation contract before declaring work complete
+- you want carryforward or seed tracking
+- you need a separate `docs/<workstream>/` root for one stream of work
 
-1. `AGENTS.md` oku.
-2. Aktif root'u bulmak icin `docs/workflow/WORKSTREAMS.md` oku.
-3. Aktif root altinda su dosyalari hizlica tara:
+## When not to use it
+
+Avoid using it when:
+
+- the task is a simple one-shot bug fix or small refactor
+- the user did not explicitly ask for workflow discipline
+- updating workflow documents would add more overhead than value
+
+## Mental model
+
+This skill assumes one active milestone at a time.
+
+Each milestone moves through the same lifecycle:
+
+1. `discuss`
+2. `research`
+3. `plan`
+4. `execute`
+5. `audit`
+6. `complete`
+
+These are steps inside one milestone, not separate milestones.
+
+In most cases, one user request maps to one milestone.
+
+## First 60 seconds
+
+When workflow is active, the expected startup sequence is:
+
+1. Read `AGENTS.md`.
+2. Read `docs/workflow/WORKSTREAMS.md` to find the active root.
+3. In the active root, scan:
    - `PROJECT.md`
    - `RUNTIME.md`
    - `PREFERENCES.md`
@@ -35,69 +63,69 @@ Varsayilan akisin yerine gecmez. Kullanici workflow, milestone, handoff, closeou
    - `WINDOW.md`
    - `SEEDS.md`
    - `MEMORY.md`
-4. State'i `8-12` maddede ozetle.
-5. Sadece aktif milestone ve aktif step scope'unda kal.
+4. Summarize the current state in `8-12` bullets.
+5. Stay strictly within the active milestone and active step scope.
 
-## Milestone akisi
+## Workflow profiles
 
-Tek bir kullanici istegi genelde tek milestone kabul edilir. Step'ler:
+- `lite`
+  Low-ritual mode for smaller or shorter tasks.
+- `standard`
+  Default general-purpose workflow mode.
+- `full`
+  Stronger process mode for real handoff, closeout, and workflow-quality tracking.
 
-1. `discuss`
-2. `research`
-3. `plan`
-4. `execute`
-5. `audit`
-6. `complete`
+## Fast path
 
-Bu step'ler ayrik milestone degildir; ayni milestone'un ic akisi olarak dusunulur.
-
-## Workflow Profilleri
-
-- `lite`: kucuk ve dusuk rituel gerektiren isler
-- `standard`: varsayilan genel amacli profil
-- `full`: handoff, closeout ve process kalite takibi gereken isler
-
-## En kisa mutlu yol
-
-Yeni milestone ac:
+Open a milestone:
 
 ```bash
-npm run workflow:new-milestone -- --id M2 --name "Fix auth drift" --goal "Auth akisini kanitli sekilde toparla"
+npm run workflow:new-milestone -- --id M2 --name "Fix auth drift" --goal "Tighten and verify the auth flow"
 ```
 
-Sonraki onerilen adimi gor:
+See the next recommended action:
 
 ```bash
 npm run workflow:next
 ```
 
-Saglik kontrolu al:
+Run health checks:
 
 ```bash
-npm run workflow:doctor
+npm run workflow:doctor -- --strict
 npm run workflow:health -- --strict
 ```
 
-Milestone kapat:
+Close a milestone:
 
 ```bash
-npm run workflow:complete-milestone -- --agents-review unchanged --summary "Auth drift kapatildi" --stage-paths src/foo,tests/foo
+npm run workflow:complete-milestone -- --agents-review unchanged --summary "Auth drift resolved" --stage-paths src/foo,tests/foo
 ```
 
-## Temel dosyalar
+## Core files
 
-- `WORKSTREAMS.md`: aktif root ve named workstream kayitlari
-- `STATUS.md`: yalnizca aktif pencere ve son durum
-- `CONTEXT.md`: aktif milestone hafizasi
-- `EXECPLAN.md`: `Plan of Record`
-- `VALIDATION.md`: audit kontrati
-- `HANDOFF.md`: pause/resume snapshot'i
-- `WINDOW.md`: context budget ve chunk karari
-- `CARRYFORWARD.md`: kapanmayan isler
-- `SEEDS.md`: daha sonra ekilebilecek fikirler
-- `MEMORY.md`: active recall ve durable notes
+- `WORKSTREAMS.md`
+  Tracks the active root and named workstreams.
+- `STATUS.md`
+  Stores active-window status only.
+- `CONTEXT.md`
+  Stores the active milestone's working context.
+- `EXECPLAN.md`
+  Holds the canonical `Plan of Record`.
+- `VALIDATION.md`
+  Holds the audit contract.
+- `HANDOFF.md`
+  Stores pause/resume state.
+- `WINDOW.md`
+  Tracks context budget and chunking decisions.
+- `CARRYFORWARD.md`
+  Stores unfinished active work that must survive closeout.
+- `SEEDS.md`
+  Stores future ideas that are not active work yet.
+- `MEMORY.md`
+  Stores active recall and durable notes.
 
-## En cok kullanilan komutlar
+## Most-used commands
 
 ```bash
 npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."
@@ -109,71 +137,77 @@ npm run workflow:save-memory -- --title "..." --note "..."
 npm run workflow:plant-seed -- --title "..." --trigger "..."
 npm run workflow:switch-workstream -- --name "<slug>" --create
 npm run workflow:workstreams status
-npm run workflow:doctor
+npm run workflow:doctor -- --strict
 npm run workflow:health -- --strict
+npm run workflow:evidence-check -- --strict
 npm run workflow:forensics
 ```
 
-## Named workstream
+## Named workstreams
 
-Repo-wide varsayilan root `docs/workflow` altindadir.
-Isi ayirmak gerekiyorsa:
+The default root is `docs/workflow`.
+
+If one repository needs an isolated workflow surface for a specific stream, create a named workstream:
 
 ```bash
 npm run workflow:switch-workstream -- --name yahoo-sync --create
 ```
 
-Bu komut `docs/yahoo-sync/` altinda ayni artifact setini olusturur ve aktif root'u oraya tasir.
+This creates a parallel surface such as `docs/yahoo-sync/` and makes it the active root.
 
-## Minimum Done
+## Minimum done by step
 
 - `discuss`
-  - `Goal/non-goals/success signal net`
-  - `Canonical refs + assumptions dolu`
-  - `Scope kanitli sekilde frame edildi`
+  Goal, non-goals, and success signal are clear.
+  Canonical refs and assumptions are filled in.
+  Scope is framed with evidence.
 - `research`
-  - `Touched files dolu`
-  - `Dependency map + risks dolu`
-  - `Validation contract milestone scope'una daraltildi`
+  Touched files, dependencies, and risks are known.
+  Verification surface is identified.
+  `VALIDATION.md` is narrowed to milestone scope.
 - `plan`
-  - `Context plan-ready`
-  - `1-2 run chunk yazildi`
-  - `Audit plan + overhead alanlari dolu`
+  `CONTEXT.md` is plan-ready.
+  The work is split into `1-2` run-sized chunks.
+  Audit and overhead planning are written down.
 - `execute`
-  - `Sadece aktif chunk uygulandi`
-  - `Status alanlari guncellendi`
-  - `Plan disi drift docs'a geri yazildi`
+  Only the active chunk is implemented.
+  Status fields are updated.
+  Off-plan drift is written back into docs if needed.
 - `audit`
-  - `Verify command'ler kostu`
-  - `Manual checks + residual risks yazildi`
-  - `Strict health gate temiz`
+  Verify commands have been run.
+  Manual checks and residual risks are documented.
+  `workflow:health -- --strict` is clean when required.
 - `complete`
-  - `Archive yazildi`
-  - `Carryforward secildi`
-  - `Git closeout scope'u bilincli netlestirildi`
+  Archive output is written.
+  Carryforward is decided.
+  Git closeout scope is made explicit.
 
-## Memory kurali
+## Memory model
 
-- `Active Recall Items`: sadece aktif milestone boyunca otomatik geri cagrilacak notlar
-- `Durable Notes`: milestone disi daha kalici notlar
+- `Active Recall Items`
+  Temporary notes that should be automatically revisited while the current milestone is still active.
+- `Durable Notes`
+  Longer-lived notes that should survive milestone closeout.
 
-Kayit icin:
+Save an active memory item:
 
 ```bash
-npm run workflow:save-memory -- --title "UI preference" --note "Responses short olsun"
+npm run workflow:save-memory -- --title "UI preference" --note "Keep responses short"
 ```
 
-Kalici not istersen:
+Save a durable note:
 
 ```bash
 npm run workflow:save-memory -- --mode durable --title "Repo rule" --note "..."
 ```
 
-## Gorunurluk
+## Visibility rule
 
-Codex app icinde skill bazli renk atamasi README veya skill seviyesinden yapilamaz.
-Bu yuzden workflow aktifken ara update'leri zorunlu olarak `WORKFLOW:` prefiksi ile ayirt et.
-En iyi pratik, prefiksten hemen sonra aktif step'i ve mumkunse milestone/root bilgisini yazmaktir:
+The Codex app cannot reliably apply custom coloring per skill, so workflow updates should be made visually distinct in plain text.
+
+When workflow is active, commentary updates should use the `WORKFLOW:` prefix and ideally include the active step, milestone, and root.
+
+Examples:
 
 - `WORKFLOW: discuss | milestone=M2 | root=docs/workflow`
 - `WORKFLOW: research | milestone=M2 | root=docs/workflow`
@@ -181,54 +215,54 @@ En iyi pratik, prefiksten hemen sonra aktif step'i ve mumkunse milestone/root bi
 - `WORKFLOW: audit | milestone=M2 | root=docs/workflow`
 - `WORKFLOW: handoff | milestone=M2 | root=docs/workflow`
 
-Kisa ornekler:
+Example update:
 
 ```text
 WORKFLOW: discuss | milestone=M2 | root=docs/workflow
-Aktif root ve state'i okuyorum; birazdan CONTEXT.md icin kanitli varsayim ozetini cikaracagim.
+I am reading the active root and current state first; next I will write evidence-backed assumptions into CONTEXT.md.
 ```
 
 ```text
 WORKFLOW: execute | milestone=M2 | root=docs/workflow
-Planlanan dosya editlerine geciyorum; bittiginde doctor ve health ile workflow yuzeyini tekrar dogrulayacagim.
+I am applying the planned edits now; after that I will re-run doctor and health checks on the workflow surface.
 ```
 
 ```text
 WORKFLOW: handoff | milestone=M2 | root=docs/workflow
-Bu pencerede yeni step baslatmiyorum; resume komutunu ve acik cursor'u HANDOFF.md uzerinden birakiyorum.
+I am not starting a new step in this window; I am leaving the resume command and cursor in HANDOFF.md.
 ```
 
-## Failure Playbook
+## Failure playbook
 
 - `Hash drift`
-  - `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
+  `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
 - `Active root mismatch`
-  - `workflow:workstreams status -> workflow:switch-workstream veya --root ile dogru root'a don`
+  `workflow:workstreams status -> workflow:switch-workstream` or use `--root` to return to the correct root
 - `Resume ambiguity`
-  - `HANDOFF.md + WINDOW.md oku -> workflow:resume-work -> workflow:next`
+  Read `HANDOFF.md` and `WINDOW.md`, then run `workflow:resume-work -> workflow:next`
 - `Dirty worktree closeout`
-  - `complete-milestone icin explicit --stage-paths veya docs-only ise --allow-workflow-only kullan`
+  Use explicit `--stage-paths`, or `--allow-workflow-only` when it is truly docs-only
 
-## Retro Surface
+## Retro surface
 
-- `RETRO.md` surec kalitesi icindir; validation yerine gecmez
-- Her `5` completed milestone sonrasi veya tekrar eden process arizasinda guncellenir
-- `full` profilde audit/complete sirasinda retro notu kontrol etmek iyi pratiktir
+- `RETRO.md` is for workflow quality, not product validation.
+- Update it after every `5` completed milestones, after repeated process failures, or when explicitly requested.
+- In `full` profile, it is good practice to check whether a retro update is needed during audit or complete.
 
-## Sik hatalar
+## Common mistakes
 
-- Workflow istemeyen normal task'ta bu skill'i gereksiz yere aktive etmek
-- `STATUS.md` yerine gecmis changelog yazmak
-- `EXECPLAN.md` disinda ikinci bir plan kaynagi olusturmak
-- `VALIDATION.md` audit kontratini doldurmadan milestone kapatmak
-- `CARRYFORWARD.md` ile `SEEDS.md`'i ayni sey sanmak
-- Named workstream acip halen eski root'a gore calismak
+- Activating workflow for a normal task that does not need it
+- Using `STATUS.md` as a historical changelog
+- Creating a second source of truth instead of using `EXECPLAN.md`
+- Closing a milestone before filling out `VALIDATION.md`
+- Treating `CARRYFORWARD.md` and `SEEDS.md` as the same thing
+- Creating a named workstream but still operating against the old root
 
-## Kisa checklist
+## Short checklist
 
-- Aktif root dogru mu
-- Aktif milestone ve step net mi
-- `CONTEXT.md` research sonrasi guncel mi
-- `EXECPLAN.md` 1-2 run chunk'a bolunmus mu
-- `VALIDATION.md` milestone scope'una daraltilmis mi
-- `workflow:health -- --strict` temiz mi
+- Is the active root correct?
+- Are the active milestone and active step explicit?
+- Is `CONTEXT.md` up to date after research?
+- Is `EXECPLAN.md` split into `1-2` run-sized chunks?
+- Is `VALIDATION.md` narrowed to milestone scope?
+- Is `workflow:health -- --strict` clean when it needs to be?
