@@ -1,0 +1,26 @@
+{
+  "name": "codex-workflow-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generic starter kit for Codex workflow, milestone, handoff, and validation surfaces.",
+  "scripts": {
+    "workflow:new-milestone": "node scripts/workflow/new_milestone.js",
+    "workflow:complete-milestone": "node scripts/workflow/complete_milestone.js",
+    "workflow:save-memory": "node scripts/workflow/save_memory.js",
+    "workflow:packet": "node scripts/workflow/build_packet.js",
+    "workflow:next": "node scripts/workflow/next_step.js",
+    "workflow:pause-work": "node scripts/workflow/pause_work.js",
+    "workflow:resume-work": "node scripts/workflow/resume_work.js",
+    "workflow:doctor": "node scripts/workflow/doctor.js",
+    "workflow:health": "node scripts/workflow/health.js",
+    "workflow:forensics": "node scripts/workflow/forensics.js",
+    "workflow:workstreams": "node scripts/workflow/workstreams.js",
+    "workflow:switch-workstream": "node scripts/workflow/switch_workstream.js",
+    "workflow:plant-seed": "node scripts/workflow/plant_seed.js",
+    "workflow:window": "node scripts/workflow/window_monitor.js",
+    "workflow:validate-contract": "node scripts/workflow/validate_contract.js",
+    "workflow:evidence-check": "node scripts/workflow/evidence_check.js",
+    "workflow:ensure-isolation": "node scripts/workflow/ensure_isolation.js",
+    "workflow:compare-golden": "node scripts/compare_golden_snapshots.ts"
+  }
+}
