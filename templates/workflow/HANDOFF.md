@@ -12,19 +12,20 @@
 
 ## Snapshot
 
-- `Aktif bir pause snapshot'i yok`
+- `No active pause snapshot`
 
 ## Immediate Next Action
 
-- `Kullanici explicit isterse ilk milestone'u ac`
+- `Open the first milestone if the user explicitly wants workflow`
 
 ## Execution Cursor
 
-- `Completed checklist items: Yok`
-- `Remaining items: Kullanici isterse ilk milestone'u ac`
+- `Completed checklist items: None`
+- `Remaining items: Open the first milestone if needed`
 - `Next unread canonical refs: docs/workflow/WORKSTREAMS.md; docs/workflow/CONTEXT.md`
 
 ## Packet Snapshot
+
 - `Packet hash: pending_sync`
 - `Current run chunk: NONE`
 - `Chunk cursor: 0/0`
@@ -44,8 +45,8 @@
 
 ## Risks
 
-- `Aktif milestone olmadigi icin handoff riski yok`
+- `No handoff risk exists while there is no active milestone`
 
 ## Notes
 
-- `HANDOFF.md session-level katmandir; milestone history burada birikmez`
+- `HANDOFF.md is a session-level layer; milestone history does not accumulate here`

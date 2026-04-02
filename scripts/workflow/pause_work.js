@@ -89,9 +89,9 @@ function main() {
   handoff = replaceSection(handoff, 'Snapshot', `- \`${summary}\``);
   handoff = replaceSection(handoff, 'Immediate Next Action', `- \`${nextAction}\``);
   handoff = replaceSection(handoff, 'Execution Cursor', [
-    `- \`Completed checklist items: ${(completed.length > 0 ? completed.join('; ') : getSectionField(planSection, 'Completed items') || 'Yok')}\``,
-    `- \`Remaining items: ${(remaining.length > 0 ? remaining.join('; ') : getSectionField(planSection, 'Remaining items') || 'Yok')}\``,
-    `- \`Next unread canonical refs: ${(refs.length > 0 ? refs.join('; ') : windowStatus.packet.recommendedReadSet.join('; ') || 'Yok')}\``,
+    `- \`Completed checklist items: ${(completed.length > 0 ? completed.join('; ') : getSectionField(planSection, 'Completed items') || 'None')}\``,
+    `- \`Remaining items: ${(remaining.length > 0 ? remaining.join('; ') : getSectionField(planSection, 'Remaining items') || 'None')}\``,
+    `- \`Next unread canonical refs: ${(refs.length > 0 ? refs.join('; ') : windowStatus.packet.recommendedReadSet.join('; ') || 'None')}\``,
   ].join('\n'));
   handoff = replaceSection(handoff, 'Packet Snapshot', [
     `- \`Packet hash: ${windowStatus.packet.inputHash}\``,
@@ -100,15 +100,15 @@ function main() {
   ].join('\n'));
   handoff = replaceSection(handoff, 'Suggested Resume Commands', renderList(
     commands.length > 0 ? commands : ['npm run workflow:resume-work', 'npm run workflow:health -- --strict', 'npm run workflow:next'],
-    'Resume komutu belirtilmedi',
+    'No resume commands provided',
   ));
   handoff = replaceSection(handoff, 'Files To Reopen', renderList(
     files.length > 0 ? files : [paths.context, paths.execplan, paths.validation, paths.window],
-    'Acik dosya notu yok',
+    'No open file notes',
   ));
   handoff = replaceSection(handoff, 'Risks', renderList(
     risks.length > 0 ? risks : [`Window decision: ${windowStatus.decision}`],
-    'Belirtilmis risk yok',
+    'No specified risks',
   ));
 
   if (dryRun) {

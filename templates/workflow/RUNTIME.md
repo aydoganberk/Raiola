@@ -23,81 +23,81 @@
 
 ## Activation Notes
 
-- Workflow protokolu varsayilan degildir; kullanici acikca istediginde acilir
-- Kullanici workflow istemediyse normal task akisiyla ilerlenir
-- Tek bir kullanici istegi genelde tek milestone olarak modellenir
-- `discuss -> research -> plan -> execute -> audit -> complete` asamalari ayni milestone'un step'leridir
+- The workflow protocol is not the default path; it opens only when explicitly requested by the user.
+- If the user does not want workflow, continue with the normal task flow.
+- One user request usually maps to one milestone.
+- `discuss -> research -> plan -> execute -> audit -> complete` are steps inside the same milestone.
 
 ## Workflow Profiles
 
 - `lite`
-  - `Kucuk isler, minimum rituel, kisa packet`
+  - `Small tasks, minimal ritual, short packets`
 - `standard`
-  - `Genel varsayilan profil`
+  - `Default general-purpose profile`
 - `full`
-  - `Gercek handoff/closeout, cok-seansli takip ve process kalite notu gereken isler`
+  - `Real handoff/closeout, multi-session tracking, and process-quality notes`
 
 ## Git Runtime Notes
 
-- `complete_milestone` default closeout davranisi commit + push yonundedir
-- Dirty worktree varsa script explicit `--stage-paths` veya bilincli `--allow-workflow-only` ister
-- `PREFERENCES.md` icindeki `Git isolation` alani workflow'un branch/worktree beklentisini kaydeder
-- `ensure_isolation.js` none|branch|worktree davranisini set eder veya dogrular
+- `complete_milestone` defaults toward commit + push closeout behavior
+- If the worktree is dirty, the script requires explicit `--stage-paths` or a deliberate `--allow-workflow-only`
+- `PREFERENCES.md` records the workflow's branch/worktree isolation expectation
+- `ensure_isolation.js` sets or validates `none|branch|worktree` behavior
 
 ## Validation Runtime Notes
 
-- `VALIDATION.md` audit kontratinin kanonik kaynagidir
-- Plan sirasinda verify command, expected signal, manual check, golden ve evidence kayitlari oraya yazilmali
-- Audit sirasinda kosulan komutlar `STATUS.md` ve `VALIDATION.md` uzerinden okunur
+- `VALIDATION.md` is the canonical source for the audit contract
+- During planning, verify commands, expected signals, manual checks, golden refs, and evidence should be written there
+- During audit, the commands actually run should be read from `STATUS.md` and `VALIDATION.md`
 
 ## Minimum Done
 
 - `discuss`
-  - `Goal/non-goals/success signal net`
-  - `Canonical refs ve assumptions dolu`
-  - `Scope kanitli sekilde frame edildi`
+  - `Goal/non-goals/success signal are clear`
+  - `Canonical refs and assumptions are filled in`
+  - `Scope is framed with evidence`
 - `research`
-  - `Touched files dolu`
-  - `Dependency map ve risks dolu`
-  - `Validation contract milestone scope'una daraltildi`
+  - `Touched files are known`
+  - `Dependency map and risks are filled in`
+  - `Validation contract is narrowed to milestone scope`
 - `plan`
-  - `Context plan-ready`
-  - `1-2 run chunk yazildi`
-  - `Audit plan ve overhead alanlari yazildi`
+  - `Context is plan-ready`
+  - `1-2` run chunks are written
+  - `Audit plan and overhead fields are written`
 - `execute`
-  - `Sadece aktif chunk uygulandi`
-  - `Status alanlari guncellendi`
-  - `Plan disi drift docs'a geri yansitildi`
+  - `Only the active chunk was implemented`
+  - `Status fields were updated`
+  - `Off-plan drift was written back into docs`
 - `audit`
-  - `Verify command'ler kostu`
-  - `Manual checks ve residual risks yazildi`
-  - `Strict health gate complete oncesi temiz`
+  - `Verify commands were run`
+  - `Manual checks and residual risks were written down`
+  - `Strict health is clean before complete`
 - `complete`
-  - `Archive yazildi`
-  - `Carryforward secildi`
-  - `Git closeout scope'u bilincli netlestirildi`
+  - `Archive output was written`
+  - `Carryforward was decided`
+  - `Git closeout scope was made explicit`
 
 ## Failure Playbook
 
 - `Hash drift`
   - `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
 - `Active root mismatch`
-  - `workflow:workstreams status -> workflow:switch-workstream veya --root ile dogru root'a don`
+  - `workflow:workstreams status -> workflow:switch-workstream or use --root to return to the correct root`
 - `Resume ambiguity`
-  - `HANDOFF.md + WINDOW.md oku -> workflow:resume-work -> workflow:next`
+  - `Read HANDOFF.md + WINDOW.md -> workflow:resume-work -> workflow:next`
 - `Dirty worktree closeout`
-  - `workflow:complete-milestone komutunda explicit --stage-paths ver veya docs-only ise --allow-workflow-only kullan`
+  - `Use explicit --stage-paths in workflow:complete-milestone or --allow-workflow-only when it is truly docs-only`
 
 ## Resume Runtime Notes
 
-- `HANDOFF.md` session-level pause/resume katmanidir
-- `WINDOW.md` budget/orchestrator snapshot'idir
-- `MEMORY.md` active recall + durable memory icindir
-- `SEEDS.md` bir sonraki milestone veya workstream'e tasinacak fikirleri tutar
-- `resume-work` sonrasi ilk komut `workflow:health -- --strict` olmalidir
+- `HANDOFF.md` is the session-level pause/resume layer
+- `WINDOW.md` stores the budget/orchestrator snapshot
+- `MEMORY.md` stores active recall and durable memory
+- `SEEDS.md` stores ideas to carry into a later milestone or workstream
+- The first command after `resume-work` should be `workflow:health -- --strict`
 
 ## Retro Runtime Notes
 
-- `RETRO.md` surec kalitesi yuzeyidir; validation state'i degil process frictions / improvements kaydidir
-- Her `5` completed milestone sonrasi, tekrar eden forensics kok nedeni goruldugunde veya explicit istenince guncellenir
-- `full` profilde audit/complete sirasinda retro notu ihtimali aktif olarak kontrol edilir
+- `RETRO.md` is the process-quality surface; it is not the product validation state
+- Update it after every `5` completed milestones, when a repeated forensics root cause appears, or when explicitly requested
+- In `full` profile, it is good practice to actively check whether a retro note should be added during audit or complete

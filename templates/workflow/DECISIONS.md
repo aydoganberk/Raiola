@@ -1,250 +1,251 @@
 # DECISIONS
 
-Bu dosya aktif stream ile ilgili mimari ve surec kararlarini tarih sirasi ile tutar.
+This file records durable architecture and process decisions for the active stream in chronological order.
 
-Kural:
-- Bu dosya active-window degil, ama yalnizca kalici ve cross-milestone kararlar icin kullanilir.
-- Milestone'a ozel gecici kararlar, tradeoff log'lari ve implementation tartismalari `completed_milestones/` arsivine gider.
+Rule:
 
-## 2026-04-01 - Varsayilan workflow surface `docs/workflow/*`
+- This file is not active-window state; it is only for durable, cross-milestone decisions.
+- Temporary milestone-specific tradeoffs and implementation debates belong in `completed_milestones/`.
 
-- Decision:
-  - Repo genelinde tek ve kolay bulunabilir bir varsayilan surface olarak `docs/workflow/EXECPLAN.md`, `docs/workflow/STATUS.md`, `docs/workflow/DECISIONS.md` kullan.
-- Why:
-  - Her yeni seans icin sabit bir giris noktasi verir.
-  - Tek aktif stream senaryosunda overhead dusuktur.
-  - Gerektiginde ayni yapinin `docs/<workstream>/` altina kopyalanmasi kolaydir.
-- Consequence:
-  - Parallel stream basladiginda generic klasor tek basina yeterli olmayabilir; o anda isimli klasore gecilmeli.
-
-## 2026-04-01 - Repo-local skill ile workflow invocation
+## 2026-04-01 - Default workflow surface is `docs/workflow/*`
 
 - Decision:
-  - Bu sistematigi repo icinde cagirilabilir bir skill olarak `.agents/skills/codex-workflow/` altina koy.
+  - Use `docs/workflow/EXECPLAN.md`, `docs/workflow/STATUS.md`, and `docs/workflow/DECISIONS.md` as the easy-to-find default surface for the repository.
 - Why:
-  - Gelecek Codex seanslarinda ayni protokolu yeniden anlatma ihtiyacini azaltir.
-  - Skill, `AGENTS.md` ile birlikte hem kalici kural hem de task-level workflow verir.
+  - It gives every new session a stable entry point.
+  - Overhead stays low when there is only one active stream.
+  - The same structure can be copied into `docs/<workstream>/` when needed.
 - Consequence:
-  - Skill metni kisa tutulmali; detayli state her zaman `docs/workflow/*` veya `docs/<workstream>/*` icinde yasamali.
+  - If parallel streams appear, the generic folder may no longer be enough and a named root should be used.
 
-## 2026-04-01 - Golden artifacts `tests/golden/` altinda tutulur
+## 2026-04-01 - Workflow is invoked through a repo-local skill
 
 - Decision:
-  - Provider baselines icin `tests/golden/providers/`, is akisina ozel baselines icin `tests/golden/<workstream>/` kullan.
+  - Keep this system available as a repo-local skill under `.agents/skills/codex-workflow/`.
 - Why:
-  - Provider-level fixtures ile workstream regression baselines ayrisir.
-  - Test yuzu runtime koda yakin kalir.
+  - It reduces the need to re-explain the workflow in future Codex sessions.
+  - Together with `AGENTS.md`, the skill provides both durable rules and task-level workflow behavior.
 - Consequence:
-  - Baseline adlandirma ve update disiplini `STATUS.md` icinde not edilmelidir.
+  - The skill text should stay concise; detailed state should always live in `docs/workflow/*` or `docs/<workstream>/*`.
 
-## 2026-04-01 - Milestone tracking `MILESTONES.md` ile ayrilir
+## 2026-04-01 - Golden artifacts live under `tests/golden/`
 
 - Decision:
-  - Fazlardan ayri olarak teslimat bazli milestone takibi icin `MILESTONES.md` kullan.
+  - Use `tests/golden/providers/` for provider-level baselines and `tests/golden/<workstream>/` for workstream-specific baselines.
 - Why:
-  - Fazlar cok genis kalabiliyor; milestone'lar seanslar arasi daha kisa ve takip edilebilir ilerleme noktasi veriyor.
-  - "Sadece aktif milestone" kuralini koyarak scope kaymasi azalir.
+  - It separates provider fixtures from workstream regression baselines.
+  - The testing surface stays close to runtime code.
 - Consequence:
-  - Her workflow klasoru artik dort ana dosya ile gelir: `EXECPLAN.md`, `STATUS.md`, `DECISIONS.md`, `MILESTONES.md`.
+  - Baseline naming and update discipline should be reflected in `STATUS.md`.
 
-## 2026-04-01 - Milestone lifecycle zorunlu loop olarak calisir
+## 2026-04-01 - Milestone tracking is separated into `MILESTONES.md`
 
 - Decision:
-  - Her aktif milestone `discuss -> research -> plan -> execute -> audit -> complete` loop'u ile ilerler.
+  - Use `MILESTONES.md` for delivery-focused milestone tracking in addition to phases.
 - Why:
-  - Scope'u erken netlestirir.
-  - Kod degistirmeden once arastirma ve dosya taramasini zorunlu kilar.
-  - Audit adimini explicit yaparak "implement edildi ama dogrulanmadi" durumunu azaltir.
+  - Phases can be too broad; milestones are easier to track across sessions.
+  - A "single active milestone" rule reduces scope drift.
 - Consequence:
-  - `STATUS.md`, `EXECPLAN.md` ve `MILESTONES.md` aktif milestone step bilgisini tasir.
-  - Sonraki milestone planlama, mevcut milestone complete edilmeden baslamaz.
+  - Each workflow surface now includes four main files: `EXECPLAN.md`, `STATUS.md`, `DECISIONS.md`, and `MILESTONES.md`.
 
-## 2026-04-01 - `CONTEXT.md` discuss/research arasinda zorunlu hafiza katmanidir
+## 2026-04-01 - Milestone lifecycle follows a mandatory loop
 
 - Decision:
-  - Her workflow klasorune `CONTEXT.md` ekle.
-  - `discuss` sonunda ilk context snapshot'i olustur.
-  - `research` sonunda ayni dosyayi guncelle.
-  - `plan` adimi ancak research-sonrasi guncel context ile baslasin.
+  - Every active milestone moves through `discuss -> research -> plan -> execute -> audit -> complete`.
 - Why:
-  - Seanslar arasi problem framing, varsayimlar, touched files ve risklerin dagilmasini onler.
-  - Context kaybi oldugunda tek ve hizli bir referans noktasi verir.
+  - It frames scope early.
+  - It forces research and file scanning before implementation.
+  - It makes audit explicit and reduces "implemented but not verified" outcomes.
 - Consequence:
-  - Varsayilan workflow surface artik bes ana dosya ile gelir: `EXECPLAN.md`, `STATUS.md`, `DECISIONS.md`, `MILESTONES.md`, `CONTEXT.md`.
+  - `STATUS.md`, `EXECPLAN.md`, and `MILESTONES.md` all carry active milestone step information.
+  - Planning for the next milestone does not begin before the current one is complete.
 
-## 2026-04-01 - `CONTEXT.md` aktif milestone'a ozeldir, tamamlananlar arsivlenir
+## 2026-04-01 - `CONTEXT.md` is the required memory layer between discuss and research
 
 - Decision:
-  - `CONTEXT.md` yalnizca aktif milestone'un calisma hafizasi olarak kullanilsin.
-  - Her yeni milestone basinda sifirlanip yeniden yazilsin.
-  - Tamamlanan milestone detaylari `completed_milestones/` altinda saklansin.
+  - Add `CONTEXT.md` to every workflow root.
+  - Create the first snapshot at the end of `discuss`.
+  - Update the same file again at the end of `research`.
+  - Allow `plan` only after the research-updated context exists.
 - Why:
-  - Aktif context'in temiz kalmasini saglar.
-  - Eski milestone framing'inin yeni milestone'a sizmasini onler.
-  - Backtrack gerektiginde milestone bazli audit trail verir.
+  - It prevents problem framing, assumptions, touched files, and risks from scattering across sessions.
+  - It gives one fast reference point when context is lost.
 - Consequence:
-  - Varsayilan workflow surface artik aktif dosyalar + `completed_milestones/` arsiv klasorunden olusur.
+  - The default workflow surface expands to five key files: `EXECPLAN.md`, `STATUS.md`, `DECISIONS.md`, `MILESTONES.md`, and `CONTEXT.md`.
 
-## 2026-04-01 - Plan step'in source of truth'u `EXECPLAN.md` icindeki `Plan of Record` olur
+## 2026-04-01 - `CONTEXT.md` belongs only to the active milestone and completed detail is archived
 
 - Decision:
-  - `plan` adiminda olusan uygulanabilir planin kanonik kaynagi `EXECPLAN.md` icindeki `Plan of Record` bolumudur.
-  - `MILESTONES.md` icindeki plan checklist'i yalnizca kisa bir ozet olarak kalir.
+  - Use `CONTEXT.md` only as the working memory for the active milestone.
+  - Reset it at the start of every new milestone.
+  - Store completed milestone detail under `completed_milestones/`.
 - Why:
-  - Planin tek bir yerde kanonik olmasi execute adiminda karisiklik riskini azaltir.
-  - Milestone karti kisa kalir, detayli uygulama plani sismez.
+  - It keeps active context clean.
+  - It prevents one milestone's framing from bleeding into the next.
+  - It provides a milestone-based audit trail for backtracking.
 - Consequence:
-  - Execute adimi `EXECPLAN.md` uzerinden ilerler.
+  - The workflow surface consists of active files plus the `completed_milestones/` archive.
 
-## 2026-04-01 - `CARRYFORWARD.md` kapanmayan isler icin aktif kuyruktur
+## 2026-04-01 - The plan step source of truth is `Plan of Record` in `EXECPLAN.md`
 
 - Decision:
-  - Tamamlanmayan ama sonraki milestone'a tasinmasi gereken maddeler `CARRYFORWARD.md` icinde tutulur.
-  - Yeni milestone planning'i baslamadan once bu dosya okunur.
+  - The canonical, executable plan for the `plan` step lives in the `Plan of Record` section of `EXECPLAN.md`.
+  - The plan checklist in `MILESTONES.md` remains only a short summary.
 - Why:
-  - Milestone kapanisinda is kaybini azaltir.
-  - Sonraki milestone planinin dogrudan onceki eksiklerden beslenmesini saglar.
+  - One canonical plan location reduces confusion during execution.
+  - The milestone card stays compact.
 - Consequence:
-  - `CARRYFORWARD.md` active-window only tutulur; detayli tarihce arsivlerde kalir.
+  - The execute step follows `EXECPLAN.md`.
 
-## 2026-04-01 - `MEMORY.md` kullanici-tetiklemeli kalici hafiza yuzeyidir
+## 2026-04-01 - `CARRYFORWARD.md` is the active queue for unfinished work
 
 - Decision:
-  - `MEMORY.md` yalnizca kullanici explicit olarak hafiza tutulmasini istediginde veya ayni milestone icin active recall notu birakilacaginda guncellenir.
-  - Dosya iki katmanlidir: `Active Recall Items` ve `Durable Notes`.
+  - Store unfinished items that must move into the next milestone in `CARRYFORWARD.md`.
+  - Read it before planning the next milestone.
 - Why:
-  - Kullanici tarafindan "bunu sonra da hatirla" denilen seyleri context reset'lerinden korur.
-  - Ayni milestone icindeki gecici recall notlarini daha kalici tercihlerden ayirir.
+  - It reduces work loss during milestone closeout.
+  - It lets the next milestone plan feed directly from unresolved work.
 - Consequence:
-  - `MEMORY.md` aktif recall + durable hafiza olarak okunur.
+  - `CARRYFORWARD.md` stays active-window only; detailed history remains in archives.
 
-## 2026-04-01 - `save_memory` helper'i memory formatini standardize eder
+## 2026-04-01 - `MEMORY.md` is the user-triggered durable memory surface
 
 - Decision:
-  - `MEMORY.md` kayitlari icin `workflow:save-memory` helper'i kullan.
+  - Update `MEMORY.md` only when the user explicitly asks to save memory or when active recall is needed for the current milestone.
+  - Keep two layers: `Active Recall Items` and `Durable Notes`.
 - Why:
-  - Durable note formatinin tutarli kalmasini saglar.
-  - Elle edit ihtiyacini azaltir.
+  - It preserves "remember this later" information through context resets.
+  - It separates milestone-local temporary notes from longer-lived preferences.
 - Consequence:
-  - `MEMORY.md` girisleri tarih, baslik, note ve opsiyonel tag/source formatinda yazilir.
+  - `MEMORY.md` is read as active recall plus durable memory.
 
-## 2026-04-01 - Planlar run-sized chunk'lara bolunur
+## 2026-04-01 - `save_memory` standardizes memory entry format
 
 - Decision:
-  - Her milestone plan'i context window'a uygun 1-2 run chunk olacak sekilde yazilir.
+  - Use the `workflow:save-memory` helper for `MEMORY.md` entries.
 - Why:
-  - Tek seferde fazla scope acilmasini onler.
-  - Seanslar arasi planin uygulanabilir parcalara bolunmesini saglar.
+  - It keeps durable note formatting consistent.
+  - It reduces manual edits.
 - Consequence:
-  - `EXECPLAN.md` icindeki `Plan of Record` bolumu current/next run chunk alanlari tasir.
+  - Memory entries are written in a stable date/title/note/tag/source format.
 
-## 2026-04-01 - Complete milestone audit kapanisindan sonra commit/push gerektirir
+## 2026-04-01 - Plans are split into run-sized chunks
 
 - Decision:
-  - Milestone `complete` edilmeden once audit kapanmali.
-  - `complete milestone` sonrasinda commit ve push protokolunun uygulanmasi varsayilan davranistir.
-  - `AGENTS.md` guncellemesi gerekip gerekmedigi complete oncesi kontrol edilir.
+  - Each milestone plan should be written as `1-2` run-sized chunks that fit the context window.
 - Why:
-  - Milestone kapanisini sadece dokumansal degil, version control seviyesinde de netlestirir.
-  - Bilgi drift'ini azaltir.
+  - It prevents opening too much scope at once.
+  - It keeps plans executable across sessions.
 - Consequence:
-  - `complete_milestone` helper'i git add/commit/push akisini destekler.
-  - `AGENTS.md` combined size takibi gereklidir.
+  - `Plan of Record` in `EXECPLAN.md` includes current/next run chunk fields.
 
-## 2026-04-01 - Active recall memory ayni milestone icinde otomatik okunur
+## 2026-04-01 - Complete milestone requires audit closeout before commit/push
 
 - Decision:
-  - `MEMORY.md` iki bolume ayrilir: `Active Recall Items` ve `Durable Notes`.
-  - Aktif milestone'a bagli recall notlari ayni milestone devam ederken otomatik okunur.
+  - Audit must be closed before a milestone is marked `complete`.
+  - Commit and push protocol is the default follow-up after milestone completion.
+  - Check whether `AGENTS.md` needs an update before complete.
 - Why:
-  - Context window degistiginde ayni milestone icindeki ara notlar kaybolmasin.
-  - Milestone-a ozel gecici notlar ile daha kalici tercihler ayrissin.
+  - It makes milestone closeout explicit at version-control level, not only in docs.
+  - It reduces information drift.
 - Consequence:
-  - `workflow:save-memory` aktif milestone varken varsayilan olarak `active` modda yazar.
-  - Seans baslangic protokolu active recall notlarini otomatik okur.
+  - `complete_milestone` supports git add/commit/push flow.
+  - `AGENTS.md` combined size should still be monitored.
 
-## 2026-04-01 - Milestone complete aktif recall memory notlarini temizler
+## 2026-04-01 - Active recall is automatically read within the same milestone
 
 - Decision:
-  - `complete_milestone` aktif milestone'a bagli `Active Recall Items` kayitlarini `MEMORY.md` icinden temizler ve arsive snapshot olarak tasir.
+  - Split `MEMORY.md` into `Active Recall Items` and `Durable Notes`.
+  - Automatically read active recall entries while the same milestone is still in progress.
 - Why:
-  - Milestone tamamlandiktan sonra gecici recall notlari birikmesin.
-  - Backtrack icin bilgi kaybi olmadan aktif hafiza temiz kalsin.
+  - Temporary notes should not disappear when the context window changes.
+  - Milestone-local notes should stay separate from durable preferences.
 - Consequence:
-  - `MEMORY.md` active-window benzeri temiz bir recall yuzeyi olarak kalir.
-  - Gecmis recall notlari milestone arsivinde izlenebilir.
+  - `workflow:save-memory` defaults to `active` mode while a milestone is active.
+  - Session startup automatically reads active recall entries.
 
-## 2026-04-01 - Complete milestone git preflight stage scope'u zorunlu netlestirir
+## 2026-04-01 - Completing a milestone clears its active recall notes
 
 - Decision:
-  - `complete_milestone`, workflow dosyalari disinda repo degisikligi varsa explicit `--stage-paths` veya bilincli `--allow-workflow-only` olmadan auto-commit etmez.
+  - `complete_milestone` removes active recall entries tied to the completed milestone from `MEMORY.md` and snapshots them into the archive.
 - Why:
-  - Yanlis scope ile eksik veya fazla dosyanin milestone commit'ine girmesini azaltir.
-  - Dirty worktree icinde milestone closeout'u daha guvenli yapar.
+  - Temporary recall should not accumulate after the milestone is done.
+  - Active memory stays clean without losing backtrackability.
 - Consequence:
-  - Milestone kapanisinda code path secimi explicit hale gelir.
-  - Docs-only kapanislar icin `--allow-workflow-only` bilincli bir override olur.
+  - `MEMORY.md` remains a clean, active-window-style recall surface.
+  - Historical recall notes remain visible in milestone archives.
 
-## 2026-04-01 - Artifact seti `PROJECT`, `RUNTIME`, `PREFERENCES`, `VALIDATION`, `HANDOFF`, `SEEDS`, `WORKSTREAMS` ile genisletildi
+## 2026-04-01 - Complete milestone requires explicit stage scope during git preflight
 
 - Decision:
-  - Workflow surface artik yalnizca plan/status/decisions/milestones baglamindan olusmaz.
-  - `PROJECT.md`, `RUNTIME.md`, `PREFERENCES.md`, `VALIDATION.md`, `HANDOFF.md`, `SEEDS.md` ve `WORKSTREAMS.md` artefact setine eklenir.
+  - If the repo has changes outside workflow docs, `complete_milestone` does not auto-commit without explicit `--stage-paths` or deliberate `--allow-workflow-only`.
 - Why:
-  - Neden, nasil ve su an ne durumda sorularini ayni dosyada toplamak yerine ayrik katmanlara bolmek AGENTS sismesini ve context drift'ini azaltir.
+  - It reduces accidental under-staging or over-staging in milestone commits.
+  - It makes closeout safer inside a dirty worktree.
 - Consequence:
-  - Seans baslangic protokolu ve helper script'ler bu dosyalari da okuyacak sekilde genisler.
+  - Code-path selection during closeout becomes explicit.
+  - `--allow-workflow-only` is a deliberate override for docs-only closeout.
 
-## 2026-04-01 - Discuss mode preference seviyesinde secilir
+## 2026-04-01 - The artifact set expands with `PROJECT`, `RUNTIME`, `PREFERENCES`, `VALIDATION`, `HANDOFF`, `SEEDS`, and `WORKSTREAMS`
 
 - Decision:
-  - `PREFERENCES.md` icindeki `Discuss mode` alani `assumptions` ve `interview` modlari arasinda secim yapar.
+  - The workflow surface is no longer only plan/status/decisions/milestones.
+  - Add `PROJECT.md`, `RUNTIME.md`, `PREFERENCES.md`, `VALIDATION.md`, `HANDOFF.md`, `SEEDS.md`, and `WORKSTREAMS.md` to the artifact set.
 - Why:
-  - Bazi codebase'lerde once kodu tarayip varsayim uretmek daha hizlidir; bazi task'larda ise once kisa hedef netlestirmesi gerekir.
+  - Splitting "why", "how", and "current state" into separate layers reduces AGENTS bloat and context drift.
 - Consequence:
-  - `CONTEXT.md`, `MILESTONES.md` ve `workflow:next` discuss davranisini bu preference'a gore aciklar.
+  - Session startup and helper scripts expand to read these files too.
 
-## 2026-04-01 - `workflow:next` aktif step icin operasyonel yonlendirici olur
+## 2026-04-01 - Discuss mode is selected at the preference level
 
 - Decision:
-  - `workflow:next`, aktif milestone step'ine gore tek onerilen sonraki hareketi ureten yardimci olur.
+  - The `Discuss mode` field in `PREFERENCES.md` chooses between `assumptions` and `interview`.
 - Why:
-  - Buyuyen workflow artifact seti icinde "simdi ne yapmaliyim" sorusuna hizli cevap verir.
+  - Some codebases benefit from scanning first; some tasks benefit from clarifying the target first.
 - Consequence:
-  - `STATUS.md` ve `HANDOFF.md` okunarak aktif step, discuss mode ve recall state birlestirilir.
+  - `CONTEXT.md`, `MILESTONES.md`, and `workflow:next` explain discuss behavior based on this preference.
 
-## 2026-04-01 - `HANDOFF.md` pause/resume icin session-level snapshot katmanidir
+## 2026-04-01 - `workflow:next` becomes the operational navigator for the active step
 
 - Decision:
-  - `HANDOFF.md` milestone history degil, sadece seans kapanis/acilis snapshot'i tutar.
+  - `workflow:next` produces one recommended next move based on the active milestone step.
 - Why:
-  - `MEMORY.md` kalici hafiza icin, `HANDOFF.md` ise "tam burada kaldik" bilgisi icin daha uygun katmandir.
+  - It answers "what should I do now?" quickly even as the workflow artifact set grows.
 - Consequence:
-  - `workflow:pause-work` ve `workflow:resume-work` bu dosya etrafinda calisir.
+  - It combines `STATUS.md`, `HANDOFF.md`, discuss mode, and recall state.
 
-## 2026-04-01 - `SEEDS.md` carryforward'dan ayrik tutulur
+## 2026-04-01 - `HANDOFF.md` is the session-level snapshot layer for pause/resume
 
 - Decision:
-  - `SEEDS.md`, kapanmayan aktif isleri tutan `CARRYFORWARD.md`'den ayrik bir fikir katmani olarak tutulur.
+  - `HANDOFF.md` stores only session close/open state, not milestone history.
 - Why:
-  - "Sonraki milestone'da muhtemelen lazim olacak fikir" ile "tamamlanmadi, tasinmali" ayni sey degildir.
+  - Resume should stay lightweight and current.
 - Consequence:
-  - Yeni milestone discuss/plan asamalarinda seed intake ayrica gorunur.
+  - `workflow:pause-work` and `workflow:resume-work` revolve around this file.
 
-## 2026-04-01 - Named workstream root secimi `WORKSTREAMS.md` ile kaydedilir
+## 2026-04-01 - `SEEDS.md` stays distinct from carryforward
 
 - Decision:
-  - Aktif workflow root'u `WORKSTREAMS.md` icinde kaydedilir ve script'ler explicit `--root` verilmediginde once buraya bakar.
+  - Keep `SEEDS.md` separate from `CARRYFORWARD.md`.
 - Why:
-  - Generic `docs/workflow` ile isimli `docs/<workstream>` root'lari arasinda gecis ergonomisini iyilestirir.
+  - "Might be useful in a future milestone" is not the same as "unfinished and must continue".
 - Consequence:
-  - `workflow:switch-workstream` named root scaffold etme ve aktif root secme gorevini ustlenir.
+  - Seed intake stays visible separately during discuss/plan.
 
-## 2026-04-01 - `workflow:doctor` ve `workflow:forensics` gozlem katmani ekler
+## 2026-04-01 - Named workstream root selection is recorded in `WORKSTREAMS.md`
 
 - Decision:
-  - Workflow state'in sagligini kontrol etmek icin `workflow:doctor`, ayni andaki state'i dondurmek icin `workflow:forensics` eklenir.
+  - Record the active workflow root in `WORKSTREAMS.md`, and let scripts consult it first when `--root` is not provided.
 - Why:
-  - Artifact sayisi arttikca dosyalar arasi drift'i elle yakalamak zorlasir.
+  - It improves ergonomics between the generic `docs/workflow` root and named `docs/<workstream>` roots.
 - Consequence:
-  - Verification asamasinda doctor/forensics komutlari hedefli audit yuzeyine dahil olur.
+  - `workflow:switch-workstream` takes responsibility for scaffolding named roots and switching active root.
+
+## 2026-04-01 - `workflow:doctor` and `workflow:forensics` add an observability layer
+
+- Decision:
+  - Add `workflow:doctor` to check workflow state health and `workflow:forensics` to snapshot current state.
+- Why:
+  - The workflow needs fast sync checks and a durable debugging surface.
+- Consequence:
+  - Packet drift, validation gaps, and state inconsistencies can be diagnosed more reliably.

@@ -7,41 +7,41 @@
 
 ## Purpose
 
-- Bu klasor, repo icindeki kalici Codex workflow protokolunun kanonik yuzeyidir.
-- Amac, cok-seansli calismalarda context kaybini azaltmak, packet budget'ini olcmek ve kanitsiz claim riskini dusurmektir.
-- Bu yuzey varsayilan degil, opt-in calisir; kullanici workflow'u acikca istediginde aktif kullanilir.
+- This folder is the canonical surface for the repository's long-lived Codex workflow protocol.
+- Its goal is to reduce context loss in multi-session work, measure packet budget, and reduce unsupported-claim risk.
+- This surface is not the default path; it is opt-in and becomes active only when the user explicitly wants workflow discipline.
 
 ## Primary Outcomes
 
-- `discuss -> research -> plan -> execute -> audit -> complete` loop'unu sabitlemek
-- `WORKSTREAMS -> CONTEXT packet -> EXECPLAN -> VALIDATION -> COMPLETE` zincirini source-of-truth olarak tutmak
-- Active-window dosyalari ile archive dosyalarini ayirmak
-- Memory, carryforward, handoff, window ve validation katmanlarini ayrik tutmak
-- `lite | standard | full` workflow profilleri ile rituel yogunlugunu ayarlamak
-- `RETRO.md` uzerinden surec kalitesi iyilestirme yuzeyi tutmak
-- Milestone closeout sirasinda git scope'unu ve reasoning kalitesini daha guvenli hale getirmek
+- Keep the `discuss -> research -> plan -> execute -> audit -> complete` loop consistent.
+- Treat `WORKSTREAMS -> CONTEXT packet -> EXECPLAN -> VALIDATION -> COMPLETE` as the workflow source of truth chain.
+- Separate active-window files from archive files.
+- Keep memory, carryforward, handoff, window, and validation as distinct layers.
+- Support `lite | standard | full` workflow profiles.
+- Maintain a process-quality improvement surface through `RETRO.md`.
+- Make git scope and reasoning quality safer during milestone closeout.
 
 ## Non-Goals
 
-- Uygulama feature backlog'unu burada tutmak
-- Kodun runtime mimarisini burada ayrintili belgelemek
-- Tamamlanan milestone changelog'unu burada biriktirmek
+- Storing the application feature backlog here
+- Documenting runtime architecture in depth here
+- Turning this file into a completed milestone changelog
 
 ## Stable Rules
 
-- `AGENTS.md` davranis ve scope kurallarini tutar
-- `PROJECT.md` neden bu workflow'un var oldugunu ve neyi optimize ettigini tutar
-- `RUNTIME.md` operasyonel komutlari ve repo-level calisma notlarini tutar
-- `DECISIONS.md` kalici mimari/surec kararlarinin kaydidir
-- `STATUS.md` aktif pencere gorunumudur
-- `WINDOW.md` aktif context budget snapshot'idir
-- Workflow kullanimi explicit user opt-in ile baslar
-- Varsayilan milestone granularity: bir istek = bir milestone, lifecycle asamalari = substep
+- `AGENTS.md` stores behavior and scope rules
+- `PROJECT.md` explains why the workflow exists and what it optimizes for
+- `RUNTIME.md` stores operational commands and repo-level runtime notes
+- `DECISIONS.md` stores durable architecture and process decisions
+- `STATUS.md` is the active-window view
+- `WINDOW.md` stores the active context-budget snapshot
+- Workflow activation begins only with explicit user opt-in
+- Default milestone granularity is one request = one milestone, with lifecycle steps as substeps
 
 ## Success Criteria
 
-- Yeni bir seans, yalnizca workflow dosyalarini okuyarak aktif milestone'u devam ettirebilmeli
-- Bir milestone kapanirken active recall, carryforward, archive, packet hash ve git closeout senkron ilerlemeli
-- Workstream ayrismasi gerektiginde `docs/<workstream>/` yuzeyi kolayca acilabilmeli
-- Health strict gate packet drift, validation gap ve hallucination riskini gosterebilmeli
-- Process kalitesi validation state'inden ayrik olarak `RETRO.md` uzerinde degerlendirilebilmeli
+- A new session can resume the active milestone by reading workflow files only
+- Milestone closeout keeps active recall, carryforward, archive, packet hash, and git closeout in sync
+- A new `docs/<workstream>/` surface can be opened easily when stream isolation is needed
+- The strict health gate can surface packet drift, validation gaps, and hallucination risk
+- Process quality can be evaluated in `RETRO.md` independently from product validation state

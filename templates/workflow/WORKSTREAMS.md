@@ -7,12 +7,13 @@
 
 ## Rules
 
-- Ayni anda tek bir workstream `active` olur
-- Generic `docs/workflow` kontrol duzlemidir ve varsayilan root olarak kalir
-- `docs/<workstream>/` altinda isimli stream acildiginda bu dosyada kaydedilir
-- Script'ler explicit `--root` verilmediginde once aktif workstream root'unu kullanir
+- Only one workstream should be `active` at a time
+- Generic `docs/workflow` is the default control plane and remains the default root
+- When a named stream is opened under `docs/<workstream>/`, record it here
+- If scripts are not given an explicit `--root`, they use the active workstream root first
 
 ## Workstream Table
+
 | Name | Root | Status | Current milestone | Step | Packet hash | Budget status | Health | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | workflow | docs/workflow | active | NONE | complete | pending_sync | ok | pending | Default workflow control plane |

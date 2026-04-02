@@ -343,7 +343,7 @@ function parseArchivedMilestones(content) {
 
 function renderArchivedMilestones(items) {
   if (items.length === 0) {
-    return '- `Henuz arsivlenmis milestone yok`';
+    return '- `No archived milestones yet`';
   }
   return items.join('\n');
 }
@@ -356,7 +356,7 @@ function getOpenCarryforwardItems(content) {
     .filter((line) => line.startsWith('- '))
     .map((line) => line.replace(/^- /, '').replace(/^`|`$/g, ''));
 
-  if (items.length === 1 && items[0] === 'Henuz carryforward item yok') {
+  if (items.length === 1 && items[0] === 'No carryforward items yet') {
     return [];
   }
 
@@ -365,7 +365,7 @@ function getOpenCarryforwardItems(content) {
 
 function renderOpenItems(items) {
   if (items.length === 0) {
-    return '- `Henuz carryforward item yok`';
+    return '- `No carryforward items yet`';
   }
 
   return items.map((item) => `- \`${item}\``).join('\n');
@@ -1212,7 +1212,7 @@ function syncWindowDocument(paths, windowStatus) {
     `- \`Packet budget status: ${status.packet.budgetStatus}\``,
   ].join('\n'));
   content = replaceSection(content, 'Read Set Estimate', status.packet.recommendedReadSet.length === 0
-    ? '- `Recommended read set henuz yok`'
+    ? '- `No recommended read set yet`'
     : status.packet.recommendedReadSet.map((item) => `- \`${item}\``).join('\n'));
   content = replaceSection(content, 'Artifact Estimate', [
     `- \`Workflow artifact tokens: ${status.artifactTokens}\``,

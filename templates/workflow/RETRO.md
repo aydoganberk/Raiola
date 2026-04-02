@@ -9,55 +9,55 @@
 
 ## Purpose
 
-- `RETRO.md`, workflow surec kalitesini validation state'inden ayri degerlendirmek icindir.
-- Burada "kod dogru mu" degil, "workflow dogru calisti mi" sorusu izlenir.
-- Validation bulgulari `VALIDATION.md` icinde kalir; surec frictions / iyilestirme fikirleri burada tutulur.
+- `RETRO.md` exists to evaluate workflow quality separately from product validation state.
+- The question here is not "is the code correct?" but "did the workflow operate correctly?"
+- Validation findings stay in `VALIDATION.md`; process frictions and improvement ideas live here.
 
 ## Binary Process Quality Checks
 
 | Check | Question | Target | Status | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Explicit activation | Workflow yalnizca explicit istendiginde mi aktive oldu? | `yes` | `pending` | `AGENTS.md` | `Yanlis aktivasyon rituel yukunu arttirir` |
-| Root consistency | Active root ile kullanilan dosya root'u uyumlu mu? | `yes` | `pending` | `WORKSTREAMS.md` | `Mismatch handoff ve packet drift uretir` |
-| Resume clarity | Resume `<= 3` komutta net sekilde yapilabiliyor mu? | `yes` | `pending` | `HANDOFF.md` | `Belirsiz resume context kaybina yol acar` |
-| Closeout hygiene | Complete oncesi strict health temiz mi? | `yes` | `pending` | `VALIDATION.md` | `Aksi halde stale closeout riski vardir` |
-| Update visibility | Workflow sirasinda `WORKFLOW:` prefiksli update'ler gorunur mu? | `yes` | `pending` | `Installed workflow skill` | `Ayirt edilebilirlik dusebilir` |
+| Explicit activation | Was workflow activated only when explicitly requested? | `yes` | `pending` | `AGENTS.md` | `Incorrect activation adds ritual overhead` |
+| Root consistency | Did the active root match the files actually used? | `yes` | `pending` | `WORKSTREAMS.md` | `Mismatch creates handoff and packet drift` |
+| Resume clarity | Can resume happen clearly in `<= 3` commands? | `yes` | `pending` | `HANDOFF.md` | `Ambiguous resume causes context loss` |
+| Closeout hygiene | Was strict health clean before complete? | `yes` | `pending` | `VALIDATION.md` | `Otherwise stale closeout risk remains` |
+| Update visibility | Were `WORKFLOW:`-prefixed updates visible during workflow? | `yes` | `pending` | `Installed workflow skill` | `Low visibility reduces clarity` |
 
 ## Open Frictions
 
-- `Henuz acik process friction notu yok`
+- `No open process friction notes yet`
 
 ## Improvement Queue
 
-- `Henuz planli process iyilestirmesi yok`
+- `No planned process improvements yet`
 
 ## Retro Loop
 
-1. `completed_milestones/`, `HANDOFF.md`, `forensics/` ve kullanici duzeltmelerinden kanit topla.
-2. Yukaridaki binary surec kalite check'lerini `yes/no` olarak degerlendir.
-3. Tek bir process degisikligi sec:
+1. Collect evidence from `completed_milestones/`, `HANDOFF.md`, `forensics/`, and user corrections.
+2. Evaluate the binary process-quality checks above as `yes/no`.
+3. Choose one process change:
    - `skill wording`
    - `docs surface`
    - `script guardrail`
    - `failure playbook`
-4. Degisikligi uygula ve `doctor + health` ile yuzeyi tekrar dogrula.
-5. Sonraki `1-2` gercek milestone sonunda keep/discard karari ver.
-6. Sonucu `Recent Retro Entries` bolumune ekle.
+4. Apply the change and re-verify the surface with `doctor + health`.
+5. Make a keep/discard decision after the next `1-2` real milestones.
+6. Add the outcome to `Recent Retro Entries`.
 
 ## Recommended Triggers
 
-- `Her 5 completed milestone`
-- `Ayni tip forensics kok nedeni 2 kez tekrar ettiginde`
-- `Resume ambiguity`, `hash drift`, `active root mismatch` veya `dirty closeout` tekrarladiginda
-- `Kullanici explicit olarak workflow'u iyilestir dediginde`
+- `Every 5 completed milestones`
+- `When the same forensics root cause repeats twice`
+- `When resume ambiguity`, `hash drift`, `active root mismatch`, or `dirty closeout` repeats
+- `When the user explicitly asks to improve the workflow`
 
 ## Failure Signals
 
 - `Hash drift` -> `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
-- `Active root mismatch` -> `workflow:workstreams status -> workflow:switch-workstream veya --root ile dogru root'a don`
-- `Resume ambiguity` -> `HANDOFF.md + WINDOW.md oku -> workflow:resume-work -> workflow:next`
-- `Dirty worktree closeout` -> `complete-milestone icin explicit --stage-paths veya docs-only ise --allow-workflow-only kullan`
+- `Active root mismatch` -> `workflow:workstreams status -> workflow:switch-workstream or use --root to return to the correct root`
+- `Resume ambiguity` -> `Read HANDOFF.md + WINDOW.md -> workflow:resume-work -> workflow:next`
+- `Dirty worktree closeout` -> `Use explicit --stage-paths or --allow-workflow-only when it is truly docs-only`
 
 ## Recent Retro Entries
 
-- `Henuz retro entry yok`
+- `No retro entries yet`

@@ -71,9 +71,9 @@ function main() {
   }
 
   let memory = read(paths.memory);
-  const activeEntries = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'Henuz aktif recall notu yok')
+  const activeEntries = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'No active recall notes yet')
     .map((entry) => parseMemoryEntry(entry));
-  const durableEntries = parseMemoryEntries(extractSection(memory, 'Durable Notes'), 'Henuz kaydedilmis durable note yok')
+  const durableEntries = parseMemoryEntries(extractSection(memory, 'Durable Notes'), 'No durable notes saved yet')
     .map((entry) => parseMemoryEntry(entry));
 
   const newEntry = {
@@ -118,8 +118,8 @@ function main() {
 
   memory = replaceField(memory, 'Last updated', today());
   memory = replaceField(memory, 'Status', 'active_recall_plus_durable');
-  memory = replaceSection(memory, 'Active Recall Items', renderMemorySection(nextActiveEntries, 'Henuz aktif recall notu yok'));
-  memory = replaceSection(memory, 'Durable Notes', renderMemorySection(nextDurableEntries, 'Henuz kaydedilmis durable note yok'));
+  memory = replaceSection(memory, 'Active Recall Items', renderMemorySection(nextActiveEntries, 'No active recall notes yet'));
+  memory = replaceSection(memory, 'Durable Notes', renderMemorySection(nextDurableEntries, 'No durable notes saved yet'));
 
   const warning = warnAgentsSize(process.cwd());
   console.log(warning);

@@ -75,19 +75,19 @@ function main() {
     milestone === String(getFieldValue(execplan, 'Active milestone') || 'NONE')
       ? 'pass'
       : 'fail',
-    'STATUS.md ve EXECPLAN.md aktif milestone alanlari senkron olmali',
+    'STATUS.md and EXECPLAN.md active milestone fields must stay in sync',
   );
   pushCheck(
     step === String(getFieldValue(execplan, 'Active milestone step') || 'unknown')
       ? 'pass'
       : 'fail',
-    'STATUS.md ve EXECPLAN.md aktif step alanlari senkron olmali',
+    'STATUS.md and EXECPLAN.md active step fields must stay in sync',
   );
   pushCheck(
     (!activeRow && milestone === 'NONE') || (activeRow && `${activeRow.milestone} - ${activeRow.goal}` === milestone)
       ? 'pass'
       : 'fail',
-    'MILESTONES.md aktif satiri ile STATUS.md ayni milestoneu gostermeli',
+    'The active row in MILESTONES.md must match the milestone shown in STATUS.md',
   );
 
   const packets = [
@@ -99,17 +99,17 @@ function main() {
   for (const packet of packets) {
     pushCheck(
       packet.canonicalRefs.length > 0 ? 'pass' : 'fail',
-      `${packet.primary.key} canonical refs bos olmamali`,
+      `${packet.primary.key} canonical refs must not be empty`,
       { packet: packet.primary.key },
     );
     pushCheck(
       packet.storedInputHash ? 'pass' : (milestone === 'NONE' ? 'warn' : 'fail'),
-      `${packet.primary.key} Input hash present olmali`,
+      `${packet.primary.key} input hash must be present`,
       { packet: packet.primary.key },
     );
     pushCheck(
       packet.hashDrift ? (milestone === 'NONE' ? 'warn' : 'fail') : 'pass',
-      `${packet.primary.key} packet hash stale olmamali`,
+      `${packet.primary.key} packet hash must not be stale`,
       { packet: packet.primary.key },
     );
     pushCheck(
@@ -159,22 +159,22 @@ function main() {
     pushCheck(fs.existsSync(archivePath) ? 'pass' : 'fail', `Archive ref exists -> ${match[1]}`);
   }
 
-  const activeMemory = parseMemoryEntries(safeExtract(memory, 'Active Recall Items'), 'Henuz aktif recall notu yok')
+  const activeMemory = parseMemoryEntries(safeExtract(memory, 'Active Recall Items'), 'No active recall notes yet')
     .map((entry) => parseMemoryEntry(entry));
   const orphanRecall = activeMemory.filter((entry) => entry.fields.Milestone && entry.fields.Milestone !== milestone);
   if (milestone === 'NONE' && activeMemory.length > 0) {
-    pushCheck('warn', 'Aktif milestone yokken Active Recall Items bulundu');
+    pushCheck('warn', 'Active Recall Items exist even though there is no active milestone');
   }
   for (const entry of orphanRecall) {
     pushCheck('warn', `Orphan active recall -> ${entry.title}`);
   }
 
-  const openSeeds = parseSeedEntries(safeExtract(seeds, 'Open Seeds'), 'Henuz acik seed yok');
+  const openSeeds = parseSeedEntries(safeExtract(seeds, 'Open Seeds'), 'No open seeds yet');
   const contextSeedIntake = safeExtract(context, 'Seed Intake');
-  if (openSeeds.length > 0 && contextSeedIntake.includes('Henuz acik seed yok') && milestone !== 'NONE') {
-    pushCheck('warn', 'Seed drift: open seeds var ama CONTEXT seed intake bunlari yansitmiyor');
+  if (openSeeds.length > 0 && contextSeedIntake.includes('No open seeds yet') && milestone !== 'NONE') {
+    pushCheck('warn', 'Seed drift: open seeds exist but CONTEXT seed intake does not reflect them');
   } else {
-    pushCheck('pass', `Seed intake check -> ${openSeeds.length} open seed`);
+    pushCheck('pass', `Seed intake check -> ${openSeeds.length} open seed(s)`);
   }
 
   const activeRoot = String(getFieldValue(workstreams, 'Active workstream root') || path.relative(cwd, rootDir).replace(/\\/g, '/')).trim();
@@ -183,7 +183,7 @@ function main() {
     `WORKSTREAMS active root -> ${activeRoot}`,
   );
   const workstreamRows = parseWorkstreamTable(workstreams).rows;
-  pushCheck(workstreamRows.length > 0 ? 'pass' : 'warn', 'WORKSTREAMS table en az bir kayit icermeli');
+  pushCheck(workstreamRows.length > 0 ? 'pass' : 'warn', 'WORKSTREAMS table should contain at least one entry');
   pushCheck('pass', warnAgentsSize(cwd));
 
   const failCount = checks.filter((item) => item.status === 'fail').length;

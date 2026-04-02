@@ -1,9 +1,9 @@
-# MILESTONE TEMPLATE
+# MILESTONE_TEMPLATE
 
-Bu template, yeni bir milestone acarken ayni lifecycle'i tekrar kurmak icin kullanilir.
+Use this template when opening a new milestone so the same lifecycle can be recreated consistently.
 
-- Varsayilan kullanim: tek bir kullanici istegi = tek milestone
-- `discuss -> research -> plan -> execute -> audit -> complete` ayni milestone'un step'leridir
+- Default usage: one user request = one milestone
+- `discuss -> research -> plan -> execute -> audit -> complete` are steps inside the same milestone
 
 ## Packet Metadata Template
 
@@ -21,40 +21,41 @@ Bu template, yeni bir milestone acarken ayni lifecycle'i tekrar kurmak icin kull
 
 | Class | Ref | Why |
 | --- | --- | --- |
-| source_of_truth | docs/workflow/CONTEXT.md | Research packet source |
-| source_of_truth | docs/workflow/EXECPLAN.md | Plan of Record source |
-| source_of_truth | docs/workflow/VALIDATION.md | Audit contract source |
+| source_of_truth | docs/workflow/CONTEXT.md | Active context |
+| source_of_truth | docs/workflow/MILESTONES.md | Active milestone truth |
+| source_of_truth | docs/workflow/PREFERENCES.md | Behavioral defaults |
 
 ## Upstream Refs Template
 
 | Class | Ref | Why |
 | --- | --- | --- |
-| supporting | docs/workflow/WINDOW.md | Budget and handoff state |
-| supporting | docs/workflow/HANDOFF.md | Resume cursor state |
+| supporting | docs/workflow/EXECPLAN.md | Plan relationship |
+| supporting | docs/workflow/VALIDATION.md | Audit relationship |
+| supporting | docs/workflow/HANDOFF.md | Resume relationship |
 
 ## Unknowns Template
 
 | Unknown | Impact | Owner | Status |
 | --- | --- | --- | --- |
-| `Milestone-specific unknown` | `Plan kalitesini etkiler` | `owner` | `open` |
+| `Unknown` | `Impact` | `owner` | `open` |
 
 ## Claim Ledger Template
 
 | Claim | Type | Evidence refs | Confidence | Failure if wrong |
 | --- | --- | --- | --- | --- |
-| `Milestone claim` | `source-backed` | `docs/workflow/CONTEXT.md` | `Likely` | `Yanlis uygulama yapilabilir` |
+| `Claim` | `source-backed` | `docs/workflow/...` | `Likely` | `Failure mode` |
 
 ## Table Row Template
 
 | Milestone | Goal | Phase | Status | Step | Exit criteria | Evidence / notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| Mx | `Kisa hedef` | `Phase N` | active | discuss | `Bitis kosulu` | `Kanit sonra doldurulacak` |
+| `Mx` | `Name` | `Phase N` | `active` | `discuss` | `Goal` | `Packet seeded` |
 
 ## Validation Contract Template
 
 | Deliverable | Verify command | Expected signal | Manual check | Golden | Audit owner | Status | Evidence | Packet hash |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `Deliverable` | `npm test` | `Temiz sonuc` | `UI veya diff kontrolu` | `tests/golden/workflow/...` | `audit` | `pending` | `docs/workflow/STATUS.md` | `pending_sync` |
+| `Deliverable` | `npm test` | `Clean result` | `UI or diff review` | `tests/golden/workflow/...` | `audit` | `pending` | `docs/workflow/STATUS.md` | `pending_sync` |
 
 ## Active Milestone Card Template
 
@@ -63,77 +64,79 @@ Bu template, yeni bir milestone acarken ayni lifecycle'i tekrar kurmak icin kull
 - Status: `active`
 - Step: `discuss`
 - Goal:
-  - `Milestone'un teslim hedefi`
+  - `Goal`
 - Success signal:
-  - `Neyin basari sayilacagi`
+  - `What success looks like`
 - Non-goals:
-  - `Bu milestone icinde yapilmayacaklar`
+  - `What will not be done in this milestone`
 - Workflow profile:
-  - `lite veya standard veya full`
+  - `standard`
 - Discuss mode:
-  - `assumptions veya interview`
+  - `assumptions`
 - Clarifying questions / assumptions:
-  - `Discuss sirasinda tabloya yazilacak`
+  - `Write assumptions or open questions here`
 - Seed intake:
-  - `SEEDS.md icinden gelen ilgili fikirler`
+  - `Write relevant seeds here`
 - Active recall intake:
-  - `MEMORY.md Active Recall Items icinden gelen ilgili notlar`
+  - `Write active recall intake here`
 - Research target files:
-  - `Degistirilmesi muhtemel dosyalar`
-  - `CARRYFORWARD.md icindeki ilgili maddeler`
+  - `Fill after discuss`
 - Plan checklist:
-  - `CONTEXT.md research-sonrasi guncel olmadan plan adimina gecme`
-  - `EXECPLAN.md icindeki Plan of Record bolumunu doldur`
-  - `Plani context window'a uygun 1-2 run chunk'a bol`
+  - `Do not start plan before research-updated context exists`
 - Execute notes:
-  - `Execute sirasinda doldur`
+  - `Use for execution notes`
 - Audit checklist:
-  - `Kosulacak komutlar, diff'ler, smoke check'ler ve manual review`
+  - `Use for audit notes`
 - Completion note:
-  - `Archive, kalan riskler, carryforward ve sonraki milestone onerisi`
+  - `Archive, carryforward, and next milestone recommendation`
 - Window note:
-  - `Minimum next-step budget birakmadan chunk olusturma`
+  - `Record any budget-specific note here`
 - Falsifier:
-  - `Bu milestone planini hangi bulgunun bozabilecegini yaz`
+  - `Write what could invalidate this milestone plan`
 
 ## Minimum Done Checklists
 
 - `discuss`
-  - `Goal/non-goals/success signal net`
-  - `Canonical refs + assumptions dolu`
-  - `Scope kanitli sekilde frame edildi`
+  - `Goal/non-goals/success signal are clear`
+  - `Canonical refs and assumptions are filled in`
+  - `Scope is framed with evidence`
 - `research`
-  - `Touched files dolu`
-  - `Dependency map + risks dolu`
-  - `Validation contract milestone scope'una daraltildi`
+  - `Touched files are known`
+  - `Dependency map and risks are filled in`
+  - `Validation contract is narrowed to milestone scope`
 - `plan`
-  - `Context plan-ready`
-  - `1-2 run chunk yazildi`
-  - `Audit plan + overhead alanlari dolu`
+  - `Context is plan-ready`
+  - `1-2` run chunks are written
+  - `Audit plan and overhead fields are filled in`
 - `execute`
-  - `Sadece aktif chunk uygulandi`
-  - `Status alanlari guncellendi`
-  - `Plan disi drift docs'a geri yazildi`
+  - `Only the active chunk was implemented`
+  - `Status fields were updated`
+  - `Off-plan drift was written back into docs`
 - `audit`
-  - `Verify command'ler kostu`
-  - `Manual checks + residual risks yazildi`
-  - `Strict health gate temiz`
+  - `Verify commands were run`
+  - `Manual checks and residual risks were recorded`
+  - `Strict health gate is clean`
 - `complete`
-  - `Archive yazildi`
-  - `Carryforward secildi`
-  - `Git closeout scope'u bilincli netlestirildi`
+  - `Archive output was written`
+  - `Carryforward was decided`
+  - `Git closeout scope was made explicit`
 
 ## Failure Playbook
 
 - `Hash drift`
   - `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
 - `Active root mismatch`
-  - `workflow:workstreams status -> workflow:switch-workstream veya --root ile dogru root'a don`
+  - `workflow:workstreams status -> workflow:switch-workstream or use --root`
 - `Resume ambiguity`
-  - `HANDOFF.md + WINDOW.md oku -> workflow:resume-work -> workflow:next`
+  - `Read HANDOFF.md + WINDOW.md -> workflow:resume-work -> workflow:next`
 - `Dirty worktree closeout`
-  - `complete-milestone icin explicit --stage-paths veya docs-only ise --allow-workflow-only kullan`
+  - `Use explicit --stage-paths or --allow-workflow-only when appropriate`
 
 ## Lifecycle Reminder
 
-`discuss -> research -> plan -> execute -> audit -> complete`
+- `discuss`
+- `research`
+- `plan`
+- `execute`
+- `audit`
+- `complete`

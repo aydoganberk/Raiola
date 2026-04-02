@@ -55,10 +55,10 @@ function renderAssumptionsTable(contextRef) {
   return renderMarkdownTable(
     ['Claim', 'Confidence', 'Evidence refs', 'Failure mode'],
     [[
-      'Discuss asamasinda doldurulacak',
+      'To be filled during discuss',
       'Unclear',
       contextRef,
-      'Milestone scope yanlis netlesebilir',
+      'Milestone scope may be framed incorrectly',
     ]],
   );
 }
@@ -71,7 +71,7 @@ function renderClaimLedgerTable(contextRef) {
       'inference',
       contextRef,
       'Likely',
-      'Research oncesi plan yapilabilir',
+      'Planning may begin before research is ready',
     ]],
   );
 }
@@ -80,8 +80,8 @@ function renderUnknownsTable() {
   return renderMarkdownTable(
     ['Unknown', 'Impact', 'Owner', 'Status'],
     [[
-      'Milestone-specific unknowns discuss asamasinda netlesecek',
-      'Plan kalitesini etkiler',
+      'Milestone-specific unknowns will be clarified during discuss',
+      'Affects plan quality',
       'owner',
       'open',
     ]],
@@ -93,9 +93,9 @@ function renderValidationContract(milestoneName, goldenRef, statusRef) {
     ['Deliverable', 'Verify command', 'Expected signal', 'Manual check', 'Golden', 'Audit owner', 'Status', 'Evidence', 'Packet hash'],
     [[
       `${milestoneName} scope`,
-      'Research sonrasi doldurulacak',
-      'Scope ve packet netlesecek',
-      'Discuss/research notlari gozden gecirilecek',
+      'Fill after research',
+      'Scope and packet become clear',
+      'Review discuss/research notes',
       goldenRef,
       'audit',
       'pending',
@@ -109,116 +109,116 @@ function renderMinimumDoneChecklist(profile) {
   const variants = {
     lite: {
       discuss: [
-        'Goal, non-goals ve success signal net',
-        'Ilgili cekirdek dosyalar tarandi',
-        'CONTEXT.md assumptions + canonical refs dolduruldu',
+        'Goal, non-goals, and success signal are clear',
+        'Relevant core files were scanned',
+        'CONTEXT.md assumptions and canonical refs were filled in',
       ],
       research: [
-        'Touched files yazildi',
-        'Riskler ve verification surface yazildi',
-        'VALIDATION.md milestone scopeuna daraltildi',
+        'Touched files were documented',
+        'Risks and verification surface were written down',
+        'VALIDATION.md was narrowed to milestone scope',
       ],
       plan: [
-        'Context plan-ready ise devam edildi',
-        '1-2 run chunk yazildi',
-        'Packet / execution / verify overhead alanlari dolduruldu',
+        'Work continued only when context was plan-ready',
+        '1-2 run chunks were written',
+        'Packet / execution / verify overhead fields were filled in',
       ],
       execute: [
-        'Sadece aktif chunk uygulandi',
-        'Plan disi drift varsa docs guncellendi',
-        'STATUS.md ozet alanlari tazelendi',
+        'Only the active chunk was executed',
+        'Docs were updated when work drifted beyond plan',
+        'STATUS.md summary fields were refreshed',
       ],
       audit: [
-        'Verify command satirlari kosuldu',
-        'Manual checks ve kalan riskler yazildi',
-        'Audit kapanmadan complete adimina gecilmedi',
+        'Verify command rows were run',
+        'Manual checks and remaining risks were written down',
+        'The milestone did not move to complete before audit closed',
       ],
       complete: [
-        'Carryforward secildi',
-        'Archive ve validation snapshot yazildi',
-        'Git closeout scopeu netlestirildi',
+        'Carryforward was selected',
+        'Archive and validation snapshot were written',
+        'Git closeout scope was made explicit',
       ],
     },
     standard: {
       discuss: [
-        'Goal, non-goals ve success signal net',
-        '5-15 ilgili dosya tarandi',
-        'Canonical refs, assumptions ve unknowns dolduruldu',
-        'Seed intake ve active recall intake kaydedildi',
+        'Goal, non-goals, and success signal are clear',
+        '5-15 relevant files were scanned',
+        'Canonical refs, assumptions, and unknowns were filled in',
+        'Seed intake and active recall intake were recorded',
       ],
       research: [
-        'Touched files yazildi',
-        'Dependency map cikarildi',
-        'Riskler ve verification surface yazildi',
-        'VALIDATION.md milestone scopeuna daraltildi',
+        'Touched files were documented',
+        'Dependency map was produced',
+        'Risks and verification surface were written down',
+        'VALIDATION.md was narrowed to milestone scope',
       ],
       plan: [
-        'Context plan-ready ise devam edildi',
-        'Carryforward + seed intake kontrol edildi',
-        '1-2 run chunk yazildi',
-        'Packet / execution / verify overhead ve audit plan yazildi',
+        'Work continued only when context was plan-ready',
+        'Carryforward and seed intake were reviewed',
+        '1-2 run chunks were written',
+        'Packet / execution / verify overhead and the audit plan were written',
       ],
       execute: [
-        'Sadece aktif chunk uygulandi',
-        'Plan disi drift varsa docs guncellendi',
-        'STATUS.md Verified/Inferred/Unknown guncellendi',
-        'Gerekirse active recall notu birakildi',
+        'Only the active chunk was executed',
+        'Docs were updated when work drifted beyond plan',
+        'STATUS.md Verified/Inferred/Unknown were updated',
+        'Active recall notes were saved when needed',
       ],
       audit: [
-        'Verify command satirlari kosuldu',
-        'Manual checks ve kalan riskler yazildi',
-        'Evidence / packet hash alanlari guncellendi',
-        'Complete oncesi strict health temizligi dogrulandi',
+        'Verify command rows were run',
+        'Manual checks and remaining risks were written down',
+        'Evidence / packet hash fields were updated',
+        'Strict health was confirmed clean before complete',
       ],
       complete: [
-        'Carryforward secildi',
-        'Archive ve validation snapshot yazildi',
-        'Active recall temizligi kontrol edildi',
-        'AGENTS.md / git closeout ihtiyaci kontrol edildi',
+        'Carryforward was selected',
+        'Archive and validation snapshot were written',
+        'Active recall cleanup was checked',
+        'AGENTS.md / git closeout needs were reviewed',
       ],
     },
     full: {
       discuss: [
-        'Goal, non-goals ve success signal net',
-        '5-15 ilgili dosya tarandi',
-        'Canonical refs, assumptions, unknowns ve falsifier yazildi',
-        'Seed intake ve active recall intake kaydedildi',
-        'Handoff/closeout ihtiyaci not edildi',
+        'Goal, non-goals, and success signal are clear',
+        '5-15 relevant files were scanned',
+        'Canonical refs, assumptions, unknowns, and falsifiers were written',
+        'Seed intake and active recall intake were recorded',
+        'Possible handoff/closeout needs were noted',
       ],
       research: [
-        'Touched files yazildi',
-        'Dependency map cikarildi',
-        'Riskler, verification surface ve research targets yazildi',
-        'VALIDATION.md milestone scopeuna daraltildi',
-        'Surec surtunmesi varsa RETRO.md icin not cikarildi',
+        'Touched files were documented',
+        'Dependency map was produced',
+        'Risks, verification surface, and research targets were written down',
+        'VALIDATION.md was narrowed to milestone scope',
+        'A RETRO note was captured if process friction appeared',
       ],
       plan: [
-        'Context plan-ready ise devam edildi',
-        'Carryforward + seed intake kontrol edildi',
-        '1-2 run chunk yazildi',
-        'Packet / execution / verify overhead ve audit plan yazildi',
-        'Resume anchor ve out-of-scope guardrails netlestirildi',
+        'Work continued only when context was plan-ready',
+        'Carryforward and seed intake were reviewed',
+        '1-2 run chunks were written',
+        'Packet / execution / verify overhead and the audit plan were written',
+        'Resume anchor and out-of-scope guardrails were clarified',
       ],
       execute: [
-        'Sadece aktif chunk uygulandi',
-        'Plan disi drift varsa docs guncellendi',
-        'STATUS.md Verified/Inferred/Unknown guncellendi',
-        'Gerekirse active recall notu birakildi',
-        'Process gap varsa RETRO.md icin not tutuldu',
+        'Only the active chunk was executed',
+        'Docs were updated when work drifted beyond plan',
+        'STATUS.md Verified/Inferred/Unknown were updated',
+        'Active recall notes were saved when needed',
+        'A RETRO note was kept if a process gap appeared',
       ],
       audit: [
-        'Verify command satirlari kosuldu',
-        'Manual checks ve kalan riskler yazildi',
-        'Evidence / packet hash alanlari guncellendi',
-        'Complete oncesi strict health temizligi dogrulandi',
-        'Process gap varsa RETRO.md kaydi hazirlandi',
+        'Verify command rows were run',
+        'Manual checks and remaining risks were written down',
+        'Evidence / packet hash fields were updated',
+        'Strict health was confirmed clean before complete',
+        'A RETRO entry was prepared if a process gap appeared',
       ],
       complete: [
-        'Carryforward secildi',
-        'Archive ve validation snapshot yazildi',
-        'Active recall temizligi kontrol edildi',
-        'AGENTS.md ve RETRO.md guncelleme ihtiyaci kontrol edildi',
-        'Git closeout scopeu bilincli sekilde netlestirildi',
+        'Carryforward was selected',
+        'Archive and validation snapshot were written',
+        'Active recall cleanup was checked',
+        'AGENTS.md and RETRO.md update needs were reviewed',
+        'Git closeout scope was made explicit intentionally',
       ],
     },
   };
@@ -298,10 +298,10 @@ function main() {
   const statusRef = path.relative(process.cwd(), paths.status).replace(/\\/g, '/');
   const workstreamsRef = path.relative(process.cwd(), controlPaths(process.cwd()).workstreams).replace(/\\/g, '/');
   const goldenRef = path.join('tests', 'golden', path.basename(rootDir), 'README.md').replace(/\\/g, '/');
-  const activeRecall = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'Henuz aktif recall notu yok')
+  const activeRecall = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'No active recall notes yet')
     .map((entry) => parseMemoryEntry(entry))
     .filter((entry) => entry.fields.Milestone === previousMilestone);
-  const openSeeds = parseSeedEntries(extractSection(seeds, 'Open Seeds'), 'Henuz acik seed yok');
+  const openSeeds = parseSeedEntries(extractSection(seeds, 'Open Seeds'), 'No open seeds yet');
 
   const milestoneTable = parseMilestoneTable(milestones);
   if (milestoneTable.rows.some((row) => row.status === 'active')) {
@@ -310,8 +310,8 @@ function main() {
 
   const currentPhaseMatch = status.match(/^- Current phase: `(.*?)`$/m);
   const phase = String(args.phase || currentPhaseMatch?.[1] || 'Phase 1 - Discuss').trim();
-  const successSignal = String(args.success || `Milestone ${milestoneId} icin scope, context ve research hedefleri net`).trim();
-  const nonGoals = String(args['non-goals'] || 'Bu milestone disindaki feature/refactor isleri').trim();
+  const successSignal = String(args.success || `Scope, context, and research targets are clear for milestone ${milestoneId}`).trim();
+  const nonGoals = String(args['non-goals'] || 'Feature/refactor work outside this milestone').trim();
   const carryforwardItems = getOpenCarryforwardItems(carryforward);
 
   milestoneTable.rows.push({
@@ -346,23 +346,23 @@ function main() {
 - Discuss mode:
   - \`${preferences.discussMode}\`
 - Clarifying questions / assumptions:
-  - \`CONTEXT.md icindeki assumptions tablosuna yaz\`
+  - \`Write these into the assumptions table in CONTEXT.md\`
 - Seed intake:
-  - \`${openSeeds.length === 0 ? 'Henuz acik seed yok' : `${openSeeds.length} open seed var`}\`
+  - \`${openSeeds.length === 0 ? 'No open seeds yet' : `${openSeeds.length} open seed(s)`}\`
 - Active recall intake:
-  - \`${activeRecall.length === 0 ? 'Bu milestone icin henuz active recall notu yok' : `${activeRecall.length} active recall notu var`}\`
+  - \`${activeRecall.length === 0 ? 'No active recall notes for this milestone yet' : `${activeRecall.length} active recall note(s)`}\`
 - Research target files:
-  - \`Discuss sonrasi doldurulacak\`
+  - \`Fill after discuss\`
 - Plan checklist:
-  - \`CONTEXT.md research-sonrasi guncel olmadan plan adimina gecme\`
-  - \`EXECPLAN.md icindeki Plan of Record bolumunu doldur\`
-  - \`Plani context window'a uygun 1-2 run chunk'a bol\`
+  - \`Do not move to planning until CONTEXT.md is current after research\`
+  - \`Fill the Plan of Record section in EXECPLAN.md\`
+  - \`Split the plan into 1-2 run chunks that fit the context window\`
 - Execute notes:
-  - \`Henuz yok\`
+  - \`None yet\`
 - Audit checklist:
-  - \`VALIDATION.md contract tablosunu doldur\`
+  - \`Fill the VALIDATION.md contract table\`
 - Completion note:
-  - \`Henuz yok\`
+  - \`None yet\`
 ${renderMinimumDoneChecklist(preferences.workflowProfile)}
 `);
 
@@ -371,20 +371,20 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
   status = replaceField(status, 'Current milestone', milestoneLabel);
   status = replaceField(status, 'Current milestone step', 'discuss');
   status = replaceField(status, 'Context readiness', 'not_ready');
-  status = replaceSection(status, 'In Progress', `- \`${milestoneLabel} discuss step'inde\``);
+  status = replaceSection(status, 'In Progress', `- \`${milestoneLabel} is in the discuss step\``);
   status = replaceSection(status, 'Verified', [
-    `- \`Milestone acildi ve packet seed edildi\``,
-    `- \`Validation / handoff / window surfaces milestone scope'u icin resetlendi\``,
+    '- `Milestone opened and packet seeded`',
+    '- `Validation / handoff / window surfaces were reset for milestone scope`',
   ].join('\n'));
-  status = replaceSection(status, 'Inferred', `- \`Research sonrasi run chunk plan'i netlesecek\``);
-  status = replaceSection(status, 'Unknown', `- \`Discuss tamamlanmadan tam file scope belli degil\``);
+  status = replaceSection(status, 'Inferred', '- `Run chunk planning will become clear after research`');
+  status = replaceSection(status, 'Unknown', '- `Full file scope is not known until discuss completes`');
   status = replaceSection(status, 'Next', [
-    `- \`Codebase-first discuss akisini baslat\``,
-    `- \`workflow:packet ve workflow:next ile packet/budget gorunumunu kontrol et\``,
+    '- `Start the codebase-first discuss flow`',
+    '- `Use workflow:packet and workflow:next to inspect packet/budget state`',
   ].join('\n'));
-  status = replaceSection(status, 'Risks', `- \`Discuss ve research tamamlanmadan plan adimina gecilmemeli\``);
-  status = replaceSection(status, 'Tests Run', `- \`Milestone seed edildi; verify komutlari research sonrasi daraltilacak\``);
-  status = replaceSection(status, 'Suggested Next Step', `- \`CONTEXT.md assumptions + claim ledger + canonical refs alanlarini doldur\``);
+  status = replaceSection(status, 'Risks', '- `Do not move to planning before discuss and research are complete`');
+  status = replaceSection(status, 'Tests Run', '- `Milestone seeded; verify commands will be narrowed after research`');
+  status = replaceSection(status, 'Suggested Next Step', '- `Fill assumptions, claim ledger, and canonical refs in CONTEXT.md`');
 
   execplan = replaceOrAppendField(execplan, 'Last updated', today());
   execplan = replaceField(execplan, 'Input hash', 'pending_sync');
@@ -395,11 +395,11 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
 - Milestone: \`${milestoneLabel}\`
 - Step owner: \`plan\`
 - Plan status: \`waiting_for_research\`
-- Carryforward considered: \`${carryforwardItems.length === 0 ? 'Henuz yok' : carryforwardItems.join('; ')}\`
+- Carryforward considered: \`${carryforwardItems.length === 0 ? 'None yet' : carryforwardItems.join('; ')}\`
 - Run chunk id: \`NONE\`
 - Run chunk hash: \`pending\`
 - Chunk cursor: \`0/0\`
-- Completed items: \`Yok\`
+- Completed items: \`None\`
 - Remaining items: \`Discuss -> research -> packet refresh\`
 - Resume from item: \`Discuss start\`
 - Estimated packet tokens: \`0\`
@@ -408,20 +408,20 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
 - Minimum reserve: \`${preferences.reserveFloorTokens}\`
 - Safe in current window: \`yes\`
 - Current run chunk:
-  - \`Yok\`
+  - \`None\`
 - Next run chunk:
-  - \`Research tamamlaninca ilk chunk yazilacak\`
+  - \`The first chunk will be written after research completes\`
 - Implementation checklist:
-  - \`Research tamamlaninca doldurulacak\`
+  - \`Fill this after research completes\`
 - Audit plan:
-  - \`Validation contract research sonrasi daraltilacak\`
+  - \`The validation contract will be narrowed after research\`
 - Out-of-scope guardrails:
-  - \`Aktif milestone disina tasma yok\`
+  - \`No work outside the active milestone\`
 `);
   execplan = replaceSection(execplan, 'Unknowns', renderUnknownsTable());
   execplan = replaceSection(execplan, 'What Would Falsify This Plan?', [
-    "- `Research bulgulari hedeflenen scope ile celisirse chunk plan'i yeniden yazilir`",
-    '- `Window budget yetersizse yeni step baslatilmaz`',
+    "- `If research findings conflict with the intended scope, the chunk plan must be rewritten`",
+    '- `If window budget is insufficient, do not start a new step`',
   ].join('\n'));
 
   context = replaceField(context, 'Last updated', today());
@@ -455,37 +455,37 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
 - Non-goals:
   - \`${nonGoals}\`
 `);
-  context = replaceSection(context, 'Codebase Scan Summary', `- \`Discuss asamasinda doldurulacak\``);
+  context = replaceSection(context, 'Codebase Scan Summary', '- `To be filled during discuss`');
   context = replaceSection(context, 'Clarifying Questions / Assumptions', renderAssumptionsTable(contextRef));
   context = replaceSection(context, 'Claim Ledger', renderClaimLedgerTable(contextRef));
   context = replaceSection(context, 'Unknowns', renderUnknownsTable());
-  context = replaceSection(context, 'Research Targets', `- \`Discuss sonrasi doldurulacak\``);
+  context = replaceSection(context, 'Research Targets', '- `Fill after discuss`');
   context = replaceSection(context, 'Carryforward Intake', carryforwardItems.length === 0
-    ? '- `Henuz carryforward item yok`'
+    ? '- `No carryforward items yet`'
     : carryforwardItems.map((item) => `- \`${item}\``).join('\n'));
   context = replaceSection(context, 'Seed Intake', openSeeds.length === 0
-    ? '- `Henuz acik seed yok`'
-    : openSeeds.map((entry) => `- \`${entry.title}\` -> \`Trigger: ${entry.fields.Trigger || 'Yok'}\``).join('\n'));
+    ? '- `No open seeds yet`'
+    : openSeeds.map((entry) => `- \`${entry.title}\` -> \`Trigger: ${entry.fields.Trigger || 'None'}\``).join('\n'));
   context = replaceSection(context, 'Active Recall Intake', activeRecall.length === 0
-    ? '- `Bu milestone icin henuz active recall notu yok`'
+    ? '- `No active recall notes for this milestone yet`'
     : activeRecall.map((entry) => `- \`${entry.title}\``).join('\n'));
-  context = replaceSection(context, 'Touched Files', `- \`Discuss sonrasi henuz netlesmedi\``);
+  context = replaceSection(context, 'Touched Files', '- `Still unclear until discuss completes`');
   context = replaceSection(context, 'Dependency Map', [
     `- \`${path.relative(process.cwd(), paths.execplan)} -> Plan of Record\``,
     `- \`${path.relative(process.cwd(), paths.validation)} -> Validation contract\``,
     `- \`${path.relative(process.cwd(), paths.window)} -> Budget state\``,
   ].join('\n'));
-  context = replaceSection(context, 'Risks', `- \`Discuss sonrasi doldurulacak\``);
+  context = replaceSection(context, 'Risks', '- `Fill after discuss`');
   context = replaceSection(context, 'Verification Surface', [
     '- `node scripts/workflow/build_packet.js --step discuss --json`',
     '- `node scripts/workflow/next_step.js --json`',
     '- `node scripts/workflow/health.js --strict`',
   ].join('\n'));
   context = replaceSection(context, 'What Would Falsify This Plan?', [
-    '- `Discuss bulgulari milestone goal ile celisirse context yeniden yazilir`',
-    '- `Canonical refs milestone ihtiyacini yansitmiyorsa packet gecersiz sayilir`',
+    '- `If discuss findings conflict with the milestone goal, rewrite the context`',
+    '- `If canonical refs do not reflect milestone needs, treat the packet as invalid`',
   ].join('\n'));
-  context = replaceSection(context, 'Ready For Plan', `- \`Hayir\``);
+  context = replaceSection(context, 'Ready For Plan', '- `No`');
 
   validation = replaceField(validation, 'Last updated', today());
   validation = replaceField(validation, 'Active milestone', milestoneLabel);
@@ -498,11 +498,11 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
   validation = replaceSection(validation, 'Validation Contract', renderValidationContract(milestoneName, goldenRef, statusRef));
   validation = replaceSection(validation, 'Unknowns', renderUnknownsTable());
   validation = replaceSection(validation, 'What Would Falsify This Plan?', [
-    '- `Validation contract bos verify/manual/evidence kolonlariyla kalirsa audit gecersizdir`',
-    '- `Packet hash stale kalirsa audit eski plan uzerinden kapanamaz`',
+    '- `If the validation contract keeps empty verify/manual/evidence columns, the audit is invalid`',
+    '- `If the packet hash stays stale, audit cannot close against the old plan`',
   ].join('\n'));
-  validation = replaceSection(validation, 'Audit Notes', `- \`Milestone acildi, validation contract research bekliyor\``);
-  validation = replaceSection(validation, 'Completion Gate', `- \`Audit kapanmadan complete milestone yapma\``);
+  validation = replaceSection(validation, 'Audit Notes', '- `Milestone opened; the validation contract is waiting for research`');
+  validation = replaceSection(validation, 'Completion Gate', '- `Do not complete the milestone before audit closes`');
 
   handoff = replaceField(handoff, 'Last updated', today());
   handoff = replaceField(handoff, 'Handoff status', 'idle');
@@ -513,12 +513,12 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
   handoff = replaceField(handoff, 'Packet hash', 'pending_sync');
   handoff = replaceField(handoff, 'Current chunk cursor', '0/0');
   handoff = replaceField(handoff, 'Expected first command', 'npm run workflow:health -- --strict');
-  handoff = replaceSection(handoff, 'Snapshot', `- \`Milestone acildi; discuss step baslamaya hazir\``);
+  handoff = replaceSection(handoff, 'Snapshot', '- `Milestone opened; ready to begin the discuss step`');
   handoff = replaceSection(handoff, 'Immediate Next Action', `
-- \`${preferences.discussMode === 'assumptions' ? 'Codebase-first assumptions discuss akisini baslat' : 'Discuss sorularini baslat'}\`
+- \`${preferences.discussMode === 'assumptions' ? 'Start the codebase-first assumptions discuss flow' : 'Start the discuss questions'}\`
 `);
   handoff = replaceSection(handoff, 'Execution Cursor', `
-- \`Completed checklist items: Yok\`
+- \`Completed checklist items: None\`
 - \`Remaining items: Discuss -> research -> packet refresh\`
 - \`Next unread canonical refs: ${path.relative(process.cwd(), paths.context)}; ${path.relative(process.cwd(), paths.execplan)}; ${path.relative(process.cwd(), paths.validation)}\`
 `);
@@ -539,7 +539,7 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
 - \`${path.relative(process.cwd(), paths.window)}\`
 `);
   handoff = replaceSection(handoff, 'Risks', `
-- \`Discuss ve research tamamlanmadan plan adimina gecilmemeli\`
+- \`Do not move to planning before discuss and research are complete\`
 `);
 
   window = replaceField(window, 'Last updated', today());

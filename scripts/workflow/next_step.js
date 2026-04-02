@@ -55,9 +55,9 @@ function deriveRecommendation(state) {
     recommendation.title = 'Resume from handoff';
     recommendation.command = 'npm run workflow:resume-work';
     recommendation.checklist = [
-      'HANDOFF.md icindeki execution cursor ve packet snapshot bolumlerini oku',
-      'Resume sonrasi workflow:health -- --strict kos',
-      'Health temizse workflow:next ile step check yap',
+      'Read the Execution Cursor and Packet Snapshot sections in HANDOFF.md',
+      'Run workflow:health -- --strict after resuming',
+      'If health is clean, run workflow:next for a fresh step check',
     ];
     recommendation.note = handoffNext;
     return recommendation;
@@ -67,9 +67,9 @@ function deriveRecommendation(state) {
     recommendation.title = 'Do not start the next step in this window';
     recommendation.command = 'npm run workflow:pause-work -- --summary "Window budget threshold reached"';
     recommendation.checklist = [
-      `WINDOW karari -> ${windowStatus.decision}`,
-      'Mevcut pencereyi compact et veya handoff snapshot al',
-      'Yeni pencerede workflow:resume-work -> workflow:health -- --strict -> workflow:next akisini izle',
+      `WINDOW decision -> ${windowStatus.decision}`,
+      'Compact the current window or capture a handoff snapshot',
+      'In the next window follow workflow:resume-work -> workflow:health -- --strict -> workflow:next',
     ];
     recommendation.note = `Remaining budget: ${windowStatus.estimatedRemainingTokens}`;
     return recommendation;
@@ -80,27 +80,27 @@ function deriveRecommendation(state) {
     recommendation.command = 'npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."';
     recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
       lite: [
-        'Gerekirse once workflow:workstreams status ile aktif rootu kontrol et',
-        'Task boyutuna gore lite|standard|full profilini sec',
-        'Yeni milestone acildiginda discuss step ile basla',
+        'If needed, check the active root first with workflow:workstreams status',
+        'Choose the lite|standard|full profile based on task size',
+        'Start with the discuss step when the new milestone opens',
       ],
       standard: [
-        'Gerekirse once workflow:workstreams status ile aktif rootu kontrol et',
-        'Open seeds varsa yeni milestone scopeuna uygun olanlari cek',
-        'Task boyutuna gore lite|standard|full profilini sec',
-        'Yeni milestone acildiginda discuss step ile basla',
+        'If needed, check the active root first with workflow:workstreams status',
+        'Pull in any open seeds that match the new milestone scope',
+        'Choose the lite|standard|full profile based on task size',
+        'Start with the discuss step when the new milestone opens',
       ],
       full: [
-        'Gerekirse once workflow:workstreams status ile aktif rootu kontrol et',
-        'Open seeds ve carryforward varsa milestone scopeuna cek',
-        'Handoff/closeout gerekiyorsa full profili sec',
-        'Yeni milestone acildiginda discuss step ile basla',
-        'RETRO.md only-once process gap var mi diye hizlica tara',
+        'If needed, check the active root first with workflow:workstreams status',
+        'Pull open seeds and carryforward items into milestone scope when relevant',
+        'Choose the full profile if handoff/closeout is likely',
+        'Start with the discuss step when the new milestone opens',
+        'Quickly scan RETRO.md for any one-time process gaps',
       ],
     });
     recommendation.note = seeds.length > 0
-      ? `Acik seed sayisi: ${seeds.length} | profil=${preferences.workflowProfile}`
-      : `Aktif milestone yok | profil=${preferences.workflowProfile}`;
+      ? `Open seeds: ${seeds.length} | profile=${preferences.workflowProfile}`
+      : `There is no active milestone | profile=${preferences.workflowProfile}`;
     return recommendation;
   }
 
@@ -108,80 +108,80 @@ function deriveRecommendation(state) {
     recommendation.title = preferences.discussMode === 'assumptions'
       ? 'Run discuss in assumptions mode'
       : 'Run discuss in interview mode';
-    recommendation.command = 'Discuss tamamlaninca CONTEXT.md initial packet snapshot guncellenmeli';
+    recommendation.command = 'Refresh the initial packet snapshot in CONTEXT.md when discuss is done';
     recommendation.checklist = preferences.discussMode === 'assumptions'
       ? checklistForProfile(preferences.workflowProfile, {
         lite: [
-          'Ilgili cekirdek dosyalari tara ve scope varsayimlarini yaz',
-          'Goal, non-goals ve success signal alanlarini netlestir',
-          'CONTEXT.md icinde canonical refs + assumptions tablosunu doldur',
+          'Scan the relevant core files and write scope assumptions',
+          'Clarify goal, non-goals, and success signal',
+          'Fill in canonical refs and the assumptions table in CONTEXT.md',
         ],
         standard: [
-          '5-15 ilgili dosya tara ve kanitli varsayim tablosunu doldur',
-          'Goal, non-goals ve success signal alanlarini netlestir',
-          'Claim Ledger, Unknowns ve Canonical Refs bolumlerini doldur',
-          'CONTEXT.md icinde seed intake ve active recall baglamini yaz',
+          'Scan 5-15 relevant files and fill in the evidence-backed assumptions table',
+          'Clarify goal, non-goals, and success signal',
+          'Fill Claim Ledger, Unknowns, and Canonical Refs',
+          'Write seed intake and active recall context into CONTEXT.md',
         ],
         full: [
-          '5-15 ilgili dosya tara ve kanitli varsayim tablosunu doldur',
-          'Goal, non-goals ve success signal alanlarini netlestir',
-          'Claim Ledger, Unknowns ve Canonical Refs bolumlerini doldur',
-          'Seed intake, active recall ve failure/falsifier notlarini yaz',
-          'Research bitmeden once hangi bulgunun scopeu bozabilecegini not et',
+          'Scan 5-15 relevant files and fill in the evidence-backed assumptions table',
+          'Clarify goal, non-goals, and success signal',
+          'Fill Claim Ledger, Unknowns, and Canonical Refs',
+          'Write seed intake, active recall, and failure/falsifier notes',
+          'Note which finding could invalidate scope before research finishes',
         ],
       })
       : checklistForProfile(preferences.workflowProfile, {
         lite: [
-          'Goal, non-goals ve success signal alanlarini netlestir',
-          'Sadece yuksek etkili sorular sor',
-          'CONTEXT.md initial packet snapshot alanlarini doldur',
+          'Clarify goal, non-goals, and success signal',
+          'Ask only high-impact questions',
+          'Fill the initial packet snapshot fields in CONTEXT.md',
         ],
         standard: [
-          'Goal, non-goals ve success signal alanlarini netlestir',
-          'Sadece yuksek etkili sorular sor',
-          'Assumptions tablosuna kalan belirsizlikleri yaz',
-          'CONTEXT.md initial packet snapshot alanlarini doldur',
+          'Clarify goal, non-goals, and success signal',
+          'Ask only high-impact questions',
+          'Write unresolved uncertainty into the assumptions table',
+          'Fill the initial packet snapshot fields in CONTEXT.md',
         ],
         full: [
-          'Goal, non-goals ve success signal alanlarini netlestir',
-          'Sadece yuksek etkili sorular sor',
-          'Assumptions tablosuna kalan belirsizlikleri yaz',
-          'Canonical refs, unknowns ve falsifier alanlarini doldur',
-          'Handoff/closeout gerekecekse bunu simdiden not et',
+          'Clarify goal, non-goals, and success signal',
+          'Ask only high-impact questions',
+          'Write unresolved uncertainty into the assumptions table',
+          'Fill canonical refs, unknowns, and falsifier fields',
+          'Note early if handoff/closeout is likely',
         ],
       });
     recommendation.note = activeRecall.length > 0
-      ? `Bu milestone icin ${activeRecall.length} active recall notu var | profil=${preferences.workflowProfile}`
-      : `Discuss sonrasi CONTEXT.md plan-ready degil | profil=${preferences.workflowProfile}`;
+      ? `This milestone has ${activeRecall.length} active recall note(s) | profile=${preferences.workflowProfile}`
+      : `After discuss, CONTEXT.md is not yet plan-ready | profile=${preferences.workflowProfile}`;
     return recommendation;
   }
 
   if (step === 'research') {
     recommendation.title = 'Consolidate research and validation inputs';
-    recommendation.command = 'Research bitince CONTEXT.md + VALIDATION.md guncelle';
+    recommendation.command = 'Update CONTEXT.md and VALIDATION.md when research is complete';
     recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
       lite: [
-        'Touched files alanini doldur',
-        'Risks ve verification surface alanlarini yaz',
-        'VALIDATION.md contract tablosunu milestone scopeuna daralt',
+        'Fill the touched files section',
+        'Write the risks and verification surface sections',
+        'Narrow the VALIDATION.md contract table to milestone scope',
       ],
       standard: [
-        'Touched files, dependency map ve risks alanlarini CONTEXT.md icine yaz',
-        'Verification surface ve research target files alanlarini guncelle',
-        'VALIDATION.md contract tablosunu milestone scopeuna daralt',
-        'Plan readiness alanini only-ready ise guncelle',
+        'Write touched files, dependency map, and risks into CONTEXT.md',
+        'Update verification surface and research target files',
+        'Narrow the VALIDATION.md contract table to milestone scope',
+        'Update plan readiness only if it is truly ready',
       ],
       full: [
-        'Touched files, dependency map ve risks alanlarini CONTEXT.md icine yaz',
-        'Verification surface, research targets ve falsifier alanlarini guncelle',
-        'VALIDATION.md contract tablosunu milestone scopeuna daralt',
-        'Plan readiness alanini only-ready ise guncelle',
-        'Tekrarlayan surec surtunmesi varsa RETRO.md icin not cikar',
+        'Write touched files, dependency map, and risks into CONTEXT.md',
+        'Update verification surface, research targets, and falsifier fields',
+        'Narrow the VALIDATION.md contract table to milestone scope',
+        'Update plan readiness only if it is truly ready',
+        'Capture a RETRO note if recurring process friction appeared',
       ],
     });
     recommendation.note = contextReadiness === 'plan_ready'
-      ? `Context hazir, plan step baslayabilir | profil=${preferences.workflowProfile}`
-      : `Research bulgulari tamamlaninca plan adimina gec | profil=${preferences.workflowProfile}`;
+      ? `Context is ready; the plan step can start | profile=${preferences.workflowProfile}`
+      : `Move to the plan step once research findings are complete | profile=${preferences.workflowProfile}`;
     return recommendation;
   }
 
@@ -190,79 +190,79 @@ function deriveRecommendation(state) {
     recommendation.command = 'EXECPLAN.md > Plan of Record';
     recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
       lite: [
-        'CARRYFORWARD.md ve ilgili seedleri oku',
-        'Plani 1-2 run chunk olacak sekilde yaz',
-        'Estimated packet / execution / verify overhead alanlarini doldur',
+        'Read CARRYFORWARD.md and the relevant seeds',
+        'Write the plan so it fits into 1-2 run chunks',
+        'Fill the estimated packet / execution / verify overhead fields',
       ],
       standard: [
-        'CARRYFORWARD.md ve ilgili seedleri oku',
-        'Plani 1-2 run chunk olacak sekilde yaz ve chunk cursor alanlarini doldur',
-        'Estimated packet tokens / execution overhead / verify overhead alanlarini doldur',
-        'Out-of-scope guardrails ve audit plan alanlarini netlestir',
+        'Read CARRYFORWARD.md and the relevant seeds',
+        'Write the plan so it fits into 1-2 run chunks and fill chunk cursor fields',
+        'Fill estimated packet tokens / execution overhead / verify overhead',
+        'Clarify out-of-scope guardrails and the audit plan',
       ],
       full: [
-        'CARRYFORWARD.md ve ilgili seedleri oku',
-        'Plani 1-2 run chunk olacak sekilde yaz ve chunk cursor alanlarini doldur',
-        'Estimated packet tokens / execution overhead / verify overhead alanlarini doldur',
-        'Out-of-scope guardrails, audit plan ve resume anchor alanlarini netlestir',
-        'Yeni chunk minimum next-step budget birakiyorsa devam et; aksi halde bol',
+        'Read CARRYFORWARD.md and the relevant seeds',
+        'Write the plan so it fits into 1-2 run chunks and fill chunk cursor fields',
+        'Fill estimated packet tokens / execution overhead / verify overhead',
+        'Clarify out-of-scope guardrails, audit plan, and resume anchor',
+        'Only continue if the new chunk leaves minimum next-step budget; otherwise split it',
       ],
     });
-    recommendation.note = `Plan source of truth EXECPLAN.md icindeki Plan of Record bolumudur | profil=${preferences.workflowProfile}`;
+    recommendation.note = `The source of truth is the Plan of Record section in EXECPLAN.md | profile=${preferences.workflowProfile}`;
     return recommendation;
   }
 
   if (step === 'execute') {
     recommendation.title = 'Execute the current run chunk';
-    recommendation.command = 'EXECPLAN.md icindeki Current run chunk checklistini uygula';
+    recommendation.command = 'Apply the Current run chunk checklist in EXECPLAN.md';
     recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
       lite: [
-        'Sadece aktif milestone scopeunda kal',
-        'Plan disina tasma varsa once docs guncelle',
-        'Anlamli degisikliklerde STATUS.md ozet alanlarini guncelle',
+        'Stay strictly inside the active milestone scope',
+        'If work drifts beyond plan, update docs first',
+        'Refresh summary fields in STATUS.md after meaningful changes',
       ],
       standard: [
-        'Sadece aktif milestone scopeunda kal',
-        'Plan disina tasma varsa once docs guncelle',
-        'Anlamli degisikliklerde STATUS.md Verified/Inferred/Unknown alanlarini guncelle',
-        'Gerekirse ara hatirlatmalari Active Recall Items olarak kaydet',
+        'Stay strictly inside the active milestone scope',
+        'If work drifts beyond plan, update docs first',
+        'Refresh STATUS.md Verified/Inferred/Unknown after meaningful changes',
+        'Save intermediate reminders as Active Recall Items when needed',
       ],
       full: [
-        'Sadece aktif milestone scopeunda kal',
-        'Plan disina tasma varsa once docs guncelle',
-        'Anlamli degisikliklerde STATUS.md Verified/Inferred/Unknown alanlarini guncelle',
-        'Gerekirse ara hatirlatmalari Active Recall Items olarak kaydet',
-        'Surec surtunmesi yasandiysa closeout sonrasi RETRO.md icin kisa not tut',
+        'Stay strictly inside the active milestone scope',
+        'If work drifts beyond plan, update docs first',
+        'Refresh STATUS.md Verified/Inferred/Unknown after meaningful changes',
+        'Save intermediate reminders as Active Recall Items when needed',
+        'If process friction happened, keep a short note for RETRO.md after closeout',
       ],
     });
-    recommendation.note = `Execute sirasinda plan disina tasma varsa once docs guncelle | profil=${preferences.workflowProfile}`;
+    recommendation.note = `If execution drifts beyond plan, update docs first | profile=${preferences.workflowProfile}`;
     return recommendation;
   }
 
   if (step === 'audit') {
     recommendation.title = 'Run validation and audit';
-    recommendation.command = 'VALIDATION.md ve STATUS.md uzerinden audit kapat';
+    recommendation.command = 'Close the audit using VALIDATION.md and STATUS.md';
     recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
       lite: [
-        'VALIDATION.md contract tablosundaki verify command satirlarini kos',
-        'Manual checks ve kalan riskleri STATUS.md icine yaz',
-        'Audit kapanmadan complete milestone yapma',
+        'Run the verify command rows in the VALIDATION.md contract table',
+        'Write manual checks and remaining risks into STATUS.md',
+        'Do not complete the milestone before audit closes',
       ],
       standard: [
-        'VALIDATION.md contract tablosundaki verify command satirlarini kos',
-        'Manual checks ve kalan riskleri STATUS.md icine yaz',
-        'Evidence ve packet hash kolonlarini guncelle',
-        'Complete oncesi workflow:health -- --strict temizligini dogrula',
+        'Run the verify command rows in the VALIDATION.md contract table',
+        'Write manual checks and remaining risks into STATUS.md',
+        'Update evidence and packet hash columns',
+        'Confirm workflow:health -- --strict is clean before complete',
       ],
       full: [
-        'VALIDATION.md contract tablosundaki verify command satirlarini kos',
-        'Manual checks ve kalan riskleri STATUS.md icine yaz',
-        'Evidence ve packet hash kolonlarini guncelle',
-        'Complete oncesi workflow:health -- --strict temizligini dogrula',
-        'Surec kaynakli bir gap varsa RETRO.md icin tek satirlik not cikar',
+        'Run the verify command rows in the VALIDATION.md contract table',
+        'Write manual checks and remaining risks into STATUS.md',
+        'Update evidence and packet hash columns',
+        'Confirm workflow:health -- --strict is clean before complete',
+        'If a process gap appeared, capture a one-line RETRO note',
       ],
     });
-    recommendation.note = `Audit kapanmadan complete milestone yapma | profil=${preferences.workflowProfile}`;
+    recommendation.note = `Do not complete the milestone before audit closes | profile=${preferences.workflowProfile}`;
     return recommendation;
   }
 
@@ -270,25 +270,25 @@ function deriveRecommendation(state) {
   recommendation.command = 'npm run workflow:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths <paths>';
   recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
     lite: [
-      'Carryforward maddelerini sec',
-      'Validation contract ve packet snapshot archive icine tasinacak',
-      'Git scope net degilse --stage-paths ver',
+      'Select carryforward items',
+      'The validation contract and packet snapshot will move into the archive',
+      'Pass --stage-paths if the git scope is not obvious',
     ],
     standard: [
-      'Carryforward maddelerini sec',
-      'Validation contract ve packet snapshot archive icine tasinacak',
-      'AGENTS.md guncellemesi gerekip gerekmedigini kontrol et',
-      'Git scope net degilse --stage-paths ver veya docs-only ise --allow-workflow-only kullan',
+      'Select carryforward items',
+      'The validation contract and packet snapshot will move into the archive',
+      'Check whether AGENTS.md needs an update',
+      'Pass --stage-paths if git scope is not obvious, or use --allow-workflow-only for docs-only closeout',
     ],
     full: [
-      'Carryforward maddelerini sec',
-      'Validation contract ve packet snapshot archive icine tasinacak',
-      'Active Recall Items temizliginin milestone ile uyumlu oldugunu kontrol et',
-      'AGENTS.md ve RETRO.md icin process guncellemesi gerekip gerekmedigini kontrol et',
-      'Git scope net degilse --stage-paths ver veya docs-only ise --allow-workflow-only kullan',
+      'Select carryforward items',
+      'The validation contract and packet snapshot will move into the archive',
+      'Confirm Active Recall cleanup matches the milestone',
+      'Check whether AGENTS.md and RETRO.md need process updates',
+      'Pass --stage-paths if git scope is not obvious, or use --allow-workflow-only for docs-only closeout',
     ],
   });
-  recommendation.note = `Complete sonrasi yeni milestone planningi baslar | profil=${preferences.workflowProfile}`;
+  recommendation.note = `Planning for the next milestone starts after complete | profile=${preferences.workflowProfile}`;
   return recommendation;
 }
 
@@ -314,10 +314,10 @@ function main() {
   const contextReadiness = String(getFieldValue(status, 'Context readiness') || 'unknown').trim();
   const handoffStatus = String(getFieldValue(handoff, 'Handoff status') || 'idle').trim();
   const handoffNext = extractSection(handoff, 'Immediate Next Action');
-  const activeRecall = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'Henuz aktif recall notu yok')
+  const activeRecall = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'No active recall notes yet')
     .map((entry) => parseMemoryEntry(entry))
     .filter((entry) => entry.fields.Milestone === milestone);
-  const seeds = parseSeedEntries(extractSection(seedsDoc, 'Open Seeds'), 'Henuz acik seed yok');
+  const seeds = parseSeedEntries(extractSection(seedsDoc, 'Open Seeds'), 'No open seeds yet');
   const windowStatus = computeWindowStatus(paths);
 
   const recommendation = deriveRecommendation({
@@ -369,7 +369,7 @@ function main() {
   console.log(`- Can start next step: \`${payload.windowStatus.canStartNextStep ? 'yes' : 'no'}\``);
   console.log(`\n## Recommended Read Set\n`);
   if (payload.recommendedReadSet.length === 0) {
-    console.log('- `Recommended read set henuz yok`');
+    console.log('- `No recommended read set yet`');
   } else {
     for (const item of payload.recommendedReadSet) {
       console.log(`- \`${item}\``);

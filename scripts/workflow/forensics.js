@@ -128,20 +128,20 @@ ${safeGit(cwd, ['log', '--oneline', '-n', '10'])}
 ## Likely Hallucination Candidates
 
 ${evidenceIssues.length === 0
-    ? '- `Belirgin hallucination adayi bulunmadi`'
+    ? '- `No obvious hallucination candidates found`'
     : evidenceIssues.map((item) => `- \`${item.kind}: ${item.claim} -> ${item.message}${item.ref ? ` (${item.ref})` : ''}\``).join('\n')}
 
 ## Validation Gaps
 
 ${validationIssues.length === 0
-    ? '- `Validation contract gap bulunmadi`'
+    ? '- `No validation contract gaps found`'
     : validationIssues.map((item) => `- \`${item.message}\``).join('\n')}
 
 ## Suspected Root Causes
 
-- \`Hash drift varsa stale packet kullaniliyor olabilir\`
-- \`Budget warn/critical ise pencereye sigmayan chunk planlanmis olabilir\`
-- \`Evidence issue varsa source-backed olmayan claim complete akisini bozuyor olabilir\`
+- \`If hash drift exists, a stale packet may be in use\`
+- \`If budget is warn/critical, a chunk may have been planned that does not fit the window\`
+- \`If evidence issues exist, unsupported source-backed claims may be blocking closeout\`
 
 ## Recommended Repair Order
 

@@ -5,38 +5,38 @@ description: "Repo workstream continuity protocol. Use only when the user explic
 
 # codex-workflow
 
-Bu skill, repo icindeki cok-seansli isleri ayni kalici protokolle surdurmek icin kullanilir.
-Varsayilan degildir; kullanici workflow'u acikca istemediyse normal task akisiyla ilerlenir.
+This skill is used to run multi-session work inside a repository through one durable workflow protocol.
+It is not the default path; if the user did not explicitly ask for workflow, continue with the normal task flow.
 
-## Ne zaman kullanilir
+## When To Use
 
-- Kullanici acikca workflow/milestone/handoff/closeout disiplini istediginde
-- Kullanici daha once acikca baslatilmis yarim bir workflow milestone'unu devam ettirmeyi istediginde
-- Named workstream, validation kontrati veya pause/resume snapshot'i explicit olarak istendiginde
+- When the user explicitly wants workflow, milestone, handoff, or closeout discipline
+- When the user wants to continue a previously opened workflow milestone
+- When named workstreams, validation contracts, or pause/resume snapshots are explicitly needed
 
 ## Granularity
 
-- Varsayilan planning birimi tek milestone'dur.
-- Tek bir kullanici istegi genelde tek milestone olarak ele alinir.
-- `discuss -> research -> plan -> execute -> audit -> complete` asamalari ayrik milestone degil, ayni milestone'un step'leridir.
+- The default planning unit is a single milestone.
+- One user request usually maps to one milestone.
+- `discuss -> research -> plan -> execute -> audit -> complete` are steps within that milestone, not separate milestones.
 
-## Workflow Profilleri
+## Workflow Profiles
 
 - `lite`
-  - `Kucuk, tek-seansli veya dusuk rituel gerektiren isler`
+  - `Small, short-lived, low-ritual tasks`
 - `standard`
-  - `Varsayilan genel amacli profil`
+  - `Default general-purpose profile`
 - `full`
-  - `Gercek handoff/closeout, cok-seansli koordinasyon ve process kalite takibi gereken isler`
-- `Workflow mode` ile `Workflow profile` ayridir:
-  - `mode` ekip/git izolasyonunu belirler
-  - `profile` rituel derinligini ve minimum done beklentisini belirler
+  - `Real handoff/closeout, multi-session coordination, and process-quality tracking`
+- `Workflow mode` and `Workflow profile` are different:
+  - `mode` controls team/git isolation behavior
+  - `profile` controls ritual depth and minimum-done expectations
 
-## Baslangic sirasi
+## Startup Sequence
 
-1. `AGENTS.md` oku.
-2. Aktif workstream root'unu `docs/workflow/WORKSTREAMS.md` uzerinden coz.
-3. Ilgili root altinda su dosyalari oku:
+1. Read `AGENTS.md`.
+2. Resolve the active workstream root from `docs/workflow/WORKSTREAMS.md`.
+3. In that root, read:
    - `PROJECT.md`
    - `RUNTIME.md`
    - `PREFERENCES.md`
@@ -50,73 +50,73 @@ Varsayilan degildir; kullanici workflow'u acikca istemediyse normal task akisiyl
    - `HANDOFF.md`
    - `WINDOW.md`
    - `SEEDS.md`
-4. `MEMORY.md` icinde aktif milestone'a bagli `Active Recall Items` varsa otomatik oku.
-5. `MEMORY.md` icindeki `Durable Notes` bolumunu yalnizca kullanici kalici hafiza tutmani istediyse veya task icin gercekten gerekli ise oku.
-6. Mevcut state'i `8-12` maddede ozetle.
-7. Yalnizca aktif fazi, aktif milestone'u ve aktif milestone step'ini uygula.
+4. If `MEMORY.md` contains `Active Recall Items` tied to the active milestone, read them automatically.
+5. Read `Durable Notes` from `MEMORY.md` only if the user asked for durable memory or if it is genuinely necessary.
+6. Summarize current state in `8-12` bullets.
+7. Operate only within the active phase, active milestone, and active milestone step.
 
-## Milestone loop
+## Milestone Loop
 
-Aktif milestone her zaman su loop ile ilerler:
+An active milestone always follows this loop:
 
 1. `discuss`
-   - Once codebase'i tara.
-   - `PREFERENCES.md` icindeki `Discuss mode` degerine gore ilerle:
-     - `assumptions`: once dosyalari oku, sonra kanitli varsayim listesi cikar.
-     - `interview`: once hedefi netlestir, sonra yalnizca yuksek etkili sorular sor.
-   - `CONTEXT.md` icinde problem frame, scan summary, canonical refs, claim ledger, unknowns, seed intake ve active recall intake'i yaz.
+   - Scan the codebase first.
+   - Follow the value of `Discuss mode` in `PREFERENCES.md`:
+     - `assumptions`: read the codebase first, then write evidence-backed assumptions.
+     - `interview`: clarify the goal first, then ask only high-leverage questions.
+   - Write problem frame, scan summary, canonical refs, claim ledger, unknowns, seed intake, and active recall intake into `CONTEXT.md`.
 2. `research`
-   - Degisecek dosyalari, bagimliliklari, riskleri ve verification surface'i cikar.
-   - `CONTEXT.md`yi research bulgulari ile guncelle.
-   - `VALIDATION.md` icindeki success contract, verify command ve manual check alanlarini aktif milestone scope'una daralt.
+   - Identify touched files, dependencies, risks, and verification surface.
+   - Update `CONTEXT.md` with research findings.
+   - Narrow the success contract, verify commands, and manual check fields in `VALIDATION.md` to the active milestone scope.
 3. `plan`
-   - Yalnizca `CONTEXT.md` research-sonrasi guncelse devam et.
-   - `CARRYFORWARD.md` ve ilgili seed'leri oku.
-   - Source of truth plani `EXECPLAN.md` icindeki `Plan of Record` bolumune yaz.
-   - Plani context window'a uygun 1-2 run chunk olacak sekilde bol.
-   - `WINDOW.md` ve packet budget yeni chunk icin yeterli degilse yeni step baslatma.
+   - Continue only if `CONTEXT.md` is current after research.
+   - Read `CARRYFORWARD.md` and relevant seeds.
+   - Write the source-of-truth plan into `Plan of Record` in `EXECPLAN.md`.
+   - Split the plan into `1-2` run-sized chunks that fit the current context window.
+   - If `WINDOW.md` and packet budget are insufficient for a new chunk, do not start a new step.
 4. `execute`
-   - Yalnizca aktif milestone planini uygula.
-   - Gerekirse ayni milestone icin `workflow:save-memory` ile active recall notu birak.
+   - Apply only the active milestone plan.
+   - Leave active recall notes with `workflow:save-memory` if needed.
 5. `audit`
-   - `VALIDATION.md` contract tablosu uzerinden test, diff, review veya smoke check yap.
-   - Sonucu ve kalan riskleri `STATUS.md`'ye yaz.
+   - Use the `VALIDATION.md` contract table for test, diff, review, or smoke checks.
+   - Write the result and remaining risks into `STATUS.md`.
 6. `complete`
-   - Kaniti, kalan riskleri ve sonraki milestone onerini yaz.
-   - Tamamlanmayan maddeleri gerekiyorsa `CARRYFORWARD.md`'ye tasi.
-   - Milestone ozetini, final context'i ve validation snapshot'ini `completed_milestones/` altina arsivle.
-   - O milestone'a bagli `Active Recall Items` kayitlarini `MEMORY.md` icinden temizle.
-   - `AGENTS.md` guncellemesi gerekip gerekmedigini kontrol et.
-   - Audit kapanmissa `workflow:health -- --strict` temizken commit ve push protokolunu uygula.
+   - Write evidence, remaining risks, and the recommended next milestone.
+   - Move unfinished items into `CARRYFORWARD.md` if needed.
+   - Archive milestone summary, final context, and validation snapshot under `completed_milestones/`.
+   - Remove milestone-linked `Active Recall Items` from `MEMORY.md`.
+   - Check whether `AGENTS.md` needs an update.
+   - If audit is closed, apply commit and push protocol only while `workflow:health -- --strict` is clean.
 
 ## Minimum Done Checklists
 
 - `discuss`
-  - `Goal/non-goals/success signal net`
-  - `Canonical refs + assumptions dolu`
-  - `Scope kanitli sekilde frame edildi`
+  - `Goal/non-goals/success signal are clear`
+  - `Canonical refs and assumptions are filled in`
+  - `Scope is framed with evidence`
 - `research`
-  - `Touched files dolu`
-  - `Dependency map + risks dolu`
-  - `VALIDATION.md milestone scope'una daraltildi`
+  - `Touched files are known`
+  - `Dependency map and risks are filled in`
+  - `VALIDATION.md is narrowed to milestone scope`
 - `plan`
-  - `Context plan-ready`
-  - `1-2 run chunk yazildi`
-  - `Audit plan + overhead alanlari dolu`
+  - `Context is plan-ready`
+  - `1-2` run chunks are written
+  - `Audit plan and overhead fields are filled in`
 - `execute`
-  - `Sadece aktif chunk uygulandi`
-  - `Status alanlari guncellendi`
-  - `Plan disi drift docs'a geri yazildi`
+  - `Only the active chunk was implemented`
+  - `Status fields were updated`
+  - `Off-plan drift was written back into docs`
 - `audit`
-  - `Verify command'ler kostu`
-  - `Manual checks + residual risks yazildi`
-  - `Strict health gate temiz`
+  - `Verify commands were run`
+  - `Manual checks and residual risks were documented`
+  - `Strict health gate is clean`
 - `complete`
-  - `Archive yazildi`
-  - `Carryforward secildi`
-  - `Git closeout scope'u bilincli netlestirildi`
+  - `Archive output was written`
+  - `Carryforward was decided`
+  - `Git closeout scope was made explicit`
 
-## Operasyonel helper'lar
+## Operational Helpers
 
 - `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."`
 - `npm run workflow:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths src/foo,tests/foo`
@@ -136,34 +136,34 @@ Aktif milestone her zaman su loop ile ilerler:
 - `Hash drift`
   - `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
 - `Active root mismatch`
-  - `workflow:workstreams status -> workflow:switch-workstream veya --root ile dogru root'a don`
+  - `workflow:workstreams status -> workflow:switch-workstream or use --root to return to the correct root`
 - `Resume ambiguity`
-  - `HANDOFF.md + WINDOW.md oku -> workflow:resume-work -> workflow:next`
+  - `Read HANDOFF.md + WINDOW.md -> workflow:resume-work -> workflow:next`
 - `Dirty worktree closeout`
-  - `complete-milestone icin explicit --stage-paths veya docs-only ise --allow-workflow-only kullan`
+  - `Use explicit --stage-paths or --allow-workflow-only when it is truly docs-only`
 
-## Calisma kurallari
+## Working Rules
 
-- `STATUS.md` active-window only tutulur.
-- `EXECPLAN.md` plan step'inin tek source of truth'udur.
-- `DECISIONS.md` yalnizca kalici cross-milestone kararlar icindir.
-- `VALIDATION.md` audit kontratinin kanonik kaynagidir.
-- `HANDOFF.md` session-level pause/resume snapshot'idir.
-- `WINDOW.md` aktif context budget ve execution cursor karari icindir.
-- `SEEDS.md`, `CARRYFORWARD.md` ile karistirilmaz:
-  - `CARRYFORWARD`: kapanmayan aktif isler
-  - `SEEDS`: daha sonraya ekilecek fikirler
-- `WORKSTREAMS.md` aktif root'u kaydeder; script'ler explicit `--root` verilmediginde once buraya bakar.
-- `PREFERENCES.md` solo/team mode, discuss mode ve git isolation davranisini belirler.
-- Named stream gerekiyorsa generic `docs/workflow/*` yerine `docs/<workstream>/*` surface'ine gec.
-- `AGENTS.md` combined size limiti varsayilan olarak `32 KiB` kabul edilir; buyurse baglami bol.
+- `STATUS.md` is active-window only.
+- `EXECPLAN.md` is the sole source of truth for the plan step.
+- `DECISIONS.md` is only for durable cross-milestone decisions.
+- `VALIDATION.md` is the canonical audit-contract source.
+- `HANDOFF.md` is the session-level pause/resume snapshot.
+- `WINDOW.md` is for active context budget and execution-cursor decisions.
+- `SEEDS.md` must not be confused with `CARRYFORWARD.md`:
+  - `CARRYFORWARD`: unfinished active work
+  - `SEEDS`: ideas that may be planted later
+- `WORKSTREAMS.md` records the active root; scripts consult it first when `--root` is not provided.
+- `PREFERENCES.md` controls solo/team mode, discuss mode, and git isolation behavior.
+- If a named stream is required, move from generic `docs/workflow/*` to `docs/<workstream>/*`.
+- `AGENTS.md` combined size defaults to `32 KiB`; split supporting context if it grows too large.
 
-## Gorunurluk notu
+## Visibility Note
 
-- Codex app uzerinde skill bazli renk veya custom UI stili garanti edilemez.
-- Bu nedenle workflow skill aktifken tum `commentary` update'leri `WORKFLOW:` prefiksi ile baslamalidir.
-- Prefiks yalnizca workflow aktifken zorunludur; normal task akisinda kullanilmaz.
-- Mumkunse prefiksten hemen sonra aktif step yaz:
+- The Codex app cannot guarantee skill-specific color or custom UI styling.
+- Therefore, all commentary updates while this workflow skill is active should begin with the `WORKFLOW:` prefix.
+- The prefix is required only while workflow is active, not in normal task flow.
+- When possible, include the active step right after the prefix:
   - `WORKFLOW: discuss`
   - `WORKFLOW: research`
   - `WORKFLOW: plan`
@@ -172,70 +172,70 @@ Aktif milestone her zaman su loop ile ilerler:
   - `WORKFLOW: complete`
   - `WORKFLOW: handoff`
 
-## Workflow update kontrati
+## Workflow Update Contract
 
-- Workflow aktifken her ara update su formata yakin olmali:
-  - `WORKFLOW: <step> | milestone=<id veya NONE> | root=<path>`
-- Ilk cumle mevcut hareketi ve sonraki adimi soylemeli.
-- Mumkun oldugunca 1-2 cumle kal; detay gerekiyorsa ikinci cumlede ver.
-- Block varsa step yerine `blocked` veya `handoff` kullanmak serbesttir:
+- While workflow is active, each update should roughly follow:
+  - `WORKFLOW: <step> | milestone=<id or NONE> | root=<path>`
+- The first sentence should describe the current move and the next step.
+- Stay at `1-2` sentences where possible; add a second sentence only when it adds value.
+- If blocked, you may use `blocked` or `handoff` instead of the step:
   - `WORKFLOW: blocked | milestone=M3 | root=docs/yahoo-sync`
   - `WORKFLOW: handoff | milestone=M3 | root=docs/yahoo-sync`
-- Dosya editi oncesi update mutlaka `WORKFLOW: execute` ile baslamali.
-- Audit/test oncesi update mutlaka `WORKFLOW: audit` ile baslamali.
+- Before file edits, updates must begin with `WORKFLOW: execute`.
+- Before audit/test work, updates must begin with `WORKFLOW: audit`.
 
-## Update sablonlari
+## Update Templates
 
 ```text
 WORKFLOW: discuss | milestone=M2 | root=docs/workflow
-Aktif root ve kanonik dosyalari okuyup scope'u netlestiriyorum; sonra CONTEXT.md icin kanitli varsayimlari cikaracagim.
+I am reading the active root and canonical files to tighten scope; next I will write evidence-backed assumptions into CONTEXT.md.
 ```
 
 ```text
 WORKFLOW: research | milestone=M2 | root=docs/workflow
-Degisecek dosyalari ve verification surface'i daraltiyorum; bir sonraki adim VALIDATION.md kontratini milestone scope'una indirmek.
+I am narrowing the touched files and verification surface; next I will reduce VALIDATION.md to milestone scope.
 ```
 
 ```text
 WORKFLOW: execute | milestone=M2 | root=docs/workflow
-Planlanan degisiklikleri uyguluyorum; hemen ardindan doctor/health ile workflow yuzeyini tekrar kontrol edecegim.
+I am applying the planned changes now; immediately after that I will re-check the workflow surface with doctor and health.
 ```
 
 ```text
 WORKFLOW: audit | milestone=M2 | root=docs/workflow
-Hedefli komutlari kosup kalan riskleri kapatiyorum; sonuc temizse milestone closeout'a gececegim.
+I am running targeted checks and closing remaining risks; if the result is clean I will move into milestone closeout.
 ```
 
 ```text
 WORKFLOW: handoff | milestone=M2 | root=docs/workflow
-Bu pencerede yeni adim baslatmiyorum; resume icin HANDOFF.md ve workflow:resume-work komutunu hazirliyorum.
+I am not starting a new step in this window; I am preparing HANDOFF.md and the workflow:resume-work command for resume.
 ```
 
-## Golden snapshot kurali
+## Golden Snapshot Rule
 
 - Provider-level baselines: `tests/golden/providers/`
-- Workflow/workstream baselines: `tests/golden/workflow/` veya `tests/golden/<workstream>/`
-- Diff almak icin:
+- Workflow/workstream baselines: `tests/golden/workflow/` or `tests/golden/<workstream>/`
+- To diff snapshots:
 
 ```bash
 node scripts/compare_golden_snapshots.ts <baseline> <candidate>
 ```
 
-## Sinirlar
+## Limits
 
-- Skill state tutmaz; state'in kanonik kaynagi her zaman repo icindeki workflow dosyalaridir.
-- Skill backlog dokumani yerine gecmez; yalnizca aktif state ve closeout disiplinini sabitler.
+- The skill does not store state; the canonical source of state is always the workflow files inside the repository.
+- The skill is not a backlog document; it exists to stabilize active state and closeout discipline.
 
 ## Retro Surface
 
-- `RETRO.md` validation state degil, surec kalitesi yuzeyidir.
-- Trigger:
-  - `Her 5 completed milestone`
-  - `Ayni tip forensics kok nedeni 2 kez gorulurse`
-  - `Kullanici explicit surec iyilestirmesi isterse`
+- `RETRO.md` is a process-quality surface, not the validation state.
+- Trigger conditions:
+  - `Every 5 completed milestones`
+  - `When the same forensics root cause appears twice`
+  - `When the user explicitly asks for workflow improvement`
 - Retro loop:
-  - `Archive + handoff + forensics + kullanici duzeltmelerini topla`
-  - `Binary surec kalite check'lerini degerlendir`
-  - `Tek bir process degisikligi sec`
-  - `Skill/docs/scripts'e uygula`
-  - `Sonraki 1-2 gercek milestone'da keep/discard karari ver`
+  - `Collect archive, handoff, forensics, and user corrections`
+  - `Evaluate the binary process-quality checks`
+  - `Choose one process change`
+  - `Apply it to skill/docs/scripts`
+  - `Make a keep/discard decision after the next 1-2 real milestones`

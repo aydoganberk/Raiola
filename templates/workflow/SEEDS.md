@@ -5,14 +5,14 @@
 
 ## Rules
 
-- Seed'ler, sonraki milestone veya workstream'de yeniden yuzeye cikmasi gereken fikirler icindir
-- `CARRYFORWARD.md` kapanmayan aktif isleri, `SEEDS.md` ise daha ileriye donuk fikirleri tutar
-- Seed kapaninca `Consumed Seeds` altina tasinir
+- Seeds are ideas that may need to resurface in a later milestone or workstream.
+- `CARRYFORWARD.md` stores unfinished active work; `SEEDS.md` stores more forward-looking ideas.
+- When a seed is consumed, move it under `Consumed Seeds`.
 
 ## Open Seeds
 
-- `Henuz acik seed yok`
+- `No open seeds yet`
 
 ## Consumed Seeds
 
-- `Henuz kullanilmis seed yok`
+- `No consumed seeds yet`

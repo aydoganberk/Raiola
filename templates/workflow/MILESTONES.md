@@ -1,16 +1,17 @@
 # MILESTONES
 
-Bu dosya workstream icindeki teslim odakli ilerleme noktalarini tutar.
+This file stores delivery-focused progress points within the workstream.
 
-Kullanim kurali:
-- Ayni anda yalnizca bir milestone `active` olmali.
-- Ayni anda yalnizca bir milestone step `active` olmali.
-- Her aktif milestone `discuss -> research -> plan -> execute -> audit -> complete` loop'u ile ilerlemeli.
-- `CONTEXT.md` discuss sonunda olusmali, research sonunda guncellenmeli, plan ondan sonra baslamali.
-- `VALIDATION.md` research/plan sirasinda scope'a daraltilmali, audit sirasinda kapanmali.
-- `HANDOFF.md` session-level snapshot katmanidir; milestone history burada birikmez.
-- `WINDOW.md` yeni step baslamadan budget/orchestrator karari vermelidir.
-- `SEEDS.md` daha sonra yuzeye cikacak fikirleri, `CARRYFORWARD.md` ise kapanmayan aktif isleri tutar.
+Usage rules:
+
+- Only one milestone should be `active` at a time.
+- Only one milestone step should be `active` at a time.
+- Every active milestone should move through `discuss -> research -> plan -> execute -> audit -> complete`.
+- `CONTEXT.md` should be created by the end of discuss, updated by the end of research, and planning should begin only after that.
+- `VALIDATION.md` should be narrowed during research/plan and closed during audit.
+- `HANDOFF.md` is the session-level snapshot layer; milestone history should not accumulate there.
+- `WINDOW.md` should decide budget/orchestrator readiness before a new step begins.
+- `SEEDS.md` stores ideas that may surface later; `CARRYFORWARD.md` stores unfinished active work.
 
 ## Status Vocabulary
 
@@ -22,58 +23,58 @@ Kullanim kurali:
 
 ## Step Vocabulary
 
-- `discuss`: Codebase scan + hedef netlestirme + discuss mode akisi + claim ledger baslangici
-- `research`: Degisecek dosyalar, bagimliliklar, riskler ve verification surface taramasi
-- `plan`: `EXECPLAN.md` icindeki `Plan of Record`'u yazma
-- `execute`: Planlanan degisikliklerin uygulanmasi
-- `audit`: `VALIDATION.md` ve `STATUS.md` uzerinden dogrulama
-- `complete`: Archive, carryforward, memory cleanup ve git closeout
+- `discuss`: codebase scan, goal framing, discuss-mode handling, and claim-ledger start
+- `research`: touched file scan, dependencies, risks, and verification surface
+- `plan`: writing `Plan of Record` into `EXECPLAN.md`
+- `execute`: applying the planned changes
+- `audit`: verification through `VALIDATION.md` and `STATUS.md`
+- `complete`: archive, carryforward, memory cleanup, and git closeout
 
 ## Step Gate Rules
 
-- `discuss` tamamlanmadan `research`e gecme:
-  - Goal, success signal ve non-goals net olmali
-  - `PREFERENCES.md` icindeki discuss mode dikkate alinmali
-  - `CONTEXT.md` initial snapshot olusmus olmali
-  - Seed intake, active recall intake, canonical refs ve claim ledger yazilmis olmali
-- `research` tamamlanmadan `plan`a gecme:
-  - Muhtemel touched files listesi
-  - Riskler / bagimliliklar
-  - Verification surface
-  - `VALIDATION.md` ilk scope kontrati
-  - `CONTEXT.md` research-sonrasi guncel surum
-  - `CARRYFORWARD.md` review edildi notu
-- `plan` tamamlanmadan `execute`a gecme:
-  - 1-2 run chunk'a bolunmus plan
-  - Uygulama checklist'i
-  - Audit/test plani
-  - `EXECPLAN.md` icindeki `Plan of Record` guncel
-  - `WINDOW.md` can start next chunk = yes
-- `execute` tamamlanmadan `audit`e gecme:
-  - Yapilan degisiklik ozeti
-  - Kapsam genislediyse notu
-  - Gerekirse active recall notlari kaydedilmis olmali
-- `audit` tamamlanmadan `complete`e gecme:
-  - Kosulan komutlar / kontroller
-  - Sonuc
-  - Kalan riskler
-  - Validation kontratinin durumu
-  - AGENTS review plani
-  - Git closeout scope'u
-  - `workflow:health -- --strict` temiz olmali
-- `complete` olmadan sonraki milestone planning'ine gecme
-- Varsayilan granularity:
-  - `Tek bir kullanici istegi genelde tek milestone olarak modellenir`
-  - `discuss -> research -> plan -> execute -> audit -> complete` ayni milestone'un step'leridir
+- Do not move from `discuss` to `research` before:
+  - goal, success signal, and non-goals are clear
+  - `Discuss mode` in `PREFERENCES.md` has been respected
+  - `CONTEXT.md` has an initial snapshot
+  - seed intake, active recall intake, canonical refs, and claim ledger are written
+- Do not move from `research` to `plan` before:
+  - likely touched files are listed
+  - risks and dependencies are listed
+  - verification surface is identified
+  - the first validation scope contract exists in `VALIDATION.md`
+  - `CONTEXT.md` is current after research
+  - `CARRYFORWARD.md` has been reviewed
+- Do not move from `plan` to `execute` before:
+  - the plan is split into `1-2` run-sized chunks
+  - the implementation checklist exists
+  - the audit/test plan exists
+  - `Plan of Record` in `EXECPLAN.md` is current
+  - `WINDOW.md` says the next chunk can start
+- Do not move from `execute` to `audit` before:
+  - a summary of changes exists
+  - scope expansion has been noted if it happened
+  - active recall notes were saved if needed
+- Do not move from `audit` to `complete` before:
+  - commands/checks run are recorded
+  - outcomes are recorded
+  - residual risks are recorded
+  - validation contract state is known
+  - AGENTS review plan is known
+  - git closeout scope is known
+  - `workflow:health -- --strict` is clean
+- Do not start planning the next milestone before the current one is `complete`
+- Default granularity:
+  - `One user request is usually modeled as one milestone`
+  - `discuss -> research -> plan -> execute -> audit -> complete` are steps inside that milestone
 
 ## Active Milestone Rule
 
-- `EXECPLAN.md` icindeki `Active milestone` alani ile bu dosya senkron kalmali.
-- `STATUS.md` icindeki `Current milestone` alani ile bu dosya senkron kalmali.
-- `EXECPLAN.md` icindeki `Active milestone step` alani ile bu dosya senkron kalmali.
-- `STATUS.md` icindeki `Current milestone step` alani ile bu dosya senkron kalmali.
-- Aktif milestone card'i ile `CONTEXT.md`, `VALIDATION.md`, `WINDOW.md` ve aktif recall notlari ayni scope'u tasimali.
-- Tamamlanan milestone detaylari active card'da birikmez; `completed_milestones/` altina tasinir.
+- This file must stay in sync with the `Active milestone` field in `EXECPLAN.md`.
+- This file must stay in sync with the `Current milestone` field in `STATUS.md`.
+- This file must stay in sync with the `Active milestone step` field in `EXECPLAN.md`.
+- This file must stay in sync with the `Current milestone step` field in `STATUS.md`.
+- The active milestone card, `CONTEXT.md`, `VALIDATION.md`, `WINDOW.md`, and active recall notes should all reflect the same scope.
+- Completed milestone detail should not accumulate in the active card; it moves into `completed_milestones/`.
 
 ## Milestone Table
 
@@ -82,7 +83,7 @@ Kullanim kurali:
 
 ## Archived Done Milestones
 
-- `Henuz arsivlenmis milestone yok`
+- `No archived milestones yet`
 
 ## Active Milestone Card
 
@@ -91,35 +92,35 @@ Kullanim kurali:
 - Status: `idle`
 - Step: `complete`
 - Goal:
-  - `Kullanici isterse acilacak ilk milestone'u beklemek`
+  - `Wait for the first milestone to be explicitly opened`
 - Success signal:
-  - `Ilk milestone kullanici tarafindan acikca tanimlanmis olacak`
+  - `The first milestone is explicitly defined by the user`
 - Non-goals:
-  - `Kullanici istemeden milestone planning'i baslatmak`
+  - `Starting milestone planning without an explicit user request`
 - Discuss mode:
   - `assumptions`
 - Clarifying questions / assumptions:
-  - `Workflow ancak explicit user request ile acilir`
+  - `Workflow opens only through explicit user request`
 - Seed intake:
-  - `Henuz acik seed yok`
+  - `No open seeds yet`
 - Active recall intake:
-  - `Aktif milestone yok`
+  - `No active milestone`
 - Research target files:
-  - `Kullanici milestone acinca doldurulacak`
+  - `Fill this when a milestone opens`
 - Plan checklist:
-  - `Kullanici milestone acinca doldurulacak`
+  - `Fill this when a milestone opens`
 - Execute notes:
-  - `Yok`
+  - `None`
 - Audit checklist:
-  - `Yok`
+  - `None`
 - Completion note:
-  - `Kullanici isterse ilk milestone acilacak`
+  - `Open the first milestone if the user wants workflow`
 
 ## Milestone Notes
 
-- `workflow:packet` step packet'ini deterministic hash ile uretir.
-- `workflow:next` aktif step icin onerilen sonraki hareketi uretir.
-- `workflow:pause-work` ve `workflow:resume-work` execution cursor + packet snapshot tasir.
-- `workflow:health --strict` asil gate olarak kullanilir.
-- `workflow:switch-workstream -- --name <slug> --create` veya `workflow:workstreams switch --name <slug> --create` ile named root scaffold edilebilir.
-- `Aktif veya pending milestone listesi kullanici explicit istemeden doldurulmaz.`
+- `workflow:packet` produces a step packet with a deterministic hash.
+- `workflow:next` produces the recommended next move for the active step.
+- `workflow:pause-work` and `workflow:resume-work` carry the execution cursor and packet snapshot.
+- `workflow:health --strict` is the main gate.
+- `workflow:switch-workstream -- --name <slug> --create` or `workflow:workstreams switch --name <slug> --create` can scaffold a named root.
+- `Do not prefill active or pending milestones unless the user explicitly wants that`

@@ -1,11 +1,12 @@
 # EXECPLAN
 
-Bu dosya repo icindeki aktif workflow control plane'in canli master planidir.
+This file is the live master plan for the active workflow control plane in the repository.
 
-Kullanim kurali:
-- Tek bir aktif stream varsa bu dosyayi guncel tut.
-- Ayrik bir stream gerekiyorsa ayni artifact setini `docs/<workstream>/` altina kopyala ve o root'u kanonik hale getir.
-- Ayni anda birden fazla aktif stream varsa her stream kendi `EXECPLAN.md`, `STATUS.md`, `DECISIONS.md`, `MILESTONES.md`, `CONTEXT.md`, `CARRYFORWARD.md`, `VALIDATION.md`, `HANDOFF.md`, `WINDOW.md`, `MEMORY.md`, `SEEDS.md`, `RETRO.md` setine sahip olmali.
+Usage rule:
+
+- If there is only one active stream, keep this file current.
+- If a separate stream is needed, copy the same artifact set into `docs/<workstream>/` and make that root canonical.
+- If multiple active streams exist, each one should have its own `EXECPLAN.md`, `STATUS.md`, `DECISIONS.md`, `MILESTONES.md`, `CONTEXT.md`, `CARRYFORWARD.md`, `VALIDATION.md`, `HANDOFF.md`, `WINDOW.md`, `MEMORY.md`, `SEEDS.md`, and `RETRO.md`.
 
 - Packet version: `2`
 - Input hash: `pending_sync`
@@ -36,139 +37,141 @@ Kullanim kurali:
 
 - Workstream: `Default workflow control plane`
 - Owner: `Codex + repo collaborators`
-- Goal: `Starter workflow surface'ini ilk milestone icin hazir tutmak`
+- Goal: `Keep the starter workflow surface ready for the first milestone`
 - Non-goals:
-  - `Bu adimda urun feature/refactor implement etmek`
+  - `Implementing product feature or refactor work at this stage`
 
 ## Session Protocol
 
-Her yeni Codex seansi su sirayla baslamali:
-1. `AGENTS.md` oku.
-2. `docs/workflow/WORKSTREAMS.md` icinden aktif root'u coz.
-3. Ilgili root altinda `PROJECT.md`, `RUNTIME.md`, `PREFERENCES.md`, `EXECPLAN.md`, `STATUS.md`, `DECISIONS.md`, `MILESTONES.md`, `CONTEXT.md`, `CARRYFORWARD.md`, `VALIDATION.md`, `HANDOFF.md`, `WINDOW.md`, `SEEDS.md` dosyalarini oku.
-4. `MEMORY.md` icinde aktif milestone'a bagli `Active Recall Items` varsa otomatik oku.
-5. `workflow:next` ile aktif step icin onerilen sonraki hareketi kontrol et.
-6. Mevcut state'i `8-12` maddede ozetle.
-7. Yalnizca aktif fazi, aktif milestone'u ve aktif milestone step'ini uygula.
+Every new Codex session should start in this order:
 
-Ek kural:
-- `resume-work` sonrasi ilk check `workflow:health -- --strict` olmali.
-- Bu protokol ancak kullanici workflow'u acikca istediginde veya daha once acilan workflow milestone'u devam ettirilirken tam olarak uygulanir.
-- Workflow acik degilse bu dosya referans yuzeyi olarak kalir; normal task akisi milestone acmadan devam edebilir.
-- `PREFERENCES.md` icindeki `Workflow profile` (`lite|standard|full`) rituel yogunlugunu belirler.
+1. Read `AGENTS.md`.
+2. Resolve the active root from `docs/workflow/WORKSTREAMS.md`.
+3. In that root, read `PROJECT.md`, `RUNTIME.md`, `PREFERENCES.md`, `EXECPLAN.md`, `STATUS.md`, `DECISIONS.md`, `MILESTONES.md`, `CONTEXT.md`, `CARRYFORWARD.md`, `VALIDATION.md`, `HANDOFF.md`, `WINDOW.md`, and `SEEDS.md`.
+4. If `MEMORY.md` contains `Active Recall Items` for the active milestone, read them automatically.
+5. Use `workflow:next` to check the recommended next move for the active step.
+6. Summarize the current state in `8-12` bullets.
+7. Operate only within the active phase, active milestone, and active milestone step.
+
+Additional rules:
+
+- The first check after `resume-work` should be `workflow:health -- --strict`.
+- This protocol is fully applied only when the user explicitly wants workflow or when resuming an already-open workflow milestone.
+- If workflow is not active, this file stays as a reference surface and normal task flow can continue without opening a milestone.
+- `Workflow profile` in `PREFERENCES.md` (`lite|standard|full`) controls ritual intensity.
 
 ## Milestone Loop
 
 1. `discuss`
-   - Once codebase'i tara.
-   - `PREFERENCES.md` icindeki `Discuss mode` degerine gore `assumptions` veya `interview` akisini kullan.
-   - `CONTEXT.md` icinde problem frame, seed intake, active recall intake, claim ledger ve unknowns yaz.
+   - Scan the codebase first.
+   - Follow `Discuss mode` from `PREFERENCES.md` using either `assumptions` or `interview`.
+   - Write problem framing, seed intake, active recall intake, claim ledger, and unknowns into `CONTEXT.md`.
 2. `research`
-   - Degisecek dosyalari, bagimliliklari, verification surface'i ve riskleri topla.
-   - `CONTEXT.md`yi research bulgulari ile guncelle.
-   - `VALIDATION.md` kontratini milestone scope'una daralt.
+   - Gather touched files, dependencies, verification surface, and risks.
+   - Update `CONTEXT.md` with research findings.
+   - Narrow `VALIDATION.md` to milestone scope.
 3. `plan`
-   - Yalnizca research-sonrasi guncel `CONTEXT.md` varsa basla.
-   - `CARRYFORWARD.md` ve ilgili seed'leri oku.
-   - Planin source of truth'unu `EXECPLAN.md` icindeki `Plan of Record` alanina yaz.
-   - Plani context window'a uygun 1-2 run chunk olacak sekilde kucuk tut.
+   - Start only when `CONTEXT.md` is current after research.
+   - Read `CARRYFORWARD.md` and any relevant seeds.
+   - Write the source-of-truth plan into the `Plan of Record` section of `EXECPLAN.md`.
+   - Keep the plan small enough to fit into `1-2` run-sized chunks.
 4. `execute`
-   - Yalnizca aktif milestone plani icindeki isi uygula.
-   - Gerekirse ayni milestone icin `workflow:save-memory` ile active recall notu birak.
+   - Apply only the work in the active milestone plan.
+   - If needed, leave an active recall note with `workflow:save-memory`.
 5. `audit`
-   - `VALIDATION.md` contract tablosu uzerinden test, diff, review veya smoke check yap.
-   - Sonucu ve kalan riskleri `STATUS.md`'ye yaz.
+   - Use the contract table in `VALIDATION.md` to run tests, diff review, or smoke checks.
+   - Write the outcome and remaining risks into `STATUS.md`.
 6. `complete`
-   - Cikis kosulunu, validation snapshot'ini ve sonraki milestone onerini yaz.
-   - Bitmeyen ama korunmasi gereken isleri `CARRYFORWARD.md`'ye ekle.
-   - Milestone ozetini `completed_milestones/` altina arsivle.
-   - O milestone'a bagli `Active Recall Items` kayitlarini `MEMORY.md` icinden temizle.
-   - `AGENTS.md` guncellemesi gerekip gerekmedigini kontrol et.
-   - Audit kapanmissa `workflow:health -- --strict` temiz olmadan closeout yapma.
+   - Write the exit condition, validation snapshot, and recommended next milestone.
+   - Move unfinished but still-important items into `CARRYFORWARD.md`.
+   - Archive the milestone summary under `completed_milestones/`.
+   - Remove `Active Recall Items` tied to the milestone from `MEMORY.md`.
+   - Check whether `AGENTS.md` needs an update.
+   - Do not close out while `workflow:health -- --strict` is not clean.
 
 ## Minimum Done Checklists
 
 - `discuss`
-  - `Goal/non-goals/success signal net`
-  - `Canonical refs + assumptions dolu`
-  - `Scope kanitli sekilde frame edildi`
+  - `Goal/non-goals/success signal are clear`
+  - `Canonical refs and assumptions are filled in`
+  - `Scope is framed with evidence`
 - `research`
-  - `Touched files dolu`
-  - `Dependency map + risks dolu`
-  - `Validation contract milestone scope'una daraltildi`
+  - `Touched files are known`
+  - `Dependency map and risks are filled in`
+  - `Validation contract is narrowed to milestone scope`
 - `plan`
-  - `Context plan-ready`
-  - `1-2 run chunk yazildi`
-  - `Audit plan + overhead alanlari dolu`
+  - `Context is plan-ready`
+  - `1-2` run chunks are written
+  - `Audit plan and overhead fields are filled in`
 - `execute`
-  - `Sadece aktif chunk uygulandi`
-  - `Status alanlari guncellendi`
-  - `Plan disi drift docs'a geri yazildi`
+  - `Only the active chunk was implemented`
+  - `Status fields were updated`
+  - `Off-plan drift was written back into docs`
 - `audit`
-  - `Verify command'ler kostu`
-  - `Manual checks + residual risks yazildi`
-  - `Strict health gate temiz`
+  - `Verify commands were run`
+  - `Manual checks and residual risks were written down`
+  - `Strict health gate is clean`
 - `complete`
-  - `Archive yazildi`
-  - `Carryforward secildi`
-  - `Git closeout scope'u bilincli netlestirildi`
+  - `Archive output was written`
+  - `Carryforward was decided`
+  - `Git closeout scope was made explicit`
 
 ## Unknowns
 
 | Unknown | Impact | Owner | Status |
 | --- | --- | --- | --- |
-| `Ilk aktif milestone scope'u` | `Plan of Record packet'i dogrudan degistirir` | `user` | `open` |
+| `The scope of the first active milestone` | `Directly changes the Plan of Record packet` | `user` | `open` |
 
 ## Milestone Model
 
-- Aktif milestone kaynagi: `MILESTONES.md`
-- Aktif context kaynagi: `CONTEXT.md`
-- Aktif validation kaynagi: `VALIDATION.md`
-- Aktif handoff kaynagi: `HANDOFF.md`
-- Aktif window kaynagi: `WINDOW.md`
-- Aktif seed kaynagi: `SEEDS.md`
-- Aktif root kaynagi: `WORKSTREAMS.md`
-- Ayni anda yalnizca bir milestone `active` olmali.
-- Ayni anda yalnizca bir milestone step `active` olmali.
-- `Plan of Record`, plan step'inin tek source of truth'udur.
-- `CONTEXT.md`, her yeni milestone basinda sifirlanir.
-- `STATUS.md` ve `EXECPLAN.md` aktif milestone / step alanlarinda senkron kalir.
-- `AGENTS.md` combined size limiti varsayilan olarak `32 KiB` kabul edilir; buyurse baglami bol.
-- Varsayilan granularity: tek bir kullanici istegi tek milestone olabilir; lifecycle asamalari bu milestone'un step'leridir.
+- Active milestone source: `MILESTONES.md`
+- Active context source: `CONTEXT.md`
+- Active validation source: `VALIDATION.md`
+- Active handoff source: `HANDOFF.md`
+- Active window source: `WINDOW.md`
+- Active seed source: `SEEDS.md`
+- Active root source: `WORKSTREAMS.md`
+- Only one milestone should be `active` at a time.
+- Only one milestone step should be `active` at a time.
+- `Plan of Record` is the sole source of truth for the plan step.
+- `CONTEXT.md` resets at the start of each new milestone.
+- `STATUS.md` and `EXECPLAN.md` stay in sync on active milestone and step fields.
+- `AGENTS.md` combined size defaults to `32 KiB`; split supporting docs if needed.
+- Default granularity is one user request = one milestone, with lifecycle steps inside it.
 
 ## Active Phase
 
 - Current phase: `Phase 0 - Idle`
 - Active milestone: `NONE`
 - Active milestone step: `complete`
-- Entry criteria: `Kullanici acikca workflow milestone'u acmak ister`
-- Exit criteria: `Ilk aktif milestone acildi`
+- Entry criteria: `The user explicitly wants to open a workflow milestone`
+- Exit criteria: `The first active milestone is opened`
 - In scope now:
-  - `Workflow surface'i idle ve temiz tutmak`
-  - `Workflow ancak explicit istendiginde acilsin`
+  - `Keeping the workflow surface idle and clean`
+  - `Opening workflow only when explicitly requested`
 - Explicitly out of scope now:
-  - `Kullanici istemeden milestone planning'i baslatmak`
+  - `Starting milestone planning without an explicit user request`
 
 ## Phase Ladder
 
 | Phase | Name | Status | Exit signal |
 | --- | --- | --- | --- |
-| 0 | Idle / Ready | active | Kullanici isterse milestone acilabilir |
-| 1 | Discuss / Research | pending | Scope net ve context hazir |
-| 2 | Execute / Audit | pending | Dogrulama temiz |
-| 3 | Complete / Handoff | pending | Closeout veya pause hazir |
+| 0 | Idle / Ready | active | The user can open a milestone if needed |
+| 1 | Discuss / Research | pending | Scope is clear and context is ready |
+| 2 | Execute / Audit | pending | Validation is clean |
+| 3 | Complete / Handoff | pending | Closeout or pause is ready |
 
 ## Plan of Record
 
 - Milestone: `NONE`
 - Step owner: `plan`
 - Plan status: `idle_until_user_opens_milestone`
-- Carryforward considered: `Yok`
+- Carryforward considered: `None`
 - Run chunk id: `NONE`
 - Run chunk hash: `pending`
 - Chunk cursor: `0/0`
-- Completed items: `Yok`
-- Remaining items: `Kullanici isterse ilk milestone'u ac`
+- Completed items: `None`
+- Remaining items: `Open the first milestone if needed`
 - Resume from item: `Milestone open`
 - Estimated packet tokens: `0`
 - Estimated execution overhead: `2000`
@@ -176,36 +179,36 @@ Ek kural:
 - Minimum reserve: `16000`
 - Safe in current window: `yes`
 - Current run chunk:
-  - `Yok`
+  - `None`
 - Next run chunk:
-  - `Kullanici isterse ilk milestone'u ac`
+  - `Open the first milestone if needed`
 - Implementation checklist:
-  - `Yok`
+  - `None`
 - Audit plan:
-  - `Yok`
+  - `None`
 - Out-of-scope guardrails:
-  - `Kullanici istemeden milestone planning'i baslatma`
+  - `Do not start milestone planning without an explicit user request`
 
 ## What Would Falsify This Plan?
 
-- `CONTEXT input hash plan step'inde refresh edilmeden degisirse bu plan stale olur`
-- `WINDOW budget yeni step icin yetersizse ayni chunk guvenli degildir`
+- `If the CONTEXT input hash changes without being refreshed before the plan step, this plan is stale`
+- `If WINDOW budget is insufficient for the next step, the same chunk is no longer safe`
 
 ## Deliverables
 
-- `PROJECT.md` workflow'un neden var oldugunu ve hedeflerini tutacak
-- `RUNTIME.md` operasyonel komutlari ve git/runtime notlarini tutacak
-- `PREFERENCES.md` solo/team, discuss mode ve git isolation davranisini tutacak
-- `VALIDATION.md` audit kontratini tutacak
-- `HANDOFF.md` session-level pause/resume snapshot'ini tutacak
-- `WINDOW.md` context-budget ve resume cursor katmanini tutacak
-- `SEEDS.md` ileriye donuk fikirleri tutacak
-- `RETRO.md` surec kalitesi ve self-improvement kuyruğunu tutacak
-- `WORKSTREAMS.md` aktif root'u ve switch log'unu tutacak
-- `tests/golden/workflow/` workflow-level golden yuzeyi olarak kullanilabilecek
+- `PROJECT.md` explains why the workflow exists and what it optimizes for
+- `RUNTIME.md` stores operational commands and runtime notes
+- `PREFERENCES.md` stores solo/team mode, discuss mode, and git isolation behavior
+- `VALIDATION.md` stores the audit contract
+- `HANDOFF.md` stores the session-level pause/resume snapshot
+- `WINDOW.md` stores context-budget and resume-cursor state
+- `SEEDS.md` stores future ideas
+- `RETRO.md` stores process quality and self-improvement backlog
+- `WORKSTREAMS.md` stores the active root and switch log
+- `tests/golden/workflow/` can be used as workflow-level golden surface
 
 ## Notes
 
-- `Bu dosya backlog degil; yalnizca aktif stream'in kanonik plani`
-- `workflow:packet`, `workflow:next`, `workflow:pause-work`, `workflow:resume-work`, `workflow:doctor`, `workflow:health` ve `workflow:forensics` operasyonel katmani destekler
-- `complete_milestone`, workflow disi degisiklik varken explicit `--stage-paths` veya bilincli `--allow-workflow-only` olmadan auto-commit etmez
+- `This file is not a backlog; it is only the canonical plan for the active stream`
+- `workflow:packet`, `workflow:next`, `workflow:pause-work`, `workflow:resume-work`, `workflow:doctor`, `workflow:health`, and `workflow:forensics` support the operational layer`
+- `complete_milestone` does not auto-commit outside workflow-only changes without explicit scope`

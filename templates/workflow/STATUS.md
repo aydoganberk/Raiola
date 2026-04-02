@@ -22,49 +22,49 @@
 
 ## Active Window Rule
 
-- Bu dosya active-window only tutulur.
-- Gecmis milestone changelog'u burada biriktirilmez.
-- Tamamlanan milestone detaylari `docs/workflow/completed_milestones/` altinda tutulur.
-- Carryforward backlog'u `docs/workflow/CARRYFORWARD.md` icinde tutulur.
+- This file is active-window only.
+- Do not accumulate historical milestone changelog here.
+- Completed milestone details live under `docs/workflow/completed_milestones/`.
+- Carryforward backlog lives in `docs/workflow/CARRYFORWARD.md`.
 
 ## In Progress
 
-- `Starter scaffold idle durumda tutuluyor; aktif milestone kullanici explicit isteyene kadar acilmiyor`
+- `The starter scaffold remains idle until the user explicitly opens a milestone`
 
 ## Verified
 
-- `Starter scaffold generic idle baslangic durumuna sifirlandi`
-- `Completed milestone arsivi ornek kayitlardan temizlendi`
-- `Ilk milestone acildiginda doldurulacak dosya yuzeyi hazir`
+- `The starter scaffold was reset to a generic idle state`
+- `The completed milestone archive was cleared of example entries`
+- `The document surface is ready to be filled when the first milestone opens`
 
 ## Inferred
 
-- `Ilk aktif milestone packet/budget katmanini aktif kullanacak`
-- `Health strict gate aktif milestone closure oncesi ana denetim olacak`
+- `The first active milestone will actively use the packet and budget layers`
+- `The strict health gate will be the main check before milestone closeout`
 
 ## Unknown
 
-- `Ilk milestone kapsamı kullanici acana kadar bilinmiyor`
+- `The first milestone scope is unknown until the user opens it`
 
 ## Next
 
-- `Kullanici explicit isterse ilk milestone'u ac`
-- `Kullanici workflow istemezse normal coding/task akisiyla devam et`
-- `Yeni milestone acildiginda CONTEXT.md, EXECPLAN.md, VALIDATION.md, HANDOFF.md ve WINDOW.md o scope icin doldurulacak`
+- `Open the first milestone if the user explicitly wants workflow`
+- `If the user does not want workflow, continue with normal coding/task flow`
+- `When a new milestone opens, fill CONTEXT.md, EXECPLAN.md, VALIDATION.md, HANDOFF.md, and WINDOW.md for that scope`
 
 ## Risks
 
-- `Aktif workflow milestone'u yok`
+- `There is no active workflow milestone`
 
 ## Broken Tests
 
-- `Henuz kaydedilmis kirik test yok`
+- `No recorded broken tests yet`
 
 ## Tests Run
 
-- `Starter template state'i ile birlikte komut ciktisi kaydi tutulmadi`
-- `Kurulum sonrasi onerilen ilk kontroller: npm run workflow:doctor -- --strict ve npm run workflow:health -- --strict`
+- `No command output log was recorded with the starter template state`
+- `Recommended first checks after installation: npm run workflow:doctor -- --strict and npm run workflow:health -- --strict`
 
 ## Suggested Next Step
 
-- `Kullanici explicit workflow isterse ilk milestone'u ac; istemezse normal task akisiyla devam et`
+- `If the user explicitly wants workflow, open the first milestone; otherwise continue with normal task flow`

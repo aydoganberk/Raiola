@@ -132,7 +132,7 @@ function main() {
   console.log(`- Budget status: \`${packet.budgetStatus}\``);
   console.log(`\n## Recommended Read Set\n`);
   if (packet.recommendedReadSet.length === 0) {
-    console.log('- `Recommended read set henuz yok`');
+    console.log('- `No recommended read set yet`');
   } else {
     for (const item of packet.recommendedReadSet) {
       console.log(`- \`${item}\``);

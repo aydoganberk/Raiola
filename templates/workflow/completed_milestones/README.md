@@ -1,21 +1,22 @@
 # Completed Milestones Archive
 
-Bu klasor, tamamlanan milestone'larin backtrack ve karar izi icin saklanan kayitlarini tutar.
+This folder stores completed milestone records for backtracking and decision traceability.
 
-Kurallar:
-- Her `done` milestone icin bir markdown dosyasi ac.
-- Dosya adi: `M<number>-short-slug.md`
-- Ana workflow dosyalari sismemesi icin milestone'a ozel tarihceyi buraya tasi.
-- Starter kit varsayilan olarak bos bir arsivle gelir.
-- Bu arsiv dosyasi en az sunlari icermeli:
+Rules:
+
+- Create one markdown file for each `done` milestone.
+- Filename format: `M<number>-short-slug.md`
+- Move milestone-specific history here so the active workflow files stay compact.
+- The starter kit intentionally ships with an empty archive.
+- Each archive file should contain at least:
   - milestone goal
   - phase
   - exit criteria
-  - discuss/research/plan/execution/audit ozetleri
+  - summaries of discuss/research/plan/execution/audit
   - final context snapshot
-  - kosulan testler / kontroller
-  - kalan riskler
-  - sonraki milestone onerisi
-  - varsa `CARRYFORWARD.md`'ye tasinan maddeler
+  - tests or checks that were run
+  - residual risks
+  - recommended next milestone
+  - any items carried into `CARRYFORWARD.md`
 
-`CONTEXT.md` aktif milestone icindir. Tamamlanan milestone detaylari burada korunur.
+`CONTEXT.md` is for the active milestone only. Completed milestone detail is preserved here.

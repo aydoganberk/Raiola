@@ -45,48 +45,48 @@
 ## Workflow Profiles
 
 - `lite`
-  - `Kucuk ve tek-seansli isler icin dusuk rituel / kucuk packet beklentisi`
-  - `Onerilen varsayilanlar: Budget profile=lean, Discuss=4000, Plan=8000, Audit=6000, Max refs=6`
+  - `Low-ritual profile for small or short tasks`
+  - `Suggested defaults: Budget profile=lean, Discuss=4000, Plan=8000, Audit=6000, Max refs=6`
 - `standard`
-  - `Varsayilan genel amacli profil`
-  - `Onerilen varsayilanlar: Budget profile=normal, Discuss=6000, Plan=12000, Audit=9000, Max refs=10`
+  - `Default general-purpose profile`
+  - `Suggested defaults: Budget profile=normal, Discuss=6000, Plan=12000, Audit=9000, Max refs=10`
 - `full`
-  - `Gercek handoff, closeout ve cok-seansli koordinasyon gerektiren isler`
-  - `Onerilen varsayilanlar: Budget profile=deep, Discuss=8000, Plan=16000, Audit=12000, Max refs=14`
-  - `Health strict ve retro notu beklentisi daha yuksek kabul edilir`
+  - `Stronger process profile for real handoff, closeout, and long-lived coordination`
+  - `Suggested defaults: Budget profile=deep, Discuss=8000, Plan=16000, Audit=12000, Max refs=14`
+  - `Health strict and retro expectations are assumed to be higher`
 
 ## Profile Notes
 
-- `Workflow mode` ile `Workflow profile` ayridir:
-  - `mode` daha cok git/ekip izolasyonunu belirler
-  - `profile` surec derinligini ve packet/rhythm beklentisini belirler
-- `lite` kucuk bugfix veya kisa repo operasyonlari icin uygundur
-- `full` handoff, closeout, tekrar kullanilacak kanit zinciri ve surec kalitesi gerektiren isler icin uygundur
+- `Workflow mode` and `Workflow profile` are different:
+  - `mode` controls git and team isolation behavior
+  - `profile` controls process depth and packet expectations
+- `lite` is a good fit for smaller bug fixes or lightweight repo operations
+- `full` is a good fit for handoff, closeout, durable evidence chains, and workflow-quality tracking
 
 ## Discuss Modes
 
 - `interview`
-  - `Discuss adiminda once hedef netlestirilir, sonra yuksek etkili sorular sorulur`
+  - `Clarify the goal first, then ask only high-leverage questions`
 - `assumptions`
-  - `Discuss adiminda once codebase taranir, sonra kanitli varsayim listesi uretilir ve gerekiyorsa kullanici duzeltir`
+  - `Scan the codebase first, then write evidence-backed assumptions and let the user correct them if needed`
 
 ## Git Isolation Modes
 
 - `none`
-  - `Mevcut branch/worktree icinde calis`
+  - `Work on the current branch or worktree`
 - `branch`
-  - `Milestone icin ayrik branch beklentisi olustur`
+  - `Expect the milestone to use a dedicated branch`
 - `worktree`
-  - `Milestone icin ayrik worktree beklentisi olustur`
+  - `Expect the milestone to use a dedicated worktree`
 
 ## Budget Notes
 
-- `Window budget mode native oldugunda ayni alanlar bridge dosyasindan okunacak`
-- `Hiçbir run chunk Minimum next-step budget birakmadan planlanmamali`
-- `Compaction target, packet compact edilince inilecek hedef oran olarak yorumlanir`
+- `When Window budget mode is native, these values may be filled from bridge data instead`
+- `No run chunk should be planned without leaving Minimum next-step budget available`
+- `Compaction target is the ratio to aim for after compacting a packet`
 
 ## Notes
 
-- `Bu dosya workflow davranisinin repo-local konfig kaynagidir`
-- `Script'ler explicit flag verilmediginde once bu dosyaya bakar`
-- `Varsayilan kullanim explicit_only olarak dusunulur; workflow tam protokol olarak ancak kullanici istediginde acilir`
+- `This file is the repo-local configuration source for workflow behavior`
+- `Scripts read this file first unless explicit flags override it`
+- `The default operating assumption is explicit_only; the full workflow activates only when the user explicitly asks for it`

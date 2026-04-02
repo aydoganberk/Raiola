@@ -14,8 +14,8 @@
 - Reasoning profile: `balanced`
 - Confidence summary: `mixed_idle_surface`
 - Refresh policy: `refresh_when_input_hash_drifts`
-- Reset policy: `Her yeni milestone basinda sifirdan yazilir`
-- Archive policy: `Complete olan milestone'lar completed_milestones/ altina tasinir`
+- Reset policy: `Rewrite from scratch at the start of each new milestone`
+- Archive policy: `Move completed milestone detail into completed_milestones/`
 - Discuss mode: `assumptions`
 
 ## Canonical Refs
@@ -37,70 +37,70 @@
 ## Problem Frame
 
 - Goal:
-  - `Ilk workflow milestone'u icin temiz baslangic yuzeyi saglamak`
+  - `Provide a clean starting surface for the first workflow milestone`
 - Success signal:
-  - `Ilk milestone kullanici tarafindan acikca tanimlandiginda bu dosya onun icin doldurulabilecek`
+  - `When the first milestone is explicitly defined, this file can be filled for that scope`
 - Non-goals:
-  - `Kullanici istemeden workflow milestone'u baslatmak`
+  - `Starting workflow planning without an explicit user request`
 
 ## Codebase Scan Summary
 
-- `Starter scaffold aktif milestone acilana kadar idle kalir`
-- `Completed milestone arsivi bos baslar`
-- `Packet ve validation alanlari ilk milestone ile birlikte senkronize edilir`
+- `The starter scaffold remains idle until an active milestone opens`
+- `The completed milestone archive starts empty`
+- `Packet and validation fields will be synchronized when the first milestone begins`
 
 ## Clarifying Questions / Assumptions
 
 | Claim | Confidence | Evidence refs | Failure mode |
 | --- | --- | --- | --- |
-| `Workflow varsayilan olarak explicit activation bekler` | `Confident` | `docs/workflow/PREFERENCES.md; docs/workflow/PROJECT.md` | `Workflow istemeden aktiflenirse scope kayar` |
-| `Tek bir kullanici istegi gerekirse tek milestone olarak modellenebilir` | `Likely` | `docs/workflow/MILESTONES.md; docs/workflow/RUNTIME.md` | `Milestone granularity tutarsiz olur` |
+| `Workflow expects explicit activation by default` | `Confident` | `docs/workflow/PREFERENCES.md; docs/workflow/PROJECT.md` | `Workflow may activate when it should not` |
+| `A single user request can usually be modeled as one milestone` | `Likely` | `docs/workflow/MILESTONES.md; docs/workflow/RUNTIME.md` | `Milestone granularity becomes inconsistent` |
 
 ## Claim Ledger
 
 | Claim | Type | Evidence refs | Confidence | Failure if wrong |
 | --- | --- | --- | --- | --- |
-| `Workflow surface explicit opt-in olarak tasarlandi` | `source-backed` | `docs/workflow/PREFERENCES.md; docs/workflow/PROJECT.md` | `Confident` | `Ajanlar workflow'u gereksiz yere acabilir` |
-| `Current root idle state icin yeterli kanonik dosyalara sahip` | `source-backed` | `docs/workflow/WORKSTREAMS.md; docs/workflow/EXECPLAN.md; docs/workflow/VALIDATION.md` | `Likely` | `Yeni milestone baslangici eksik packet ile acilabilir` |
+| `The workflow surface is designed as explicit opt-in` | `source-backed` | `docs/workflow/PREFERENCES.md; docs/workflow/PROJECT.md` | `Confident` | `Agents may activate workflow unnecessarily` |
+| `The current root has enough canonical files to start from an idle state` | `source-backed` | `docs/workflow/WORKSTREAMS.md; docs/workflow/EXECPLAN.md; docs/workflow/VALIDATION.md` | `Likely` | `A new milestone may open with an incomplete packet` |
 
 ## Unknowns
 
 | Unknown | Impact | Owner | Status |
 | --- | --- | --- | --- |
-| `Ilk aktif milestone ne zaman acilacak` | `Packet iceriği milestone ile degisecek` | `user` | `open` |
+| `When the first active milestone will be opened` | `Packet contents will change with milestone scope` | `user` | `open` |
 
 ## Research Targets
 
-- `Kullanici milestone acinca doldurulacak`
+- `Fill this when the user opens a milestone`
 
 ## Carryforward Intake
 
-- `Henuz carryforward item yok`
+- `No carryforward items yet`
 
 ## Seed Intake
 
-- `Henuz acik seed yok`
+- `No open seeds yet`
 
 ## Active Recall Intake
 
-- `Aktif milestone olmadigi icin active recall notu yok`
+- `There are no active recall notes because no milestone is active`
 
 ## Touched Files
 
-- `Workflow milestone acildiginda doldurulacak`
+- `Fill this when a workflow milestone opens`
 
 ## Dependency Map
 
-- `WORKSTREAMS.md` -> aktif root secimi
-- `PREFERENCES.md` -> discuss mode + git isolation + activation tercihi
+- `WORKSTREAMS.md` -> active root selection
+- `PREFERENCES.md` -> discuss mode, git isolation, and activation defaults
 - `EXECPLAN.md` -> Plan of Record
-- `VALIDATION.md` -> audit kontrati
-- `HANDOFF.md` -> pause/resume snapshot'i
-- `WINDOW.md` -> budget/orchestrator snapshot'i
+- `VALIDATION.md` -> audit contract
+- `HANDOFF.md` -> pause/resume snapshot
+- `WINDOW.md` -> budget/orchestrator snapshot
 
 ## Risks
 
-- `Aktif milestone yok`
+- `No active milestone exists yet`
 
 ## Verification Surface
 
@@ -110,9 +110,9 @@
 
 ## What Would Falsify This Plan?
 
-- `Workflow explicit_only degilse mevcut problem frame yanlis olur`
-- `WORKSTREAMS.md aktif root'u farkli bir yere tasimissa bu packet stale olur`
+- `If workflow is not actually explicit_only, the current problem frame is wrong`
+- `If WORKSTREAMS.md points to another active root, this packet is stale`
 
 ## Ready For Plan
 
-- `Hayir`
+- `No`

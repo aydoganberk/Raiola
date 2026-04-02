@@ -62,7 +62,7 @@ function copyTemplateWorkstream(templateRoot, targetRoot) {
 
   fs.writeFileSync(
     path.join(targetRoot, 'completed_milestones', 'README.md'),
-    `# COMPLETED MILESTONES\n\n- \`${path.basename(targetRoot)}\` workstream'i icin tamamlanan milestone arsivleri burada tutulur\`\n`,
+    `# COMPLETED MILESTONES\n\n- \`Completed milestone archives for the ${path.basename(targetRoot)} workstream are stored here\`\n`,
   );
 }
 
@@ -101,18 +101,18 @@ function patchSeededRoot(rootDir, workstreamName, note) {
   status = replaceField(status, 'Current retro file', `${relativeRoot}/RETRO.md`);
   status = replaceField(status, 'Completed archive root', `${relativeRoot}/completed_milestones/`);
   status = replaceField(status, 'Current workstream', workstreamName);
-  status = replaceSection(status, 'In Progress', `- \`Isimli workstream olusturuldu; aktif milestone bekleniyor\``);
+  status = replaceSection(status, 'In Progress', '- `Named workstream created; waiting for an active milestone`');
   status = replaceSection(status, 'Verified', [
-    `- \`${workstreamName} workstream surface'i root template'ten seed edildi\``,
-    `- \`Packet, validation ve window dosyalari mevcut\``,
+    `- \`${workstreamName} workstream surface was seeded from the root template\``,
+    '- `Packet, validation, and window files are present`',
   ].join('\n'));
-  status = replaceSection(status, 'Inferred', '- `Ilk milestone bu root altinda acilacak`');
-  status = replaceSection(status, 'Unknown', '- `Ilk milestone kapsamı henuz bilinmiyor`');
+  status = replaceSection(status, 'Inferred', '- `The first milestone will open under this root`');
+  status = replaceSection(status, 'Unknown', '- `The first milestone scope is not known yet`');
   status = replaceSection(status, 'Next', [
-    '- `Yeni milestone ac`',
-    '- `workflow:next ile ilk onerilen adimi oku`',
+    '- `Open a new milestone`',
+    '- `Read the first recommended step with workflow:next`',
   ].join('\n'));
-  status = replaceSection(status, 'Suggested Next Step', '- `workflow:new-milestone ile ilk milestoneu ac ve discuss step ile basla`');
+  status = replaceSection(status, 'Suggested Next Step', '- `Open the first milestone with workflow:new-milestone and start with the discuss step`');
   write(paths.status, status);
 
   let context = read(paths.context);
@@ -131,7 +131,7 @@ function patchSeededRoot(rootDir, workstreamName, note) {
   write(paths.handoff, handoff);
 
   let decisions = read(paths.decisions);
-  decisions += `\n\n## ${today()} - ${workstreamName} workstream active root oldu\n\n- Decision:\n  - \`${workstreamName}\` isimli workstream aktif root olarak secildi.\n- Why:\n  - Workstream isolation ve packet budget takibi icin.\n- Consequence:\n  - Active milestone bu root altinda ilerleyecek.\n`;
+  decisions += `\n\n## ${today()} - ${workstreamName} became the active workstream root\n\n- Decision:\n  - \`The ${workstreamName} workstream was selected as the active root.\`\n- Why:\n  - \`To preserve workstream isolation and packet budget tracking.\`\n- Consequence:\n  - \`The active milestone will progress under this root.\`\n`;
   write(paths.decisions, decisions);
 
   let workstreams = read(controlPaths(process.cwd()).workstreams);

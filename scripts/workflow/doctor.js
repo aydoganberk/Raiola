@@ -63,15 +63,15 @@ function main() {
   pushCheck(resolvedActiveRoot === rootDir ? 'pass' : 'warn', `Active workstream root -> ${activeRoot || defaultActiveRoot}`);
   pushCheck(milestone === String(getFieldValue(execplan, 'Active milestone') || 'NONE')
     ? 'pass'
-    : 'fail', 'STATUS.md ve EXECPLAN.md aktif milestone alanlari senkron olmali');
+    : 'fail', 'STATUS.md and EXECPLAN.md active milestone fields must stay in sync');
   pushCheck(step === String(getFieldValue(execplan, 'Active milestone step') || 'unknown')
     ? 'pass'
-    : 'fail', 'STATUS.md ve EXECPLAN.md aktif step alanlari senkron olmali');
+    : 'fail', 'STATUS.md and EXECPLAN.md active step fields must stay in sync');
   pushCheck(
     (!activeRow && milestone === 'NONE') || (activeRow && `${activeRow.milestone} - ${activeRow.goal}` === milestone)
       ? 'pass'
       : 'fail',
-    'MILESTONES.md aktif satiri ile STATUS.md ayni milestoneu gostermeli',
+    'The active row in MILESTONES.md must match the milestone shown in STATUS.md',
   );
   pushCheck(
     ['solo', 'team'].includes(preferences.mode) ? 'pass' : 'fail',
@@ -90,9 +90,9 @@ function main() {
     `Git isolation -> ${preferences.gitIsolation}`,
   );
   if (preferences.gitIsolation === 'branch' && milestone !== 'NONE') {
-    pushCheck(currentBranch(cwd) !== 'main' ? 'pass' : 'warn', 'Branch isolation beklenirken hala main branch uzerindesin');
+    pushCheck(currentBranch(cwd) !== 'main' ? 'pass' : 'warn', 'Branch isolation is expected but you are still on main');
   }
-  pushCheck(workstreamRows.length > 0 ? 'pass' : 'warn', 'WORKSTREAMS.md en az bir kayit icermeli');
+  pushCheck(workstreamRows.length > 0 ? 'pass' : 'warn', 'WORKSTREAMS.md should contain at least one entry');
   for (const packet of packets) {
     pushCheck(
       packet.storedInputHash ? 'pass' : 'warn',

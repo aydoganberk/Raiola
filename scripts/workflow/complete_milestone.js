@@ -133,7 +133,7 @@ function main() {
   }
 
   const summary = String(args.summary || 'Milestone completed and archived').trim();
-  const nextMilestone = String(args.next || 'Yeni milestone planning icin hazir').trim();
+  const nextMilestone = String(args.next || 'Ready to plan the next milestone').trim();
   const carryforwardItems = toList(args.carryforward);
   const allowWorkflowOnly = Boolean(args['allow-workflow-only']);
   const milestonesRef = path.relative(process.cwd(), paths.milestones).replace(/\\/g, '/');
@@ -153,7 +153,7 @@ function main() {
   const handoffSnapshot = handoff.trim();
   const windowSnapshot = window.trim();
   const clearedMemoryEntries = memory
-    ? parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'Henuz aktif recall notu yok')
+    ? parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'No active recall notes yet')
       .map((entry) => parseMemoryEntry(entry))
       .filter((entry) => entry.fields.Milestone === `${activeRow.milestone} - ${activeRow.goal}`)
     : [];
@@ -226,7 +226,7 @@ ${risks}
 
 ## Carryforward
 
-${carryforwardItems.length === 0 ? '- `Carryforward yok`' : carryforwardItems.map((item) => `- \`${item}\``).join('\n')}
+${carryforwardItems.length === 0 ? '- `No carryforward items selected`' : carryforwardItems.map((item) => `- \`${item}\``).join('\n')}
 
 ## Packet Snapshot
 
@@ -248,9 +248,9 @@ ${windowSnapshot}
 
 ## Cleared Memory Recall Items
 
-${clearedMemoryEntries.length === 0 ? '- `Temizlenen aktif memory notu yok`' : clearedMemoryEntries.map((entry) => (
+${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : clearedMemoryEntries.map((entry) => (
   `- \`${entry.date} | ${entry.title}\`
-  - \`Note: ${entry.fields.Note || 'Yok'}\`
+  - \`Note: ${entry.fields.Note || 'None'}\`
   - \`Step: ${entry.fields.Step || 'unknown'}\`
   - \`Source: ${entry.fields.Source || 'user-triggered'}\``
 )).join('\n')}
@@ -276,29 +276,29 @@ ${clearedMemoryEntries.length === 0 ? '- `Temizlenen aktif memory notu yok`' : c
 - Status: \`idle\`
 - Step: \`complete\`
 - Goal:
-  - \`Yeni milestone acilana kadar aktif kart beklemede\`
+  - \`Wait until the next milestone is explicitly opened\`
 - Success signal:
-  - \`Yeni milestone olusturulunca doldurulacak\`
+  - \`The next milestone is explicitly defined by the user\`
 - Non-goals:
-  - \`Bu kartta gecmis milestone detaylarini tutmak\`
+  - \`Keeping historical milestone details on this card\`
 - Discuss mode:
   - \`${preferences.discussMode}\`
 - Clarifying questions / assumptions:
-  - \`Yeni milestone ile doldurulacak\`
+  - \`Fill this when the next milestone opens\`
 - Seed intake:
-  - \`Henuz acik seed yok\`
+  - \`No open seeds yet\`
 - Active recall intake:
-  - \`Aktif milestone yok\`
+  - \`No active milestone\`
 - Research target files:
-  - \`Yeni milestone ile doldurulacak\`
+  - \`Fill this when the next milestone opens\`
 - Plan checklist:
-  - \`Yeni milestone ile doldurulacak\`
+  - \`Fill this when the next milestone opens\`
 - Execute notes:
-  - \`Yok\`
+  - \`None\`
 - Audit checklist:
-  - \`Yok\`
+  - \`None\`
 - Completion note:
-  - \`${activeRow.milestone} arsivlendi\`
+  - \`${activeRow.milestone} was archived\`
 `);
 
   status = replaceField(status, 'Last updated', today());
@@ -306,19 +306,19 @@ ${clearedMemoryEntries.length === 0 ? '- `Temizlenen aktif memory notu yok`' : c
   status = replaceField(status, 'Current milestone', 'NONE');
   status = replaceField(status, 'Current milestone step', 'complete');
   status = replaceField(status, 'Context readiness', 'frozen_until_next_milestone');
-  status = replaceSection(status, 'In Progress', `- \`Workflow surface idle durumda; yeni milestone bekleniyor\``);
+  status = replaceSection(status, 'In Progress', '- `Workflow surface is idle; waiting for the next milestone`');
   status = replaceSection(status, 'Verified', [
-    `- \`${activeRow.milestone} archive edildi\``,
-    '- `Validation snapshot ve packet hash archive icine tasindi`',
+    `- \`${activeRow.milestone} was archived\``,
+    '- `Validation snapshot and packet hash were moved into the archive`',
   ].join('\n'));
-  status = replaceSection(status, 'Inferred', '- `Bir sonraki milestone yeni packet seti ile acilacak`');
-  status = replaceSection(status, 'Unknown', '- `Sonraki milestone kapsamı henuz bilinmiyor`');
+  status = replaceSection(status, 'Inferred', '- `The next milestone will open with a fresh packet set`');
+  status = replaceSection(status, 'Unknown', '- `The next milestone scope is not known yet`');
   status = replaceSection(status, 'Next', [
-    '- `Kullanici explicit workflow isterse yeni milestone ac`',
-    '- `workflow:next ile idle recommendation al`',
+    '- `Open a new milestone if the user explicitly wants workflow`',
+    '- `Use workflow:next to get the idle recommendation`',
   ].join('\n'));
-  status = replaceSection(status, 'Risks', '- `Aktif milestone yok`');
-  status = replaceSection(status, 'Suggested Next Step', '- `Kullanici explicit workflow isterse ilk milestoneu ac`');
+  status = replaceSection(status, 'Risks', '- `There is no active milestone`');
+  status = replaceSection(status, 'Suggested Next Step', '- `Open the next milestone if the user explicitly wants workflow`');
 
   context = replaceField(context, 'Last updated', today());
   context = replaceField(context, 'Milestone', 'NONE');
@@ -329,41 +329,41 @@ ${clearedMemoryEntries.length === 0 ? '- `Temizlenen aktif memory notu yok`' : c
   context = replaceField(context, 'Confidence summary', 'mixed_idle_surface');
   context = replaceSection(context, 'Problem Frame', `
 - Goal:
-  - \`Kullanici isterse acilacak workflow milestone'u icin temiz baslangic yuzeyi saglamak\`
+  - \`Provide a clean starting surface for the next workflow milestone if the user wants one\`
 - Success signal:
-  - \`Ilk milestone kullanici tarafindan acikca tanimlandiginda bu dosya onun icin doldurulabilecek\`
+  - \`When the user explicitly defines the next milestone, this file can be filled for it\`
 - Non-goals:
-  - \`Kullanici istemeden workflow milestone'u baslatmak\`
+  - \`Starting a workflow milestone without the user's request\`
 `);
   context = replaceSection(context, 'Codebase Scan Summary', [
-    '- `Workflow surface idle durumuna cekildi`',
-    `- \`${activeRow.milestone} archive altina tasindi\``,
+    '- `Workflow surface returned to idle state`',
+    `- \`${activeRow.milestone} was moved under the archive\``,
   ].join('\n'));
   context = replaceSection(context, 'Clarifying Questions / Assumptions', `
 | Claim | Confidence | Evidence refs | Failure mode |
 | --- | --- | --- | --- |
-| Workflow ancak kullanici acikca istediginde aktif kullanilacak | Confident | AGENTS.md; .agents/skills/codex-workflow/SKILL.md | Workflow istemeden aktiflenirse scope kayar |
-| Tek bir kullanici istegi gerekirse tek milestone olarak modellenebilir | Likely | AGENTS.md; ${milestonesRef} | Milestone granularity tutarsiz olur |
+| Workflow will be used only when the user explicitly asks for it | Confident | AGENTS.md; .agents/skills/codex-workflow/SKILL.md | Scope drifts if workflow activates without request |
+| A single user request can still be modeled as one milestone when needed | Likely | AGENTS.md; ${milestonesRef} | Milestone granularity becomes inconsistent |
 `);
   context = replaceSection(context, 'Claim Ledger', `
 | Claim | Type | Evidence refs | Confidence | Failure if wrong |
 | --- | --- | --- | --- | --- |
-| Workflow surface explicit opt-in olarak tasarlandi | source-backed | AGENTS.md; .agents/skills/codex-workflow/SKILL.md | Confident | Ajanlar workflow'u gereksiz yere acabilir |
-| Current root idle state icin yeterli kanonik dosyalara sahip | source-backed | ${workstreamsRef}; ${execplanRef}; ${validationRef} | Likely | Yeni milestone baslangici eksik packet ile acilabilir |
+| The workflow surface is designed as explicit opt-in | source-backed | AGENTS.md; .agents/skills/codex-workflow/SKILL.md | Confident | Agents may open workflow unnecessarily |
+| The current root has enough canonical files for idle state | source-backed | ${workstreamsRef}; ${execplanRef}; ${validationRef} | Likely | A new milestone may open with an incomplete packet |
 `);
   context = replaceSection(context, 'Unknowns', `
 | Unknown | Impact | Owner | Status |
 | --- | --- | --- | --- |
-| Ilk aktif milestone ne zaman acilacak | Packet iceriği milestone ile degisecek | user | open |
+| When the next active milestone will be opened | Packet contents will change with milestone scope | user | open |
 `);
-  context = replaceSection(context, 'Research Targets', '- `Kullanici milestone acinca doldurulacak`');
-  context = replaceSection(context, 'Touched Files', '- `Workflow milestone acildiginda doldurulacak`');
-  context = replaceSection(context, 'Risks', '- `Aktif milestone yok`');
+  context = replaceSection(context, 'Research Targets', '- `Fill this when the user opens a milestone`');
+  context = replaceSection(context, 'Touched Files', '- `Fill this when a workflow milestone opens`');
+  context = replaceSection(context, 'Risks', '- `There is no active milestone`');
   context = replaceSection(context, 'What Would Falsify This Plan?', [
-    '- `Workflow explicit_only degilse mevcut problem frame yanlis olur`',
-    '- `WORKSTREAMS.md aktif rootu farkli bir yere tasimissa bu packet stale olur`',
+    '- `If workflow is not explicit-only, the current problem frame is wrong`',
+    '- `If WORKSTREAMS.md moved the active root elsewhere, this packet becomes stale`',
   ].join('\n'));
-  context = replaceSection(context, 'Ready For Plan', '- `Hayir`');
+  context = replaceSection(context, 'Ready For Plan', '- `No`');
 
   execplan = replaceOrAppendField(execplan, 'Input hash', 'pending_sync');
   execplan = replaceField(execplan, 'Active milestone', 'NONE');
@@ -373,12 +373,12 @@ ${clearedMemoryEntries.length === 0 ? '- `Temizlenen aktif memory notu yok`' : c
 - Milestone: \`NONE\`
 - Step owner: \`plan\`
 - Plan status: \`idle_until_user_opens_milestone\`
-- Carryforward considered: \`${carryforwardItems.length === 0 ? 'Yok' : carryforwardItems.join('; ')}\`
+- Carryforward considered: \`${carryforwardItems.length === 0 ? 'None' : carryforwardItems.join('; ')}\`
 - Run chunk id: \`NONE\`
 - Run chunk hash: \`pending\`
 - Chunk cursor: \`0/0\`
-- Completed items: \`Yok\`
-- Remaining items: \`Kullanici isterse ilk milestone'u ac\`
+- Completed items: \`None\`
+- Remaining items: \`Open the next milestone if needed\`
 - Resume from item: \`Milestone open\`
 - Estimated packet tokens: \`0\`
 - Estimated execution overhead: \`2000\`
@@ -386,39 +386,39 @@ ${clearedMemoryEntries.length === 0 ? '- `Temizlenen aktif memory notu yok`' : c
 - Minimum reserve: \`${preferences.reserveFloorTokens}\`
 - Safe in current window: \`yes\`
 - Current run chunk:
-  - \`Yok\`
+  - \`None\`
 - Next run chunk:
-  - \`Kullanici isterse ilk milestone'u ac\`
+  - \`Open the next milestone if the user wants workflow\`
 - Implementation checklist:
-  - \`Yok\`
+  - \`None\`
 - Audit plan:
-  - \`Yok\`
+  - \`None\`
 - Out-of-scope guardrails:
-  - \`Kullanici istemeden milestone planning'i baslatma\`
+  - \`Do not start milestone planning without the user's request\`
 `);
 
   carryforward = replaceSection(carryforward, 'Open Items', renderOpenItems(carryforwardItems));
   if (memory) {
-    const activeEntries = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'Henuz aktif recall notu yok')
+    const activeEntries = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'No active recall notes yet')
       .map((entry) => parseMemoryEntry(entry))
       .filter((entry) => entry.fields.Milestone !== `${activeRow.milestone} - ${activeRow.goal}`);
     memory = replaceField(memory, 'Last updated', today());
     memory = replaceField(memory, 'Status', 'active_recall_plus_durable');
-    memory = replaceSection(memory, 'Active Recall Items', renderMemorySection(activeEntries, 'Henuz aktif recall notu yok'));
+    memory = replaceSection(memory, 'Active Recall Items', renderMemorySection(activeEntries, 'No active recall notes yet'));
   }
   validation = replaceField(validation, 'Last updated', today());
   validation = replaceField(validation, 'Active milestone', 'NONE');
   validation = replaceField(validation, 'Validation status', 'idle_until_milestone');
   validation = replaceField(validation, 'Audit readiness', 'not_ready');
   validation = replaceField(validation, 'Input hash', 'pending_sync');
-  validation = replaceSection(validation, 'Success Contract', `- \`Yeni milestone research/plani ile doldurulacak\``);
+  validation = replaceSection(validation, 'Success Contract', '- `To be filled by the next milestone research/plan`');
   validation = replaceSection(validation, 'Validation Contract', `
 | Deliverable | Verify command | Expected signal | Manual check | Golden | Audit owner | Status | Evidence | Packet hash |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Workflow idle validation surface | node scripts/workflow/doctor.js --strict | 0 fail | Idle workflow summary aligns with STATUS.md | ${goldenRef} | audit | pending | ${statusRef} | pending_sync |
 `);
-  validation = replaceSection(validation, 'Audit Notes', `- \`${activeRow.milestone} tamamlandi ve validation snapshot archive icine tasindi\``);
-  validation = replaceSection(validation, 'Completion Gate', `- \`Yeni milestone ile doldurulacak\``);
+  validation = replaceSection(validation, 'Audit Notes', `- \`${activeRow.milestone} completed and the validation snapshot was moved into the archive\``);
+  validation = replaceSection(validation, 'Completion Gate', '- `To be filled by the next milestone`');
 
   handoff = replaceField(handoff, 'Last updated', today());
   handoff = replaceField(handoff, 'Handoff status', 'idle');
@@ -428,11 +428,11 @@ ${clearedMemoryEntries.length === 0 ? '- `Temizlenen aktif memory notu yok`' : c
   handoff = replaceField(handoff, 'Packet hash', 'pending_sync');
   handoff = replaceField(handoff, 'Current chunk cursor', '0/0');
   handoff = replaceField(handoff, 'Expected first command', 'npm run workflow:health -- --strict');
-  handoff = replaceSection(handoff, 'Snapshot', `- \`${activeRow.milestone} complete edildi\``);
-  handoff = replaceSection(handoff, 'Immediate Next Action', `- \`Bir sonraki milestone'u planla veya workstream degistir\``);
+  handoff = replaceSection(handoff, 'Snapshot', `- \`${activeRow.milestone} was completed\``);
+  handoff = replaceSection(handoff, 'Immediate Next Action', '- `Plan the next milestone or switch workstreams`');
   handoff = replaceSection(handoff, 'Execution Cursor', `
 - \`Completed checklist items: Milestone complete\`
-- \`Remaining items: Kullanici isterse yeni milestone ac\`
+- \`Remaining items: Open the next milestone if needed\`
 - \`Next unread canonical refs: ${path.relative(process.cwd(), paths.workstreams || controlPaths(process.cwd()).workstreams)}; ${path.relative(process.cwd(), paths.context)}\`
 `);
   handoff = replaceSection(handoff, 'Packet Snapshot', `
@@ -445,7 +445,7 @@ ${clearedMemoryEntries.length === 0 ? '- `Temizlenen aktif memory notu yok`' : c
 - \`${path.relative(process.cwd(), paths.status)}\`
 - \`${path.relative(process.cwd(), paths.window)}\`
 `);
-  handoff = replaceSection(handoff, 'Risks', `- \`Yeni milestone acilmadan aktif context tekrar kullanilmaz\``);
+  handoff = replaceSection(handoff, 'Risks', '- `Do not reuse active context before a new milestone is opened`');
 
   window = replaceField(window, 'Last updated', today());
   window = replaceField(window, 'Session id', 'pending_sync');
@@ -466,7 +466,7 @@ ${clearedMemoryEntries.length === 0 ? '- `Temizlenen aktif memory notu yok`' : c
 - \`Estimated packet tokens: 0\`
 - \`Packet budget status: ok\`
 `);
-  window = replaceSection(window, 'Read Set Estimate', `- \`Recommended read set henuz yok\``);
+  window = replaceSection(window, 'Read Set Estimate', '- `No recommended read set yet`');
   window = replaceSection(window, 'Artifact Estimate', `
 - \`Workflow artifact tokens: 0\`
 - \`Execution overhead: 2000\`

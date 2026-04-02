@@ -42,7 +42,7 @@ function main() {
   const status = read(paths.status);
   const memory = read(paths.memory);
   const milestone = String(getFieldValue(status, 'Current milestone') || 'NONE');
-  const recall = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'Henuz aktif recall notu yok')
+  const recall = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'No active recall notes yet')
     .map((entry) => parseMemoryEntry(entry))
     .filter((entry) => entry.fields.Milestone === milestone)
     .map((entry) => ({
@@ -99,7 +99,7 @@ function main() {
   console.log(payload.filesToReopen);
   console.log(`\n## Active Recall\n`);
   if (payload.recall.length === 0) {
-    console.log('- `Bu milestone icin active recall notu yok`');
+    console.log('- `No active recall notes for this milestone`');
   } else {
     for (const item of payload.recall) {
       console.log(`- \`${item.title}\``);

@@ -32,7 +32,7 @@
 
 ## Success Contract
 
-- `Yeni milestone research/plani ile doldurulacak`
+- `To be filled during research/planning for the next milestone`
 
 ## Validation Contract
 
@@ -44,17 +44,17 @@
 
 | Unknown | Impact | Owner | Status |
 | --- | --- | --- | --- |
-| `Ilk aktif milestone dogrulama kontrati` | `Validation rows degisecek` | `user` | `open` |
+| `What the first active milestone validation contract should be` | `Validation rows will change` | `user` | `open` |
 
 ## What Would Falsify This Plan?
 
-- `Validation tablosu verify/manual/evidence kolonlari bos kalirsa audit contract gecersiz olur`
-- `Packet hash stale kalirsa audit eski plan uzerinden kapanabilir`
+- `If the validation table keeps empty verify/manual/evidence columns, the audit contract is invalid`
+- `If the packet hash stays stale, audit may close out against an outdated plan`
 
 ## Audit Notes
 
-- `Starter scaffold ilk aktif milestone'a kadar beklemede`
+- `The starter scaffold is waiting until the first active milestone`
 
 ## Completion Gate
 
-- `Yeni milestone ile doldurulacak`
+- `To be filled when the next milestone opens`

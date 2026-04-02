@@ -55,7 +55,7 @@ function main() {
   const dryRun = Boolean(args['dry-run']);
 
   let seeds = read(paths.seeds);
-  const openSeeds = parseSeedEntries(extractSection(seeds, 'Open Seeds'), 'Henuz acik seed yok');
+  const openSeeds = parseSeedEntries(extractSection(seeds, 'Open Seeds'), 'No open seeds yet');
   const nextEntries = [
     {
       date: today(),
@@ -72,7 +72,7 @@ function main() {
   ];
 
   seeds = replaceField(seeds, 'Last updated', today());
-  seeds = replaceSection(seeds, 'Open Seeds', renderSeedSection(nextEntries, 'Henuz acik seed yok'));
+  seeds = replaceSection(seeds, 'Open Seeds', renderSeedSection(nextEntries, 'No open seeds yet'));
 
   if (dryRun) {
     console.log(`DRY RUN: would write seed "${title}" to ${paths.seeds}`);
@@ -80,7 +80,7 @@ function main() {
   }
 
   write(paths.seeds, seeds);
-  console.log(`Planted seed "${title}"`);
+  console.log(`Saved seed "${title}"`);
 }
 
 main();
