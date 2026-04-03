@@ -107,6 +107,7 @@ function main() {
   const agentsReview = String(args['agents-review'] || '').trim();
   const preferences = loadPreferences(paths);
   const noPush = Boolean(args['no-push']) || !preferences.autoPush;
+  const requireStrictHealth = Boolean(preferences.healthStrictRequired);
 
   if (!agentsReview) {
     throw new Error('--agents-review is required');
@@ -169,10 +170,12 @@ function main() {
     throw new Error(`Validation contract incomplete: ${validationIssues.map((item) => item.message).join('; ')}`);
   }
 
-  try {
-    runHealthStrict(rootDir);
-  } catch (error) {
-    throw new Error(`workflow:health --strict failed before complete: ${String(error.stderr || error.stdout || error.message).trim()}`);
+  if (requireStrictHealth) {
+    try {
+      runHealthStrict(rootDir);
+    } catch (error) {
+      throw new Error(`workflow:health --strict failed before complete: ${String(error.stderr || error.stdout || error.message).trim()}`);
+    }
   }
 
   const archiveName = `${activeRow.milestone}-${slugify(activeRow.goal) || 'milestone'}.md`;

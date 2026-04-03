@@ -8,6 +8,7 @@ const {
   controlPaths,
   ensureDir,
   escapeRegex,
+  slugify,
   getFieldValue,
   loadPreferences,
   parseArgs,
@@ -43,6 +44,28 @@ const WORKSTREAM_DOC_FILES = [
 ];
 
 const LIFECYCLE_STEPS = new Set(['discuss', 'research', 'plan', 'execute', 'audit', 'complete']);
+const WORKSTREAM_NAME_MAX_LENGTH = 60;
+
+function validateWorkstreamName(rawName) {
+  const name = String(rawName || '').trim();
+  if (!name) {
+    throw new Error('--name is required');
+  }
+
+  if (slugify(name).length < 1) {
+    throw new Error(`Invalid workstream name: ${name}`);
+  }
+
+  if (name !== slugify(name)) {
+    throw new Error(`Invalid workstream name: ${name}`);
+  }
+
+  if (name.length > WORKSTREAM_NAME_MAX_LENGTH) {
+    throw new Error(`Invalid workstream name: ${name}`);
+  }
+
+  return name;
+}
 
 function printHelp() {
   console.log(`
@@ -436,10 +459,7 @@ function ensureRegistryRow(cwd, rowData, options = {}) {
 }
 
 function createWorkstream(cwd, args) {
-  const workstreamName = String(args.name || '').trim();
-  if (!workstreamName) {
-    throw new Error('--name is required');
-  }
+  const workstreamName = validateWorkstreamName(args.name);
 
   const targetRoot = targetRootForName(cwd, workstreamName);
   if (fs.existsSync(targetRoot)) {
@@ -486,10 +506,7 @@ function createWorkstream(cwd, args) {
 }
 
 function switchWorkstream(cwd, args) {
-  const workstreamName = String(args.name || '').trim();
-  if (!workstreamName) {
-    throw new Error('--name is required');
-  }
+  const workstreamName = validateWorkstreamName(args.name);
 
   const note = String(args.note || 'Named workstream control plane').trim();
   const targetRoot = targetRootForName(cwd, workstreamName);
@@ -629,7 +646,7 @@ function printList(summary) {
 }
 
 function printResume(row) {
-  const strictFlag = row.mode === 'team' ? '--strict ' : '--strict ';
+  const strictFlag = row.mode === 'team' ? '--strict ' : '';
   console.log('# WORKSTREAM RESUME\n');
   console.log(`- Workstream: \`${row.name}\``);
   console.log(`- Root: \`${row.root}\``);
@@ -642,11 +659,12 @@ function printResume(row) {
 }
 
 function printComplete(row) {
+  const strictFlag = row.mode === 'team' ? '--strict ' : '';
   console.log('# WORKSTREAM COMPLETE\n');
   console.log(`- Workstream: \`${row.name}\``);
   console.log(`- Root: \`${row.root}\``);
   console.log(`- Closeout command: \`npm run workflow:complete-milestone -- --root ${row.root} --agents-review unchanged --summary "..."\``);
-  console.log('- Preflight: `npm run workflow:health -- --strict`');
+  console.log(`- Preflight: \`npm run workflow:health -- ${strictFlag}--root ${row.root}\``);
 }
 
 function main() {

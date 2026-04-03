@@ -5,6 +5,7 @@ const {
   buildPacketSnapshot,
   computeWindowStatus,
   extractSection,
+  loadPreferences,
   getFieldValue,
   parseArgs,
   parseArchivedMilestones,
@@ -55,6 +56,8 @@ function main() {
   const rootDir = resolveWorkflowRoot(cwd, args.root);
   const paths = workflowPaths(rootDir);
   assertWorkflowFiles(paths);
+  const preferences = loadPreferences(paths);
+  const strictMode = Boolean(args.strict) || Boolean(preferences.healthStrictRequired);
 
   const checks = [];
   const pushCheck = (status, message, extra = {}) => checks.push({ status, message, ...extra });
@@ -213,6 +216,7 @@ function main() {
   if (args.json) {
     console.log(JSON.stringify({
       rootDir: path.relative(cwd, rootDir),
+      strictMode,
       failCount,
       warnCount,
       checks,
@@ -229,12 +233,13 @@ function main() {
   console.log(`- Root: \`${path.relative(cwd, rootDir)}\``);
   console.log(`- Fail count: \`${failCount}\``);
   console.log(`- Warn count: \`${warnCount}\``);
+  console.log(`- Strict mode: \`${strictMode ? 'on' : 'off'}\``);
   console.log(`\n## Checks\n`);
   for (const check of checks) {
     console.log(`- [${check.status.toUpperCase()}] ${check.message}`);
   }
 
-  if (args.strict && failCount > 0) {
+  if (strictMode && failCount > 0) {
     process.exitCode = 1;
   }
 }

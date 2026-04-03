@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const childProcess = require('node:child_process');
 const {
   assertWorkflowFiles,
   computeWindowStatus,
@@ -36,6 +37,14 @@ Options:
   --sync            Write plan-ready state back to workflow docs
   --json            Print machine-readable output
   `);
+}
+
+function runHealthStrictCheck(rootDir, cwd = process.cwd()) {
+  childProcess.execFileSync('node', [path.join(__dirname, 'health.js'), '--root', rootDir, '--strict'], {
+    cwd,
+    stdio: 'pipe',
+    encoding: 'utf8',
+  });
 }
 
 function safeExtract(content, heading, fallback = '') {
@@ -277,6 +286,11 @@ function main() {
   let validationDoc = read(paths.validation);
   const milestone = String(getFieldValue(statusDoc, 'Current milestone') || 'NONE').trim();
   const step = String(getFieldValue(statusDoc, 'Current milestone step') || 'unknown').trim();
+  const requireStrictHealth = Boolean(preferences.healthStrictRequired);
+
+  if (requireStrictHealth && milestone !== 'NONE') {
+    runHealthStrictCheck(rootDir, cwd);
+  }
 
   const checks = [];
   const pushCheck = (status, area, message, extra = {}) => checks.push({ status, area, message, ...extra });

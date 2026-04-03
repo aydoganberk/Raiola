@@ -520,7 +520,7 @@ Make the workflow layer feel native and efficient inside the Codex app.
 
 ### Delivery Meta
 
-- Status: `planned`
+- Status: `done`
 - Owner: `app experience and workflow UX lane`
 - Dependencies:
   - `Phase 1`

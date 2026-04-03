@@ -23,6 +23,15 @@ function run(command, args, cwd) {
   });
 }
 
+function runExpectError(command, args, cwd) {
+  try {
+    run(command, args, cwd);
+    return null;
+  } catch (error) {
+    return error;
+  }
+}
+
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -71,7 +80,10 @@ test('workflow:workstreams progress shows stale and budget-out streams in one co
   run('node', [workstreamsScript, 'create', '--name', 'beta'], targetRepo);
 
   let alphaExecplan = readFile(targetRepo, 'docs/alpha/EXECPLAN.md');
-  alphaExecplan = alphaExecplan.replace('- `This file is not a backlog; it is only the canonical plan for the active stream`', '- `This file is not a backlog; it is only the canonical plan for the active stream`\n- `Un-synced alpha drift`');
+  alphaExecplan = alphaExecplan.replace(
+    '- `This file is not a backlog; it is only the canonical plan for the active stream`',
+    '- `This file is not a backlog; it is only the canonical plan for the active stream`\n- `Un-synced alpha drift`',
+  );
   writeFile(targetRepo, 'docs/alpha/EXECPLAN.md', alphaExecplan);
 
   let betaExecplan = readFile(targetRepo, 'docs/beta/EXECPLAN.md');
@@ -88,6 +100,63 @@ test('workflow:workstreams progress shows stale and budget-out streams in one co
   assert.ok(status.stale.some((row) => row.name === 'alpha'));
   assert.ok(!status.stale.some((row) => row.name === 'beta'));
   assert.equal(status.active.name, 'workflow');
+});
+
+test('workstream name rejects traversal and unsafe characters', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [initScript, '--target', targetRepo], repoRoot);
+
+  const workstreamsScript = path.join(targetRepo, 'scripts', 'workflow', 'workstreams.js');
+
+  assert.throws(() => {
+    run('node', [workstreamsScript, 'create', '--name', '../escape-here'], targetRepo);
+  }, /Invalid workstream name/);
+
+  assert.throws(() => {
+    run('node', [workstreamsScript, 'create', '--name', 'with/slash'], targetRepo);
+  }, /Invalid workstream name/);
+
+  assert.throws(() => {
+    run('node', [workstreamsScript, 'create', '--name', 'bad$name'], targetRepo);
+  }, /Invalid workstream name/);
+});
+
+test('team mode makes health strict by default and resume output reflects that', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [initScript, '--target', targetRepo], repoRoot);
+  initGitRepo(targetRepo);
+
+  const workstreamsScript = path.join(targetRepo, 'scripts', 'workflow', 'workstreams.js');
+  const healthScript = path.join(targetRepo, 'scripts', 'workflow', 'health.js');
+
+  let prefs = readFile(targetRepo, 'docs/workflow/PREFERENCES.md');
+  prefs = replaceField(prefs, 'Workflow mode', 'team');
+  writeFile(targetRepo, 'docs/workflow/PREFERENCES.md', prefs);
+
+  run('node', [workstreamsScript, 'create', '--name', 'team-stream'], targetRepo);
+  run('node', [workstreamsScript, 'switch', '--name', 'team-stream'], targetRepo);
+
+  let statusDoc = readFile(targetRepo, 'docs/team-stream/STATUS.md');
+  statusDoc = replaceField(statusDoc, 'Current milestone', 'M9');
+  writeFile(targetRepo, 'docs/team-stream/STATUS.md', statusDoc);
+
+  let execplanDoc = readFile(targetRepo, 'docs/team-stream/EXECPLAN.md');
+  execplanDoc = replaceField(execplanDoc, 'Active milestone', 'M0');
+  writeFile(targetRepo, 'docs/team-stream/EXECPLAN.md', execplanDoc);
+
+  const healthFailure = runExpectError('node', [healthScript, '--root', 'docs/team-stream'], targetRepo);
+  assert.ok(healthFailure);
+  assert.equal(healthFailure.status, 1);
+
+  const planCheckFailure = runExpectError('node', [path.join(targetRepo, 'scripts', 'workflow', 'plan_check.js'), '--root', 'docs/team-stream', '--json'], targetRepo);
+  assert.ok(planCheckFailure);
+  assert.equal(planCheckFailure.status, 1);
+
+  const resumeOutput = run('node', [workstreamsScript, 'resume', '--name', 'team-stream'], targetRepo);
+  assert.ok(resumeOutput.includes('workflow:health -- --strict --root docs/team-stream'));
+
+  const completeOutput = run('node', [workstreamsScript, 'complete', '--name', 'team-stream'], targetRepo);
+  assert.ok(completeOutput.includes('workflow:health -- --strict'));
 });
 
 test('team mode enforces unique milestone ids and branch isolation during workstream switch', () => {
