@@ -14,6 +14,7 @@ const {
   parseSeedEntries,
   parseWorkstreamTable,
   read,
+  readPlanGateStatus,
   resolveWorkflowRoot,
   runEvidenceChecks,
   validateValidationContract,
@@ -69,6 +70,8 @@ function main() {
   const workstreams = read(paths.workstreams);
   const milestone = String(getFieldValue(statusDoc, 'Current milestone') || 'NONE').trim();
   const step = String(getFieldValue(statusDoc, 'Current milestone step') || 'unknown').trim();
+  const contextReadiness = String(getFieldValue(statusDoc, 'Context readiness') || 'unknown').trim();
+  const planGate = readPlanGateStatus(paths);
   const activeRow = parseMilestoneTable(milestones).rows.find((row) => row.status === 'active');
 
   pushCheck(
@@ -89,6 +92,12 @@ function main() {
       : 'fail',
     'The active row in MILESTONES.md must match the milestone shown in STATUS.md',
   );
+  if (milestone !== 'NONE' && ['execute', 'audit'].includes(step)) {
+    pushCheck(
+      planGate === 'pass' ? 'pass' : 'fail',
+      `Execute/audit requires plan gate pass -> gate=${planGate}, readiness=${contextReadiness}`,
+    );
+  }
 
   const packets = [
     buildPacketSnapshot(paths, { doc: 'context', step: 'discuss' }),

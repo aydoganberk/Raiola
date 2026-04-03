@@ -1,11 +1,11 @@
 # VALIDATION
 
-- Last updated: `2026-04-02`
+- Last updated: `2026-04-03`
 - Active milestone: `NONE`
 - Validation status: `idle_until_milestone`
 - Audit readiness: `not_ready`
 - Contract owner: `audit`
-- Packet version: `2`
+- Packet version: `3`
 - Input hash: `pending_sync`
 - Budget profile: `normal`
 - Target input tokens: `9000`
@@ -33,6 +33,28 @@
 ## Success Contract
 
 - `To be filled during research/planning for the next milestone`
+
+## Acceptance Criteria
+
+| Acceptance ID | Criterion | How to observe | Status |
+| --- | --- | --- | --- |
+| `AC0` | `Fill when a milestone opens` | `Describe the observable signal that proves this criterion` | `pending` |
+
+## User-visible Outcomes
+
+| Outcome | How to observe | Status |
+| --- | --- | --- |
+| `Fill when a milestone opens` | `Describe what the user should be able to see or do` | `pending` |
+
+## Regression Focus
+
+| Area | Risk | Check |
+| --- | --- | --- |
+| `Fill when a milestone opens` | `Document what could regress` | `Describe the regression-oriented check` |
+
+## Verification Attachments
+
+- `Optionally add VERIFICATION_BRIEF.md or TEST_SPEC.md when the milestone needs deeper verification planning`
 
 ## Validation Contract
 

@@ -5,6 +5,8 @@
 - Workstream: `Default workflow control plane`
 - Milestone: `NONE`
 - Step: `complete`
+- Automation mode: `manual`
+- Automation status: `idle`
 - Resume anchor: `Milestone open`
 - Packet hash: `pending_sync`
 - Current chunk cursor: `0/0`
@@ -29,6 +31,13 @@
 - `Packet hash: pending_sync`
 - `Current run chunk: NONE`
 - `Chunk cursor: 0/0`
+
+## Automation Policy
+
+- `manual` -> `Resume only the explicitly requested next action`
+- `phase` -> `Finish the current phase and stop at the next phase boundary`
+- `full` -> `Continue phase-to-phase until blocked, complete, or window-managed`
+- `Window pressure` -> `Prefer a handoff/new window when available; otherwise refresh packet state and continue from the remaining plan`
 
 ## Suggested Resume Commands
 

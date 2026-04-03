@@ -13,6 +13,7 @@
 - Can finish current chunk: `yes`
 - Can start next chunk: `yes`
 - Recommended action: `continue`
+- Automation recommendation: `continue_in_current_window`
 - Resume anchor: `Milestone open`
 - Last safe checkpoint: `pending_sync`
 - Budget status: `ok`
@@ -47,3 +48,4 @@
 ## Notes
 
 - `When Window budget mode is native, this file can be filled from bridge data`
+- `When automation mode is active, handoff/new-window recovery is preferred before packet compaction when the client can support it`

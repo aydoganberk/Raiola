@@ -71,6 +71,7 @@ function collectHudState(cwd, rootDir) {
       remainingBudget: next.windowStatus.remainingBudget,
       canStartNextStep: next.windowStatus.canStartNextStep,
       canFinishCurrentChunk: next.windowStatus.canFinishCurrentChunk,
+      automationRecommendation: next.windowStatus.automationRecommendation,
       packetHash: next.packetHash,
       estimatedTokens: next.estimatedTokens,
       budgetStatus: next.budgetStatus,
@@ -90,8 +91,9 @@ function printCompact(state) {
     .join(' ');
 
   console.log(`# HUD\n`);
-  console.log(`- root=\`${state.workflowRootRelative}\` workstream=\`${state.activeWorkstream.name}\` milestone=\`${state.workflow.milestone}\` step=\`${state.workflow.step}\` readiness=\`${state.workflow.readiness}\``);
-  console.log(`- health=\`${state.health.status}\` fail=\`${state.health.failCount}\` warn=\`${state.health.warnCount}\` window=\`${state.window.decision}\` remaining=\`${state.window.remainingBudget}\` handoff=\`${state.handoff.status}\``);
+  console.log(`- root=\`${state.workflowRootRelative}\` workstream=\`${state.activeWorkstream.name}\` milestone=\`${state.workflow.milestone}\` step=\`${state.workflow.step}\` readiness=\`${state.workflow.readiness}\` plan=\`${state.workflow.planGate}\``);
+  console.log(`- profile=\`${state.workflow.profile}\` automation=\`${state.workflow.automationMode}\` automation_status=\`${state.workflow.automationStatus}\``);
+  console.log(`- health=\`${state.health.status}\` fail=\`${state.health.failCount}\` warn=\`${state.health.warnCount}\` window=\`${state.window.decision}\` remaining=\`${state.window.remainingBudget}\` handoff=\`${state.handoff.status}\` auto_window=\`${state.window.automationRecommendation}\``);
   console.log(`- packets=\`${packetSummary}\``);
   console.log(`- counts=\`carryforward:${state.counts.carryforward} seeds:${state.counts.seeds} recall:${state.counts.activeRecall}\``);
   console.log(`- next=\`${state.next.title}\` command=\`${state.next.command}\``);
@@ -106,9 +108,13 @@ function printStandard(state) {
   console.log(`- Milestone: \`${state.workflow.milestone}\``);
   console.log(`- Step: \`${state.workflow.step}\``);
   console.log(`- Readiness: \`${state.workflow.readiness}\``);
+  console.log(`- Plan gate: \`${state.workflow.planGate}\``);
+  console.log(`- Workflow profile: \`${state.workflow.profile}\``);
+  console.log(`- Automation: \`${state.workflow.automationMode}\` (\`${state.workflow.automationStatus}\`)`);
   console.log(`- Health: \`${state.health.status}\` (\`${state.health.failCount}\` fail / \`${state.health.warnCount}\` warn)`);
   console.log(`- Window decision: \`${state.window.decision}\``);
   console.log(`- Remaining budget: \`${state.window.remainingBudget}\``);
+  console.log(`- Automation recommendation: \`${state.window.automationRecommendation}\``);
   console.log(`- Handoff: \`${state.handoff.status}\``);
   console.log(`- State file: \`${state.stateFileRelative}\``);
 

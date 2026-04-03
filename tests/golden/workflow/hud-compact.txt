@@ -1,8 +1,9 @@
 # HUD
 
-- root=`docs/workflow` workstream=`workflow` milestone=`NONE` step=`complete` readiness=`not_ready`
-- health=`warn` fail=`0` warn=`3` window=`continue` remaining=`119363` handoff=`idle`
-- packets=`context:498c2ed4c373*/ok execplan:95f6319136eb*/ok validation:41bc8708cc6e*/ok`
+- root=`docs/workflow` workstream=`workflow` milestone=`NONE` step=`complete` readiness=`not_ready` plan=`pending`
+- profile=`standard` automation=`manual` automation_status=`idle`
+- health=`warn` fail=`0` warn=`3` window=`continue` remaining=`117898` handoff=`idle` auto_window=`continue_in_current_window`
+- packets=`context:a07e217ae6bb*/ok execplan:9f1c10d3b56f*/ok validation:7ce3786f3c0b*/ok`
 - counts=`carryforward:0 seeds:0 recall:0`
-- next=`Open or switch a milestone` command=`npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."`
+- next=`Open or switch a milestone` command=`npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual`
 - state=`.workflow/state.json`

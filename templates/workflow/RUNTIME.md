@@ -10,7 +10,9 @@
 - `npm run workflow:hud`
 - `npm run workflow:map-codebase`
 - `npm run workflow:delegation-plan`
-- `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."`
+- `npm run workflow:plan-check -- --strict`
+- `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual`
+- `npm run workflow:automation -- --mode phase`
 - `npm run workflow:complete-milestone -- --agents-review unchanged --summary "..."`
 - `npm run workflow:save-memory -- --title "..." --note "..."`
 - `npm run workflow:packet -- --step plan --json`
@@ -30,6 +32,7 @@
 - If the user does not want workflow, continue with the normal task flow.
 - One user request usually maps to one milestone.
 - `discuss -> research -> plan -> execute -> audit -> complete` are steps inside the same milestone.
+- `discuss` itself is split into `intent capture -> constraint extraction -> execution shaping`.
 - Team Lite delegation is not active by default; it activates only with explicit parallel mode.
 - Natural-language triggers that count as explicit Team Lite activation include:
   - `parallel yap`
@@ -46,6 +49,16 @@
 - `full`
   - `Real handoff/closeout, multi-session tracking, and process-quality notes`
 
+## Automation Profiles
+
+- `manual`
+  - `Stop at major workflow transitions unless the user explicitly asks to continue`
+- `phase`
+  - `Codex may finish the current phase and stop at the next phase boundary`
+- `full`
+  - `Codex may keep moving phase-to-phase until blocked, complete, or window-managed`
+- `workflow:automation` updates the canonical automation state so this behavior is visible in the Codex app as well as the CLI
+
 ## Git Runtime Notes
 
 - `complete_milestone` defaults toward commit + push closeout behavior
@@ -56,8 +69,20 @@
 ## Validation Runtime Notes
 
 - `VALIDATION.md` is the canonical source for the audit contract
-- During planning, verify commands, expected signals, manual checks, golden refs, and evidence should be written there
+- During planning, acceptance criteria, user-visible outcomes, regression focus, verify commands, expected signals, manual checks, golden refs, and evidence should be written there
 - During audit, the commands actually run should be read from `STATUS.md` and `VALIDATION.md`
+
+## Plan Check Runtime Notes
+
+- `workflow:plan-check` is the quality gate between planning and execute
+- It checks:
+  - `plan-ready`
+  - `coverage pass/fail`
+  - `anti-horizontal slicing`
+  - `success criteria observability`
+- `pending` means the packet is incomplete but not yet structurally wrong
+- `fail` means the plan shape is wrong and must be revised
+- Use `--sync` when you want the script to write `Plan readiness: yes` only after the gate passes
 
 ## Mapping Runtime Notes
 
@@ -85,17 +110,17 @@
 ## Minimum Done
 
 - `discuss`
-  - `Goal/non-goals/success signal are clear`
-  - `Canonical refs and assumptions are filled in`
+  - `Intent capture, constraint extraction, and execution shaping are complete`
+  - `User intent, explicit constraints, success rubric, and requirement list are filled in`
   - `Scope is framed with evidence`
 - `research`
   - `Touched files are known`
   - `Dependency map and risks are filled in`
   - `Validation contract is narrowed to milestone scope`
 - `plan`
-  - `Context is plan-ready`
-  - `1-2` run chunks are written
-  - `Audit plan and overhead fields are written`
+  - `Chosen strategy, rejected strategies, rollback/fallback, and wave structure are written`
+  - `Coverage matrix has no orphan or duplicate requirements`
+  - `workflow:plan-check passes before execute starts`
 - `execute`
   - `Only the active chunk was implemented`
   - `Status fields were updated`
@@ -126,6 +151,7 @@
 
 - `HANDOFF.md` is the session-level pause/resume layer
 - `WINDOW.md` stores the budget/orchestrator snapshot
+- When automation is active and window pressure appears, prefer handoff/new-window recovery first when the client supports it; otherwise compact and continue from the remaining plan
 - `MEMORY.md` stores active recall and durable memory
 - `SEEDS.md` stores ideas to carry into a later milestone or workstream
 - `.workflow/state.json` stores generated HUD/runtime state and should not be treated as canonical

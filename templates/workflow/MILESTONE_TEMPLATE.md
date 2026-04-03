@@ -4,10 +4,11 @@ Use this template when opening a new milestone so the same lifecycle can be recr
 
 - Default usage: one user request = one milestone
 - `discuss -> research -> plan -> execute -> audit -> complete` are steps inside the same milestone
+- `discuss` is split into `intent capture -> constraint extraction -> execution shaping`
 
 ## Packet Metadata Template
 
-- Packet version: `2`
+- Packet version: `3`
 - Input hash: `pending_sync`
 - Workflow profile: `standard`
 - Budget profile: `normal`
@@ -57,12 +58,36 @@ Use this template when opening a new milestone so the same lifecycle can be recr
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `Deliverable` | `npm test` | `Clean result` | `UI or diff review` | `tests/golden/workflow/...` | `audit` | `pending` | `docs/workflow/STATUS.md` | `pending_sync` |
 
+## Requirement List Template
+
+| Requirement ID | Requirement | Type | Source | Notes |
+| --- | --- | --- | --- | --- |
+| `R1` | `Requirement` | `functional` | `user` | `Notes` |
+
+## Coverage Matrix Template
+
+| Requirement ID | Milestone | Capability slice | Plan chunk | Validation ID | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `R1` | `Mx - Name` | `User-visible slice` | `chunk-1` | `AC1` | `Mapping note` |
+
+## Plan Chunk Table Template
+
+| Chunk ID | Capability slice | Deliverable | Depends on | Wave | Status |
+| --- | --- | --- | --- | --- | --- |
+| `chunk-1` | `Capability slice` | `Deliverable` | `none` | `1` | `pending` |
+
 ## Active Milestone Card Template
 
 - Milestone: `Mx - Name`
 - Phase: `Phase N`
 - Status: `active`
 - Step: `discuss`
+- Milestone profile override:
+  - `none|lite|standard|full`
+- Automation mode:
+  - `manual|phase|full`
+- Automation status:
+  - `idle|active|paused|handoff|complete`
 - Goal:
   - `Goal`
 - Success signal:
@@ -73,6 +98,10 @@ Use this template when opening a new milestone so the same lifecycle can be recr
   - `standard`
 - Discuss mode:
   - `assumptions`
+- Discuss breakdown:
+  - `intent capture -> user intent + requirement list`
+  - `constraint extraction -> explicit constraints + unanswered high-leverage questions`
+  - `execution shaping -> alternatives considered + success rubric`
 - Clarifying questions / assumptions:
   - `Write assumptions or open questions here`
 - Seed intake:
@@ -97,17 +126,17 @@ Use this template when opening a new milestone so the same lifecycle can be recr
 ## Minimum Done Checklists
 
 - `discuss`
-  - `Goal/non-goals/success signal are clear`
-  - `Canonical refs and assumptions are filled in`
-  - `Scope is framed with evidence`
+  - `Intent capture, constraint extraction, and execution shaping are complete`
+  - `User intent, explicit constraints, success rubric, and requirement list are filled in`
+  - `Scope is framed with evidence and high-leverage questions are visible`
 - `research`
   - `Touched files are known`
   - `Dependency map and risks are filled in`
-  - `Validation contract is narrowed to milestone scope`
+  - `Validation contract and acceptance criteria are narrowed to milestone scope`
 - `plan`
-  - `Context is plan-ready`
-  - `1-2` run chunks are written
-  - `Audit plan and overhead fields are filled in`
+  - `Chosen strategy, rollback, blockers, wave structure, and chunks are written`
+  - `Coverage matrix has no orphan or duplicate requirements`
+  - `workflow:plan-check passes before execute begins`
 - `execute`
   - `Only the active chunk was implemented`
   - `Status fields were updated`

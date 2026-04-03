@@ -395,14 +395,33 @@ function parseNumber(value, fallback) {
   return Number.isFinite(normalized) ? normalized : fallback;
 }
 
-function loadPreferences(paths) {
-  const content = readIfExists(paths.preferences);
-  const mode = String((content && getFieldValue(content, 'Workflow mode')) || 'solo').trim();
-  const workflowProfileRaw = String((content && getFieldValue(content, 'Workflow profile')) || 'standard').trim();
-  const workflowProfile = ['lite', 'standard', 'full'].includes(workflowProfileRaw)
-    ? workflowProfileRaw
-    : 'standard';
-  const profileDefaults = {
+function normalizeWorkflowProfile(value, fallback = 'standard') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['lite', 'standard', 'full'].includes(normalized) ? normalized : fallback;
+}
+
+function normalizeAutomationMode(value, fallback = 'manual') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['manual', 'phase', 'full'].includes(normalized) ? normalized : fallback;
+}
+
+function normalizeAutomationStatus(value, fallback = 'idle') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['idle', 'active', 'paused', 'handoff', 'complete'].includes(normalized) ? normalized : fallback;
+}
+
+function normalizeAutomationWindowPolicy(value, fallback = 'handoff_then_compact') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['handoff_then_compact', 'compact_then_continue'].includes(normalized) ? normalized : fallback;
+}
+
+function normalizePlanGateStatus(value, fallback = 'pending') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['pending', 'pass', 'fail'].includes(normalized) ? normalized : fallback;
+}
+
+function profileDefaultsFor(workflowProfile) {
+  return {
     lite: {
       budgetProfile: 'lean',
       healthStrictRequired: false,
@@ -454,7 +473,67 @@ function loadPreferences(paths) {
       minimumNextStepBudget: 14000,
       compactionTarget: 0.6,
     },
-  }[workflowProfile];
+  }[workflowProfile] || {
+    budgetProfile: 'normal',
+    healthStrictRequired: false,
+    tokenReserve: 8000,
+    discussBudget: 6000,
+    planBudget: 12000,
+    auditBudget: 9000,
+    compactionThreshold: 0.8,
+    maxCanonicalRefsPerStep: 10,
+    windowBudgetMode: 'estimated',
+    windowSizeTokens: 128000,
+    reserveFloorTokens: 16000,
+    stopStartingNewWorkThreshold: 24000,
+    mustHandoffThreshold: 12000,
+    minimumNextStepBudget: 10000,
+    compactionTarget: 0.55,
+  };
+}
+
+function readPlanGateStatus(paths) {
+  const execplan = readIfExists(paths.execplan);
+  if (!execplan) {
+    return 'pending';
+  }
+
+  return normalizePlanGateStatus(getFieldValue(execplan, 'Plan-ready gate'), 'pending');
+}
+
+function loadPreferences(paths) {
+  const content = readIfExists(paths.preferences);
+  const statusContent = readIfExists(paths.status);
+  const contextContent = readIfExists(paths.context);
+  const milestone = String((statusContent && getFieldValue(statusContent, 'Current milestone')) || 'NONE').trim();
+  const mode = String((content && getFieldValue(content, 'Workflow mode')) || 'solo').trim();
+  const repoWorkflowProfileRaw = String((content && getFieldValue(content, 'Workflow profile')) || 'standard').trim();
+  const repoWorkflowProfile = normalizeWorkflowProfile(repoWorkflowProfileRaw, 'standard');
+  const milestoneProfileOverrideRaw = milestone !== 'NONE'
+    ? String((contextContent && getFieldValue(contextContent, 'Milestone profile override')) || 'none').trim()
+    : 'none';
+  const milestoneProfileOverride = normalizeWorkflowProfile(milestoneProfileOverrideRaw, 'none');
+  const workflowProfileRaw = milestoneProfileOverride === 'none'
+    ? repoWorkflowProfileRaw
+    : milestoneProfileOverrideRaw;
+  const workflowProfile = milestoneProfileOverride === 'none'
+    ? repoWorkflowProfile
+    : milestoneProfileOverride;
+  const repoAutomationModeRaw = String((content && getFieldValue(content, 'Automation mode')) || 'manual').trim();
+  const repoAutomationMode = normalizeAutomationMode(repoAutomationModeRaw, 'manual');
+  const milestoneAutomationModeRaw = milestone !== 'NONE'
+    ? String((contextContent && getFieldValue(contextContent, 'Automation mode')) || repoAutomationModeRaw).trim()
+    : repoAutomationModeRaw;
+  const automationModeRaw = milestoneAutomationModeRaw || repoAutomationModeRaw;
+  const automationMode = normalizeAutomationMode(automationModeRaw, repoAutomationMode);
+  const automationStatusRaw = String(
+    (statusContent && getFieldValue(statusContent, 'Automation status'))
+    || (contextContent && getFieldValue(contextContent, 'Automation status'))
+    || (automationMode === 'manual' ? 'idle' : 'active'),
+  ).trim();
+  const automationWindowPolicyRaw = String((content && getFieldValue(content, 'Automation window policy')) || 'handoff_then_compact').trim();
+  const automationWindowPolicy = normalizeAutomationWindowPolicy(automationWindowPolicyRaw, 'handoff_then_compact');
+  const profileDefaults = profileDefaultsFor(workflowProfile);
   const modeDefaults = mode === 'team'
     ? {
       discussMode: 'assumptions',
@@ -484,9 +563,23 @@ function loadPreferences(paths) {
 
   return {
     mode,
+    milestone,
     workflowProfile,
     workflowProfileRaw,
+    repoWorkflowProfile,
+    repoWorkflowProfileRaw,
+    milestoneProfileOverride,
+    milestoneProfileOverrideRaw,
     discussMode: String((content && getFieldValue(content, 'Discuss mode')) || defaults.discussMode).trim(),
+    repoAutomationMode,
+    repoAutomationModeRaw,
+    automationMode,
+    automationModeRaw,
+    milestoneAutomationMode: automationMode,
+    milestoneAutomationModeRaw,
+    automationStatus: normalizeAutomationStatus(automationStatusRaw, automationMode === 'manual' ? 'idle' : 'active'),
+    automationWindowPolicy,
+    automationWindowPolicyRaw,
     gitIsolation: String((content && getFieldValue(content, 'Git isolation')) || defaults.gitIsolation).trim(),
     teamLiteDelegation: String((content && getFieldValue(content, 'Team Lite delegation')) || defaults.teamLiteDelegation).trim(),
     autoPush: parseBoolean(content && getFieldValue(content, 'Auto push'), defaults.autoPush),
@@ -1156,6 +1249,17 @@ function computeWindowStatus(paths, options = {}) {
     recommendedAction = 'compact';
   }
 
+  let automationRecommendation = 'continue_in_current_window';
+  if (preferences.automationMode !== 'manual') {
+    if (['handoff-required', 'new-window-recommended'].includes(decision)) {
+      automationRecommendation = preferences.automationWindowPolicy === 'handoff_then_compact'
+        ? 'prefer_handoff_or_new_window'
+        : 'compact_and_continue';
+    } else if (['do-not-start-next-step', 'compact-now'].includes(decision)) {
+      automationRecommendation = 'compact_then_continue';
+    }
+  }
+
   const storedUsed = parseNumber(getFieldValue(windowContent, 'Estimated used tokens'), 0);
   const recentContextGrowth = Math.max(0, estimatedUsedTokens - storedUsed);
 
@@ -1174,6 +1278,9 @@ function computeWindowStatus(paths, options = {}) {
     canStartNextChunk,
     decision,
     recommendedAction,
+    automationMode: preferences.automationMode,
+    automationWindowPolicy: preferences.automationWindowPolicy,
+    automationRecommendation,
     budgetRatio,
     executionOverhead,
     verifyOverhead,
@@ -1205,6 +1312,7 @@ function syncWindowDocument(paths, windowStatus) {
   content = replaceOrAppendField(content, 'Can finish current chunk', status.canFinishCurrentChunk ? 'yes' : 'no');
   content = replaceOrAppendField(content, 'Can start next chunk', status.canStartNextChunk ? 'yes' : 'no');
   content = replaceOrAppendField(content, 'Recommended action', status.recommendedAction);
+  content = replaceOrAppendField(content, 'Automation recommendation', status.automationRecommendation);
   content = replaceOrAppendField(content, 'Resume anchor', status.resumeAnchor);
   content = replaceOrAppendField(content, 'Last safe checkpoint', status.lastSafeCheckpoint);
   content = replaceOrAppendField(content, 'Budget status', status.budgetStatus);
@@ -1380,6 +1488,11 @@ module.exports = {
   loadPreferences,
   normalizeReference,
   normalizeStagePath,
+  normalizeAutomationMode,
+  normalizeAutomationStatus,
+  normalizeAutomationWindowPolicy,
+  normalizePlanGateStatus,
+  normalizeWorkflowProfile,
   parseArgs,
   parseArchivedMilestones,
   parseBoolean,
@@ -1388,6 +1501,7 @@ module.exports = {
   parseMemoryEntry,
   parseMilestoneTable,
   parseNumber,
+  profileDefaultsFor,
   parseReferenceList,
   parseRefTable,
   parseSeedEntries,
@@ -1395,6 +1509,7 @@ module.exports = {
   parseValidationContract,
   parseWorkstreamTable,
   read,
+  readPlanGateStatus,
   readIfExists,
   renderArchivedMilestones,
   renderMarkdownTable,

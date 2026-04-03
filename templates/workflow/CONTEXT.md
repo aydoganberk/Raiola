@@ -1,12 +1,16 @@
 # CONTEXT
 
-- Last updated: `2026-04-02`
+- Last updated: `2026-04-03`
 - Workstream: `Default workflow control plane`
 - Milestone: `NONE`
+- Milestone profile override: `none`
 - Step source: `discuss`
 - Context status: `idle_until_milestone`
+- Discuss subphase: `intent_capture`
+- Automation mode: `manual`
+- Automation status: `idle`
 - Plan readiness: `not_ready`
-- Packet version: `2`
+- Packet version: `3`
 - Input hash: `pending_sync`
 - Budget profile: `normal`
 - Target input tokens: `12000`
@@ -42,6 +46,51 @@
   - `When the first milestone is explicitly defined, this file can be filled for that scope`
 - Non-goals:
   - `Starting workflow planning without an explicit user request`
+
+## Discuss Breakdown
+
+- `Intent capture` -> `Turn the user request into a concrete intent statement and an initial requirement list`
+- `Constraint extraction` -> `Surface explicit constraints, tradeoffs, and unanswered high-leverage questions`
+- `Execution shaping` -> `Decide what a good strategy looks like before execution and validation planning begins`
+
+## User Intent
+
+- Primary request:
+  - `Fill this when a milestone opens`
+- Why this matters now:
+  - `Capture the user-facing reason before planning starts`
+- In-scope outcome:
+  - `Describe the smallest meaningful capability we are trying to land`
+
+## Explicit Constraints
+
+| Constraint | Type | Source | Impact |
+| --- | --- | --- | --- |
+| `Fill when a milestone opens` | `scope` | `user` | `Planning should not start until the constraint surface is explicit` |
+
+## Alternatives Considered
+
+| Option | Status | Why |
+| --- | --- | --- |
+| `Fill when a milestone opens` | `open` | `Document the main alternatives before choosing a strategy` |
+
+## Unanswered High-Leverage Questions
+
+| Question | Impact | Owner | Status |
+| --- | --- | --- | --- |
+| `Fill when a milestone opens` | `Open questions can block a plan or change the preferred slice` | `owner` | `open` |
+
+## Success Rubric
+
+| Outcome | Observable signal | Why it matters |
+| --- | --- | --- |
+| `Fill when a milestone opens` | `Describe how we would observe success` | `A plan is only ready when success is observable` |
+
+## Requirement List
+
+| Requirement ID | Requirement | Type | Source | Notes |
+| --- | --- | --- | --- | --- |
+| `R0` | `Fill when a milestone opens` | `functional` | `user` | `Every active milestone should replace this placeholder with real requirements` |
 
 ## Codebase Scan Summary
 

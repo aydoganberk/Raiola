@@ -76,12 +76,23 @@ These are steps inside a single milestone, not separate milestones.
 
 In practice:
 
-- `discuss` frames the goal, non-goals, assumptions, and success signal
+- `discuss` moves through `intent capture -> constraint extraction -> execution shaping`
 - `research` identifies touched files, dependencies, risks, and verification surface
-- `plan` writes the canonical implementation plan into `EXECPLAN.md`
+- `plan` writes the canonical implementation plan, coverage matrix, and validation mapping into `EXECPLAN.md`
 - `execute` applies only the active chunk of work
 - `audit` runs validation checks and records residual risks
 - `complete` archives the milestone, cleans up active recall, and prepares closeout
+
+The workflow also supports milestone-scoped automation:
+
+- `manual`
+  Codex pauses at major transitions unless the user explicitly asks to continue.
+- `phase`
+  Codex may complete the current phase end-to-end, then stop at the next phase boundary.
+- `full`
+  Codex may continue phase-to-phase until blocked, complete, or window-managed.
+
+This is designed to work in the Codex app as well as the CLI. The canonical contract lives in the workflow docs (`STATUS.md`, `CONTEXT.md`, `HANDOFF.md`, `WINDOW.md`), so automation state is visible and resumable across sessions.
 
 ## Install into another repository
 
@@ -125,13 +136,20 @@ npm run workflow:hud -- --compact
 npm run workflow:map-codebase -- --compact
 npm run workflow:doctor -- --strict
 npm run workflow:health -- --strict
+npm run workflow:plan-check -- --strict
 npm run workflow:next
 ```
 
 If the surface is clean, open the first milestone:
 
 ```bash
-npm run workflow:new-milestone -- --id M1 --name "Initial setup" --goal "Set up the first workflow-backed task"
+npm run workflow:new-milestone -- --id M1 --name "Initial setup" --goal "Set up the first workflow-backed task" --profile standard --automation manual
+```
+
+To switch automation mode later:
+
+```bash
+npm run workflow:automation -- --mode phase
 ```
 
 During execution, the most common loop is:
@@ -151,12 +169,14 @@ npm run workflow:complete-milestone -- --agents-review unchanged --summary "Mile
 ## Core commands
 
 ```bash
-npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."
+npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual
+npm run workflow:automation -- --mode phase
 npm run workflow:complete-milestone -- --agents-review unchanged --summary "..."
 npm run workflow:next
 npm run workflow:hud
 npm run workflow:map-codebase
 npm run workflow:delegation-plan
+npm run workflow:plan-check -- --sync --strict
 npm run workflow:packet -- --step plan --json
 npm run workflow:pause-work -- --summary "..."
 npm run workflow:resume-work
@@ -214,6 +234,8 @@ The starter kit intentionally ships with an empty `completed_milestones/` archiv
 - Keep `STATUS.md` limited to the active window, not historical changelog data.
 - Use `SEEDS.md` for future ideas and `CARRYFORWARD.md` for unfinished active work. They are not the same thing.
 - Run `workflow:health -- --strict` before closeout when the profile or task requires strong validation discipline.
+- Run `workflow:plan-check -- --sync --strict` before execute so `plan-ready=yes` is written only after the quality gate passes.
+- Treat `workflow:plan-check -> pending` as "the packet is incomplete" and `fail` as "the plan shape is wrong".
 
 ## Repository status
 

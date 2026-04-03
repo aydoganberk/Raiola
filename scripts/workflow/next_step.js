@@ -10,6 +10,7 @@ const {
   parseMemoryEntry,
   parseSeedEntries,
   read,
+  readPlanGateStatus,
   resolveWorkflowRoot,
   workflowPaths,
 } = require('./common');
@@ -38,6 +39,7 @@ function deriveRecommendation(state) {
     milestone,
     step,
     contextReadiness,
+    planGate,
     handoffStatus,
     handoffNext,
     activeRecall,
@@ -81,7 +83,7 @@ function deriveRecommendation(state) {
 
   if (milestone === 'NONE') {
     recommendation.title = 'Open or switch a milestone';
-    recommendation.command = 'npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."';
+    recommendation.command = 'npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual';
     recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
       lite: [
         'If needed, check the active root first with workflow:workstreams status',
@@ -103,8 +105,8 @@ function deriveRecommendation(state) {
       ],
     });
     recommendation.note = seeds.length > 0
-      ? `Open seeds: ${seeds.length} | profile=${preferences.workflowProfile}`
-      : `There is no active milestone | profile=${preferences.workflowProfile}`;
+      ? `Open seeds: ${seeds.length} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`
+      : `There is no active milestone | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
     return recommendation;
   }
 
@@ -116,19 +118,21 @@ function deriveRecommendation(state) {
     recommendation.checklist = preferences.discussMode === 'assumptions'
       ? checklistForProfile(preferences.workflowProfile, {
         lite: [
-          'Scan the relevant core files and write scope assumptions',
-          'Clarify goal, non-goals, and success signal',
-          'Fill in canonical refs and the assumptions table in CONTEXT.md',
+          'Complete intent capture first: write User Intent and the first Requirement List rows',
+          'Move into constraint extraction: capture Explicit Constraints and high-leverage questions',
+          'Finish execution shaping: add Alternatives Considered and an observable Success Rubric',
         ],
         standard: [
-          'Scan 5-15 relevant files and fill in the evidence-backed assumptions table',
-          'Clarify goal, non-goals, and success signal',
+          'Scan 5-15 relevant files while filling User Intent and Requirement List with evidence-backed scope',
+          'Capture Explicit Constraints, unanswered questions, and the assumptions table',
+          'Finish execution shaping with Alternatives Considered and an observable Success Rubric',
           'Fill Claim Ledger, Unknowns, and Canonical Refs',
           'Write seed intake and active recall context into CONTEXT.md',
         ],
         full: [
-          'Scan 5-15 relevant files and fill in the evidence-backed assumptions table',
-          'Clarify goal, non-goals, and success signal',
+          'Scan 5-15 relevant files while filling User Intent and Requirement List with evidence-backed scope',
+          'Capture Explicit Constraints, unanswered questions, and the assumptions table',
+          'Finish execution shaping with Alternatives Considered and an observable Success Rubric',
           'Fill Claim Ledger, Unknowns, and Canonical Refs',
           'Write seed intake, active recall, and failure/falsifier notes',
           'Note which finding could invalidate scope before research finishes',
@@ -136,27 +140,34 @@ function deriveRecommendation(state) {
       })
       : checklistForProfile(preferences.workflowProfile, {
         lite: [
-          'Clarify goal, non-goals, and success signal',
-          'Ask only high-impact questions',
-          'Fill the initial packet snapshot fields in CONTEXT.md',
+          'Clarify the user intent first and draft the initial Requirement List',
+          'Ask only high-impact questions that affect constraints or slice choice',
+          'Write Explicit Constraints, Alternatives Considered, and Success Rubric in CONTEXT.md',
         ],
         standard: [
-          'Clarify goal, non-goals, and success signal',
-          'Ask only high-impact questions',
-          'Write unresolved uncertainty into the assumptions table',
+          'Clarify the user intent first and draft the initial Requirement List',
+          'Ask only high-impact questions that affect constraints or slice choice',
+          'Write Explicit Constraints, Alternatives Considered, and unresolved uncertainty into CONTEXT.md',
           'Fill the initial packet snapshot fields in CONTEXT.md',
         ],
         full: [
-          'Clarify goal, non-goals, and success signal',
-          'Ask only high-impact questions',
-          'Write unresolved uncertainty into the assumptions table',
+          'Clarify the user intent first and draft the initial Requirement List',
+          'Ask only high-impact questions that affect constraints or slice choice',
+          'Write Explicit Constraints, Alternatives Considered, and unresolved uncertainty into CONTEXT.md',
           'Fill canonical refs, unknowns, and falsifier fields',
           'Note early if handoff/closeout is likely',
         ],
-      });
+    });
+    if (preferences.automationMode !== 'manual') {
+      recommendation.checklist.push(
+        preferences.automationMode === 'phase'
+          ? 'Automation mode is phase, so Codex may finish discuss and the current phase before pausing at the next boundary'
+          : 'Automation mode is full, so Codex may keep moving through phase boundaries until blocked, complete, or window-managed',
+      );
+    }
     recommendation.note = activeRecall.length > 0
-      ? `This milestone has ${activeRecall.length} active recall note(s) | profile=${preferences.workflowProfile}`
-      : `After discuss, CONTEXT.md is not yet plan-ready | profile=${preferences.workflowProfile}`;
+      ? `This milestone has ${activeRecall.length} active recall note(s) | plan=${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`
+      : `After discuss, the plan gate is still ${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
     return recommendation;
   }
 
@@ -168,20 +179,20 @@ function deriveRecommendation(state) {
         'Run workflow:map-codebase if stack or repo-shape assumptions are still fuzzy',
         'Fill the touched files section',
         'Write the risks and verification surface sections',
-        'Narrow the VALIDATION.md contract table to milestone scope',
+        'Narrow Acceptance Criteria, User-visible Outcomes, and the VALIDATION.md contract table to milestone scope',
       ],
       standard: [
         'Run workflow:map-codebase to refresh stack, architecture, quality, and risk lanes',
         'Write touched files, dependency map, and risks into CONTEXT.md',
         'Update verification surface and research target files',
-        'Narrow the VALIDATION.md contract table to milestone scope',
+        'Narrow Acceptance Criteria, User-visible Outcomes, Regression Focus, and the VALIDATION.md contract table to milestone scope',
         'Update plan readiness only if it is truly ready',
       ],
       full: [
         'Run workflow:map-codebase to refresh stack, architecture, quality, and risk lanes',
         'Write touched files, dependency map, and risks into CONTEXT.md',
         'Update verification surface, research targets, and falsifier fields',
-        'Narrow the VALIDATION.md contract table to milestone scope',
+        'Narrow Acceptance Criteria, User-visible Outcomes, Regression Focus, and the VALIDATION.md contract table to milestone scope',
         'Update plan readiness only if it is truly ready',
         'Capture a RETRO note if recurring process friction appeared',
       ],
@@ -189,9 +200,9 @@ function deriveRecommendation(state) {
     if (teamLiteHint) {
       recommendation.checklist.push(teamLiteHint);
     }
-    recommendation.note = contextReadiness === 'plan_ready'
-      ? `Context is ready; the plan step can start | profile=${preferences.workflowProfile}`
-      : `Move to the plan step once research findings are complete | profile=${preferences.workflowProfile}`;
+    recommendation.note = planGate === 'pass'
+      ? `Context is ready; the plan step can start cleanly | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`
+      : `Move to the plan step once research findings are complete; current gate=${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
     return recommendation;
   }
 
@@ -201,26 +212,41 @@ function deriveRecommendation(state) {
     recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
       lite: [
         'Read CARRYFORWARD.md and the relevant seeds',
-        'Write the plan so it fits into 1-2 run chunks',
-        'Fill the estimated packet / execution / verify overhead fields',
+        'Write Chosen Strategy, Rollback / Fallback, Wave Structure, Coverage Matrix, and Plan Chunk Table',
+        'Run workflow:plan-check -- --sync --strict before execute starts',
       ],
       standard: [
         'Read CARRYFORWARD.md and the relevant seeds',
         'Use workflow:delegation-plan only if the user explicitly wants a parallel route',
-        'Write the plan so it fits into 1-2 run chunks and fill chunk cursor fields',
-        'Fill estimated packet tokens / execution overhead / verify overhead',
-        'Clarify out-of-scope guardrails and the audit plan',
+        'Write Chosen Strategy, Rejected Strategies, Rollback / Fallback, Dependency Blockers, Wave Structure, Coverage Matrix, and Plan Chunk Table',
+        'Keep chunk slices vertical and capability-oriented rather than UI/API/model splits',
+        'Run workflow:plan-check -- --sync --strict before execute starts',
       ],
       full: [
         'Read CARRYFORWARD.md and the relevant seeds',
         'Use workflow:delegation-plan only if the user explicitly wants a parallel route',
-        'Write the plan so it fits into 1-2 run chunks and fill chunk cursor fields',
-        'Fill estimated packet tokens / execution overhead / verify overhead',
-        'Clarify out-of-scope guardrails, audit plan, and resume anchor',
+        'Write Chosen Strategy, Rejected Strategies, Rollback / Fallback, Dependency Blockers, Wave Structure, Coverage Matrix, and Plan Chunk Table',
+        'Keep chunk slices vertical and capability-oriented rather than UI/API/model splits',
+        'Run workflow:plan-check -- --sync --strict before execute starts',
         'Only continue if the new chunk leaves minimum next-step budget; otherwise split it',
       ],
     });
-    recommendation.note = `The source of truth is the Plan of Record section in EXECPLAN.md | profile=${preferences.workflowProfile}`;
+    recommendation.note = planGate === 'pass'
+      ? `Plan gate is clean; execute can start within the checked plan | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`
+      : `The source of truth is the Plan of Record section in EXECPLAN.md, but execute must wait for workflow:plan-check | gate=${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
+    return recommendation;
+  }
+
+  if (['execute', 'audit'].includes(step) && planGate !== 'pass') {
+    recommendation.title = 'Do not advance until plan-check passes';
+    recommendation.command = 'npm run workflow:plan-check -- --sync --strict';
+    recommendation.checklist = [
+      'Fill any remaining placeholders in CONTEXT.md, EXECPLAN.md, and VALIDATION.md',
+      'Ensure every requirement maps exactly once into the coverage matrix',
+      'Keep plan chunks capability-oriented rather than UI/API/model slices',
+      'Only continue once the plan gate becomes pass and plan-ready becomes yes',
+    ];
+    recommendation.note = `Current gate -> ${planGate} | readiness=${contextReadiness || 'unknown'} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
     return recommendation;
   }
 
@@ -249,7 +275,7 @@ function deriveRecommendation(state) {
         'If process friction happened, keep a short note for RETRO.md after closeout',
       ],
     });
-    recommendation.note = `If execution drifts beyond plan, update docs first | profile=${preferences.workflowProfile}`;
+    recommendation.note = `If execution drifts beyond plan, update docs first | plan=${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
     return recommendation;
   }
 
@@ -278,7 +304,7 @@ function deriveRecommendation(state) {
         'If a process gap appeared, capture a one-line RETRO note',
       ],
     });
-    recommendation.note = `Do not complete the milestone before audit closes | profile=${preferences.workflowProfile}`;
+    recommendation.note = `Do not complete the milestone before audit closes | plan=${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
     return recommendation;
   }
 
@@ -304,7 +330,7 @@ function deriveRecommendation(state) {
       'Pass --stage-paths if git scope is not obvious, or use --allow-workflow-only for docs-only closeout',
     ],
   });
-  recommendation.note = `Planning for the next milestone starts after complete | profile=${preferences.workflowProfile}`;
+  recommendation.note = `Planning for the next milestone starts after complete | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
   return recommendation;
 }
 
@@ -328,6 +354,7 @@ function main() {
   const milestone = String(getFieldValue(status, 'Current milestone') || 'NONE').trim();
   const step = String(getFieldValue(status, 'Current milestone step') || 'unknown').trim();
   const contextReadiness = String(getFieldValue(status, 'Context readiness') || 'unknown').trim();
+  const planGate = readPlanGateStatus(paths);
   const handoffStatus = String(getFieldValue(handoff, 'Handoff status') || 'idle').trim();
   const handoffNext = extractSection(handoff, 'Immediate Next Action');
   const activeRecall = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'No active recall notes yet')
@@ -341,6 +368,7 @@ function main() {
     milestone,
     step,
     contextReadiness,
+    planGate,
     handoffStatus,
     handoffNext,
     activeRecall,
@@ -352,6 +380,8 @@ function main() {
     rootDir: path.relative(cwd, rootDir),
     milestone,
     step,
+    planGate,
+    contextReadiness,
     preferences,
     packetHash: windowStatus.packet.inputHash,
     estimatedTokens: windowStatus.packet.estimatedTotalTokens,
@@ -362,6 +392,12 @@ function main() {
       remainingBudget: windowStatus.estimatedRemainingTokens,
       canStartNextStep: windowStatus.canStartNextChunk,
       canFinishCurrentChunk: windowStatus.canFinishCurrentChunk,
+      automationRecommendation: windowStatus.automationRecommendation,
+    },
+    automation: {
+      mode: preferences.automationMode,
+      status: preferences.automationStatus,
+      windowPolicy: preferences.automationWindowPolicy,
     },
     recommendation,
   };
@@ -393,7 +429,11 @@ function main() {
   console.log(`- Root: \`${payload.rootDir}\``);
   console.log(`- Milestone: \`${milestone}\``);
   console.log(`- Step: \`${step}\``);
+  console.log(`- Plan gate: \`${planGate}\``);
+  console.log(`- Context readiness: \`${contextReadiness}\``);
   console.log(`- Workflow profile: \`${preferences.workflowProfile}\``);
+  console.log(`- Automation mode: \`${preferences.automationMode}\``);
+  console.log(`- Automation status: \`${preferences.automationStatus}\``);
   console.log(`- Discuss mode: \`${preferences.discussMode}\``);
   console.log(`- Git isolation: \`${preferences.gitIsolation}\``);
   console.log(`- Team Lite delegation: \`${preferences.teamLiteDelegation}\``);
@@ -402,6 +442,7 @@ function main() {
   console.log(`- Budget status: \`${payload.budgetStatus}\``);
   console.log(`- Remaining budget: \`${payload.windowStatus.remainingBudget}\``);
   console.log(`- Can start next step: \`${payload.windowStatus.canStartNextStep ? 'yes' : 'no'}\``);
+  console.log(`- Automation recommendation: \`${payload.windowStatus.automationRecommendation}\``);
   console.log(`\n## Recommended Read Set\n`);
   if (payload.recommendedReadSet.length === 0) {
     console.log('- `No recommended read set yet`');

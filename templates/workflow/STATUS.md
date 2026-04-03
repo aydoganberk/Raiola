@@ -4,6 +4,9 @@
 - Current phase: `Phase 0 - Idle`
 - Current milestone: `NONE`
 - Current milestone step: `complete`
+- Effective workflow profile: `standard`
+- Automation mode: `manual`
+- Automation status: `idle`
 - Current context file: `docs/workflow/CONTEXT.md`
 - Context readiness: `not_ready`
 - Current carryforward file: `docs/workflow/CARRYFORWARD.md`

@@ -79,12 +79,24 @@ function main() {
     `Workflow mode -> ${preferences.mode}`,
   );
   pushCheck(
-    ['lite', 'standard', 'full'].includes(preferences.workflowProfileRaw) ? 'pass' : 'fail',
-    `Workflow profile -> ${preferences.workflowProfileRaw}`,
+    ['lite', 'standard', 'full'].includes(preferences.repoWorkflowProfileRaw) ? 'pass' : 'fail',
+    `Workflow profile -> repo=${preferences.repoWorkflowProfileRaw}, effective=${preferences.workflowProfile}`,
   );
   pushCheck(
     ['interview', 'assumptions'].includes(preferences.discussMode) ? 'pass' : 'fail',
     `Discuss mode -> ${preferences.discussMode}`,
+  );
+  pushCheck(
+    ['manual', 'phase', 'full'].includes(preferences.automationMode) ? 'pass' : 'fail',
+    `Automation mode -> ${preferences.automationMode}`,
+  );
+  pushCheck(
+    ['idle', 'active', 'paused', 'handoff', 'complete'].includes(preferences.automationStatus) ? 'pass' : 'fail',
+    `Automation status -> ${preferences.automationStatus}`,
+  );
+  pushCheck(
+    ['handoff_then_compact', 'compact_then_continue'].includes(preferences.automationWindowPolicy) ? 'pass' : 'fail',
+    `Automation window policy -> ${preferences.automationWindowPolicy}`,
   );
   pushCheck(
     ['explicit_only', 'suggest', 'off'].includes(preferences.teamLiteDelegation) ? 'pass' : 'fail',

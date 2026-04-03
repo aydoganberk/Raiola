@@ -221,7 +221,7 @@ Make the kit installable, visible, and immediately usable in a target repo.
 
 ### Delivery Meta
 
-- Status: `planned`
+- Status: `implemented`
 - Owner: `core workflow platform`
 - Dependencies:
   - `None`

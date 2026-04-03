@@ -8,7 +8,7 @@ Usage rule:
 - If a separate stream is needed, copy the same artifact set into `docs/<workstream>/` and make that root canonical.
 - If multiple active streams exist, each one should have its own `EXECPLAN.md`, `STATUS.md`, `DECISIONS.md`, `MILESTONES.md`, `CONTEXT.md`, `CARRYFORWARD.md`, `VALIDATION.md`, `HANDOFF.md`, `WINDOW.md`, `MEMORY.md`, `SEEDS.md`, and `RETRO.md`.
 
-- Packet version: `2`
+- Packet version: `3`
 - Input hash: `pending_sync`
 - Budget profile: `normal`
 - Target input tokens: `12000`
@@ -65,16 +65,17 @@ Additional rules:
 1. `discuss`
    - Scan the codebase first.
    - Follow `Discuss mode` from `PREFERENCES.md` using either `assumptions` or `interview`.
-   - Write problem framing, seed intake, active recall intake, claim ledger, and unknowns into `CONTEXT.md`.
+   - Complete `intent capture -> constraint extraction -> execution shaping`.
+   - Write user intent, explicit constraints, alternatives considered, success rubric, requirement list, seed intake, active recall intake, claim ledger, and unknowns into `CONTEXT.md`.
 2. `research`
    - Gather touched files, dependencies, verification surface, and risks.
    - Update `CONTEXT.md` with research findings.
-   - Narrow `VALIDATION.md` to milestone scope.
+   - Narrow `VALIDATION.md` acceptance criteria, user-visible outcomes, regression focus, and validation rows to milestone scope.
 3. `plan`
    - Start only when `CONTEXT.md` is current after research.
    - Read `CARRYFORWARD.md` and any relevant seeds.
-   - Write the source-of-truth plan into the `Plan of Record` section of `EXECPLAN.md`.
-   - Keep the plan small enough to fit into `1-2` run-sized chunks.
+   - Write the source-of-truth plan into the `Plan of Record`, `Chosen Strategy`, `Wave Structure`, `Coverage Matrix`, and `Plan Chunk Table` sections of `EXECPLAN.md`.
+   - Keep the plan small enough to fit into `1-2` run-sized chunks and pass `workflow:plan-check` before execute begins.
 4. `execute`
    - Apply only the work in the active milestone plan.
    - If needed, leave an active recall note with `workflow:save-memory`.
@@ -92,17 +93,17 @@ Additional rules:
 ## Minimum Done Checklists
 
 - `discuss`
-  - `Goal/non-goals/success signal are clear`
-  - `Canonical refs and assumptions are filled in`
+  - `Intent capture, constraint extraction, and execution shaping are complete`
+  - `User intent, explicit constraints, success rubric, and requirement list are filled in`
   - `Scope is framed with evidence`
 - `research`
   - `Touched files are known`
   - `Dependency map and risks are filled in`
-  - `Validation contract is narrowed to milestone scope`
+  - `Acceptance criteria, user-visible outcomes, regression focus, and validation contract are narrowed to milestone scope`
 - `plan`
-  - `Context is plan-ready`
-  - `1-2` run chunks are written
-  - `Audit plan and overhead fields are filled in`
+  - `Chosen strategy, rejected strategies, rollback/fallback, blockers, wave structure, and chunks are written`
+  - `Coverage matrix has no orphan or duplicate requirements`
+  - `workflow:plan-check passes before execute begins`
 - `execute`
   - `Only the active chunk was implemented`
   - `Status fields were updated`
@@ -166,6 +167,7 @@ Additional rules:
 - Milestone: `NONE`
 - Step owner: `plan`
 - Plan status: `idle_until_user_opens_milestone`
+- Plan-ready gate: `pending`
 - Carryforward considered: `None`
 - Run chunk id: `NONE`
 - Run chunk hash: `pending`
@@ -188,6 +190,42 @@ Additional rules:
   - `None`
 - Out-of-scope guardrails:
   - `Do not start milestone planning without an explicit user request`
+
+## Chosen Strategy
+
+- `Fill when an active milestone reaches execution shaping / plan`
+
+## Rejected Strategies
+
+- `Document the alternatives that were considered and deliberately not chosen`
+
+## Rollback / Fallback
+
+- `Describe what we will revert, disable, or narrow if the chosen strategy fails`
+
+## Dependency Blockers
+
+| Blocker | Type | Owner | Status | Unblock signal |
+| --- | --- | --- | --- | --- |
+| `None currently` | `none` | `n/a` | `clear` | `Replace this row if a real blocker appears` |
+
+## Wave Structure
+
+| Wave | Chunks | Goal | Depends on |
+| --- | --- | --- | --- |
+| `Fill when planning starts` | `chunk-1` | `Describe the capability slice for this wave` | `none` |
+
+## Coverage Matrix
+
+| Requirement ID | Milestone | Capability slice | Plan chunk | Validation ID | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `R0` | `NONE` | `Fill when planning starts` | `chunk-1` | `AC0` | `Replace this placeholder before execute` |
+
+## Plan Chunk Table
+
+| Chunk ID | Capability slice | Deliverable | Depends on | Wave | Status |
+| --- | --- | --- | --- | --- | --- |
+| `chunk-1` | `Fill when planning starts` | `Describe the user-visible slice this chunk delivers` | `none` | `1` | `pending` |
 
 ## What Would Falsify This Plan?
 

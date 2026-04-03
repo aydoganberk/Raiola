@@ -32,6 +32,27 @@ It is not the default path; if the user did not explicitly ask for workflow, con
   - `mode` controls team/git isolation behavior
   - `profile` controls ritual depth and minimum-done expectations
 
+## Automation Modes
+
+- `manual`
+  - `Pause at major workflow transitions unless the user explicitly asks to continue`
+- `phase`
+  - `Codex may complete the current phase end-to-end, update canonical docs, then stop at the next phase boundary`
+- `full`
+  - `Codex may continue phase-to-phase until blocked, complete, or window-managed`
+- Read `Automation mode` and `Automation status` from `STATUS.md`, `CONTEXT.md`, and `HANDOFF.md` as the active behavior contract.
+- Users may set or change this with:
+  - `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation phase`
+  - `npm run workflow:automation -- --mode full`
+- When automation is active, Codex should own:
+  - `discussion flow`
+  - `CONTEXT.md updates`
+  - `plan sequencing`
+  - `phase transitions allowed by the current mode`
+- `workflow:plan-check` may legitimately report `pending` during `discuss` or `research`; treat that as incomplete work, not as a hard failure.
+- If `WINDOW.md` recommends `handoff-required` or `new-window-recommended` and the client can open a new window/thread, prefer that handoff path.
+- If the client cannot open a new window/thread, compact the current context, refresh packet state, and continue from the remaining plan.
+
 ## Startup Sequence
 
 1. Read `AGENTS.md`.
@@ -64,16 +85,19 @@ An active milestone always follows this loop:
    - Follow the value of `Discuss mode` in `PREFERENCES.md`:
      - `assumptions`: read the codebase first, then write evidence-backed assumptions.
      - `interview`: clarify the goal first, then ask only high-leverage questions.
-   - Write problem frame, scan summary, canonical refs, claim ledger, unknowns, seed intake, and active recall intake into `CONTEXT.md`.
+   - Complete `intent capture -> constraint extraction -> execution shaping`.
+   - Write user intent, explicit constraints, alternatives considered, success rubric, requirement list, problem frame, scan summary, canonical refs, claim ledger, unknowns, seed intake, and active recall intake into `CONTEXT.md`.
 2. `research`
    - Identify touched files, dependencies, risks, and verification surface.
    - Update `CONTEXT.md` with research findings.
-   - Narrow the success contract, verify commands, and manual check fields in `VALIDATION.md` to the active milestone scope.
+   - Narrow acceptance criteria, user-visible outcomes, regression focus, success contract, verify commands, and manual check fields in `VALIDATION.md` to the active milestone scope.
 3. `plan`
    - Continue only if `CONTEXT.md` is current after research.
    - Read `CARRYFORWARD.md` and relevant seeds.
-   - Write the source-of-truth plan into `Plan of Record` in `EXECPLAN.md`.
+   - Write the source-of-truth plan into `Plan of Record`, `Chosen Strategy`, `Wave Structure`, `Coverage Matrix`, and `Plan Chunk Table` in `EXECPLAN.md`.
    - Split the plan into `1-2` run-sized chunks that fit the current context window.
+   - Run `workflow:plan-check -- --sync --strict` before execute begins.
+   - Treat `pending` as "finish the planning packet first" and `fail` as "the plan shape is wrong and must be revised".
    - If `WINDOW.md` and packet budget are insufficient for a new chunk, do not start a new step.
 4. `execute`
    - Apply only the active milestone plan.
@@ -92,17 +116,17 @@ An active milestone always follows this loop:
 ## Minimum Done Checklists
 
 - `discuss`
-  - `Goal/non-goals/success signal are clear`
-  - `Canonical refs and assumptions are filled in`
+  - `Intent capture, constraint extraction, and execution shaping are complete`
+  - `User intent, explicit constraints, success rubric, and requirement list are filled in`
   - `Scope is framed with evidence`
 - `research`
   - `Touched files are known`
   - `Dependency map and risks are filled in`
-  - `VALIDATION.md is narrowed to milestone scope`
+  - `VALIDATION.md acceptance criteria, user-visible outcomes, regression focus, and contract are narrowed to milestone scope`
 - `plan`
-  - `Context is plan-ready`
-  - `1-2` run chunks are written
-  - `Audit plan and overhead fields are filled in`
+  - `Chosen strategy, rejected strategies, rollback/fallback, blockers, wave structure, and chunks are written`
+  - `Coverage matrix has no orphan or duplicate requirements`
+  - `workflow:plan-check passes before execute begins`
 - `execute`
   - `Only the active chunk was implemented`
   - `Status fields were updated`
@@ -121,7 +145,9 @@ An active milestone always follows this loop:
 - `npm run workflow:hud`
 - `npm run workflow:map-codebase`
 - `npm run workflow:delegation-plan`
-- `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."`
+- `npm run workflow:plan-check -- --sync --strict`
+- `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual`
+- `npm run workflow:automation -- --mode phase`
 - `npm run workflow:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths src/foo,tests/foo`
 - `npm run workflow:save-memory -- --title "..." --note "..."`
 - `npm run workflow:packet -- --step plan --json`

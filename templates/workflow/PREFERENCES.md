@@ -4,6 +4,8 @@
 - Workflow activation: `explicit_only`
 - Workflow mode: `solo`
 - Workflow profile: `standard`
+- Automation mode: `manual`
+- Automation window policy: `handoff_then_compact`
 - Discuss mode: `assumptions`
 - Git isolation: `none`
 - Team Lite delegation: `explicit_only`
@@ -56,6 +58,7 @@
   - `Stronger process profile for real handoff, closeout, and long-lived coordination`
   - `Suggested defaults: Budget profile=deep, Discuss=8000, Plan=16000, Audit=12000, Max refs=14`
   - `Health strict and retro expectations are assumed to be higher`
+  - `A milestone may still override the repo default via workflow:new-milestone --profile`
 
 ## Profile Notes
 
@@ -71,6 +74,20 @@
   - `Clarify the goal first, then ask only high-leverage questions`
 - `assumptions`
   - `Scan the codebase first, then write evidence-backed assumptions and let the user correct them if needed`
+
+## Automation Modes
+
+- `manual`
+  - `Codex follows the normal step-by-step workflow and waits for explicit direction between major transitions`
+- `phase`
+  - `Codex may complete the current phase end-to-end, update the canonical docs, then stop at the next phase boundary`
+- `full`
+  - `Codex may continue phase-to-phase until the milestone is blocked, completed, or hits a window-management boundary`
+
+## Automation Window Policy
+
+- `handoff_then_compact`
+  - `When the context window gets tight, prefer a clean handoff/new window if the client can provide one; otherwise refresh packet state and continue from the remaining plan`
 
 ## Git Isolation Modes
 
@@ -101,3 +118,4 @@
 - `This file is the repo-local configuration source for workflow behavior`
 - `Scripts read this file first unless explicit flags override it`
 - `The default operating assumption is explicit_only; the full workflow activates only when the user explicitly asks for it`
+- `Automation mode is only a workflow behavior setting; it does not force automation unless the user explicitly chooses it`

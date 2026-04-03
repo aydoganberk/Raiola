@@ -42,6 +42,8 @@ These are steps inside one milestone, not separate milestones.
 
 In most cases, one user request maps to one milestone.
 
+Inside that lifecycle, `discuss` is deliberately split into `intent capture -> constraint extraction -> execution shaping` so scope and validation intent are explicit before execute starts.
+
 ## First 60 seconds
 
 When workflow is active, the expected startup sequence is:
@@ -75,12 +77,28 @@ When workflow is active, the expected startup sequence is:
 - `full`
   Stronger process mode for real handoff, closeout, and workflow-quality tracking.
 
+## Automation modes
+
+- `manual`
+  Codex pauses at major workflow transitions unless the user explicitly asks to continue.
+- `phase`
+  Codex may finish the current phase, refresh the canonical docs, and stop at the next phase boundary.
+- `full`
+  Codex may keep moving phase-to-phase until blocked, complete, or window-managed.
+
+This matters in the Codex app too: the active automation contract lives in the workflow docs, not only in CLI flags. When automation is active, Codex should manage the discuss flow, write `CONTEXT.md`, run `workflow:plan-check`, and advance phases according to the selected mode.
+
+If window pressure appears, `WINDOW.md` and `HANDOFF.md` become the control surface:
+
+- prefer a handoff/new window when the client can support it
+- otherwise compact the current context, refresh packet state, and continue from the remaining plan
+
 ## Fast path
 
 Open a milestone:
 
 ```bash
-npm run workflow:new-milestone -- --id M2 --name "Fix auth drift" --goal "Tighten and verify the auth flow"
+npm run workflow:new-milestone -- --id M2 --name "Fix auth drift" --goal "Tighten and verify the auth flow" --profile standard --automation manual
 ```
 
 See the next recommended action:
@@ -106,6 +124,8 @@ Run health checks:
 ```bash
 npm run workflow:doctor -- --strict
 npm run workflow:health -- --strict
+npm run workflow:plan-check -- --strict
+npm run workflow:automation -- --mode phase
 ```
 
 Close a milestone:
@@ -140,11 +160,13 @@ npm run workflow:complete-milestone -- --agents-review unchanged --summary "Auth
 ## Most-used commands
 
 ```bash
-npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."
+npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual
+npm run workflow:automation -- --mode phase
 npm run workflow:next
 npm run workflow:hud
 npm run workflow:map-codebase
 npm run workflow:delegation-plan
+npm run workflow:plan-check -- --sync --strict
 npm run workflow:packet -- --step plan --json
 npm run workflow:pause-work -- --summary "..."
 npm run workflow:resume-work
@@ -183,17 +205,17 @@ Use delegation planning when the task is explicitly parallelized and ownership i
 ## Minimum done by step
 
 - `discuss`
-  Goal, non-goals, and success signal are clear.
-  Canonical refs and assumptions are filled in.
+  Intent capture, constraint extraction, and execution shaping are complete.
+  User intent, explicit constraints, success rubric, and requirement list are filled in.
   Scope is framed with evidence.
 - `research`
   Touched files, dependencies, and risks are known.
   Verification surface is identified.
   `VALIDATION.md` is narrowed to milestone scope.
 - `plan`
-  `CONTEXT.md` is plan-ready.
-  The work is split into `1-2` run-sized chunks.
-  Audit and overhead planning are written down.
+  Strategy, rollback/fallback, blockers, waves, and chunks are written down.
+  Coverage has no orphan or duplicate requirements.
+  `workflow:plan-check -- --sync --strict` reaches `pass` before execute.
 - `execute`
   Only the active chunk is implemented.
   Status fields are updated.

@@ -8,12 +8,15 @@ const {
   getFieldValue,
   getOpenCarryforwardItems,
   loadPreferences,
+  normalizeAutomationMode,
+  normalizeWorkflowProfile,
   parseArgs,
   parseMemoryEntries,
   parseMemoryEntry,
   parseMilestoneTable,
   parseSeedEntries,
   parseWorkstreamTable,
+  profileDefaultsFor,
   read,
   renderMarkdownTable,
   renderMilestoneTable,
@@ -45,6 +48,8 @@ Options:
   --name <display-name>    Required. Milestone title
   --goal <goal>            Required. Milestone goal
   --phase <phase>          Optional. Default: current phase from STATUS/EXECPLAN or Phase 1
+  --profile <mode>         Optional milestone profile override: lite|standard|full
+  --automation <mode>      Optional automation mode: manual|phase|full
   --success <text>         Optional success signal
   --non-goals <text>       Optional non-goal summary
   --dry-run                Print AGENTS size check and planned changes without writing
@@ -72,6 +77,118 @@ function renderClaimLedgerTable(contextRef) {
       contextRef,
       'Likely',
       'Planning may begin before research is ready',
+    ]],
+  );
+}
+
+function renderConstraintsTable() {
+  return renderMarkdownTable(
+    ['Constraint', 'Type', 'Source', 'Impact'],
+    [[
+      'No explicit constraints captured yet',
+      'scope',
+      'user',
+      'Fill during constraint extraction before planning starts',
+    ]],
+  );
+}
+
+function renderAlternativesTable() {
+  return renderMarkdownTable(
+    ['Option', 'Status', 'Why'],
+    [[
+      'Keep the seeded milestone framing and refine it after codebase scan',
+      'open',
+      'Fill real alternatives during execution shaping',
+    ]],
+  );
+}
+
+function renderHighLeverageQuestionsTable(milestoneGoal) {
+  return renderMarkdownTable(
+    ['Question', 'Impact', 'Owner', 'Status'],
+    [[
+      `What is the smallest user-visible slice that proves "${milestoneGoal}" is done?`,
+      'This decides how the plan should be sliced',
+      'owner',
+      'open',
+    ]],
+  );
+}
+
+function renderSuccessRubricTable(successSignal) {
+  return renderMarkdownTable(
+    ['Outcome', 'Observable signal', 'Why it matters'],
+    [[
+      'Milestone success',
+      successSignal,
+      'Execution should not start before success is observable',
+    ]],
+  );
+}
+
+function renderRequirementListTable(milestoneGoal) {
+  return renderMarkdownTable(
+    ['Requirement ID', 'Requirement', 'Type', 'Source', 'Notes'],
+    [[
+      'R1',
+      milestoneGoal,
+      'functional',
+      'user',
+      'Seeded from the milestone goal; refine or split during discuss',
+    ]],
+  );
+}
+
+function renderDependencyBlockersTable() {
+  return renderMarkdownTable(
+    ['Blocker', 'Type', 'Owner', 'Status', 'Unblock signal'],
+    [[
+      'No blockers identified yet',
+      'none',
+      'n/a',
+      'clear',
+      'Replace this row only if a real dependency blocker appears',
+    ]],
+  );
+}
+
+function renderWaveStructureTable() {
+  return renderMarkdownTable(
+    ['Wave', 'Chunks', 'Goal', 'Depends on'],
+    [[
+      '1',
+      'chunk-1',
+      'Fill once the chosen strategy and capability slices are explicit',
+      'none',
+    ]],
+  );
+}
+
+function renderCoverageMatrixTable(milestoneLabel) {
+  return renderMarkdownTable(
+    ['Requirement ID', 'Milestone', 'Capability slice', 'Plan chunk', 'Validation ID', 'Notes'],
+    [[
+      'R1',
+      milestoneLabel,
+      'Fill during planning',
+      'chunk-1',
+      'AC1',
+      'Every active requirement must map exactly once before execute',
+    ]],
+  );
+}
+
+function renderPlanChunkTable() {
+  return renderMarkdownTable(
+    ['Chunk ID', 'Capability slice', 'Deliverable', 'Depends on', 'Wave', 'Status'],
+    [[
+      'chunk-1',
+      'Fill during planning',
+      'Describe the first vertical capability slice',
+      'none',
+      '1',
+      'pending',
     ]],
   );
 }
@@ -105,23 +222,57 @@ function renderValidationContract(milestoneName, goldenRef, statusRef) {
   );
 }
 
+function renderAcceptanceCriteriaTable(successSignal) {
+  return renderMarkdownTable(
+    ['Acceptance ID', 'Criterion', 'How to observe', 'Status'],
+    [[
+      'AC1',
+      'The active milestone delivers the intended capability',
+      successSignal,
+      'pending',
+    ]],
+  );
+}
+
+function renderUserVisibleOutcomesTable(successSignal) {
+  return renderMarkdownTable(
+    ['Outcome', 'How to observe', 'Status'],
+    [[
+      'User-visible outcome seeded from milestone success signal',
+      successSignal,
+      'pending',
+    ]],
+  );
+}
+
+function renderRegressionFocusTable() {
+  return renderMarkdownTable(
+    ['Area', 'Risk', 'Check'],
+    [[
+      'Existing behavior adjacent to this milestone',
+      'Regression focus is still unknown until research completes',
+      'Fill after touched files and dependencies are known',
+    ]],
+  );
+}
+
 function renderMinimumDoneChecklist(profile) {
   const variants = {
     lite: {
       discuss: [
-        'Goal, non-goals, and success signal are clear',
-        'Relevant core files were scanned',
-        'CONTEXT.md assumptions and canonical refs were filled in',
+        'Intent capture, constraint extraction, and execution shaping were completed',
+        'User intent, explicit constraints, success rubric, and requirement list were filled in',
+        'Relevant core files were scanned and the scope was framed with evidence',
       ],
       research: [
         'Touched files were documented',
         'Risks and verification surface were written down',
-        'VALIDATION.md was narrowed to milestone scope',
+        'VALIDATION.md acceptance criteria and contract were narrowed to milestone scope',
       ],
       plan: [
-        'Work continued only when context was plan-ready',
-        '1-2 run chunks were written',
-        'Packet / execution / verify overhead fields were filled in',
+        'Chosen strategy, rollback/fallback, blockers, and wave structure were written',
+        'Coverage matrix had no orphan or duplicate requirements',
+        'workflow:plan-check passed before execute started',
       ],
       execute: [
         'Only the active chunk was executed',
@@ -141,22 +292,22 @@ function renderMinimumDoneChecklist(profile) {
     },
     standard: {
       discuss: [
-        'Goal, non-goals, and success signal are clear',
+        'Intent capture, constraint extraction, and execution shaping were completed',
         '5-15 relevant files were scanned',
-        'Canonical refs, assumptions, and unknowns were filled in',
+        'User intent, explicit constraints, unanswered questions, and requirement list were filled in',
         'Seed intake and active recall intake were recorded',
       ],
       research: [
         'Touched files were documented',
         'Dependency map was produced',
         'Risks and verification surface were written down',
-        'VALIDATION.md was narrowed to milestone scope',
+        'VALIDATION.md acceptance criteria, user-visible outcomes, and contract were narrowed to milestone scope',
       ],
       plan: [
-        'Work continued only when context was plan-ready',
+        'Chosen strategy and rejected strategies were written',
         'Carryforward and seed intake were reviewed',
-        '1-2 run chunks were written',
-        'Packet / execution / verify overhead and the audit plan were written',
+        'Coverage matrix and plan chunk table were written as vertical capability slices',
+        'workflow:plan-check passed before execute started',
       ],
       execute: [
         'Only the active chunk was executed',
@@ -179,9 +330,9 @@ function renderMinimumDoneChecklist(profile) {
     },
     full: {
       discuss: [
-        'Goal, non-goals, and success signal are clear',
+        'Intent capture, constraint extraction, and execution shaping were completed',
         '5-15 relevant files were scanned',
-        'Canonical refs, assumptions, unknowns, and falsifiers were written',
+        'User intent, explicit constraints, unanswered questions, success rubric, and falsifiers were written',
         'Seed intake and active recall intake were recorded',
         'Possible handoff/closeout needs were noted',
       ],
@@ -189,14 +340,14 @@ function renderMinimumDoneChecklist(profile) {
         'Touched files were documented',
         'Dependency map was produced',
         'Risks, verification surface, and research targets were written down',
-        'VALIDATION.md was narrowed to milestone scope',
+        'VALIDATION.md acceptance criteria, user-visible outcomes, regression focus, and contract were narrowed to milestone scope',
         'A RETRO note was captured if process friction appeared',
       ],
       plan: [
-        'Work continued only when context was plan-ready',
+        'Chosen strategy, rejected strategies, rollback/fallback, and blockers were written',
         'Carryforward and seed intake were reviewed',
-        '1-2 run chunks were written',
-        'Packet / execution / verify overhead and the audit plan were written',
+        'Coverage matrix and plan chunk table were written as vertical capability slices',
+        'workflow:plan-check passed before execute started',
         'Resume anchor and out-of-scope guardrails were clarified',
       ],
       execute: [
@@ -274,6 +425,8 @@ function main() {
   const milestoneName = String(args.name || '').trim();
   const milestoneGoal = String(args.goal || '').trim();
   const dryRun = Boolean(args['dry-run']);
+  const profileOverrideRaw = String(args.profile || '').trim();
+  const automationModeRaw = String(args.automation || '').trim();
 
   if (!rawMilestoneId || !milestoneName || !milestoneGoal) {
     throw new Error('--id, --name, and --goal are required');
@@ -290,6 +443,46 @@ function main() {
   const memory = read(paths.memory);
   const seeds = read(paths.seeds);
   const preferences = loadPreferences(paths);
+  const profileOverride = profileOverrideRaw
+    ? normalizeWorkflowProfile(profileOverrideRaw, '')
+    : '';
+  const automationMode = automationModeRaw
+    ? normalizeAutomationMode(automationModeRaw, '')
+    : preferences.repoAutomationMode;
+
+  if (profileOverrideRaw && !profileOverride) {
+    throw new Error('--profile must be one of: lite, standard, full');
+  }
+
+  if (automationModeRaw && !automationMode) {
+    throw new Error('--automation must be one of: manual, phase, full');
+  }
+
+  const effectiveProfile = profileOverride || preferences.repoWorkflowProfile;
+  const milestoneProfileOverride = profileOverride || 'none';
+  const automationStatus = automationMode === 'manual' ? 'idle' : 'active';
+  const profileDefaults = profileDefaultsFor(effectiveProfile);
+  const effectivePreferences = profileOverride
+    ? {
+      ...preferences,
+      workflowProfile: effectiveProfile,
+      budgetProfile: profileDefaults.budgetProfile,
+      tokenReserve: profileDefaults.tokenReserve,
+      discussBudget: profileDefaults.discussBudget,
+      planBudget: profileDefaults.planBudget,
+      auditBudget: profileDefaults.auditBudget,
+      compactionThreshold: profileDefaults.compactionThreshold,
+      maxCanonicalRefsPerStep: profileDefaults.maxCanonicalRefsPerStep,
+      windowBudgetMode: profileDefaults.windowBudgetMode,
+      windowSizeTokens: profileDefaults.windowSizeTokens,
+      reserveFloorTokens: profileDefaults.reserveFloorTokens,
+      stopStartingNewWorkThreshold: profileDefaults.stopStartingNewWorkThreshold,
+      mustHandoffThreshold: profileDefaults.mustHandoffThreshold,
+      minimumNextStepBudget: profileDefaults.minimumNextStepBudget,
+      compactionTarget: profileDefaults.compactionTarget,
+      healthStrictRequired: profileDefaults.healthStrictRequired,
+    }
+    : preferences;
   const currentWorkstream = String(getFieldValue(status, 'Current workstream') || path.relative(process.cwd(), rootDir)).trim();
   const previousMilestone = String(getFieldValue(status, 'Current milestone') || 'NONE').trim();
   const milestoneId = ensureUniqueMilestoneId(rawMilestoneId, preferences);
@@ -342,9 +535,19 @@ function main() {
 - Non-goals:
   - \`${nonGoals}\`
 - Workflow profile:
-  - \`${preferences.workflowProfile}\`
+  - \`${effectiveProfile}\`
+- Milestone profile override:
+  - \`${milestoneProfileOverride}\`
+- Automation mode:
+  - \`${automationMode}\`
+- Automation status:
+  - \`${automationStatus}\`
 - Discuss mode:
   - \`${preferences.discussMode}\`
+- Discuss breakdown:
+  - \`intent capture -> user intent + requirement list\`
+  - \`constraint extraction -> explicit constraints + unanswered high-leverage questions\`
+  - \`execution shaping -> alternatives considered + success rubric\`
 - Clarifying questions / assumptions:
   - \`Write these into the assumptions table in CONTEXT.md\`
 - Seed intake:
@@ -355,21 +558,24 @@ function main() {
   - \`Fill after discuss\`
 - Plan checklist:
   - \`Do not move to planning until CONTEXT.md is current after research\`
-  - \`Fill the Plan of Record section in EXECPLAN.md\`
-  - \`Split the plan into 1-2 run chunks that fit the context window\`
+  - \`Fill chosen strategy, coverage matrix, wave structure, and plan chunks in EXECPLAN.md\`
+  - \`Run workflow:plan-check -- --sync --strict before execute begins\`
 - Execute notes:
   - \`None yet\`
 - Audit checklist:
-  - \`Fill the VALIDATION.md contract table\`
+  - \`Fill acceptance criteria, user-visible outcomes, regression focus, and the VALIDATION.md contract table\`
 - Completion note:
   - \`None yet\`
-${renderMinimumDoneChecklist(preferences.workflowProfile)}
+${renderMinimumDoneChecklist(effectiveProfile)}
 `);
 
   status = replaceField(status, 'Last updated', today());
   status = replaceField(status, 'Current phase', phase);
   status = replaceField(status, 'Current milestone', milestoneLabel);
   status = replaceField(status, 'Current milestone step', 'discuss');
+  status = replaceField(status, 'Effective workflow profile', effectiveProfile);
+  status = replaceField(status, 'Automation mode', automationMode);
+  status = replaceField(status, 'Automation status', automationStatus);
   status = replaceField(status, 'Context readiness', 'not_ready');
   status = replaceSection(status, 'In Progress', `- \`${milestoneLabel} is in the discuss step\``);
   status = replaceSection(status, 'Verified', [
@@ -379,12 +585,15 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
   status = replaceSection(status, 'Inferred', '- `Run chunk planning will become clear after research`');
   status = replaceSection(status, 'Unknown', '- `Full file scope is not known until discuss completes`');
   status = replaceSection(status, 'Next', [
-    '- `Start the codebase-first discuss flow`',
+    '- `Start intent capture, then move through constraint extraction and execution shaping`',
     '- `Use workflow:packet and workflow:next to inspect packet/budget state`',
+    automationMode === 'manual'
+      ? '- `Move phase boundaries only when the user asks for the next workflow step`'
+      : `- \`Automation mode is ${automationMode}; Codex may continue until the next boundary or blocker\``,
   ].join('\n'));
   status = replaceSection(status, 'Risks', '- `Do not move to planning before discuss and research are complete`');
   status = replaceSection(status, 'Tests Run', '- `Milestone seeded; verify commands will be narrowed after research`');
-  status = replaceSection(status, 'Suggested Next Step', '- `Fill assumptions, claim ledger, and canonical refs in CONTEXT.md`');
+  status = replaceSection(status, 'Suggested Next Step', '- `Fill User Intent and Requirement List first, then capture constraints and success rubric in CONTEXT.md`');
 
   execplan = replaceOrAppendField(execplan, 'Last updated', today());
   execplan = replaceField(execplan, 'Input hash', 'pending_sync');
@@ -395,6 +604,7 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
 - Milestone: \`${milestoneLabel}\`
 - Step owner: \`plan\`
 - Plan status: \`waiting_for_research\`
+- Plan-ready gate: \`pending\`
 - Carryforward considered: \`${carryforwardItems.length === 0 ? 'None yet' : carryforwardItems.join('; ')}\`
 - Run chunk id: \`NONE\`
 - Run chunk hash: \`pending\`
@@ -405,19 +615,27 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
 - Estimated packet tokens: \`0\`
 - Estimated execution overhead: \`2000\`
 - Estimated verify overhead: \`1000\`
-- Minimum reserve: \`${preferences.reserveFloorTokens}\`
+- Minimum reserve: \`${effectivePreferences.reserveFloorTokens}\`
 - Safe in current window: \`yes\`
+- Automation mode: \`${automationMode}\`
 - Current run chunk:
   - \`None\`
 - Next run chunk:
   - \`The first chunk will be written after research completes\`
 - Implementation checklist:
-  - \`Fill this after research completes\`
+  - \`Fill chosen strategy, coverage matrix, and vertical chunks after research completes\`
 - Audit plan:
-  - \`The validation contract will be narrowed after research\`
+  - \`Acceptance criteria and validation rows will be narrowed after research\`
 - Out-of-scope guardrails:
   - \`No work outside the active milestone\`
 `);
+  execplan = replaceSection(execplan, 'Chosen Strategy', '- `Fill during execution shaping and planning`');
+  execplan = replaceSection(execplan, 'Rejected Strategies', '- `Document the alternatives that were considered but not chosen`');
+  execplan = replaceSection(execplan, 'Rollback / Fallback', '- `Describe the fallback path before execute begins`');
+  execplan = replaceSection(execplan, 'Dependency Blockers', renderDependencyBlockersTable());
+  execplan = replaceSection(execplan, 'Wave Structure', renderWaveStructureTable());
+  execplan = replaceSection(execplan, 'Coverage Matrix', renderCoverageMatrixTable(milestoneLabel));
+  execplan = replaceSection(execplan, 'Plan Chunk Table', renderPlanChunkTable());
   execplan = replaceSection(execplan, 'Unknowns', renderUnknownsTable());
   execplan = replaceSection(execplan, 'What Would Falsify This Plan?', [
     "- `If research findings conflict with the intended scope, the chunk plan must be rewritten`",
@@ -427,13 +645,17 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
   context = replaceField(context, 'Last updated', today());
   context = replaceField(context, 'Workstream', currentWorkstream);
   context = replaceField(context, 'Milestone', milestoneLabel);
+  context = replaceField(context, 'Milestone profile override', milestoneProfileOverride);
   context = replaceField(context, 'Step source', 'discuss');
   context = replaceField(context, 'Context status', 'initial_from_discuss');
+  context = replaceField(context, 'Discuss subphase', 'intent_capture');
+  context = replaceField(context, 'Automation mode', automationMode);
+  context = replaceField(context, 'Automation status', automationStatus);
   context = replaceField(context, 'Plan readiness', 'not_ready');
   context = replaceField(context, 'Input hash', 'pending_sync');
-  context = replaceField(context, 'Budget profile', preferences.budgetProfile);
-  context = replaceField(context, 'Target input tokens', String(preferences.discussBudget));
-  context = replaceField(context, 'Hard cap tokens', String(preferences.discussBudget + preferences.tokenReserve));
+  context = replaceField(context, 'Budget profile', effectivePreferences.budgetProfile);
+  context = replaceField(context, 'Target input tokens', String(effectivePreferences.discussBudget));
+  context = replaceField(context, 'Hard cap tokens', String(effectivePreferences.discussBudget + effectivePreferences.tokenReserve));
   context = replaceField(context, 'Reasoning profile', 'balanced');
   context = replaceField(context, 'Confidence summary', 'initial_discuss_unknowns');
   context = replaceField(context, 'Discuss mode', preferences.discussMode);
@@ -455,6 +677,24 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
 - Non-goals:
   - \`${nonGoals}\`
 `);
+  context = replaceSection(context, 'Discuss Breakdown', [
+    '- `Intent capture -> turn the user request into concrete intent and requirements`',
+    '- `Constraint extraction -> capture explicit constraints and unanswered high-leverage questions`',
+    '- `Execution shaping -> compare approaches and define an observable success rubric`',
+  ].join('\n'));
+  context = replaceSection(context, 'User Intent', `
+- Primary request:
+  - \`${milestoneGoal}\`
+- Why this matters now:
+  - \`Milestone opened from an explicit workflow request\`
+- In-scope outcome:
+  - \`${successSignal}\`
+`);
+  context = replaceSection(context, 'Explicit Constraints', renderConstraintsTable());
+  context = replaceSection(context, 'Alternatives Considered', renderAlternativesTable());
+  context = replaceSection(context, 'Unanswered High-Leverage Questions', renderHighLeverageQuestionsTable(milestoneGoal));
+  context = replaceSection(context, 'Success Rubric', renderSuccessRubricTable(successSignal));
+  context = replaceSection(context, 'Requirement List', renderRequirementListTable(milestoneGoal));
   context = replaceSection(context, 'Codebase Scan Summary', '- `To be filled during discuss`');
   context = replaceSection(context, 'Clarifying Questions / Assumptions', renderAssumptionsTable(contextRef));
   context = replaceSection(context, 'Claim Ledger', renderClaimLedgerTable(contextRef));
@@ -492,9 +732,13 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
   validation = replaceField(validation, 'Validation status', 'pending_research');
   validation = replaceField(validation, 'Audit readiness', 'not_ready');
   validation = replaceField(validation, 'Input hash', 'pending_sync');
-  validation = replaceField(validation, 'Target input tokens', String(preferences.auditBudget));
-  validation = replaceField(validation, 'Hard cap tokens', String(preferences.auditBudget + preferences.tokenReserve));
+  validation = replaceField(validation, 'Target input tokens', String(effectivePreferences.auditBudget));
+  validation = replaceField(validation, 'Hard cap tokens', String(effectivePreferences.auditBudget + effectivePreferences.tokenReserve));
   validation = replaceSection(validation, 'Success Contract', `- \`${milestoneGoal}\``);
+  validation = replaceSection(validation, 'Acceptance Criteria', renderAcceptanceCriteriaTable(successSignal));
+  validation = replaceSection(validation, 'User-visible Outcomes', renderUserVisibleOutcomesTable(successSignal));
+  validation = replaceSection(validation, 'Regression Focus', renderRegressionFocusTable());
+  validation = replaceSection(validation, 'Verification Attachments', '- `Add VERIFICATION_BRIEF.md or TEST_SPEC.md only if the milestone needs deeper validation planning`');
   validation = replaceSection(validation, 'Validation Contract', renderValidationContract(milestoneName, goldenRef, statusRef));
   validation = replaceSection(validation, 'Unknowns', renderUnknownsTable());
   validation = replaceSection(validation, 'What Would Falsify This Plan?', [
@@ -509,6 +753,8 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
   handoff = replaceField(handoff, 'Workstream', String(getFieldValue(status, 'Current workstream') || currentWorkstream));
   handoff = replaceField(handoff, 'Milestone', milestoneLabel);
   handoff = replaceField(handoff, 'Step', 'discuss');
+  handoff = replaceField(handoff, 'Automation mode', automationMode);
+  handoff = replaceField(handoff, 'Automation status', automationStatus);
   handoff = replaceField(handoff, 'Resume anchor', 'Discuss start');
   handoff = replaceField(handoff, 'Packet hash', 'pending_sync');
   handoff = replaceField(handoff, 'Current chunk cursor', '0/0');
@@ -545,16 +791,17 @@ ${renderMinimumDoneChecklist(preferences.workflowProfile)}
   window = replaceField(window, 'Last updated', today());
   window = replaceField(window, 'Session id', 'pending_sync');
   window = replaceField(window, 'Current packet hash', 'pending_sync');
-  window = replaceField(window, 'Window mode', preferences.windowBudgetMode);
-  window = replaceField(window, 'Window size tokens', String(preferences.windowSizeTokens));
+  window = replaceField(window, 'Window mode', effectivePreferences.windowBudgetMode);
+  window = replaceField(window, 'Window size tokens', String(effectivePreferences.windowSizeTokens));
   window = replaceField(window, 'Estimated used tokens', '0');
-  window = replaceField(window, 'Estimated remaining tokens', String(preferences.windowSizeTokens));
-  window = replaceField(window, 'Reserve floor', String(preferences.reserveFloorTokens));
+  window = replaceField(window, 'Estimated remaining tokens', String(effectivePreferences.windowSizeTokens));
+  window = replaceField(window, 'Reserve floor', String(effectivePreferences.reserveFloorTokens));
   window = replaceField(window, 'Current step', 'discuss');
   window = replaceField(window, 'Current run chunk', 'NONE');
   window = replaceField(window, 'Can finish current chunk', 'yes');
   window = replaceField(window, 'Can start next chunk', 'yes');
   window = replaceField(window, 'Recommended action', 'continue');
+  window = replaceField(window, 'Automation recommendation', automationMode === 'manual' ? 'continue_in_current_window' : 'prefer_handoff_or_new_window');
   window = replaceField(window, 'Resume anchor', 'Discuss start');
   window = replaceField(window, 'Last safe checkpoint', 'pending_sync');
   window = replaceField(window, 'Budget status', 'ok');

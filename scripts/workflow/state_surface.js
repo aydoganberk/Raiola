@@ -6,11 +6,13 @@ const {
   extractSection,
   getFieldValue,
   getOpenCarryforwardItems,
+  loadPreferences,
   parseMemoryEntries,
   parseMemoryEntry,
   parseSeedEntries,
   parseWorkstreamTable,
   read,
+  readPlanGateStatus,
   readIfExists,
   workflowPaths,
   write,
@@ -53,6 +55,8 @@ function buildBaseState(cwd, rootDir) {
   const carryforwardCount = getOpenCarryforwardItems(carryforwardDoc).length;
   const seedCount = parseSeedEntries(safeExtract(seedsDoc, 'Open Seeds'), 'No open seeds yet').length;
   const milestone = String(getFieldValue(statusDoc, 'Current milestone') || 'NONE').trim();
+  const preferences = loadPreferences(paths);
+  const planGate = readPlanGateStatus(paths);
   const activeRecallCount = parseMemoryEntries(
     safeExtract(memoryDoc, 'Active Recall Items'),
     'No active recall notes yet',
@@ -85,6 +89,10 @@ function buildBaseState(cwd, rootDir) {
       milestone,
       step: String(getFieldValue(statusDoc, 'Current milestone step') || 'unknown').trim(),
       readiness: String(getFieldValue(statusDoc, 'Context readiness') || 'unknown').trim(),
+      profile: preferences.workflowProfile,
+      planGate,
+      automationMode: preferences.automationMode,
+      automationStatus: preferences.automationStatus,
     },
     packets: packetList,
     drift: {
