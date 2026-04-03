@@ -4,8 +4,13 @@
 - Active milestone: `NONE`
 - Validation status: `idle_until_milestone`
 - Audit readiness: `not_ready`
+- Frontend mode: `inactive`
+- Frontend profile ref: `docs/workflow/FRONTEND_PROFILE.md`
+- Frontend profile json: `.workflow/frontend-profile.json`
+- Frontend adapter route: `none`
+- Visual verdict required: `no`
 - Contract owner: `audit`
-- Packet version: `3`
+- Packet version: `4`
 - Input hash: `pending_sync`
 - Budget profile: `normal`
 - Target input tokens: `9000`
@@ -52,9 +57,30 @@
 | --- | --- | --- |
 | `Fill when a milestone opens` | `Document what could regress` | `Describe the regression-oriented check` |
 
+## Frontend Audit Mode
+
+- `Frontend mode: inactive`
+- `Activation reason: workflow_active_without_frontend_signals`
+- `Activation signals: none`
+- `Design-system aware execution: no`
+- `Adapter route: none`
+- `Preview/browser verification need: no`
+- `Visual verdict required: no`
+
 ## Verification Attachments
 
 - `Optionally add VERIFICATION_BRIEF.md or TEST_SPEC.md when the milestone needs deeper verification planning`
+
+## Visual Verdict
+
+| Verdict area | Expectation | How to observe | Evidence expectation | Status |
+| --- | --- | --- | --- | --- |
+| `responsive` | `Fill when frontend mode is active` | `Describe viewport or breakpoint proof` | `Screenshot or browser-verify note` | `optional` |
+| `interaction` | `Fill when frontend mode is active` | `Describe key interaction checks` | `Manual note, test output, or browser trace` | `optional` |
+| `visual consistency` | `Fill when frontend mode is active` | `Describe design-system or visual review` | `Review note plus screenshot evidence when relevant` | `optional` |
+| `component reuse` | `Fill when frontend mode is active` | `Describe shared component/design-system reuse` | `Diff review note` | `optional` |
+| `accessibility smoke` | `Fill when frontend mode is active` | `Describe semantic/focus/label smoke checks` | `Manual note or tool output` | `optional` |
+| `screenshot evidence` | `Fill when frontend mode is active` | `Describe the screenshot or visual artifact` | `Screenshot path, URL, or explicit note` | `optional` |
 
 ## Validation Contract
 

@@ -5,10 +5,11 @@ Use this template when opening a new milestone so the same lifecycle can be recr
 - Default usage: one user request = one milestone
 - `discuss -> research -> plan -> execute -> audit -> complete` are steps inside the same milestone
 - `discuss` is split into `intent capture -> constraint extraction -> execution shaping`
+- `execute` is wave-based inside the milestone: `wave 1 -> wave 2 -> wave 3`
 
 ## Packet Metadata Template
 
-- Packet version: `3`
+- Packet version: `4`
 - Input hash: `pending_sync`
 - Workflow profile: `standard`
 - Budget profile: `normal`
@@ -70,11 +71,40 @@ Use this template when opening a new milestone so the same lifecycle can be recr
 | --- | --- | --- | --- | --- | --- |
 | `R1` | `Mx - Name` | `User-visible slice` | `chunk-1` | `AC1` | `Mapping note` |
 
+## Wave Execution Policy Template
+
+- `Execute follows wave 1 -> wave 2 -> wave 3.`
+- `Wave 1 carries dependency-free foundation or prep slices.`
+- `Wave 2 may start only after wave 1 is integrated and only for work that depends on completed wave 1 outputs.`
+- `Wave 3 closes the execute loop with final integration, shared-surface work, or execution-level cleanup.`
+- `Only dependency-free chunks may share a wave. If a dependency is unclear, serialize it or move it to a later wave.`
+- `Every write-capable chunk must name an owner and explicit write scope before a worker can be opened.`
+- `Unused waves should be marked not needed rather than omitted so resume logic can see the intended execution shape.`
+
+## Wave Structure Template
+
+| Wave | Chunks | Goal | Depends on | Parallel rule | Owners / write scope | Integration order | Commit boundary |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `1` | `chunk-1` | `Dependency-free foundation or prep slice` | `none` | `Only independent chunks may run together` | `Fill owners and paths` | `Integrate wave 1 before wave 2 opens` | `manual` |
+| `2` | `chunk-2` | `Build on completed wave 1 outputs` | `wave-1` | `Only chunks that depend only on completed wave 1 work` | `Fill owners and paths` | `Integrate after all wave 2 work is complete` | `manual` |
+| `3` | `chunk-3` | `Final integration, shared-surface work, or execute closeout` | `wave-1, wave-2` | `Prefer serialized or narrowly parallel work` | `Fill owners and paths` | `Close execute before audit begins` | `manual` |
+
 ## Plan Chunk Table Template
 
-| Chunk ID | Capability slice | Deliverable | Depends on | Wave | Status |
-| --- | --- | --- | --- | --- | --- |
-| `chunk-1` | `Capability slice` | `Deliverable` | `none` | `1` | `pending` |
+| Chunk ID | Capability slice | Deliverable | Depends on | Wave | Owner | Write scope | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `chunk-1` | `Capability slice` | `Dependency-free slice` | `none` | `1` | `main` | `Owned paths` | `pending` |
+| `chunk-2` | `Capability slice` | `Wave 2 slice` | `chunk-1` | `2` | `main` | `Owned paths` | `pending` |
+| `chunk-3` | `Capability slice` | `Wave 3 integration slice` | `chunk-1, chunk-2` | `3` | `main` | `Owned paths` | `pending` |
+
+## Commit Policy Template
+
+- `Preference source: PREFERENCES.md -> Commit granularity`
+- `Commit granularity: manual`
+- `Atomic commit mode: off`
+- `If atomic commit mode = wave, only commit after a whole wave has been integrated.`
+- `If atomic commit mode = chunk, only commit after a single chunk has been integrated.`
+- `If atomic commit mode = off, stay manual and use the normal milestone closeout path unless the user explicitly wants otherwise.`
 
 ## Active Milestone Card Template
 
@@ -112,6 +142,7 @@ Use this template when opening a new milestone so the same lifecycle can be recr
   - `Fill after discuss`
 - Plan checklist:
   - `Do not start plan before research-updated context exists`
+  - `Model execute as wave 1 -> wave 2 -> wave 3`
 - Execute notes:
   - `Use for execution notes`
 - Audit checklist:
@@ -134,12 +165,14 @@ Use this template when opening a new milestone so the same lifecycle can be recr
   - `Dependency map and risks are filled in`
   - `Validation contract and acceptance criteria are narrowed to milestone scope`
 - `plan`
-  - `Chosen strategy, rollback, blockers, wave structure, and chunks are written`
+  - `Chosen strategy, rollback, blockers, wave execution policy, chunks, and commit policy are written`
   - `Coverage matrix has no orphan or duplicate requirements`
   - `workflow:plan-check passes before execute begins`
 - `execute`
-  - `Only the active chunk was implemented`
+  - `Only ready chunks from the active wave were implemented`
+  - `Same-wave work was dependency-free and had disjoint write scopes`
   - `Status fields were updated`
+  - `Integration order and any atomic commit checkpoints were documented`
   - `Off-plan drift was written back into docs`
 - `audit`
   - `Verify commands were run`

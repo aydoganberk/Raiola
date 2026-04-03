@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const {
+  buildPacketSnapshot,
   computeWindowStatus,
   controlPaths,
   ensureDir,
@@ -10,7 +11,7 @@ const {
   renderWorkstreamTable,
   replaceField,
   replaceSection,
-  syncPacketHash,
+  syncStablePacketSet,
   syncWindowDocument,
   today,
   workflowPaths,
@@ -198,7 +199,7 @@ Add or adapt a short workflow section like this inside your repo's \`AGENTS.md\`
 function syncDefaultWorkflowSurface(targetRepo, options = {}) {
   const { setAsActive = false } = options;
   const rootDir = path.join(targetRepo, 'docs', 'workflow');
-  const paths = workflowPaths(rootDir);
+  const paths = workflowPaths(rootDir, targetRepo);
   const controls = controlPaths(targetRepo);
 
   ensureDir(paths.archiveDir);
@@ -209,10 +210,12 @@ function syncDefaultWorkflowSurface(targetRepo, options = {}) {
     );
   }
 
-  const contextPacket = syncPacketHash(paths, { doc: 'context', step: 'discuss' });
-  const execplanPacket = syncPacketHash(paths, { doc: 'execplan', step: 'plan' });
-  const validationPacket = syncPacketHash(paths, { doc: 'validation', step: 'audit' });
-  const windowStatus = syncWindowDocument(paths, computeWindowStatus(paths, { doc: 'validation', step: 'audit' }));
+  const {
+    contextPacket,
+    execplanPacket,
+    validationPacket,
+    windowStatus,
+  } = syncStablePacketSet(paths);
 
   if (fs.existsSync(controls.workstreams)) {
     let workstreams = read(controls.workstreams);
@@ -259,12 +262,20 @@ function syncDefaultWorkflowSurface(targetRepo, options = {}) {
     write(controls.workstreams, workstreams);
   }
 
+  runTargetScript(targetRepo, 'build_packet.js', ['--all', '--sync']);
+  const stabilized = {
+    contextPacket: buildPacketSnapshot(paths, { doc: 'context', step: 'discuss' }),
+    execplanPacket: buildPacketSnapshot(paths, { doc: 'execplan', step: 'plan' }),
+    validationPacket: buildPacketSnapshot(paths, { doc: 'validation', step: 'audit' }),
+    windowStatus: computeWindowStatus(paths, { doc: 'validation', step: 'audit' }),
+  };
+
   return {
     rootDir,
-    contextPacket,
-    execplanPacket,
-    validationPacket,
-    windowStatus,
+    contextPacket: stabilized.contextPacket,
+    execplanPacket: stabilized.execplanPacket,
+    validationPacket: stabilized.validationPacket,
+    windowStatus: stabilized.windowStatus,
   };
 }
 

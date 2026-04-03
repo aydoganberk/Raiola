@@ -14,6 +14,7 @@ const {
   resolveWorkflowRoot,
   workflowPaths,
 } = require('./common');
+const { buildFrontendProfile } = require('./map_frontend');
 const { writeStateSurface } = require('./state_surface');
 
 function printHelp() {
@@ -45,6 +46,7 @@ function deriveRecommendation(state) {
     activeRecall,
     seeds,
     windowStatus,
+    frontendProfile,
   } = state;
 
   const recommendation = {
@@ -56,6 +58,11 @@ function deriveRecommendation(state) {
   const teamLiteHint = preferences.teamLiteDelegation === 'off'
     ? null
     : 'If the user explicitly asks for parallel/subagent/delegate/team mode, route it with workflow:delegation-plan -- --activation-text "<user request>"';
+  const frontendHint = frontendProfile.frontendMode.active
+    ? `Frontend mode is active; adapter route=${frontendProfile.adapters.selected.join(', ') || 'none'}`
+    : frontendProfile.signals.hits.length > 0
+      ? 'Frontend signals are present; run workflow:map-frontend to refresh adapter routing and visual verdict expectations'
+      : null;
 
   if (handoffStatus === 'ready_to_resume' && handoffNext) {
     recommendation.title = 'Resume from handoff';
@@ -200,9 +207,16 @@ function deriveRecommendation(state) {
     if (teamLiteHint) {
       recommendation.checklist.push(teamLiteHint);
     }
+    if (frontendHint) {
+      recommendation.checklist.push(frontendHint);
+    }
+    if (frontendProfile.frontendMode.active || frontendProfile.signals.hits.length > 0) {
+      recommendation.checklist.push('Run workflow:map-frontend to fingerprint the stack and sync frontend audit fields in VALIDATION.md');
+      recommendation.checklist.push('If frontend mode is active, narrow Validation around responsive, interaction, visual consistency, component reuse, accessibility smoke, and screenshot evidence');
+    }
     recommendation.note = planGate === 'pass'
-      ? `Context is ready; the plan step can start cleanly | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`
-      : `Move to the plan step once research findings are complete; current gate=${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
+      ? `Context is ready; the plan step can start cleanly | frontend=${frontendProfile.frontendMode.status} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`
+      : `Move to the plan step once research findings are complete; current gate=${planGate} | frontend=${frontendProfile.frontendMode.status} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
     return recommendation;
   }
 
@@ -231,9 +245,14 @@ function deriveRecommendation(state) {
         'Only continue if the new chunk leaves minimum next-step budget; otherwise split it',
       ],
     });
+    if (frontendProfile.frontendMode.active) {
+      recommendation.checklist.push('Run workflow:map-frontend if the current profile is stale before locking the plan');
+      recommendation.checklist.push(`Choose the frontend adapter route explicitly -> ${frontendProfile.adapters.selected.join(', ') || 'none'}`);
+      recommendation.checklist.push('Make design-system-aware execution and visual verdict requirements explicit in VALIDATION.md');
+    }
     recommendation.note = planGate === 'pass'
-      ? `Plan gate is clean; execute can start within the checked plan | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`
-      : `The source of truth is the Plan of Record section in EXECPLAN.md, but execute must wait for workflow:plan-check | gate=${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
+      ? `Plan gate is clean; execute can start within the checked plan | frontend=${frontendProfile.frontendMode.status} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`
+      : `The source of truth is the Plan of Record section in EXECPLAN.md, but execute must wait for workflow:plan-check | gate=${planGate} | frontend=${frontendProfile.frontendMode.status} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
     return recommendation;
   }
 
@@ -275,7 +294,12 @@ function deriveRecommendation(state) {
         'If process friction happened, keep a short note for RETRO.md after closeout',
       ],
     });
-    recommendation.note = `If execution drifts beyond plan, update docs first | plan=${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
+    if (frontendProfile.frontendMode.active) {
+      recommendation.checklist.push(`Keep the selected adapter route active -> ${frontendProfile.adapters.selected.join(', ') || 'none'}`);
+      recommendation.checklist.push('Stay design-system-aware and avoid ad hoc UI primitives when the repo already exposes shared surfaces');
+      recommendation.checklist.push('Prepare audit evidence for the visual verdict protocol while implementing, not after the fact');
+    }
+    recommendation.note = `If execution drifts beyond plan, update docs first | plan=${planGate} | frontend=${frontendProfile.frontendMode.status} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
     return recommendation;
   }
 
@@ -304,7 +328,12 @@ function deriveRecommendation(state) {
         'If a process gap appeared, capture a one-line RETRO note',
       ],
     });
-    recommendation.note = `Do not complete the milestone before audit closes | plan=${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
+    if (frontendProfile.frontendMode.active) {
+      recommendation.checklist.push('Treat visual verdict as part of the audit contract, not optional polish');
+      recommendation.checklist.push('Close responsive, interaction, visual consistency, component reuse, accessibility smoke, and screenshot evidence rows');
+      recommendation.checklist.push('Use browser/preview verification when the adapter route or validation surface expects it');
+    }
+    recommendation.note = `Do not complete the milestone before audit closes | plan=${planGate} | frontend=${frontendProfile.frontendMode.status} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
     return recommendation;
   }
 
@@ -362,6 +391,7 @@ function main() {
     .filter((entry) => entry.fields.Milestone === milestone);
   const seeds = parseSeedEntries(extractSection(seedsDoc, 'Open Seeds'), 'No open seeds yet');
   const windowStatus = computeWindowStatus(paths);
+  const frontendProfile = buildFrontendProfile(cwd, rootDir);
 
   const recommendation = deriveRecommendation({
     preferences,
@@ -374,6 +404,7 @@ function main() {
     activeRecall,
     seeds,
     windowStatus,
+    frontendProfile,
   });
 
   const payload = {
@@ -399,6 +430,16 @@ function main() {
       status: preferences.automationStatus,
       windowPolicy: preferences.automationWindowPolicy,
     },
+    frontend: {
+      active: frontendProfile.frontendMode.active,
+      status: frontendProfile.frontendMode.status,
+      framework: frontendProfile.framework.primary,
+      uiSystem: frontendProfile.uiSystem.primary,
+      adapters: frontendProfile.adapters.selected,
+      visualVerdictRequired: frontendProfile.visualVerdict.required,
+      signals: frontendProfile.signals.hits.map((item) => item.label),
+      refreshStatus: frontendProfile.fingerprint.refreshStatus,
+    },
     recommendation,
   };
 
@@ -418,6 +459,7 @@ function main() {
       note: recommendation.note,
       checklist: recommendation.checklist,
     },
+    frontend: payload.frontend,
   }, { updatedBy: 'next' });
 
   if (args.json) {
@@ -437,6 +479,10 @@ function main() {
   console.log(`- Discuss mode: \`${preferences.discussMode}\``);
   console.log(`- Git isolation: \`${preferences.gitIsolation}\``);
   console.log(`- Team Lite delegation: \`${preferences.teamLiteDelegation}\``);
+  console.log(`- Frontend mode: \`${payload.frontend.status}\``);
+  console.log(`- Frontend framework: \`${payload.frontend.framework}\``);
+  console.log(`- Frontend adapters: \`${payload.frontend.adapters.join(', ') || 'none'}\``);
+  console.log(`- Visual verdict required: \`${payload.frontend.visualVerdictRequired ? 'yes' : 'no'}\``);
   console.log(`- Packet hash: \`${payload.packetHash}\``);
   console.log(`- Estimated tokens: \`${payload.estimatedTokens}\``);
   console.log(`- Budget status: \`${payload.budgetStatus}\``);

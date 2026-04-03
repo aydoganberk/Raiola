@@ -24,6 +24,7 @@ const {
   renderWorkstreamTable,
   replaceField,
   replaceOrAppendField,
+  replaceOrAppendSection,
   replaceSection,
   resolveWorkflowRoot,
   setActiveMilestoneCard,
@@ -155,14 +156,52 @@ function renderDependencyBlockersTable() {
 
 function renderWaveStructureTable() {
   return renderMarkdownTable(
-    ['Wave', 'Chunks', 'Goal', 'Depends on'],
-    [[
-      '1',
-      'chunk-1',
-      'Fill once the chosen strategy and capability slices are explicit',
-      'none',
-    ]],
+    ['Wave', 'Chunks', 'Goal', 'Depends on', 'Parallel rule', 'Owners / write scope', 'Integration order', 'Commit boundary'],
+    [
+      [
+        '1',
+        'chunk-1',
+        'Dependency-free foundation or prep slice',
+        'none',
+        'Only independent chunks may run together',
+        'Fill owners and paths before execute',
+        'Integrate wave 1 before wave 2 opens',
+        'manual',
+      ],
+      [
+        '2',
+        'chunk-2',
+        'Build on completed wave 1 outputs',
+        'wave-1',
+        'Only chunks that depend only on completed wave 1 work',
+        'Fill owners and paths before execute',
+        'Integrate after all wave 2 work is complete',
+        'manual',
+      ],
+      [
+        '3',
+        'chunk-3',
+        'Final integration, shared-surface work, or execute closeout',
+        'wave-1, wave-2',
+        'Prefer serialized or narrowly parallel work',
+        'Fill owners and paths before execute',
+        'Close execute before audit begins',
+        'manual',
+      ],
+    ],
   );
+}
+
+function renderWaveExecutionPolicy() {
+  return [
+    '- `Execute follows wave 1 -> wave 2 -> wave 3.`',
+    '- `Wave 1 carries dependency-free foundation or prep slices.`',
+    '- `Wave 2 may start only after wave 1 is integrated and only for work that depends on completed wave 1 outputs.`',
+    '- `Wave 3 closes the execute loop with final integration, shared-surface work, or execution-level cleanup.`',
+    '- `Only dependency-free chunks may share a wave. If a dependency is unclear, serialize it or move it to a later wave.`',
+    '- `Every write-capable chunk must name an owner and explicit write scope before a worker can be opened.`',
+    '- `Unused waves should be marked not needed rather than omitted so resume logic can see the intended execution shape.`',
+  ].join('\n');
 }
 
 function renderCoverageMatrixTable(milestoneLabel) {
@@ -181,16 +220,51 @@ function renderCoverageMatrixTable(milestoneLabel) {
 
 function renderPlanChunkTable() {
   return renderMarkdownTable(
-    ['Chunk ID', 'Capability slice', 'Deliverable', 'Depends on', 'Wave', 'Status'],
-    [[
-      'chunk-1',
-      'Fill during planning',
-      'Describe the first vertical capability slice',
-      'none',
-      '1',
-      'pending',
-    ]],
+    ['Chunk ID', 'Capability slice', 'Deliverable', 'Depends on', 'Wave', 'Owner', 'Write scope', 'Status'],
+    [
+      [
+        'chunk-1',
+        'Fill during planning',
+        'Describe the dependency-free slice this chunk delivers',
+        'none',
+        '1',
+        'main',
+        'Fill owned paths before execute',
+        'pending',
+      ],
+      [
+        'chunk-2',
+        'Fill during planning',
+        'Describe the wave 2 slice this chunk delivers',
+        'chunk-1',
+        '2',
+        'main',
+        'Fill owned paths before execute',
+        'pending',
+      ],
+      [
+        'chunk-3',
+        'Fill during planning',
+        'Describe the wave 3 integration slice this chunk delivers',
+        'chunk-1, chunk-2',
+        '3',
+        'main',
+        'Fill owned paths before execute',
+        'pending',
+      ],
+    ],
   );
+}
+
+function renderCommitPolicy(commitGranularity = 'manual') {
+  return [
+    '- `Preference source: PREFERENCES.md -> Commit granularity`',
+    `- \`Commit granularity: ${commitGranularity}\``,
+    '- `Atomic commit mode: off`',
+    '- `If atomic commit mode = wave, only commit after a whole wave has been integrated.`',
+    '- `If atomic commit mode = chunk, only commit after a single chunk has been integrated.`',
+    '- `If atomic commit mode = off, stay manual and use the normal milestone closeout path unless the user explicitly wants otherwise.`',
+  ].join('\n');
 }
 
 function renderUnknownsTable() {
@@ -256,6 +330,32 @@ function renderRegressionFocusTable() {
   );
 }
 
+function renderInitialFrontendAuditMode() {
+  return [
+    '- `Frontend mode: inactive`',
+    '- `Activation reason: workflow_active_without_frontend_signals`',
+    '- `Activation signals: none`',
+    '- `Design-system aware execution: no`',
+    '- `Adapter route: none`',
+    '- `Preview/browser verification need: no`',
+    '- `Visual verdict required: no`',
+  ].join('\n');
+}
+
+function renderInitialVisualVerdictTable() {
+  return renderMarkdownTable(
+    ['Verdict area', 'Expectation', 'How to observe', 'Evidence expectation', 'Status'],
+    [
+      ['responsive', 'Fill when frontend mode is active', 'Describe viewport or breakpoint proof', 'Screenshot or browser-verify note', 'optional'],
+      ['interaction', 'Fill when frontend mode is active', 'Describe key interaction checks', 'Manual note, test output, or browser trace', 'optional'],
+      ['visual consistency', 'Fill when frontend mode is active', 'Describe design-system or visual review', 'Review note plus screenshot evidence when relevant', 'optional'],
+      ['component reuse', 'Fill when frontend mode is active', 'Describe shared component/design-system reuse', 'Diff review note', 'optional'],
+      ['accessibility smoke', 'Fill when frontend mode is active', 'Describe semantic/focus/label smoke checks', 'Manual note or tool output', 'optional'],
+      ['screenshot evidence', 'Fill when frontend mode is active', 'Describe the screenshot or visual artifact', 'Screenshot path, URL, or explicit note', 'optional'],
+    ],
+  );
+}
+
 function renderMinimumDoneChecklist(profile) {
   const variants = {
     lite: {
@@ -270,14 +370,16 @@ function renderMinimumDoneChecklist(profile) {
         'VALIDATION.md acceptance criteria and contract were narrowed to milestone scope',
       ],
       plan: [
-        'Chosen strategy, rollback/fallback, blockers, and wave structure were written',
+        'Chosen strategy, rollback/fallback, blockers, wave execution policy, and commit policy were written',
         'Coverage matrix had no orphan or duplicate requirements',
         'workflow:plan-check passed before execute started',
       ],
       execute: [
-        'Only the active chunk was executed',
+        'Only ready chunks from the active wave were executed',
+        'Same-wave work stayed dependency-free with disjoint write scope',
         'Docs were updated when work drifted beyond plan',
         'STATUS.md summary fields were refreshed',
+        'Integration order and any atomic commit checkpoints were recorded when relevant',
       ],
       audit: [
         'Verify command rows were run',
@@ -304,15 +406,17 @@ function renderMinimumDoneChecklist(profile) {
         'VALIDATION.md acceptance criteria, user-visible outcomes, and contract were narrowed to milestone scope',
       ],
       plan: [
-        'Chosen strategy and rejected strategies were written',
+        'Chosen strategy, rejected strategies, wave execution policy, and commit policy were written',
         'Carryforward and seed intake were reviewed',
-        'Coverage matrix and plan chunk table were written as vertical capability slices',
+        'Coverage matrix and plan chunk table were written as dependency-aware vertical capability slices with owner + write scope',
         'workflow:plan-check passed before execute started',
       ],
       execute: [
-        'Only the active chunk was executed',
+        'Only ready chunks from the active wave were executed',
+        'Same-wave work stayed dependency-free with disjoint write scope',
         'Docs were updated when work drifted beyond plan',
         'STATUS.md Verified/Inferred/Unknown were updated',
+        'Integration order and any atomic commit checkpoints were recorded when relevant',
         'Active recall notes were saved when needed',
       ],
       audit: [
@@ -344,16 +448,18 @@ function renderMinimumDoneChecklist(profile) {
         'A RETRO note was captured if process friction appeared',
       ],
       plan: [
-        'Chosen strategy, rejected strategies, rollback/fallback, and blockers were written',
+        'Chosen strategy, rejected strategies, rollback/fallback, blockers, wave execution policy, and commit policy were written',
         'Carryforward and seed intake were reviewed',
-        'Coverage matrix and plan chunk table were written as vertical capability slices',
+        'Coverage matrix and plan chunk table were written as dependency-aware vertical capability slices with owner + write scope',
         'workflow:plan-check passed before execute started',
         'Resume anchor and out-of-scope guardrails were clarified',
       ],
       execute: [
-        'Only the active chunk was executed',
+        'Only ready chunks from the active wave were executed',
+        'Same-wave work stayed dependency-free with disjoint write scope',
         'Docs were updated when work drifted beyond plan',
         'STATUS.md Verified/Inferred/Unknown were updated',
+        'Integration order and any atomic commit checkpoints were recorded when relevant',
         'Active recall notes were saved when needed',
         'A RETRO note was kept if a process gap appeared',
       ],
@@ -480,7 +586,7 @@ function main() {
       mustHandoffThreshold: profileDefaults.mustHandoffThreshold,
       minimumNextStepBudget: profileDefaults.minimumNextStepBudget,
       compactionTarget: profileDefaults.compactionTarget,
-      healthStrictRequired: profileDefaults.healthStrictRequired,
+      healthStrictRequired: preferences.mode === 'team' ? true : profileDefaults.healthStrictRequired,
     }
     : preferences;
   const currentWorkstream = String(getFieldValue(status, 'Current workstream') || path.relative(process.cwd(), rootDir)).trim();
@@ -558,7 +664,7 @@ function main() {
   - \`Fill after discuss\`
 - Plan checklist:
   - \`Do not move to planning until CONTEXT.md is current after research\`
-  - \`Fill chosen strategy, coverage matrix, wave structure, and plan chunks in EXECPLAN.md\`
+  - \`Fill chosen strategy, wave execution policy, coverage matrix, plan chunks, and commit policy in EXECPLAN.md\`
   - \`Run workflow:plan-check -- --sync --strict before execute begins\`
 - Execute notes:
   - \`None yet\`
@@ -609,6 +715,12 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
 - Run chunk id: \`NONE\`
 - Run chunk hash: \`pending\`
 - Chunk cursor: \`0/0\`
+- Active wave: \`0/3\`
+- Wave status: \`idle\`
+- Wave advancement rule: \`dependency_free_only\`
+- Worker orchestration: \`dependency_aware\`
+- Commit granularity default: \`${effectivePreferences.commitGranularity}\`
+- Atomic commit mode: \`off\`
 - Completed items: \`None\`
 - Remaining items: \`Discuss -> research -> packet refresh\`
 - Resume from item: \`Discuss start\`
@@ -621,25 +733,29 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
 - Current run chunk:
   - \`None\`
 - Next run chunk:
-  - \`The first chunk will be written after research completes\`
+  - \`The first wave/chunk entries will be written after research completes\`
 - Implementation checklist:
-  - \`Fill chosen strategy, coverage matrix, and vertical chunks after research completes\`
+  - \`Fill wave execution policy, coverage matrix, chunk ownership/write scope, and commit policy after research completes\`
 - Audit plan:
   - \`Acceptance criteria and validation rows will be narrowed after research\`
 - Out-of-scope guardrails:
   - \`No work outside the active milestone\`
 `);
   execplan = replaceSection(execplan, 'Chosen Strategy', '- `Fill during execution shaping and planning`');
+  execplan = replaceSection(execplan, 'Wave Execution Policy', renderWaveExecutionPolicy());
   execplan = replaceSection(execplan, 'Rejected Strategies', '- `Document the alternatives that were considered but not chosen`');
   execplan = replaceSection(execplan, 'Rollback / Fallback', '- `Describe the fallback path before execute begins`');
   execplan = replaceSection(execplan, 'Dependency Blockers', renderDependencyBlockersTable());
   execplan = replaceSection(execplan, 'Wave Structure', renderWaveStructureTable());
   execplan = replaceSection(execplan, 'Coverage Matrix', renderCoverageMatrixTable(milestoneLabel));
   execplan = replaceSection(execplan, 'Plan Chunk Table', renderPlanChunkTable());
+  execplan = replaceSection(execplan, 'Commit Policy', renderCommitPolicy(effectivePreferences.commitGranularity));
   execplan = replaceSection(execplan, 'Unknowns', renderUnknownsTable());
+  execplan = replaceField(execplan, 'Reasoning profile', 'deep');
   execplan = replaceSection(execplan, 'What Would Falsify This Plan?', [
-    "- `If research findings conflict with the intended scope, the chunk plan must be rewritten`",
+    "- `If research findings conflict with the intended scope, the wave/chunk plan must be rewritten`",
     '- `If window budget is insufficient, do not start a new step`',
+    '- `If same-wave chunks overlap on write scope or hide a dependency, the execute plan is unsafe`',
   ].join('\n'));
 
   context = replaceField(context, 'Last updated', today());
@@ -731,14 +847,23 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   validation = replaceField(validation, 'Active milestone', milestoneLabel);
   validation = replaceField(validation, 'Validation status', 'pending_research');
   validation = replaceField(validation, 'Audit readiness', 'not_ready');
+  validation = replaceField(validation, 'Packet version', '4');
   validation = replaceField(validation, 'Input hash', 'pending_sync');
   validation = replaceField(validation, 'Target input tokens', String(effectivePreferences.auditBudget));
   validation = replaceField(validation, 'Hard cap tokens', String(effectivePreferences.auditBudget + effectivePreferences.tokenReserve));
+  validation = replaceField(validation, 'Reasoning profile', 'deep');
+  validation = replaceOrAppendField(validation, 'Frontend mode', 'inactive');
+  validation = replaceOrAppendField(validation, 'Frontend profile ref', path.relative(process.cwd(), path.join(paths.rootDir, 'FRONTEND_PROFILE.md')).replace(/\\/g, '/'));
+  validation = replaceOrAppendField(validation, 'Frontend profile json', '.workflow/frontend-profile.json');
+  validation = replaceOrAppendField(validation, 'Frontend adapter route', 'none');
+  validation = replaceOrAppendField(validation, 'Visual verdict required', 'no');
   validation = replaceSection(validation, 'Success Contract', `- \`${milestoneGoal}\``);
   validation = replaceSection(validation, 'Acceptance Criteria', renderAcceptanceCriteriaTable(successSignal));
   validation = replaceSection(validation, 'User-visible Outcomes', renderUserVisibleOutcomesTable(successSignal));
   validation = replaceSection(validation, 'Regression Focus', renderRegressionFocusTable());
+  validation = replaceOrAppendSection(validation, 'Frontend Audit Mode', renderInitialFrontendAuditMode());
   validation = replaceSection(validation, 'Verification Attachments', '- `Add VERIFICATION_BRIEF.md or TEST_SPEC.md only if the milestone needs deeper validation planning`');
+  validation = replaceOrAppendSection(validation, 'Visual Verdict', renderInitialVisualVerdictTable());
   validation = replaceSection(validation, 'Validation Contract', renderValidationContract(milestoneName, goldenRef, statusRef));
   validation = replaceSection(validation, 'Unknowns', renderUnknownsTable());
   validation = replaceSection(validation, 'What Would Falsify This Plan?', [

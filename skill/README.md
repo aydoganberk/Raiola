@@ -117,6 +117,7 @@ Build a fresh repository map:
 
 ```bash
 npm run workflow:map-codebase -- --compact
+npm run workflow:map-frontend -- --compact
 ```
 
 Run health checks:
@@ -165,6 +166,7 @@ npm run workflow:automation -- --mode phase
 npm run workflow:next
 npm run workflow:hud
 npm run workflow:map-codebase
+npm run workflow:map-frontend
 npm run workflow:delegation-plan
 npm run workflow:plan-check -- --sync --strict
 npm run workflow:packet -- --step plan --json
@@ -202,6 +204,27 @@ Use delegation planning when the task is explicitly parallelized and ownership i
 - `workflow:delegation-plan -- --start` turns the plan into a real orchestration runtime with packets, results, and wave state.
 - `execute` fan-out is only safe when worker write scopes are explicit and disjoint.
 
+## Frontend specialization
+
+Use frontend specialization when workflow is active and frontend/UI signals appear.
+
+- `workflow:map-frontend` fingerprints framework, styling, UI system, forms/data/motion/test stack, and Storybook/Figma/Playwright surfaces.
+- It writes `FRONTEND_PROFILE.md` in the active workflow root and `.workflow/frontend-profile.json` in the repo runtime surface.
+- Frontend auto mode should turn on when the active milestone points at UI work such as React/TSX-heavy component scope, `components.json`, Tailwind, Storybook, Figma links, preview/browser validation, or user intent like `frontend`, `UI`, `screen`, `component`, `design`, or `responsive`.
+- Once frontend mode is active, route through the adapter registry:
+  - `shadcn`
+  - `react-best-practices`
+  - `web-design-guidelines`
+  - `figma-implement-design`
+  - `browser-verify`
+- Frontend milestones should expand `VALIDATION.md` with the visual verdict protocol:
+  - `responsive`
+  - `interaction`
+  - `visual consistency`
+  - `component reuse`
+  - `accessibility smoke`
+  - `screenshot evidence`
+
 ## Minimum done by step
 
 - `discuss`
@@ -213,16 +236,17 @@ Use delegation planning when the task is explicitly parallelized and ownership i
   Verification surface is identified.
   `VALIDATION.md` is narrowed to milestone scope.
 - `plan`
-  Strategy, rollback/fallback, blockers, waves, and chunks are written down.
+  Strategy, rollback/fallback, blockers, frontend routing when relevant, waves, and chunks are written down.
   Coverage has no orphan or duplicate requirements.
   `workflow:plan-check -- --sync --strict` reaches `pass` before execute.
 - `execute`
-  Only the active chunk is implemented.
+  Only ready chunks from the active wave are implemented.
   Status fields are updated.
   Off-plan drift is written back into docs if needed.
 - `audit`
   Verify commands have been run.
   Manual checks and residual risks are documented.
+  Frontend milestones close the visual verdict protocol, not just the functional contract.
   `workflow:health -- --strict` is clean when required.
 - `complete`
   Archive output is written.
@@ -294,6 +318,7 @@ I am not starting a new step in this window; I am leaving the resume command and
 - Do not treat it as canonical state; the markdown workflow files remain authoritative.
 - `workflow:doctor` and `workflow:next` also refresh it so the runtime summary stays current between HUD calls.
 - The same rule applies to `.workflow/codebase-map.json` and `.workflow/delegation-plan.json`.
+- The same rule also applies to `.workflow/frontend-profile.json`.
 - The same rule also applies to `.workflow/codebase/*` and `.workflow/orchestration/*`.
 - `Resume ambiguity`
   Read `HANDOFF.md` and `WINDOW.md`, then run `workflow:resume-work -> workflow:next`
@@ -320,6 +345,7 @@ I am not starting a new step in this window; I am leaving the resume command and
 - Is the active root correct?
 - Are the active milestone and active step explicit?
 - Is `CONTEXT.md` up to date after research?
-- Is `EXECPLAN.md` split into `1-2` run-sized chunks?
+- Is `EXECPLAN.md` written as dependency-aware execution waves?
 - Is `VALIDATION.md` narrowed to milestone scope?
+- If frontend mode is active, did `workflow:map-frontend` run and did `VALIDATION.md` expand the visual verdict rows?
 - Is `workflow:health -- --strict` clean when it needs to be?

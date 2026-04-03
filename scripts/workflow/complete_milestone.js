@@ -24,6 +24,7 @@ const {
   renderWorkstreamTable,
   replaceField,
   replaceOrAppendField,
+  replaceOrAppendSection,
   replaceSection,
   resolveWorkflowRoot,
   runGit,
@@ -427,6 +428,12 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
 - Run chunk id: \`NONE\`
 - Run chunk hash: \`pending\`
 - Chunk cursor: \`0/0\`
+- Active wave: \`0/3\`
+- Wave status: \`idle\`
+- Wave advancement rule: \`dependency_free_only\`
+- Worker orchestration: \`dependency_aware\`
+- Commit granularity default: \`${preferences.commitGranularity}\`
+- Atomic commit mode: \`off\`
 - Completed items: \`None\`
 - Remaining items: \`Open the next milestone if needed\`
 - Resume from item: \`Milestone open\`
@@ -447,6 +454,15 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   - \`Do not start milestone planning without the user's request\`
 `);
   execplan = replaceSection(execplan, 'Chosen Strategy', '- `Fill when the next milestone reaches planning`');
+  execplan = replaceSection(execplan, 'Wave Execution Policy', `
+- \`Execute follows wave 1 -> wave 2 -> wave 3.\`
+- \`Wave 1 carries dependency-free foundation or prep slices.\`
+- \`Wave 2 may start only after wave 1 is integrated and only for work that depends on completed wave 1 outputs.\`
+- \`Wave 3 closes the execute loop with final integration, shared-surface work, or execution-level cleanup.\`
+- \`Only dependency-free chunks may share a wave. If a dependency is unclear, serialize it or move it to a later wave.\`
+- \`Every write-capable chunk must name an owner and explicit write scope before a worker can be opened.\`
+- \`Unused waves must be marked not needed rather than omitted so resume logic can see the intended execution shape.\`
+`);
   execplan = replaceSection(execplan, 'Rejected Strategies', '- `Document rejected strategies during the next milestone`');
   execplan = replaceSection(execplan, 'Rollback / Fallback', '- `Describe rollback or fallback before the next milestone executes`');
   execplan = replaceSection(execplan, 'Dependency Blockers', `
@@ -455,9 +471,11 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
 | \`None currently\` | \`none\` | \`n/a\` | \`clear\` | \`Replace this row if a real blocker appears\` |
 `);
   execplan = replaceSection(execplan, 'Wave Structure', `
-| Wave | Chunks | Goal | Depends on |
-| --- | --- | --- | --- |
-| \`Fill when the next milestone reaches planning\` | \`chunk-1\` | \`Describe the capability slice for the wave\` | \`none\` |
+| Wave | Chunks | Goal | Depends on | Parallel rule | Owners / write scope | Integration order | Commit boundary |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| \`1\` | \`chunk-1\` | \`Dependency-free foundation or prep slice\` | \`none\` | \`Only independent chunks may run together\` | \`Fill owners and paths\` | \`Integrate wave 1 before wave 2 opens\` | \`manual\` |
+| \`2\` | \`chunk-2\` | \`Build on completed wave 1 outputs\` | \`wave-1\` | \`Only chunks that depend only on completed wave 1 work\` | \`Fill owners and paths\` | \`Integrate after all wave 2 work is complete\` | \`manual\` |
+| \`3\` | \`chunk-3\` | \`Final integration, shared-surface work, or execute closeout\` | \`wave-1, wave-2\` | \`Prefer serialized or narrowly parallel work\` | \`Fill owners and paths\` | \`Close execute before audit begins\` | \`manual\` |
 `);
   execplan = replaceSection(execplan, 'Coverage Matrix', `
 | Requirement ID | Milestone | Capability slice | Plan chunk | Validation ID | Notes |
@@ -465,9 +483,19 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
 | \`R0\` | \`NONE\` | \`Fill when the next milestone reaches planning\` | \`chunk-1\` | \`AC0\` | \`Replace this placeholder before execute\` |
 `);
   execplan = replaceSection(execplan, 'Plan Chunk Table', `
-| Chunk ID | Capability slice | Deliverable | Depends on | Wave | Status |
-| --- | --- | --- | --- | --- | --- |
-| \`chunk-1\` | \`Fill when the next milestone reaches planning\` | \`Describe the first vertical capability slice\` | \`none\` | \`1\` | \`pending\` |
+| Chunk ID | Capability slice | Deliverable | Depends on | Wave | Owner | Write scope | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| \`chunk-1\` | \`Fill when the next milestone reaches planning\` | \`Describe the dependency-free slice this chunk delivers\` | \`none\` | \`1\` | \`main\` | \`Fill owned paths before execute\` | \`pending\` |
+| \`chunk-2\` | \`Fill when the next milestone reaches planning\` | \`Describe the wave 2 slice this chunk delivers\` | \`chunk-1\` | \`2\` | \`main\` | \`Fill owned paths before execute\` | \`pending\` |
+| \`chunk-3\` | \`Fill when the next milestone reaches planning\` | \`Describe the wave 3 integration slice this chunk delivers\` | \`chunk-1, chunk-2\` | \`3\` | \`main\` | \`Fill owned paths before execute\` | \`pending\` |
+`);
+  execplan = replaceSection(execplan, 'Commit Policy', `
+- \`Preference source: PREFERENCES.md -> Commit granularity\`
+- \`Commit granularity: ${preferences.commitGranularity}\`
+- \`Atomic commit mode: off\`
+- \`If atomic commit mode = wave, only commit after a whole wave has been integrated.\`
+- \`If atomic commit mode = chunk, only commit after a single chunk has been integrated.\`
+- \`If atomic commit mode = off, stay manual and use the normal milestone closeout path unless the user explicitly wants otherwise.\`
 `);
 
   carryforward = replaceSection(carryforward, 'Open Items', renderOpenItems(carryforwardItems));
@@ -483,7 +511,13 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   validation = replaceField(validation, 'Active milestone', 'NONE');
   validation = replaceField(validation, 'Validation status', 'idle_until_milestone');
   validation = replaceField(validation, 'Audit readiness', 'not_ready');
+  validation = replaceField(validation, 'Packet version', '4');
   validation = replaceField(validation, 'Input hash', 'pending_sync');
+  validation = replaceOrAppendField(validation, 'Frontend mode', 'inactive');
+  validation = replaceOrAppendField(validation, 'Frontend profile ref', path.relative(process.cwd(), path.join(paths.rootDir, 'FRONTEND_PROFILE.md')).replace(/\\/g, '/'));
+  validation = replaceOrAppendField(validation, 'Frontend profile json', '.workflow/frontend-profile.json');
+  validation = replaceOrAppendField(validation, 'Frontend adapter route', 'none');
+  validation = replaceOrAppendField(validation, 'Visual verdict required', 'no');
   validation = replaceSection(validation, 'Success Contract', '- `To be filled by the next milestone research/plan`');
   validation = replaceSection(validation, 'Acceptance Criteria', `
 | Acceptance ID | Criterion | How to observe | Status |
@@ -500,7 +534,26 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
 | --- | --- | --- |
 | \`Fill when the next milestone opens\` | \`Document what could regress\` | \`Describe the regression-oriented check\` |
 `);
+  validation = replaceOrAppendSection(validation, 'Frontend Audit Mode', `
+- \`Frontend mode: inactive\`
+- \`Activation reason: workflow_active_without_frontend_signals\`
+- \`Activation signals: none\`
+- \`Design-system aware execution: no\`
+- \`Adapter route: none\`
+- \`Preview/browser verification need: no\`
+- \`Visual verdict required: no\`
+`);
   validation = replaceSection(validation, 'Verification Attachments', '- `Optionally add VERIFICATION_BRIEF.md or TEST_SPEC.md when the next milestone needs deeper verification planning`');
+  validation = replaceOrAppendSection(validation, 'Visual Verdict', `
+| Verdict area | Expectation | How to observe | Evidence expectation | Status |
+| --- | --- | --- | --- | --- |
+| \`responsive\` | \`Fill when frontend mode is active\` | \`Describe viewport or breakpoint proof\` | \`Screenshot or browser-verify note\` | \`optional\` |
+| \`interaction\` | \`Fill when frontend mode is active\` | \`Describe key interaction checks\` | \`Manual note, test output, or browser trace\` | \`optional\` |
+| \`visual consistency\` | \`Fill when frontend mode is active\` | \`Describe design-system or visual review\` | \`Review note plus screenshot evidence when relevant\` | \`optional\` |
+| \`component reuse\` | \`Fill when frontend mode is active\` | \`Describe shared component/design-system reuse\` | \`Diff review note\` | \`optional\` |
+| \`accessibility smoke\` | \`Fill when frontend mode is active\` | \`Describe semantic/focus/label smoke checks\` | \`Manual note or tool output\` | \`optional\` |
+| \`screenshot evidence\` | \`Fill when frontend mode is active\` | \`Describe the screenshot or visual artifact\` | \`Screenshot path, URL, or explicit note\` | \`optional\` |
+`);
   validation = replaceSection(validation, 'Validation Contract', `
 | Deliverable | Verify command | Expected signal | Manual check | Golden | Audit owner | Status | Evidence | Packet hash |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |

@@ -93,6 +93,9 @@ function printCompact(state) {
   console.log(`# HUD\n`);
   console.log(`- root=\`${state.workflowRootRelative}\` workstream=\`${state.activeWorkstream.name}\` milestone=\`${state.workflow.milestone}\` step=\`${state.workflow.step}\` readiness=\`${state.workflow.readiness}\` plan=\`${state.workflow.planGate}\``);
   console.log(`- profile=\`${state.workflow.profile}\` automation=\`${state.workflow.automationMode}\` automation_status=\`${state.workflow.automationStatus}\``);
+  if (state.frontend) {
+    console.log(`- frontend=\`${state.frontend.status}\` framework=\`${state.frontend.framework}\` adapters=\`${(state.frontend.adapters || []).join(', ') || 'none'}\` visual_verdict=\`${state.frontend.visualVerdictRequired ? 'yes' : 'no'}\``);
+  }
   console.log(`- health=\`${state.health.status}\` fail=\`${state.health.failCount}\` warn=\`${state.health.warnCount}\` window=\`${state.window.decision}\` remaining=\`${state.window.remainingBudget}\` handoff=\`${state.handoff.status}\` auto_window=\`${state.window.automationRecommendation}\``);
   console.log(`- packets=\`${packetSummary}\``);
   console.log(`- counts=\`carryforward:${state.counts.carryforward} seeds:${state.counts.seeds} recall:${state.counts.activeRecall}\``);
@@ -111,6 +114,12 @@ function printStandard(state) {
   console.log(`- Plan gate: \`${state.workflow.planGate}\``);
   console.log(`- Workflow profile: \`${state.workflow.profile}\``);
   console.log(`- Automation: \`${state.workflow.automationMode}\` (\`${state.workflow.automationStatus}\`)`);
+  if (state.frontend) {
+    console.log(`- Frontend mode: \`${state.frontend.status}\``);
+    console.log(`- Frontend framework: \`${state.frontend.framework}\``);
+    console.log(`- Frontend adapters: \`${(state.frontend.adapters || []).join(', ') || 'none'}\``);
+    console.log(`- Visual verdict required: \`${state.frontend.visualVerdictRequired ? 'yes' : 'no'}\``);
+  }
   console.log(`- Health: \`${state.health.status}\` (\`${state.health.failCount}\` fail / \`${state.health.warnCount}\` warn)`);
   console.log(`- Window decision: \`${state.window.decision}\``);
   console.log(`- Remaining budget: \`${state.window.remainingBudget}\``);

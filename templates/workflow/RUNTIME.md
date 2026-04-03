@@ -1,6 +1,6 @@
 # RUNTIME
 
-- Last updated: `2026-04-02`
+- Last updated: `2026-04-03`
 - Runtime status: `documented`
 - Default workflow root: `docs/workflow`
 - Default compare script: `scripts/compare_golden_snapshots.ts`
@@ -9,6 +9,7 @@
 
 - `npm run workflow:hud`
 - `npm run workflow:map-codebase`
+- `npm run workflow:map-frontend`
 - `npm run workflow:delegation-plan`
 - `npm run workflow:plan-check -- --strict`
 - `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual`
@@ -23,7 +24,10 @@
 - `npm run workflow:health -- --strict`
 - `npm run workflow:forensics`
 - `npm run workflow:workstreams status`
-- `npm run workflow:switch-workstream -- --name "<slug>"`
+- `npm run workflow:workstreams progress`
+- `npm run workflow:workstreams create -- --name "<slug>"`
+- `npm run workflow:workstreams switch -- --name "<slug>"`
+- `npm run workflow:ensure-isolation -- --root docs/workflow`
 - `npm run workflow:plant-seed -- --title "..." --trigger "..."`
 
 ## Activation Notes
@@ -64,12 +68,15 @@
 - `complete_milestone` defaults toward commit + push closeout behavior
 - If the worktree is dirty, the script requires explicit `--stage-paths` or a deliberate `--allow-workflow-only`
 - `PREFERENCES.md` records the workflow's branch/worktree isolation expectation
-- `ensure_isolation.js` sets or validates `none|branch|worktree` behavior
+- `workflow:workstreams switch` automatically runs `workflow:ensure-isolation` unless you pass `--no-isolation`
+- `ensure_isolation.js` sets or validates `none|branch|worktree` behavior and can provision a real branch/worktree
+- `team` mode forces branch isolation and keeps `workflow:health -- --strict` as the pre-closeout gate
 
 ## Validation Runtime Notes
 
 - `VALIDATION.md` is the canonical source for the audit contract
 - During planning, acceptance criteria, user-visible outcomes, regression focus, verify commands, expected signals, manual checks, golden refs, and evidence should be written there
+- When frontend mode is active, `VALIDATION.md` should also carry the frontend audit mode fields and the visual verdict protocol
 - During audit, the commands actually run should be read from `STATUS.md` and `VALIDATION.md`
 
 ## Plan Check Runtime Notes
@@ -78,6 +85,7 @@
 - It checks:
   - `plan-ready`
   - `coverage pass/fail`
+  - `counterexample / falsification pass`
   - `anti-horizontal slicing`
   - `success criteria observability`
 - `pending` means the packet is incomplete but not yet structurally wrong
@@ -96,6 +104,28 @@
   - `.workflow/codebase/TESTING.md`
   - `.workflow/codebase/CONCERNS.md`
 - These are generated summaries with freshness metadata, not canonical state.
+- `workflow:map-frontend` writes:
+  - `<active workflow root>/FRONTEND_PROFILE.md`
+  - `.workflow/frontend-profile.json`
+- The frontend profile records active workstream scope, fingerprint inputs, refresh status, adapter routing, and visual verdict expectations.
+- When frontend mode is active, the validation contract should expand beyond functional checks and include the visual verdict protocol.
+
+## Frontend Runtime Notes
+
+- Frontend auto mode activates only while workflow is active and frontend/UI signals are present.
+- Activation signals include:
+  - `React/TSX-heavy surface`
+  - `components.json`
+  - `Tailwind config`
+  - `Storybook`
+  - `Figma link`
+  - `preview/browser/screenshot validation need`
+  - `user intent such as landing page, frontend, UI, screen, component, design, responsive`
+- When frontend mode is active:
+  - `run workflow:map-frontend to refresh the profile and sync VALIDATION.md`
+  - `prefer design-system-aware implementation choices`
+  - `select adapters from the frontend registry`
+  - `expand audit expectations to the visual verdict protocol`
 
 ## Team Lite Runtime Notes
 
@@ -118,16 +148,17 @@
   - `Dependency map and risks are filled in`
   - `Validation contract is narrowed to milestone scope`
 - `plan`
-  - `Chosen strategy, rejected strategies, rollback/fallback, and wave structure are written`
+  - `Chosen strategy, rejected strategies, rollback/fallback, wave structure, and frontend routing when relevant are written`
   - `Coverage matrix has no orphan or duplicate requirements`
   - `workflow:plan-check passes before execute starts`
 - `execute`
-  - `Only the active chunk was implemented`
+  - `Only ready chunks from the active wave were implemented`
   - `Status fields were updated`
   - `Off-plan drift was written back into docs`
 - `audit`
   - `Verify commands were run`
   - `Manual checks and residual risks were written down`
+  - `Frontend milestones also close the visual verdict protocol`
   - `Strict health is clean before complete`
 - `complete`
   - `Archive output was written`

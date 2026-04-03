@@ -1,7 +1,9 @@
+const fs = require('node:fs');
 const path = require('node:path');
 const {
   assertWorkflowFiles,
   computeWindowStatus,
+  extractBulletItems,
   extractSection,
   getFieldValue,
   loadPreferences,
@@ -18,6 +20,7 @@ const {
   workflowPaths,
   write,
 } = require('./common');
+const { buildFrontendProfile } = require('./map_frontend');
 const { writeStateSurface } = require('./state_surface');
 
 function printHelp() {
@@ -287,6 +290,7 @@ function main() {
   if (milestone === 'NONE') {
     pushCheck('warn', 'plan-ready', 'No active milestone is open; plan check is informational only');
   } else {
+    const frontendProfile = buildFrontendProfile(cwd, rootDir);
     const userIntent = safeExtract(contextDoc, 'User Intent');
     const constraints = cleanRows(parseTableSectionObjects(contextDoc, 'Explicit Constraints'));
     const alternatives = cleanRows(parseTableSectionObjects(contextDoc, 'Alternatives Considered'));
@@ -297,6 +301,7 @@ function main() {
     const chosenStrategy = safeExtract(execplanDoc, 'Chosen Strategy');
     const rejectedStrategies = safeExtract(execplanDoc, 'Rejected Strategies');
     const rollbackFallback = safeExtract(execplanDoc, 'Rollback / Fallback');
+    const execplanFalsifiers = extractBulletItems(safeExtract(execplanDoc, 'What Would Falsify This Plan?'));
     const dependencyBlockers = cleanRows(parseTableSectionObjects(execplanDoc, 'Dependency Blockers'));
     const waveStructure = cleanRows(parseTableSectionObjects(execplanDoc, 'Wave Structure'));
     const coverageMatrix = cleanRows(parseTableSectionObjects(execplanDoc, 'Coverage Matrix'));
@@ -306,6 +311,12 @@ function main() {
     const userVisibleOutcomes = cleanRows(parseTableSectionObjects(validationDoc, 'User-visible Outcomes'));
     const regressionFocus = cleanRows(parseTableSectionObjects(validationDoc, 'Regression Focus'));
     const validationContract = cleanRows(parseValidationContract(validationDoc));
+    const visualVerdict = cleanRows(parseTableSectionObjects(validationDoc, 'Visual Verdict'));
+    const validationFalsifiers = extractBulletItems(safeExtract(validationDoc, 'What Would Falsify This Plan?'));
+    const validationFrontendMode = String(getFieldValue(validationDoc, 'Frontend mode') || 'inactive').trim().toLowerCase();
+    const validationFrontendProfileRef = String(getFieldValue(validationDoc, 'Frontend profile ref') || '').trim();
+    const validationFrontendAdapterRoute = String(getFieldValue(validationDoc, 'Frontend adapter route') || '').trim();
+    const validationVisualVerdictRequired = String(getFieldValue(validationDoc, 'Visual verdict required') || 'no').trim().toLowerCase();
 
     pushCompletenessCheck('user_intent', sectionHasMeaningfulText(userIntent), 'plan-ready', 'User Intent must be explicit');
     pushCompletenessCheck('explicit_constraints', rowsWithContent(constraints, ['constraint', 'type', 'source', 'impact']).length > 0, 'plan-ready', 'Explicit Constraints must include at least one concrete row');
@@ -321,6 +332,7 @@ function main() {
     pushCompletenessCheck('chosen_strategy', sectionHasMeaningfulText(chosenStrategy), 'plan-ready', 'Chosen Strategy must be written');
     pushCompletenessCheck('rejected_strategies', sectionHasMeaningfulText(rejectedStrategies, { allowExplicitNone: true }), 'plan-ready', 'Rejected Strategies must be explicit');
     pushCompletenessCheck('rollback_fallback', sectionHasMeaningfulText(rollbackFallback), 'plan-ready', 'Rollback / Fallback must be explicit');
+    pushCheck(execplanFalsifiers.length > 0 ? 'pass' : 'fail', 'falsification', 'EXECPLAN must record what would falsify the plan');
     pushCompletenessCheck('wave_structure', rowsWithContent(waveStructure, ['wave', 'chunks', 'goal', 'depends_on']).length > 0, 'plan-ready', 'Wave Structure must define at least one wave');
 
     const planChunkRows = rowsWithContent(planChunks, ['chunk_id', 'capability_slice', 'deliverable', 'depends_on', 'wave', 'status']);
@@ -334,6 +346,7 @@ function main() {
     pushCompletenessCheck('acceptance_criteria', acceptanceRows.length > 0, 'observability', 'Acceptance Criteria must be observable');
     pushCompletenessCheck('user_visible_outcomes', outcomeRows.length > 0, 'observability', 'User-visible Outcomes must be explicit');
     pushCompletenessCheck('regression_focus', regressionRows.length > 0, 'plan-ready', 'Regression Focus must be explicit');
+    pushCheck(validationFalsifiers.length > 0 ? 'pass' : 'fail', 'falsification', 'VALIDATION must record what would falsify the audit plan');
     const validationRows = rowsWithContent(validationContract, [
       'deliverable',
       'verify_command',
@@ -345,6 +358,40 @@ function main() {
       'evidence',
     ]);
     pushCompletenessCheck('validation_contract', validationRows.length > 0, 'plan-ready', 'Validation Contract must contain concrete verification rows');
+
+    const frontendRequired = frontendProfile.frontendMode.active;
+    const frontendMarkdownPath = path.join(rootDir, 'FRONTEND_PROFILE.md');
+    const frontendJsonPath = path.join(cwd, '.workflow', 'frontend-profile.json');
+    const verdictRows = rowsWithContent(visualVerdict, [
+      'verdict_area',
+      'expectation',
+      'how_to_observe',
+      'evidence_expectation',
+      'status',
+    ]);
+    const requiredVerdictAreas = [
+      'responsive',
+      'interaction',
+      'visual consistency',
+      'component reuse',
+      'accessibility smoke',
+      'screenshot evidence',
+    ];
+    const coveredVerdictAreas = new Set(verdictRows.map((row) => row.verdict_area.toLowerCase()));
+    const missingVerdictAreas = requiredVerdictAreas.filter((area) => !coveredVerdictAreas.has(area));
+
+    if (frontendRequired) {
+      pushCompletenessCheck('frontend_mode', validationFrontendMode === 'active', 'frontend', 'Validation must mark Frontend mode active when frontend signals are present');
+      pushCompletenessCheck('frontend_profile_ref', Boolean(validationFrontendProfileRef) && !isPlaceholderValue(validationFrontendProfileRef), 'frontend', 'Frontend profile ref must be explicit when frontend mode is active');
+      pushCompletenessCheck('frontend_adapter_route', Boolean(validationFrontendAdapterRoute) && validationFrontendAdapterRoute.toLowerCase() !== 'none' && !isPlaceholderValue(validationFrontendAdapterRoute), 'frontend', 'Frontend adapter route must be explicit when frontend mode is active');
+      pushCompletenessCheck('visual_verdict_required', validationVisualVerdictRequired === 'yes', 'frontend', 'Visual verdict must be marked required when frontend mode is active');
+      pushCompletenessCheck('visual_verdict_rows', verdictRows.length > 0, 'frontend', 'Visual Verdict must contain concrete rows when frontend mode is active');
+      pushCheck(fs.existsSync(frontendMarkdownPath) ? 'pass' : 'fail', 'frontend', `FRONTEND_PROFILE.md exists -> ${fs.existsSync(frontendMarkdownPath) ? 'yes' : 'no'}`);
+      pushCheck(fs.existsSync(frontendJsonPath) ? 'pass' : 'fail', 'frontend', `.workflow/frontend-profile.json exists -> ${fs.existsSync(frontendJsonPath) ? 'yes' : 'no'}`);
+      pushCheck(missingVerdictAreas.length === 0 ? 'pass' : 'fail', 'frontend', `Visual Verdict coverage -> ${missingVerdictAreas.length === 0 ? 'all required areas covered' : missingVerdictAreas.join(', ')}`);
+    } else if (validationFrontendMode === 'active') {
+      pushCheck('warn', 'frontend', 'Validation marks Frontend mode active, but current auto-detection is inactive');
+    }
 
     const requirementIds = requirementRows.map((row) => row.requirement_id);
     const coverageRows = rowsWithContent(coverageMatrix, ['requirement_id', 'milestone', 'capability_slice', 'plan_chunk', 'validation_id']);
@@ -422,6 +469,8 @@ function main() {
     pushCheck(missingObservability.length === 0 ? 'pass' : 'fail', 'observability', `Observable success criteria -> ${missingObservability.length === 0 ? 'pass' : missingObservability.join(', ')}`);
 
     const coverageGate = gateStatusFromChecks(checks, 'coverage');
+    const falsificationGate = gateStatusFromChecks(checks, 'falsification');
+    const frontendGate = gateStatusFromChecks(checks, 'frontend');
     const antiHorizontalGate = gateStatusFromChecks(checks, 'anti-horizontal-slicing');
     const observabilityGate = gateStatusFromChecks(checks, 'observability');
     const summary = summarizeChecks(checks);
@@ -453,6 +502,8 @@ function main() {
       gates: {
         planReady: planGate,
         coverage: coverageGate,
+        falsification: falsificationGate,
+        frontend: frontendGate,
         antiHorizontalSlicing: antiHorizontalGate,
         observability: observabilityGate,
       },
@@ -464,11 +515,21 @@ function main() {
         unresolvedChunks: coverageChunkMisses,
         unresolvedValidationIds: coverageValidationMisses,
       },
+      falsification: {
+        execplanCount: execplanFalsifiers.length,
+        validationCount: validationFalsifiers.length,
+      },
       antiHorizontalSlicing: {
         flaggedChunks: flaggedHorizontalSlices,
       },
       observability: {
         missing: missingObservability,
+      },
+      frontend: {
+        autoDetected: frontendProfile.frontendMode.active,
+        validationMode: validationFrontendMode,
+        adapters: frontendProfile.adapters.selected,
+        missingVerdictAreas,
       },
       syncApplied: Boolean(args.sync),
     };
@@ -494,6 +555,8 @@ function main() {
     console.log(`- Pending count: \`${summary.pendingCount}\``);
     console.log(`- Warn count: \`${summary.warnCount}\``);
     console.log(`- Coverage gate: \`${report.gates.coverage}\``);
+    console.log(`- Falsification gate: \`${report.gates.falsification}\``);
+    console.log(`- Frontend gate: \`${report.gates.frontend}\``);
     console.log(`- Anti-horizontal slicing: \`${report.gates.antiHorizontalSlicing}\``);
     console.log(`- Observability: \`${report.gates.observability}\``);
     console.log(`\n## Checks\n`);
@@ -536,6 +599,7 @@ function main() {
     gates: {
       planReady: planGate,
       coverage: 'pending',
+      falsification: 'pending',
       antiHorizontalSlicing: 'pending',
       observability: 'pending',
     },
@@ -546,6 +610,10 @@ function main() {
       duplicateRequirements: [],
       unresolvedChunks: [],
       unresolvedValidationIds: [],
+    },
+    falsification: {
+      execplanCount: 0,
+      validationCount: 0,
     },
     antiHorizontalSlicing: {
       flaggedChunks: [],
@@ -577,6 +645,7 @@ function main() {
   console.log(`- Pending count: \`${summary.pendingCount}\``);
   console.log(`- Warn count: \`${summary.warnCount}\``);
   console.log(`- Coverage gate: \`${report.gates.coverage}\``);
+  console.log(`- Falsification gate: \`${report.gates.falsification}\``);
   console.log(`- Anti-horizontal slicing: \`${report.gates.antiHorizontalSlicing}\``);
   console.log(`- Observability: \`${report.gates.observability}\``);
   console.log(`\n## Checks\n`);

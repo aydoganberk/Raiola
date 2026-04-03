@@ -269,7 +269,7 @@ Bring in a thin orchestrator model that keeps main context lean while enabling s
 
 ### Delivery Meta
 
-- Status: `planned`
+- Status: `done`
 - Owner: `orchestration and runtime lane`
 - Dependencies:
   - `Phase 1`
@@ -392,11 +392,11 @@ Improve planning quality so the system better understands what should be built b
 
 ### Goal
 
-Make parallel execution safer, more explicit, and easier to reason about.
+Make `execute` stronger through controlled parallelism.
 
 ### Delivery Meta
 
-- Status: `planned`
+- Status: `implemented`
 - Owner: `execution systems lane`
 - Dependencies:
   - `Phase 2`
@@ -409,19 +409,23 @@ Make parallel execution safer, more explicit, and easier to reason about.
 ### Deliverables
 
 - wave-based execution policy
+- optional atomic commit mode
 - worker orchestration rules
-- optional commit granularity control
 
 ### Scope
 
-- Introduce dependency-aware execution waves.
+- Run `execute` through explicit `wave 1 -> wave 2 -> wave 3` progression.
 - Only dependency-free work should run in the same wave.
-- Each wave should record ownership, dependency assumptions, and merge or integration order.
-- Add optional commit granularity settings:
+- Parallel workers must be opened from dependency-aware plan entries, not ad hoc or capacity-first.
+- Each wave should record ownership, dependency assumptions, write scope, and merge or integration order.
+- `PREFERENCES.md` may optionally define `commit_granularity` with:
   - `phase`
   - `chunk`
   - `manual`
-- Keep this mode optional; do not force atomic commits everywhere.
+- `EXECPLAN.md` may optionally enable atomic commit mode for the active milestone:
+  - `wave`
+  - `chunk`
+- Keep atomic mode optional; do not force chunk or wave commits everywhere.
 
 ### Files
 
@@ -431,8 +435,9 @@ Make parallel execution safer, more explicit, and easier to reason about.
 
 ### Acceptance Criteria
 
-- Parallel execution reduces collisions instead of increasing them.
-- Execution plans are easier to inspect and resume.
+- Parallel execution becomes safer instead of looser.
+- Write conflicts go down because same-wave ownership is explicit.
+- Execution plans become easier to inspect, integrate, and resume.
 
 ## Phase 5 - Frontend and UI Specialization
 
@@ -442,7 +447,7 @@ Make the workflow platform understand frontend work deeply enough to route, impl
 
 ### Delivery Meta
 
-- Status: `planned`
+- Status: `implemented`
 - Owner: `frontend specialization lane`
 - Dependencies:
   - `Phase 1`
@@ -456,7 +461,7 @@ Make the workflow platform understand frontend work deeply enough to route, impl
 
 - `workflow:map-frontend`
 - frontend auto mode
-- visual verdict protocol
+- visual verdict alt-protocol
 - adapter registry
 
 ### Scope
@@ -471,6 +476,14 @@ Make the workflow platform understand frontend work deeply enough to route, impl
   - `FRONTEND_PROFILE.md`
   - or `.workflow/frontend-profile.json`
 - Frontend auto mode should activate automatically when workflow is active and frontend/UI signals are present.
+- Automatic activation signals include:
+  - `React/TSX-heavy edit surface`
+  - `components.json`
+  - `Tailwind config`
+  - `Storybook`
+  - `Figma link`
+  - `dev server / preview validation need`
+  - `user intent such as landing page, frontend, UI, screen, component, design, responsive`
 - Frontend auto mode should be overrideable via repository preference and one-shot runtime override.
 - The skill should then route through the right adapter path.
 - Adapter registry should support:
@@ -527,6 +540,11 @@ Make the workflow layer feel native and efficient inside the Codex app.
 - thread kickoff templates
 - worktree-aware guidance
 - optional automations
+- `workflow:workstreams {list|create|switch|status|progress|resume|complete}`
+- enforced `solo|team` runtime presets
+- real `workflow:ensure-isolation` setup for `none|branch|worktree`
+- packet-level `Reasoning profile: fast|balanced|deep|critical`
+- plan/audit counterexample pass via `What Would Falsify This Plan?`
 
 ### Scope
 
@@ -554,6 +572,7 @@ Make the workflow layer feel native and efficient inside the Codex app.
 ### Acceptance Criteria
 
 - Thread-based workflow remains readable and efficient without constant document hopping.
+- Multiple named streams can be scanned in one command to see stale vs budget-out status.
 
 ## Subagent Final Design
 

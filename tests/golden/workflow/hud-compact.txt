@@ -2,8 +2,9 @@
 
 - root=`docs/workflow` workstream=`workflow` milestone=`NONE` step=`complete` readiness=`not_ready` plan=`pending`
 - profile=`standard` automation=`manual` automation_status=`idle`
-- health=`warn` fail=`0` warn=`3` window=`continue` remaining=`117898` handoff=`idle` auto_window=`continue_in_current_window`
-- packets=`context:a07e217ae6bb*/ok execplan:9f1c10d3b56f*/ok validation:7ce3786f3c0b*/ok`
+- frontend=`inactive` framework=`Custom` adapters=`none` visual_verdict=`no`
+- health=`warn` fail=`0` warn=`2` window=`compact-now` remaining=`115692` handoff=`idle` auto_window=`continue_in_current_window`
+- packets=`context:0ff9a49c6008/ok execplan:c861ab5a78ee/ok validation:c0e807e4f566/warn`
 - counts=`carryforward:0 seeds:0 recall:0`
 - next=`Open or switch a milestone` command=`npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual`
 - state=`.workflow/state.json`

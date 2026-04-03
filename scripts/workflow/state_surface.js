@@ -35,7 +35,7 @@ function stateFilePath(cwd) {
 }
 
 function buildBaseState(cwd, rootDir) {
-  const paths = workflowPaths(rootDir);
+  const paths = workflowPaths(rootDir, cwd);
   const statusDoc = read(paths.status);
   const handoffDoc = read(paths.handoff);
   const memoryDoc = read(paths.memory);

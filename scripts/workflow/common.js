@@ -129,6 +129,14 @@ function replaceSection(content, heading, body) {
   return content.replace(pattern, replacement);
 }
 
+function replaceOrAppendSection(content, heading, body) {
+  try {
+    return replaceSection(content, heading, body);
+  } catch {
+    return `${content.trimEnd()}\n\n## ${heading}\n\n${body.trimEnd()}\n`;
+  }
+}
+
 function extractSection(content, heading) {
   const pattern = new RegExp(`^## ${escapeRegex(heading)}\\n([\\s\\S]*?)(?=^## [^\\n]+\\n|(?![\\s\\S]))`, 'm');
   const match = content.match(pattern);
@@ -189,10 +197,10 @@ function resolveWorkflowRoot(cwd, requestedRoot) {
   return path.resolve(cwd, activeRoot);
 }
 
-function workflowPaths(rootDir) {
+function workflowPaths(rootDir, cwd = process.cwd()) {
   return {
     rootDir,
-    workstreams: path.join(rootDir, 'WORKSTREAMS.md'),
+    workstreams: controlPaths(cwd).workstreams,
     project: path.join(rootDir, 'PROJECT.md'),
     runtime: path.join(rootDir, 'RUNTIME.md'),
     preferences: path.join(rootDir, 'PREFERENCES.md'),
@@ -415,9 +423,52 @@ function normalizeAutomationWindowPolicy(value, fallback = 'handoff_then_compact
   return ['handoff_then_compact', 'compact_then_continue'].includes(normalized) ? normalized : fallback;
 }
 
+function normalizeWorkflowMode(value, fallback = 'solo') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['solo', 'team'].includes(normalized) ? normalized : fallback;
+}
+
+function normalizeCommitGranularity(value, fallback = 'manual') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['manual', 'phase', 'chunk'].includes(normalized) ? normalized : fallback;
+}
+
+function normalizeReasoningProfile(value, fallback = 'balanced') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['fast', 'balanced', 'deep', 'critical'].includes(normalized) ? normalized : fallback;
+}
+
 function normalizePlanGateStatus(value, fallback = 'pending') {
   const normalized = String(value || '').trim().toLowerCase();
   return ['pending', 'pass', 'fail'].includes(normalized) ? normalized : fallback;
+}
+
+function defaultReasoningProfileForStep(step, preferences = {}) {
+  const normalizedStep = String(step || '').trim().toLowerCase();
+  const discussMode = String(preferences.discussMode || '').trim().toLowerCase();
+
+  if (['plan', 'audit', 'complete'].includes(normalizedStep)) {
+    return 'deep';
+  }
+
+  if (normalizedStep === 'discuss' && discussMode === 'assumptions') {
+    return 'balanced';
+  }
+
+  if (['research', 'execute'].includes(normalizedStep)) {
+    return 'balanced';
+  }
+
+  return 'balanced';
+}
+
+function extractBulletItems(sectionBody) {
+  return String(sectionBody || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^[-*]\s+/.test(line))
+    .map((line) => line.replace(/^[-*]\s+/, '').replace(/^`|`$/g, '').trim())
+    .filter(Boolean);
 }
 
 function profileDefaultsFor(workflowProfile) {
@@ -506,7 +557,8 @@ function loadPreferences(paths) {
   const statusContent = readIfExists(paths.status);
   const contextContent = readIfExists(paths.context);
   const milestone = String((statusContent && getFieldValue(statusContent, 'Current milestone')) || 'NONE').trim();
-  const mode = String((content && getFieldValue(content, 'Workflow mode')) || 'solo').trim();
+  const modeRaw = String((content && getFieldValue(content, 'Workflow mode')) || 'solo').trim();
+  const mode = normalizeWorkflowMode(modeRaw, 'solo');
   const repoWorkflowProfileRaw = String((content && getFieldValue(content, 'Workflow profile')) || 'standard').trim();
   const repoWorkflowProfile = normalizeWorkflowProfile(repoWorkflowProfileRaw, 'standard');
   const milestoneProfileOverrideRaw = milestone !== 'NONE'
@@ -541,6 +593,7 @@ function loadPreferences(paths) {
       teamLiteDelegation: 'suggest',
       autoPush: false,
       autoCheckpoint: true,
+      commitGranularity: 'phase',
       commitDocs: true,
       uniqueMilestoneIds: true,
       preMergeCheck: true,
@@ -551,6 +604,7 @@ function loadPreferences(paths) {
       teamLiteDelegation: 'explicit_only',
       autoPush: true,
       autoCheckpoint: true,
+      commitGranularity: 'manual',
       commitDocs: true,
       uniqueMilestoneIds: false,
       preMergeCheck: false,
@@ -561,8 +615,21 @@ function loadPreferences(paths) {
     healthStrictRequired: mode === 'team' ? true : profileDefaults.healthStrictRequired,
   };
 
+  let gitIsolation = String((content && getFieldValue(content, 'Git isolation')) || defaults.gitIsolation).trim();
+  let autoPush = parseBoolean(content && getFieldValue(content, 'Auto push'), defaults.autoPush);
+  let uniqueMilestoneIds = parseBoolean(content && getFieldValue(content, 'Unique milestone ids'), defaults.uniqueMilestoneIds);
+  let healthStrictRequired = parseBoolean(content && getFieldValue(content, 'Health strict required'), defaults.healthStrictRequired);
+
+  if (mode === 'team') {
+    gitIsolation = 'branch';
+    autoPush = false;
+    uniqueMilestoneIds = true;
+    healthStrictRequired = true;
+  }
+
   return {
     mode,
+    modeRaw,
     milestone,
     workflowProfile,
     workflowProfileRaw,
@@ -580,14 +647,15 @@ function loadPreferences(paths) {
     automationStatus: normalizeAutomationStatus(automationStatusRaw, automationMode === 'manual' ? 'idle' : 'active'),
     automationWindowPolicy,
     automationWindowPolicyRaw,
-    gitIsolation: String((content && getFieldValue(content, 'Git isolation')) || defaults.gitIsolation).trim(),
+    gitIsolation,
     teamLiteDelegation: String((content && getFieldValue(content, 'Team Lite delegation')) || defaults.teamLiteDelegation).trim(),
-    autoPush: parseBoolean(content && getFieldValue(content, 'Auto push'), defaults.autoPush),
+    autoPush,
     autoCheckpoint: parseBoolean(content && getFieldValue(content, 'Auto checkpoint'), defaults.autoCheckpoint),
+    commitGranularity: normalizeCommitGranularity(content && getFieldValue(content, 'Commit granularity'), defaults.commitGranularity),
     commitDocs: parseBoolean(content && getFieldValue(content, 'Commit docs'), defaults.commitDocs),
-    uniqueMilestoneIds: parseBoolean(content && getFieldValue(content, 'Unique milestone ids'), defaults.uniqueMilestoneIds),
+    uniqueMilestoneIds,
     preMergeCheck: parseBoolean(content && getFieldValue(content, 'Pre-merge check'), defaults.preMergeCheck),
-    healthStrictRequired: parseBoolean(content && getFieldValue(content, 'Health strict required'), defaults.healthStrictRequired),
+    healthStrictRequired,
     budgetProfile: String((content && getFieldValue(content, 'Budget profile')) || defaults.budgetProfile).trim(),
     tokenReserve: parseNumber(content && getFieldValue(content, 'Token reserve'), defaults.tokenReserve),
     discussBudget: parseNumber(content && getFieldValue(content, 'Discuss budget'), defaults.discussBudget),
@@ -1022,7 +1090,7 @@ function checkReference(cwd, rawRef, options = {}) {
 }
 
 function sanitizeContentForHash(content) {
-  return String(content || '')
+  let sanitized = String(content || '')
     .replace(/^- Last updated: `.*?`$/gm, '- Last updated: `<dynamic>`')
     .replace(/^- Input hash: `.*?`$/gm, '- Input hash: `<dynamic>`')
     .replace(/^- Current packet hash: `.*?`$/gm, '- Current packet hash: `<dynamic>`')
@@ -1031,6 +1099,39 @@ function sanitizeContentForHash(content) {
     .replace(/^- Session id: `.*?`$/gm, '- Session id: `<dynamic>`')
     .replace(/`[a-f0-9]{12,64}`/g, '`<hash>`')
     .replace(/\b[a-f0-9]{32,64}\b/g, '<hash>');
+
+  if (sanitized.startsWith('# WORKSTREAMS')) {
+    sanitized = sanitized
+      .replace(
+        /^\| ([^|]+?) \| ([^|]+?) \| [^|]* \| [^|]* \| [^|]* \| [^|]* \| [^|]* \| [^|]* \| ([^|]*?) \|$/gm,
+        '| $1 | $2 | <status> | <milestone> | <step> | <packet> | <budget> | <health> | $3 |',
+      )
+      .replace(/^- `\d{4}-\d{2}-\d{2} \| .*?`$/gm, '- `<switch-log>`');
+  }
+
+  if (sanitized.startsWith('# WINDOW')) {
+    sanitized = sanitized
+      .replace(/^- Current step: `.*?`$/gm, '- Current step: `<dynamic>`')
+      .replace(/^- Current run chunk: `.*?`$/gm, '- Current run chunk: `<dynamic>`')
+      .replace(/^- Can finish current chunk: `.*?`$/gm, '- Can finish current chunk: `<dynamic>`')
+      .replace(/^- Can start next chunk: `.*?`$/gm, '- Can start next chunk: `<dynamic>`')
+      .replace(/^- Recommended action: `.*?`$/gm, '- Recommended action: `<dynamic>`')
+      .replace(/^- Automation recommendation: `.*?`$/gm, '- Automation recommendation: `<dynamic>`')
+      .replace(/^- Resume anchor: `.*?`$/gm, '- Resume anchor: `<dynamic>`')
+      .replace(/^- Last safe checkpoint: `.*?`$/gm, '- Last safe checkpoint: `<dynamic>`')
+      .replace(/^- Budget status: `.*?`$/gm, '- Budget status: `<dynamic>`')
+      .replace(/^- `Primary doc: .*?`$/gm, '- `Primary doc: <dynamic>`')
+      .replace(/^- `Packet hash: .*?`$/gm, '- `Packet hash: <dynamic>`')
+      .replace(/^- `Estimated packet tokens: .*?`$/gm, '- `Estimated packet tokens: <dynamic>`')
+      .replace(/^- `Packet budget status: .*?`$/gm, '- `Packet budget status: <dynamic>`')
+      .replace(/^- `Workflow artifact tokens: .*?`$/gm, '- `Workflow artifact tokens: <dynamic>`')
+      .replace(/^- `Execution overhead: .*?`$/gm, '- `Execution overhead: <dynamic>`')
+      .replace(/^- `Verify overhead: .*?`$/gm, '- `Verify overhead: <dynamic>`')
+      .replace(/^- `Delta since last window snapshot: .*?`$/gm, '- `Delta since last window snapshot: <dynamic>`')
+      .replace(/^- `Budget ratio: .*?`$/gm, '- `Budget ratio: <dynamic>`');
+  }
+
+  return sanitized;
 }
 
 function defaultPacketTargetForStep(preferences, step) {
@@ -1134,12 +1235,14 @@ function buildPacketSnapshot(paths, options = {}) {
     getFieldValue(primaryContent, 'Hard cap tokens'),
     targetInputTokens + preferences.tokenReserve,
   );
-  const reasoningProfile = String(getFieldValue(primaryContent, 'Reasoning profile') || (
-    ['plan', 'audit', 'complete'].includes(step) ? 'deep' : 'balanced'
-  )).trim();
+  const reasoningProfileRaw = String(getFieldValue(primaryContent, 'Reasoning profile') || '').trim();
+  const defaultReasoningProfile = defaultReasoningProfileForStep(step, preferences);
+  const reasoningProfile = normalizeReasoningProfile(reasoningProfileRaw || defaultReasoningProfile, defaultReasoningProfile);
+  const reasoningProfileValid = !reasoningProfileRaw || reasoningProfileRaw === reasoningProfile;
   const confidenceSummary = String(getFieldValue(primaryContent, 'Confidence summary') || 'mixed').trim();
   const refreshPolicy = String(getFieldValue(primaryContent, 'Refresh policy') || 'refresh_when_input_hash_drifts').trim();
   const storedInputHash = String(getFieldValue(primaryContent, 'Input hash') || '').trim();
+  const falsificationItems = extractBulletItems(tryExtractSection(primaryContent, 'What Would Falsify This Plan?', ''));
   const normalizedPayload = {
     step,
     primaryDoc: primaryRelative,
@@ -1176,6 +1279,8 @@ function buildPacketSnapshot(paths, options = {}) {
     targetInputTokens,
     hardCapTokens,
     reasoningProfile,
+    reasoningProfileRaw,
+    reasoningProfileValid,
     confidenceSummary,
     refreshPolicy,
     storedInputHash,
@@ -1188,6 +1293,7 @@ function buildPacketSnapshot(paths, options = {}) {
     estimatedTotalTokens,
     budgetStatus,
     unknowns,
+    falsificationItems,
   };
 }
 
@@ -1197,6 +1303,37 @@ function syncPacketHash(paths, options = {}) {
   const next = replaceOrAppendField(content, 'Input hash', packet.inputHash);
   write(packet.primary.filePath, next);
   return packet;
+}
+
+function syncStablePacketSet(paths) {
+  syncPacketHash(paths, { doc: 'context', step: 'discuss' });
+  syncPacketHash(paths, { doc: 'execplan', step: 'plan' });
+  syncPacketHash(paths, { doc: 'validation', step: 'audit' });
+  const windowStatus = syncWindowDocument(paths, computeWindowStatus(paths, { doc: 'validation', step: 'audit' }));
+  let contextPacket = null;
+  let execplanPacket = null;
+  let validationPacket = null;
+
+  for (let pass = 0; pass < 3; pass += 1) {
+    syncPacketHash(paths, { doc: 'context', step: 'discuss' });
+    syncPacketHash(paths, { doc: 'execplan', step: 'plan' });
+    syncPacketHash(paths, { doc: 'validation', step: 'audit' });
+
+    contextPacket = buildPacketSnapshot(paths, { doc: 'context', step: 'discuss' });
+    execplanPacket = buildPacketSnapshot(paths, { doc: 'execplan', step: 'plan' });
+    validationPacket = buildPacketSnapshot(paths, { doc: 'validation', step: 'audit' });
+
+    if (!contextPacket.hashDrift && !execplanPacket.hashDrift && !validationPacket.hashDrift) {
+      break;
+    }
+  }
+
+  return {
+    contextPacket,
+    execplanPacket,
+    validationPacket,
+    windowStatus,
+  };
 }
 
 function parseDelimitedFieldValue(sectionBody, label) {
@@ -1429,6 +1566,8 @@ function validateValidationContract(paths) {
   const milestone = String(getFieldValue(status, 'Current milestone') || 'NONE').trim();
   const rows = parseValidationContract(validation);
   const issues = [];
+  const frontendMode = String(getFieldValue(validation, 'Frontend mode') || 'inactive').trim().toLowerCase();
+  const visualVerdictRequired = String(getFieldValue(validation, 'Visual verdict required') || 'no').trim().toLowerCase() === 'yes';
 
   if (rows.length === 0) {
     issues.push({
@@ -1462,6 +1601,76 @@ function validateValidationContract(paths) {
     }
   }
 
+  if (frontendMode === 'active' || visualVerdictRequired) {
+    const profileRef = String(getFieldValue(validation, 'Frontend profile ref') || '').trim();
+    const adapterRoute = String(getFieldValue(validation, 'Frontend adapter route') || '').trim();
+    const verdictRows = parseTableSectionObjects(validation, 'Visual Verdict');
+    const requiredAreas = new Set([
+      'responsive',
+      'interaction',
+      'visual consistency',
+      'component reuse',
+      'accessibility smoke',
+      'screenshot evidence',
+    ]);
+
+    if (!profileRef) {
+      issues.push({
+        status: milestone === 'NONE' ? 'warn' : 'fail',
+        message: 'Frontend validation missing Frontend profile ref',
+      });
+    }
+
+    if (!adapterRoute || adapterRoute.toLowerCase() === 'none') {
+      issues.push({
+        status: milestone === 'NONE' ? 'warn' : 'fail',
+        message: 'Frontend validation missing adapter route',
+      });
+    }
+
+    if (verdictRows.length === 0) {
+      issues.push({
+        status: milestone === 'NONE' ? 'warn' : 'fail',
+        message: 'Frontend validation missing Visual Verdict table',
+      });
+    } else {
+      const coveredAreas = new Set();
+      for (const row of verdictRows) {
+        const area = String(row.verdict_area || '').trim().toLowerCase();
+        if (area) {
+          coveredAreas.add(area);
+        }
+
+        const requiredFields = [
+          ['verdict_area', 'Verdict area'],
+          ['expectation', 'Expectation'],
+          ['how_to_observe', 'How to observe'],
+          ['evidence_expectation', 'Evidence expectation'],
+          ['status', 'Status'],
+        ];
+
+        for (const [fieldKey, fieldLabel] of requiredFields) {
+          if (!String(row[fieldKey] || '').trim()) {
+            issues.push({
+              status: milestone === 'NONE' ? 'warn' : 'fail',
+              message: `Visual Verdict row missing ${fieldLabel}`,
+              row,
+            });
+          }
+        }
+      }
+
+      for (const area of requiredAreas) {
+        if (!coveredAreas.has(area)) {
+          issues.push({
+            status: milestone === 'NONE' ? 'warn' : 'fail',
+            message: `Visual Verdict missing ${area}`,
+          });
+        }
+      }
+    }
+  }
+
   return issues;
 }
 
@@ -1472,11 +1681,13 @@ module.exports = {
   computeWindowStatus,
   controlPaths,
   currentBranch,
+  defaultReasoningProfileForStep,
   defaultPacketTargetForStep,
   ensureDir,
   ensureUniqueMilestoneId,
   escapeRegex,
   estimateTokens,
+  extractBulletItems,
   extractSection,
   fileCoveredByStagePath,
   getFieldValue,
@@ -1492,6 +1703,8 @@ module.exports = {
   normalizeAutomationStatus,
   normalizeAutomationWindowPolicy,
   normalizePlanGateStatus,
+  normalizeReasoningProfile,
+  normalizeWorkflowMode,
   normalizeWorkflowProfile,
   parseArgs,
   parseArchivedMilestones,
@@ -1521,6 +1734,7 @@ module.exports = {
   renderSeedSection,
   renderWorkstreamTable,
   replaceField,
+  replaceOrAppendSection,
   replaceOrAppendField,
   replaceSection,
   resolveWorkflowRoot,
@@ -1532,6 +1746,7 @@ module.exports = {
   shortHash,
   slugify,
   syncPacketHash,
+  syncStablePacketSet,
   syncWindowDocument,
   today,
   toList,

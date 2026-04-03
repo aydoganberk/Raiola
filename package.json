@@ -8,6 +8,7 @@
     "workflow:migrate": "node scripts/workflow/migrate.js",
     "workflow:hud": "node scripts/workflow/hud.js",
     "workflow:map-codebase": "node scripts/workflow/map_codebase.js",
+    "workflow:map-frontend": "node scripts/workflow/map_frontend.js",
     "workflow:delegation-plan": "node scripts/workflow/delegation_plan.js",
     "workflow:plan-check": "node scripts/workflow/plan_check.js",
     "workflow:automation": "node scripts/workflow/automation.js",

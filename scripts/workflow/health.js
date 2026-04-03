@@ -107,6 +107,11 @@ function main() {
 
   for (const packet of packets) {
     pushCheck(
+      packet.reasoningProfileValid ? 'pass' : 'fail',
+      `${packet.primary.key} reasoning profile -> ${packet.reasoningProfileRaw || packet.reasoningProfile} (allowed: fast|balanced|deep|critical)`,
+      { packet: packet.primary.key },
+    );
+    pushCheck(
       packet.canonicalRefs.length > 0 ? 'pass' : 'fail',
       `${packet.primary.key} canonical refs must not be empty`,
       { packet: packet.primary.key },
@@ -126,6 +131,13 @@ function main() {
       `${packet.primary.key} packet budget status -> ${packet.budgetStatus}`,
       { packet: packet.primary.key },
     );
+    if (['execplan', 'validation'].includes(packet.primary.key)) {
+      pushCheck(
+        packet.falsificationItems.length > 0 ? 'pass' : 'fail',
+        `${packet.primary.key} must name what would falsify the current plan`,
+        { packet: packet.primary.key },
+      );
+    }
   }
 
   const windowStatus = computeWindowStatus(paths);

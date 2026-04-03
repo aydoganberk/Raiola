@@ -187,6 +187,10 @@ npm run workflow:forensics
 npm run workflow:save-memory -- --title "..." --note "..."
 npm run workflow:plant-seed -- --title "..." --trigger "..."
 npm run workflow:workstreams status
+npm run workflow:workstreams progress
+npm run workflow:workstreams create -- --name "<slug>"
+npm run workflow:workstreams switch -- --name "<slug>" --create
+npm run workflow:ensure-isolation -- --root docs/workflow
 npm run workflow:switch-workstream -- --name "<slug>" --create
 npm run workflow:compare-golden -- --help
 ```
@@ -200,16 +204,27 @@ The default root is `docs/workflow`.
 If one repository needs multiple isolated workflow surfaces, create a named workstream:
 
 ```bash
-npm run workflow:switch-workstream -- --name yahoo-sync --create
+npm run workflow:workstreams create -- --name yahoo-sync
+npm run workflow:workstreams switch -- --name yahoo-sync
 ```
 
 This creates a parallel surface such as `docs/yahoo-sync/` and records it in `WORKSTREAMS.md`.
+
+To see the whole repo at once:
+
+```bash
+npm run workflow:workstreams progress
+```
+
+That command refreshes the registry and shows which streams are stale, which ones are out of packet/window budget, and which roots need attention.
 
 Use named workstreams when:
 
 - one repo contains multiple long-running initiatives
 - the default control plane becomes too noisy
 - you want independent milestone history and handoff state for a specific stream
+
+If a stream expects git isolation, `workflow:workstreams switch` now runs `workflow:ensure-isolation` automatically so `branch` and `worktree` modes do real setup instead of staying advisory.
 
 ## Validation, handoff, and closeout
 
@@ -236,6 +251,8 @@ The starter kit intentionally ships with an empty `completed_milestones/` archiv
 - Run `workflow:health -- --strict` before closeout when the profile or task requires strong validation discipline.
 - Run `workflow:plan-check -- --sync --strict` before execute so `plan-ready=yes` is written only after the quality gate passes.
 - Treat `workflow:plan-check -> pending` as "the packet is incomplete" and `fail` as "the plan shape is wrong".
+- Use `Reasoning profile: fast|balanced|deep|critical` on packets when a step needs a lighter or stricter thinking budget.
+- Keep `What Would Falsify This Plan?` explicit in `EXECPLAN.md` and `VALIDATION.md`; plan/audit packets now treat that counterexample pass as mandatory.
 
 ## Repository status
 
