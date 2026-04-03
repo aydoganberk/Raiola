@@ -3,6 +3,7 @@ const {
   assertWorkflowFiles,
   computeWindowStatus,
   extractSection,
+  formatWorkflowControlCommand,
   getFieldValue,
   loadPreferences,
   parseArgs,
@@ -12,6 +13,7 @@ const {
   read,
   readPlanGateStatus,
   resolveWorkflowRoot,
+  workflowControlExamplesForFamily,
   workflowPaths,
 } = require('./common');
 const { buildFrontendProfile } = require('./map_frontend');
@@ -55,9 +57,11 @@ function deriveRecommendation(state) {
     checklist: [],
     note: '',
   };
+  const controlCommand = formatWorkflowControlCommand('<user request>');
+  const parallelExamples = workflowControlExamplesForFamily('parallel_control', 4);
   const teamLiteHint = preferences.teamLiteDelegation === 'off'
     ? null
-    : 'If the user explicitly asks for parallel/subagent/delegate/team mode, route it with workflow:delegation-plan -- --activation-text "<user request>"';
+    : `If the user explicitly asks for parallel/subagent/delegate/team mode${parallelExamples.length > 0 ? ` (${parallelExamples.join(', ')})` : ''}, normalize it with ${controlCommand} and then route it with workflow:delegation-plan -- --activation-text "<user request>"`;
   const frontendHint = frontendProfile.frontendMode.active
     ? `Frontend mode is active; adapter route=${frontendProfile.adapters.selected.join(', ') || 'none'}`
     : frontendProfile.signals.hits.length > 0

@@ -7,6 +7,7 @@ const {
   normalizeAutomationStatus,
   parseArgs,
   read,
+  resolveWorkflowControlIntent,
   replaceField,
   resolveWorkflowRoot,
   syncWindowDocument,
@@ -26,6 +27,7 @@ Usage:
 Options:
   --root <path>           Workflow root. Defaults to active workstream root
   --mode <mode>           manual|phase|full
+  --utterance <text>      Natural-language automation instruction, e.g. "buradan sonra sen akit"
   --status <status>       idle|active|paused|handoff|complete
   --scope <scope>         auto|repo|milestone
   --json                  Print machine-readable output
@@ -56,6 +58,7 @@ function main() {
   let handoffDoc = read(paths.handoff);
   const milestone = String(getFieldValue(statusDoc, 'Current milestone') || 'NONE').trim();
   const scope = String(args.scope || (milestone === 'NONE' ? 'repo' : 'milestone')).trim().toLowerCase();
+  const rawUtterance = String(args.utterance || '').trim();
 
   if (!['auto', 'repo', 'milestone'].includes(scope)) {
     throw new Error('--scope must be one of: auto, repo, milestone');
@@ -65,12 +68,26 @@ function main() {
   const currentPreferences = loadPreferences(paths);
   const rawMode = String(args.mode || '').trim();
   const rawStatus = String(args.status || '').trim();
+  if (rawMode && rawUtterance) {
+    throw new Error('Use either --mode or --utterance, not both');
+  }
+
+  const controlIntent = rawUtterance ? resolveWorkflowControlIntent(rawUtterance) : null;
+  if (controlIntent && controlIntent.matched && controlIntent.family !== 'automation_control') {
+    throw new Error(`--utterance resolved to ${controlIntent.family}; automation requires an automation_control intent`);
+  }
+  if (controlIntent && !controlIntent.matched) {
+    throw new Error('--utterance did not resolve to an automation control intent');
+  }
+
   const mode = rawMode
     ? normalizeAutomationMode(rawMode, '')
-    : (resolvedScope === 'repo' ? currentPreferences.repoAutomationMode : currentPreferences.automationMode);
+    : controlIntent?.mode
+      ? normalizeAutomationMode(controlIntent.mode, '')
+      : (resolvedScope === 'repo' ? currentPreferences.repoAutomationMode : currentPreferences.automationMode);
   const status = rawStatus
     ? normalizeAutomationStatus(rawStatus, '')
-    : (rawMode ? (mode === 'manual' ? 'idle' : 'active') : currentPreferences.automationStatus);
+    : (rawMode || controlIntent ? (mode === 'manual' ? 'idle' : 'active') : currentPreferences.automationStatus);
 
   if (rawMode && !mode) {
     throw new Error('--mode must be one of: manual, phase, full');
@@ -118,6 +135,15 @@ function main() {
       windowPolicy: effectivePreferences.automationWindowPolicy,
       windowRecommendation: windowStatus.automationRecommendation,
     },
+    control: controlIntent
+      ? {
+        utterance: rawUtterance,
+        family: controlIntent.family,
+        matchId: controlIntent.matchId,
+        resolution: controlIntent.resolution,
+        mode: controlIntent.mode,
+      }
+      : null,
   };
 
   writeStateSurface(cwd, rootDir, { automation: payload.automation }, { updatedBy: 'automation' });
@@ -134,6 +160,10 @@ function main() {
   console.log(`- Status: \`${payload.automation.status}\``);
   console.log(`- Window policy: \`${payload.automation.windowPolicy}\``);
   console.log(`- Window recommendation: \`${payload.automation.windowRecommendation}\``);
+  if (payload.control) {
+    console.log(`- Control intent: \`${payload.control.family}\``);
+    console.log(`- Control mode: \`${payload.control.mode}\``);
+  }
 }
 
 main();
