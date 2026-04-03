@@ -7,6 +7,9 @@
 
 ## Core Commands
 
+- `npm run workflow:hud`
+- `npm run workflow:map-codebase`
+- `npm run workflow:delegation-plan`
 - `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."`
 - `npm run workflow:complete-milestone -- --agents-review unchanged --summary "..."`
 - `npm run workflow:save-memory -- --title "..." --note "..."`
@@ -27,6 +30,12 @@
 - If the user does not want workflow, continue with the normal task flow.
 - One user request usually maps to one milestone.
 - `discuss -> research -> plan -> execute -> audit -> complete` are steps inside the same milestone.
+- Team Lite delegation is not active by default; it activates only with explicit parallel mode.
+- Natural-language triggers that count as explicit Team Lite activation include:
+  - `parallel yap`
+  - `subagent kullan`
+  - `delegate et`
+  - `team mode`
 
 ## Workflow Profiles
 
@@ -49,6 +58,29 @@
 - `VALIDATION.md` is the canonical source for the audit contract
 - During planning, verify commands, expected signals, manual checks, golden refs, and evidence should be written there
 - During audit, the commands actually run should be read from `STATUS.md` and `VALIDATION.md`
+
+## Mapping Runtime Notes
+
+- `workflow:map-codebase` writes:
+  - `.workflow/codebase-map.json`
+  - `.workflow/codebase-map.md`
+  - `.workflow/codebase/STACK.md`
+  - `.workflow/codebase/INTEGRATIONS.md`
+  - `.workflow/codebase/ARCHITECTURE.md`
+  - `.workflow/codebase/STRUCTURE.md`
+  - `.workflow/codebase/TESTING.md`
+  - `.workflow/codebase/CONCERNS.md`
+- These are generated summaries with freshness metadata, not canonical state.
+
+## Team Lite Runtime Notes
+
+- `workflow:delegation-plan` can do more than print a plan:
+  - `--start` creates orchestration state and task packets
+  - `--status` shows wave progress and the next route
+  - `--task-packet <task-id>` prints the packet for a role task
+  - `--complete-task <task-id> --summary "..."` ingests child/main results
+  - `--advance` activates the next wave once the current wave is finished
+- Runtime state lives under `.workflow/orchestration/`.
 
 ## Minimum Done
 
@@ -80,9 +112,11 @@
 ## Failure Playbook
 
 - `Hash drift`
-  - `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
+- `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
 - `Active root mismatch`
   - `workflow:workstreams status -> workflow:switch-workstream or use --root to return to the correct root`
+- `Parallel routing uncertainty`
+  - `workflow:map-codebase -> workflow:delegation-plan -- --activation-text "<user request>" -> workflow:delegation-plan -- --start only after write scopes are explicit`
 - `Resume ambiguity`
   - `Read HANDOFF.md + WINDOW.md -> workflow:resume-work -> workflow:next`
 - `Dirty worktree closeout`
@@ -94,6 +128,8 @@
 - `WINDOW.md` stores the budget/orchestrator snapshot
 - `MEMORY.md` stores active recall and durable memory
 - `SEEDS.md` stores ideas to carry into a later milestone or workstream
+- `.workflow/state.json` stores generated HUD/runtime state and should not be treated as canonical
+- `workflow:hud`, `workflow:doctor`, and `workflow:next` refresh `.workflow/state.json`
 - The first command after `resume-work` should be `workflow:health -- --strict`
 
 ## Retro Runtime Notes

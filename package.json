@@ -4,6 +4,11 @@
   "private": true,
   "description": "Generic starter kit for Codex workflow, milestone, handoff, and validation surfaces.",
   "scripts": {
+    "workflow:init": "node scripts/workflow/init.js",
+    "workflow:migrate": "node scripts/workflow/migrate.js",
+    "workflow:hud": "node scripts/workflow/hud.js",
+    "workflow:map-codebase": "node scripts/workflow/map_codebase.js",
+    "workflow:delegation-plan": "node scripts/workflow/delegation_plan.js",
     "workflow:new-milestone": "node scripts/workflow/new_milestone.js",
     "workflow:complete-milestone": "node scripts/workflow/complete_milestone.js",
     "workflow:save-memory": "node scripts/workflow/save_memory.js",

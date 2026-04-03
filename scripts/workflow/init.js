@@ -1,0 +1,64 @@
+const path = require('node:path');
+const { parseArgs } = require('./common');
+const {
+  formatInstallSummary,
+  installWorkflowSurface,
+  relativePath,
+} = require('./install_common');
+
+function printHelp() {
+  console.log(`
+init
+
+Usage:
+  node scripts/workflow/init.js --target /path/to/repo
+
+Options:
+  --target <path>        Target repository. Defaults to current working directory
+  --force-docs           Overwrite an existing docs/workflow surface
+  --write-agents-template
+                         Write docs/workflow/AGENTS_PATCH_TEMPLATE.md
+  --overwrite-scripts    Replace conflicting package.json workflow scripts
+  --skip-verify          Skip doctor/health/next/hud verification
+  `);
+}
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.help || args._.includes('help')) {
+    printHelp();
+    return;
+  }
+
+  const targetRepo = path.resolve(process.cwd(), String(args.target || '.'));
+  const report = installWorkflowSurface(targetRepo, {
+    mode: 'init',
+    forceDocs: Boolean(args['force-docs']),
+    overwriteScriptConflicts: Boolean(args['overwrite-scripts']),
+    writeAgentsTemplate: Boolean(args['write-agents-template']),
+    verify: !args['skip-verify'],
+  });
+
+  console.log('# WORKFLOW INIT\n');
+  for (const line of formatInstallSummary(report)) {
+    console.log(line);
+  }
+
+  if (report.packageScripts.conflicts.length > 0) {
+    console.log('\n## Package Script Conflicts\n');
+    for (const conflict of report.packageScripts.conflicts) {
+      console.log(`- \`${conflict.name}\` kept existing value -> \`${conflict.existing}\``);
+    }
+  }
+
+  console.log('\n## Next\n');
+  console.log(`- \`cd ${targetRepo}\``);
+  console.log('- `npm run workflow:hud -- --compact`');
+  console.log('- `npm run workflow:doctor -- --strict`');
+  console.log('- `npm run workflow:next`');
+  if (report.hudState) {
+    console.log(`- HUD state file written to \`${relativePath(targetRepo, report.hudState.stateFile)}\``);
+  }
+}
+
+main();

@@ -459,6 +459,7 @@ function loadPreferences(paths) {
     ? {
       discussMode: 'assumptions',
       gitIsolation: 'branch',
+      teamLiteDelegation: 'suggest',
       autoPush: false,
       autoCheckpoint: true,
       commitDocs: true,
@@ -468,6 +469,7 @@ function loadPreferences(paths) {
     : {
       discussMode: 'assumptions',
       gitIsolation: 'none',
+      teamLiteDelegation: 'explicit_only',
       autoPush: true,
       autoCheckpoint: true,
       commitDocs: true,
@@ -486,6 +488,7 @@ function loadPreferences(paths) {
     workflowProfileRaw,
     discussMode: String((content && getFieldValue(content, 'Discuss mode')) || defaults.discussMode).trim(),
     gitIsolation: String((content && getFieldValue(content, 'Git isolation')) || defaults.gitIsolation).trim(),
+    teamLiteDelegation: String((content && getFieldValue(content, 'Team Lite delegation')) || defaults.teamLiteDelegation).trim(),
     autoPush: parseBoolean(content && getFieldValue(content, 'Auto push'), defaults.autoPush),
     autoCheckpoint: parseBoolean(content && getFieldValue(content, 'Auto checkpoint'), defaults.autoCheckpoint),
     commitDocs: parseBoolean(content && getFieldValue(content, 'Commit docs'), defaults.commitDocs),

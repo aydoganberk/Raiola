@@ -89,6 +89,18 @@ See the next recommended action:
 npm run workflow:next
 ```
 
+Open the compact HUD:
+
+```bash
+npm run workflow:hud -- --compact
+```
+
+Build a fresh repository map:
+
+```bash
+npm run workflow:map-codebase -- --compact
+```
+
 Run health checks:
 
 ```bash
@@ -130,6 +142,9 @@ npm run workflow:complete-milestone -- --agents-review unchanged --summary "Auth
 ```bash
 npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."
 npm run workflow:next
+npm run workflow:hud
+npm run workflow:map-codebase
+npm run workflow:delegation-plan
 npm run workflow:packet -- --step plan --json
 npm run workflow:pause-work -- --summary "..."
 npm run workflow:resume-work
@@ -154,6 +169,16 @@ npm run workflow:switch-workstream -- --name yahoo-sync --create
 ```
 
 This creates a parallel surface such as `docs/yahoo-sync/` and makes it the active root.
+
+## Team Lite delegation
+
+Use delegation planning when the task is explicitly parallelized and ownership is clear.
+
+- `workflow:map-codebase` builds stack, architecture, quality, and risk lanes with freshness metadata.
+- `workflow:map-codebase` also writes `STACK.md`, `INTEGRATIONS.md`, `ARCHITECTURE.md`, `STRUCTURE.md`, `TESTING.md`, and `CONCERNS.md` under `.workflow/codebase/`.
+- `workflow:delegation-plan -- --activation-text "<user request>"` can activate Team Lite from explicit user phrasing such as `parallel yap`, `subagent kullan`, `delegate et`, or `team mode`.
+- `workflow:delegation-plan -- --start` turns the plan into a real orchestration runtime with packets, results, and wave state.
+- `execute` fan-out is only safe when worker write scopes are explicit and disjoint.
 
 ## Minimum done by step
 
@@ -238,6 +263,16 @@ I am not starting a new step in this window; I am leaving the resume command and
   `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
 - `Active root mismatch`
   `workflow:workstreams status -> workflow:switch-workstream` or use `--root` to return to the correct root
+
+## Generated state
+
+`workflow:hud` also refreshes `.workflow/state.json`.
+
+- Treat it as a convenience summary for compact UX surfaces.
+- Do not treat it as canonical state; the markdown workflow files remain authoritative.
+- `workflow:doctor` and `workflow:next` also refresh it so the runtime summary stays current between HUD calls.
+- The same rule applies to `.workflow/codebase-map.json` and `.workflow/delegation-plan.json`.
+- The same rule also applies to `.workflow/codebase/*` and `.workflow/orchestration/*`.
 - `Resume ambiguity`
   Read `HANDOFF.md` and `WINDOW.md`, then run `workflow:resume-work -> workflow:next`
 - `Dirty worktree closeout`

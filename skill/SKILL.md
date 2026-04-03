@@ -118,6 +118,9 @@ An active milestone always follows this loop:
 
 ## Operational Helpers
 
+- `npm run workflow:hud`
+- `npm run workflow:map-codebase`
+- `npm run workflow:delegation-plan`
 - `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."`
 - `npm run workflow:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths src/foo,tests/foo`
 - `npm run workflow:save-memory -- --title "..." --note "..."`
@@ -155,8 +158,21 @@ An active milestone always follows this loop:
   - `SEEDS`: ideas that may be planted later
 - `WORKSTREAMS.md` records the active root; scripts consult it first when `--root` is not provided.
 - `PREFERENCES.md` controls solo/team mode, discuss mode, and git isolation behavior.
+- `Team Lite delegation` in `PREFERENCES.md` controls whether delegation is explicit-only, suggested, or off.
 - If a named stream is required, move from generic `docs/workflow/*` to `docs/<workstream>/*`.
 - `AGENTS.md` combined size defaults to `32 KiB`; split supporting context if it grows too large.
+- Team Lite becomes active only when the user explicitly asks for parallel mode; worker write scopes must be disjoint before execute fan-out.
+- Explicit Team Lite trigger phrases include:
+  - `parallel yap`
+  - `subagent kullan`
+  - `delegate et`
+  - `team mode`
+- When Team Lite is active:
+  - run `workflow:map-codebase`
+  - run `workflow:delegation-plan -- --start --activation-text "<user request>"`
+  - use `.workflow/orchestration/packets/` as child-task packets
+  - ingest results with `workflow:delegation-plan -- --complete-task ...`
+  - use `workflow:delegation-plan -- --status` to decide the next route
 
 ## Visibility Note
 
@@ -224,6 +240,8 @@ node scripts/compare_golden_snapshots.ts <baseline> <candidate>
 ## Limits
 
 - The skill does not store state; the canonical source of state is always the workflow files inside the repository.
+- `.workflow/state.json` is a generated convenience surface only and must never replace the markdown control plane.
+- `workflow:hud`, `workflow:doctor`, and `workflow:next` may all refresh that generated state surface.
 - The skill is not a backlog document; it exists to stabilize active state and closeout discipline.
 
 ## Retro Surface

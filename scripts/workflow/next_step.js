@@ -13,6 +13,7 @@ const {
   resolveWorkflowRoot,
   workflowPaths,
 } = require('./common');
+const { writeStateSurface } = require('./state_surface');
 
 function printHelp() {
   console.log(`
@@ -50,6 +51,9 @@ function deriveRecommendation(state) {
     checklist: [],
     note: '',
   };
+  const teamLiteHint = preferences.teamLiteDelegation === 'off'
+    ? null
+    : 'If the user explicitly asks for parallel/subagent/delegate/team mode, route it with workflow:delegation-plan -- --activation-text "<user request>"';
 
   if (handoffStatus === 'ready_to_resume' && handoffNext) {
     recommendation.title = 'Resume from handoff';
@@ -161,17 +165,20 @@ function deriveRecommendation(state) {
     recommendation.command = 'Update CONTEXT.md and VALIDATION.md when research is complete';
     recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
       lite: [
+        'Run workflow:map-codebase if stack or repo-shape assumptions are still fuzzy',
         'Fill the touched files section',
         'Write the risks and verification surface sections',
         'Narrow the VALIDATION.md contract table to milestone scope',
       ],
       standard: [
+        'Run workflow:map-codebase to refresh stack, architecture, quality, and risk lanes',
         'Write touched files, dependency map, and risks into CONTEXT.md',
         'Update verification surface and research target files',
         'Narrow the VALIDATION.md contract table to milestone scope',
         'Update plan readiness only if it is truly ready',
       ],
       full: [
+        'Run workflow:map-codebase to refresh stack, architecture, quality, and risk lanes',
         'Write touched files, dependency map, and risks into CONTEXT.md',
         'Update verification surface, research targets, and falsifier fields',
         'Narrow the VALIDATION.md contract table to milestone scope',
@@ -179,6 +186,9 @@ function deriveRecommendation(state) {
         'Capture a RETRO note if recurring process friction appeared',
       ],
     });
+    if (teamLiteHint) {
+      recommendation.checklist.push(teamLiteHint);
+    }
     recommendation.note = contextReadiness === 'plan_ready'
       ? `Context is ready; the plan step can start | profile=${preferences.workflowProfile}`
       : `Move to the plan step once research findings are complete | profile=${preferences.workflowProfile}`;
@@ -196,12 +206,14 @@ function deriveRecommendation(state) {
       ],
       standard: [
         'Read CARRYFORWARD.md and the relevant seeds',
+        'Use workflow:delegation-plan only if the user explicitly wants a parallel route',
         'Write the plan so it fits into 1-2 run chunks and fill chunk cursor fields',
         'Fill estimated packet tokens / execution overhead / verify overhead',
         'Clarify out-of-scope guardrails and the audit plan',
       ],
       full: [
         'Read CARRYFORWARD.md and the relevant seeds',
+        'Use workflow:delegation-plan only if the user explicitly wants a parallel route',
         'Write the plan so it fits into 1-2 run chunks and fill chunk cursor fields',
         'Fill estimated packet tokens / execution overhead / verify overhead',
         'Clarify out-of-scope guardrails, audit plan, and resume anchor',
@@ -223,12 +235,14 @@ function deriveRecommendation(state) {
       ],
       standard: [
         'Stay strictly inside the active milestone scope',
+        'Only use workflow:delegation-plan -- --start after write ownership is explicit and disjoint',
         'If work drifts beyond plan, update docs first',
         'Refresh STATUS.md Verified/Inferred/Unknown after meaningful changes',
         'Save intermediate reminders as Active Recall Items when needed',
       ],
       full: [
         'Stay strictly inside the active milestone scope',
+        'Only use workflow:delegation-plan -- --start after write ownership is explicit and disjoint',
         'If work drifts beyond plan, update docs first',
         'Refresh STATUS.md Verified/Inferred/Unknown after meaningful changes',
         'Save intermediate reminders as Active Recall Items when needed',
@@ -250,12 +264,14 @@ function deriveRecommendation(state) {
       ],
       standard: [
         'Run the verify command rows in the VALIDATION.md contract table',
+        'If audit work needs parallel read-only help, route it with workflow:delegation-plan -- --start',
         'Write manual checks and remaining risks into STATUS.md',
         'Update evidence and packet hash columns',
         'Confirm workflow:health -- --strict is clean before complete',
       ],
       full: [
         'Run the verify command rows in the VALIDATION.md contract table',
+        'If audit work needs parallel read-only help, route it with workflow:delegation-plan -- --start',
         'Write manual checks and remaining risks into STATUS.md',
         'Update evidence and packet hash columns',
         'Confirm workflow:health -- --strict is clean before complete',
@@ -350,6 +366,24 @@ function main() {
     recommendation,
   };
 
+  writeStateSurface(cwd, rootDir, {
+    window: {
+      decision: payload.windowStatus.decision,
+      remainingBudget: payload.windowStatus.remainingBudget,
+      canStartNextStep: payload.windowStatus.canStartNextStep,
+      canFinishCurrentChunk: payload.windowStatus.canFinishCurrentChunk,
+      packetHash: payload.packetHash,
+      estimatedTokens: payload.estimatedTokens,
+      budgetStatus: payload.budgetStatus,
+    },
+    next: {
+      title: recommendation.title,
+      command: recommendation.command,
+      note: recommendation.note,
+      checklist: recommendation.checklist,
+    },
+  }, { updatedBy: 'next' });
+
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
     return;
@@ -362,6 +396,7 @@ function main() {
   console.log(`- Workflow profile: \`${preferences.workflowProfile}\``);
   console.log(`- Discuss mode: \`${preferences.discussMode}\``);
   console.log(`- Git isolation: \`${preferences.gitIsolation}\``);
+  console.log(`- Team Lite delegation: \`${preferences.teamLiteDelegation}\``);
   console.log(`- Packet hash: \`${payload.packetHash}\``);
   console.log(`- Estimated tokens: \`${payload.estimatedTokens}\``);
   console.log(`- Budget status: \`${payload.budgetStatus}\``);

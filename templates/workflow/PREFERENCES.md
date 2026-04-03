@@ -6,6 +6,7 @@
 - Workflow profile: `standard`
 - Discuss mode: `assumptions`
 - Git isolation: `none`
+- Team Lite delegation: `explicit_only`
 - Auto push: `true`
 - Auto checkpoint: `true`
 - Commit docs: `true`
@@ -40,6 +41,7 @@
   - `Unique milestone ids: true`
   - `Pre-merge check: true`
   - `Git isolation: branch`
+  - `Team Lite delegation: suggest`
   - `Health strict required: true`
 
 ## Workflow Profiles
@@ -78,6 +80,15 @@
   - `Expect the milestone to use a dedicated branch`
 - `worktree`
   - `Expect the milestone to use a dedicated worktree`
+
+## Team Lite Delegation
+
+- `explicit_only`
+  - `Only produce active delegation plans when the user explicitly asks for parallel mode`
+- `suggest`
+  - `Show delegation opportunities in next-step guidance, but still require explicit parallel mode to activate`
+- `off`
+  - `Do not suggest Team Lite automatically; explicit user intent can still override`
 
 ## Budget Notes
 

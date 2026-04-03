@@ -13,6 +13,7 @@ const {
   warnAgentsSize,
   workflowPaths,
 } = require('./common');
+const { writeStateSurface } = require('./state_surface');
 
 function printHelp() {
   console.log(`
@@ -86,6 +87,10 @@ function main() {
     `Discuss mode -> ${preferences.discussMode}`,
   );
   pushCheck(
+    ['explicit_only', 'suggest', 'off'].includes(preferences.teamLiteDelegation) ? 'pass' : 'fail',
+    `Team Lite delegation -> ${preferences.teamLiteDelegation}`,
+  );
+  pushCheck(
     ['none', 'branch', 'worktree'].includes(preferences.gitIsolation) ? 'pass' : 'fail',
     `Git isolation -> ${preferences.gitIsolation}`,
   );
@@ -103,6 +108,14 @@ function main() {
 
   const failCount = checks.filter((item) => item.status === 'fail').length;
   const warnCount = checks.filter((item) => item.status === 'warn').length;
+  writeStateSurface(cwd, rootDir, {
+    doctor: {
+      failCount,
+      warnCount,
+      checks,
+      rootDir: path.relative(cwd, rootDir),
+    },
+  }, { updatedBy: 'doctor' });
 
   console.log(`# WORKFLOW DOCTOR\n`);
   console.log(`- Root: \`${rootDir}\``);

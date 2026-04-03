@@ -1,0 +1,7 @@
+{
+  "name": "workflow-fixture",
+  "private": true,
+  "scripts": {
+    "test:fixture": "node -e \"process.exit(0)\""
+  }
+}
