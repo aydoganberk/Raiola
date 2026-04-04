@@ -13,6 +13,7 @@ const {
   workflowPaths,
   write,
 } = require('./common');
+const { listIndexedRepoFiles } = require('./fs_index');
 
 const GENERATOR_VERSION = 'phase2-map-v1';
 const DEFAULT_LANES = ['stack', 'architecture', 'quality', 'risks'];
@@ -90,33 +91,8 @@ function walkFiles(cwd, currentDir, files = []) {
   return files;
 }
 
-function listRepoFiles(cwd) {
-  const rg = safeExec('rg', [
-    '--files',
-    '--hidden',
-    '-g',
-    '!.git',
-    '-g',
-    '!node_modules',
-    '-g',
-    '!.next',
-    '-g',
-    '!.turbo',
-    '-g',
-    '!.workflow',
-    '-g',
-    '!dist',
-    '-g',
-    '!build',
-    '-g',
-    '!coverage',
-  ], { cwd });
-
-  if (rg.ok && rg.stdout) {
-    return rg.stdout.split('\n').map((line) => line.trim()).filter(Boolean).sort();
-  }
-
-  return walkFiles(cwd, cwd).sort();
+function listRepoFiles(cwd, refreshMode = 'incremental') {
+  return listIndexedRepoFiles(cwd, { refreshMode });
 }
 
 function fileExtensionCounts(files) {
@@ -790,7 +766,8 @@ function buildCodebaseMap(cwd, rootDir, options = {}) {
   assertWorkflowFiles(paths);
 
   const preferences = loadPreferences(paths);
-  const files = listRepoFiles(cwd);
+  const repoIndex = listRepoFiles(cwd, refreshMode);
+  const files = repoIndex.files;
   const fileSet = new Set(files);
   const pkg = maybeReadPackageJson(cwd);
   const extensionCounts = fileExtensionCounts(files);
@@ -870,11 +847,15 @@ function buildCodebaseMap(cwd, rootDir, options = {}) {
       laneStatuses,
       previousGeneratedAt: previous?.generatedAt || null,
       fileCount: files.length,
+      indexStatus: repoIndex.refreshStatus,
+      changedFileCount: repoIndex.changedFiles.length,
+      indexPath: repoIndex.indexPath,
     },
     repo: {
       fileCount: files.length,
       topLevelDirectories: topLevelDirectories(files),
       extensionCounts: extensionCounts.slice(0, 12),
+      changedFiles: repoIndex.changedFiles.slice(0, 50),
     },
     lanes: builtLanes,
   };

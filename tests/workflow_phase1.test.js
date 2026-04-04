@@ -40,13 +40,16 @@ test('workflow:init installs the runtime surface and HUD state', () => {
 
   assert.ok(fs.existsSync(path.join(targetRepo, 'docs', 'workflow', 'WORKSTREAMS.md')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'hud.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'init.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'cli', 'cwf.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'bin', 'cwf.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, '.agents', 'skills', 'codex-workflow', 'SKILL.md')));
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'state.json')));
 
   const packageJson = JSON.parse(fs.readFileSync(path.join(targetRepo, 'package.json'), 'utf8'));
   assert.equal(packageJson.scripts['workflow:hud'], 'node scripts/workflow/hud.js');
   assert.equal(packageJson.scripts['workflow:doctor'], 'node scripts/workflow/doctor.js');
-  assert.equal(packageJson.scripts['workflow:init'], undefined);
+  assert.equal(packageJson.scripts['workflow:init'], 'node scripts/workflow/init.js');
 
   const compactHud = run('node', [path.join(targetRepo, 'scripts', 'workflow', 'hud.js'), '--compact'], targetRepo);
   const hudJson = JSON.parse(run('node', [path.join(targetRepo, 'scripts', 'workflow', 'hud.js'), '--json'], targetRepo));

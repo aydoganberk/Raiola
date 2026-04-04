@@ -2,6 +2,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const childProcess = require('node:child_process');
+const fileIo = require('./io/files');
+const markdown = require('./markdown/sections');
+const packetCache = require('./packet/cache');
+const runtimeCache = require('./perf/runtime_cache');
 
 function parseArgs(argv) {
   const args = { _: [] };
@@ -503,107 +507,63 @@ function resolveWorkflowControlIntent(utterance) {
 }
 
 function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return markdown.escapeRegex(value);
 }
 
 function read(filePath) {
-  return fs.readFileSync(filePath, 'utf8');
+  return fileIo.readText(filePath);
 }
 
 function readIfExists(filePath) {
-  return fs.existsSync(filePath) ? read(filePath) : null;
+  return fileIo.readTextIfExists(filePath);
 }
 
 function write(filePath, content) {
-  fs.writeFileSync(filePath, content);
+  fileIo.writeText(filePath, content);
 }
 
 function ensureDir(dirPath) {
-  fs.mkdirSync(dirPath, { recursive: true });
+  fileIo.ensureDir(dirPath);
 }
 
 function replaceField(content, label, value) {
-  const pattern = new RegExp(`^- ${escapeRegex(label)}: .*?$`, 'm');
-  if (!pattern.test(content)) {
-    throw new Error(`Missing field: ${label}`);
-  }
-  return content.replace(pattern, `- ${label}: \`${value}\``);
+  return markdown.replaceField(content, label, value);
 }
 
 function replaceOrAppendField(content, label, value) {
-  const pattern = new RegExp(`^- ${escapeRegex(label)}: .*?$`, 'm');
-  if (pattern.test(content)) {
-    return content.replace(pattern, `- ${label}: \`${value}\``);
-  }
-
-  if (!content.startsWith('# ')) {
-    return `- ${label}: \`${value}\`\n${content}`;
-  }
-
-  const lines = content.split('\n');
-  lines.splice(1, 0, '', `- ${label}: \`${value}\``);
-  return lines.join('\n');
+  return markdown.replaceOrAppendField(content, label, value);
 }
 
 function ensureField(content, label, value) {
-  return getFieldValue(content, label) == null
-    ? replaceOrAppendField(content, label, value)
-    : content;
+  return markdown.ensureField(content, label, value);
 }
 
 function getFieldValue(content, label) {
-  const pattern = new RegExp(`^- ${escapeRegex(label)}: \`(.*?)\`$`, 'm');
-  const match = content.match(pattern);
-  return match ? match[1] : null;
+  return markdown.getFieldValue(content, label);
 }
 
 function getSectionField(sectionBody, label) {
-  const pattern = new RegExp(`^- ${escapeRegex(label)}: \`(.*?)\`$`, 'm');
-  const match = sectionBody.match(pattern);
-  return match ? match[1] : null;
+  return markdown.getSectionField(sectionBody, label);
 }
 
 function replaceSection(content, heading, body) {
-  const pattern = new RegExp(`(^## ${escapeRegex(heading)}\\n)([\\s\\S]*?)(?=^## [^\\n]+\\n|(?![\\s\\S]))`, 'm');
-  const replacement = `$1${body.trimEnd()}\n\n`;
-  if (!pattern.test(content)) {
-    throw new Error(`Missing section: ${heading}`);
-  }
-  return content.replace(pattern, replacement);
+  return markdown.replaceSection(content, heading, body);
 }
 
 function replaceOrAppendSection(content, heading, body) {
-  try {
-    return replaceSection(content, heading, body);
-  } catch {
-    return `${content.trimEnd()}\n\n## ${heading}\n\n${body.trimEnd()}\n`;
-  }
+  return markdown.replaceOrAppendSection(content, heading, body);
 }
 
 function ensureSection(content, heading, body) {
-  try {
-    extractSection(content, heading);
-    return content;
-  } catch {
-    return replaceOrAppendSection(content, heading, body);
-  }
+  return markdown.ensureSection(content, heading, body);
 }
 
 function extractSection(content, heading) {
-  const pattern = new RegExp(`^## ${escapeRegex(heading)}\\n([\\s\\S]*?)(?=^## [^\\n]+\\n|(?![\\s\\S]))`, 'm');
-  const match = content.match(pattern);
-  if (!match) {
-    throw new Error(`Missing section: ${heading}`);
-  }
-  return match[1].trim();
+  return markdown.extractSection(content, heading);
 }
 
 function tryExtractSection(content, heading, fallback = '') {
-  try {
-    return extractSection(content, heading);
-  } catch {
-    return fallback;
-  }
+  return markdown.tryExtractSection(content, heading, fallback);
 }
 
 function slugify(value) {
@@ -1285,25 +1245,7 @@ function renderSeedSection(entries, emptyMarker) {
 }
 
 function listGitChanges(cwd) {
-  const commands = [
-    ['diff', '--name-only', '--cached'],
-    ['diff', '--name-only'],
-    ['ls-files', '--others', '--exclude-standard'],
-  ];
-
-  const files = new Set();
-  for (const args of commands) {
-    const output = childProcess.execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
-    if (!output) {
-      continue;
-    }
-
-    for (const line of output.split('\n').map((item) => item.trim()).filter(Boolean)) {
-      files.add(line);
-    }
-  }
-
-  return [...files];
+  return runtimeCache.listGitChangesCached(cwd);
 }
 
 function normalizeStagePath(cwd, inputPath) {
@@ -1451,72 +1393,35 @@ function shortHash(value, length = 12) {
 }
 
 function packetRuntimeStatePath(cwd = process.cwd()) {
-  return path.join(cwd, '.workflow', 'packet-state.json');
+  return packetCache.packetRuntimeStatePath(cwd);
 }
 
 function readPacketRuntimeState(cwd = process.cwd()) {
-  const filePath = packetRuntimeStatePath(cwd);
-  const content = readIfExists(filePath);
-  if (!content) {
-    return { version: 1, workflows: {} };
-  }
-
-  try {
-    const parsed = JSON.parse(content);
-    return {
-      version: 1,
-      workflows: parsed && typeof parsed === 'object' && parsed.workflows && typeof parsed.workflows === 'object'
-        ? parsed.workflows
-        : {},
-    };
-  } catch {
-    return { version: 1, workflows: {} };
-  }
+  return packetCache.readPacketRuntimeState(cwd);
 }
 
 function writePacketRuntimeState(cwd = process.cwd(), state = {}) {
-  const filePath = packetRuntimeStatePath(cwd);
-  ensureDir(path.dirname(filePath));
-  write(filePath, `${JSON.stringify(state, null, 2)}\n`);
-  return filePath;
+  return packetCache.writePacketRuntimeState(cwd, state);
 }
 
 function packetRuntimeRootKey(cwd, rootDir) {
-  return path.relative(cwd, rootDir).replace(/\\/g, '/') || '.';
+  return packetCache.packetRuntimeRootKey(cwd, rootDir);
 }
 
 function packetRuntimeEntryKey(primaryKey, hashStep) {
-  return `${primaryKey}:${hashStep}`;
+  return packetCache.packetRuntimeEntryKey(primaryKey, hashStep);
 }
 
 function readPacketRuntimeEntry(cwd, rootDir, primaryKey, hashStep) {
-  const state = readPacketRuntimeState(cwd);
-  const rootKey = packetRuntimeRootKey(cwd, rootDir);
-  const entryKey = packetRuntimeEntryKey(primaryKey, hashStep);
-  return state.workflows?.[rootKey]?.packets?.[entryKey] || null;
+  return packetCache.readPacketRuntimeEntry(cwd, rootDir, primaryKey, hashStep);
 }
 
 function writePacketRuntimeEntry(cwd, rootDir, primaryKey, hashStep, entry) {
-  const state = readPacketRuntimeState(cwd);
-  const rootKey = packetRuntimeRootKey(cwd, rootDir);
-  const entryKey = packetRuntimeEntryKey(primaryKey, hashStep);
-  const next = {
-    version: 1,
-    workflows: { ...state.workflows },
-  };
-  const workflowState = next.workflows[rootKey] || { packets: {} };
-  next.workflows[rootKey] = {
-    ...workflowState,
-    packets: {
-      ...(workflowState.packets || {}),
-      [entryKey]: entry,
-    },
-  };
-  writePacketRuntimeState(cwd, next);
+  packetCache.writePacketRuntimeEntry(cwd, rootDir, primaryKey, hashStep, entry);
 }
 
 function estimateTokens(value) {
-  return Math.ceil(String(value || '').length / 4);
+  return runtimeCache.estimateTokensCached(value);
 }
 
 const PACKET_VERSION = '5';
@@ -1780,20 +1685,7 @@ function normalizeReference(cwd, rawRef, options = {}) {
 }
 
 function safeExec(command, args, options = {}) {
-  try {
-    const stdout = childProcess.execFileSync(command, args, {
-      cwd: options.cwd,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    return { ok: true, stdout: stdout.trim() };
-  } catch (error) {
-    return {
-      ok: false,
-      stdout: String(error.stdout || '').trim(),
-      stderr: String(error.stderr || '').trim(),
-    };
-  }
+  return runtimeCache.safeExecCached(command, args, options);
 }
 
 function checkReference(cwd, rawRef, options = {}) {
@@ -2154,6 +2046,43 @@ function buildPacketSnapshot(paths, options = {}) {
   const preferences = loadPreferences(paths);
   const statusContent = read(paths.status);
   const step = String(options.step || getFieldValue(statusContent, 'Current milestone step') || 'discuss').trim();
+  const packetLoadingMode = String(options.packetLoadingMode || preferences.packetLoadingMode || 'delta').trim();
+  const tokenEfficiencyMeasures = normalizeTokenEfficiencyMeasures(
+    options.tokenEfficiencyMeasures || preferences.tokenEfficiencyMeasures,
+    packetLoadingMode === 'continuity_first' ? 'off' : 'on',
+  );
+  const cacheKey = hashString(JSON.stringify({
+    rootDir: paths.rootDir,
+    step,
+    doc: options.doc || 'auto',
+    packetLoadingMode,
+    tokenEfficiencyMeasures,
+    explicitNeed: Boolean(options.explicitNeed),
+    includeColdRefs: Boolean(options.includeColdRefs),
+    fileSignatures: [
+      paths.status,
+      paths.context,
+      paths.execplan,
+      paths.validation,
+      paths.handoff,
+      paths.window,
+      paths.preferences,
+    ].map((filePath) => {
+      if (!fs.existsSync(filePath)) {
+        return { filePath, missing: true };
+      }
+      const stat = fs.statSync(filePath);
+      return {
+        filePath,
+        size: stat.size,
+        mtimeMs: Math.round(stat.mtimeMs),
+      };
+    }),
+  }));
+  const cachedPacket = packetCache.getPacketSnapshotCache(cwd, cacheKey);
+  if (cachedPacket) {
+    return cachedPacket;
+  }
   const primary = primaryDocForStep(paths, step, options.doc);
   const primaryContent = read(primary.filePath);
   const unknowns = parseTableSectionObjects(primaryContent, 'Unknowns');
@@ -2196,11 +2125,6 @@ function buildPacketSnapshot(paths, options = {}) {
   const storedInputHash = String(getFieldValue(primaryContent, 'Input hash') || '').trim();
   const falsificationItems = extractBulletItems(tryExtractSection(primaryContent, 'What Would Falsify This Plan?', ''));
   const stableFragments = [...stableBundle.tierA, ...stableBundle.tierB];
-  const packetLoadingMode = String(options.packetLoadingMode || preferences.packetLoadingMode || 'delta').trim();
-  const tokenEfficiencyMeasures = normalizeTokenEfficiencyMeasures(
-    options.tokenEfficiencyMeasures || preferences.tokenEfficiencyMeasures,
-    packetLoadingMode === 'continuity_first' ? 'off' : 'on',
-  );
   const continuityFirst = packetLoadingMode === 'continuity_first';
   const normalizedPayload = {
     hashStep,
@@ -2289,7 +2213,7 @@ function buildPacketSnapshot(paths, options = {}) {
     budgetStatus = 'warn';
   }
 
-  return {
+  const snapshot = {
     step,
     primary,
     packetVersion,
@@ -2340,6 +2264,8 @@ function buildPacketSnapshot(paths, options = {}) {
     unknowns,
     falsificationItems,
   };
+  packetCache.setPacketSnapshotCache(cwd, cacheKey, snapshot);
+  return snapshot;
 }
 
 function syncPacketHash(paths, options = {}) {

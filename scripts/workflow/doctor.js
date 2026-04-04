@@ -1,3 +1,4 @@
+const fs = require('node:fs');
 const path = require('node:path');
 const {
   assertWorkflowFiles,
@@ -13,7 +14,20 @@ const {
   warnAgentsSize,
   workflowPaths,
 } = require('./common');
+const { readProductManifest, readInstalledVersionMarker } = require('./product_manifest');
 const { writeStateSurface } = require('./state_surface');
+
+function summarizeItems(items, limit = 3) {
+  if (items.length <= limit) {
+    return items.join(', ');
+  }
+  return `${items.slice(0, limit).join(', ')} +${items.length - limit} more`;
+}
+
+function extractNodeScriptPath(scriptValue) {
+  const match = String(scriptValue || '').trim().match(/^node\s+([^\s]+)/);
+  return match ? match[1] : null;
+}
 
 function printHelp() {
   console.log(`
@@ -41,7 +55,7 @@ function main() {
   assertWorkflowFiles(paths);
 
   const checks = [];
-  const pushCheck = (status, message) => checks.push({ status, message });
+  const pushCheck = (status, message, fix = null) => checks.push({ status, message, fix });
 
   const status = read(paths.status);
   const execplan = read(paths.execplan);
@@ -55,6 +69,19 @@ function main() {
   const step = String(getFieldValue(status, 'Current milestone step') || 'unknown');
   const activeRow = parseMilestoneTable(milestones).rows.find((row) => row.status === 'active');
   const workstreamRows = parseWorkstreamTable(workstreams).rows;
+  const productManifest = readProductManifest(cwd);
+  const expectedRuntimeScripts = productManifest?.runtimeScripts || {};
+  const expectedScriptEntries = Object.entries(expectedRuntimeScripts);
+  const expectedRuntimeFiles = [...new Set([
+    ...expectedScriptEntries
+      .map(([, scriptValue]) => extractNodeScriptPath(scriptValue))
+      .filter(Boolean),
+    ...((productManifest?.runtimeFiles || []).filter(Boolean)),
+  ])].sort();
+  const packageJsonPath = path.join(cwd, 'package.json');
+  const skillPath = path.join(cwd, '.agents', 'skills', 'codex-workflow', 'SKILL.md');
+  const versionMarker = readInstalledVersionMarker(cwd);
+  const installedProductVersion = productManifest?.installedVersion || null;
   const packets = [
     buildPacketSnapshot(paths, { doc: 'context', step: 'discuss' }),
     buildPacketSnapshot(paths, { doc: 'execplan', step: 'plan' }),
@@ -110,6 +137,87 @@ function main() {
     ['none', 'branch', 'worktree'].includes(preferences.gitIsolation) ? 'pass' : 'fail',
     `Git isolation -> ${preferences.gitIsolation}`,
   );
+  if (!productManifest) {
+    pushCheck(
+      'warn',
+      'Product manifest -> .workflow/product-manifest.json is missing, so install-surface parity cannot be fully checked',
+      'cwf update',
+    );
+  } else if (!fs.existsSync(packageJsonPath)) {
+    pushCheck(
+      'fail',
+      'Package scripts -> package.json is missing, so backward-compatible workflow:* commands are unavailable',
+      'cwf update --overwrite-scripts',
+    );
+  } else {
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    const currentScripts = packageJson.scripts || {};
+    const missingScripts = [];
+    const mismatchedScripts = [];
+
+    for (const [name, expected] of expectedScriptEntries) {
+      if (!(name in currentScripts)) {
+        missingScripts.push(name);
+        continue;
+      }
+      if (currentScripts[name] !== expected) {
+        mismatchedScripts.push(name);
+      }
+    }
+
+    if (missingScripts.length === 0 && mismatchedScripts.length === 0) {
+      pushCheck('pass', `Package scripts -> ${expectedScriptEntries.length} expected workflow:* mappings are installed`);
+    } else {
+      const details = [];
+      if (missingScripts.length > 0) {
+        details.push(`missing=${summarizeItems(missingScripts)}`);
+      }
+      if (mismatchedScripts.length > 0) {
+        details.push(`mismatched=${summarizeItems(mismatchedScripts)}`);
+      }
+      pushCheck(
+        'fail',
+        `Package scripts -> ${details.join(' | ')}`,
+        'cwf update --overwrite-scripts',
+      );
+    }
+  }
+
+  if (productManifest) {
+    const missingRuntimeFiles = expectedRuntimeFiles.filter((relativeScriptPath) => !fs.existsSync(path.join(cwd, relativeScriptPath)));
+    pushCheck(
+      missingRuntimeFiles.length === 0 ? 'pass' : 'fail',
+      missingRuntimeFiles.length === 0
+        ? `Runtime surface -> ${expectedRuntimeFiles.length} expected files are present`
+        : `Runtime surface -> missing ${summarizeItems(missingRuntimeFiles.map((item) => `\`${item}\``))}`,
+      missingRuntimeFiles.length === 0 ? null : 'cwf update',
+    );
+  }
+
+  pushCheck(
+    fs.existsSync(skillPath) ? 'pass' : 'warn',
+    fs.existsSync(skillPath)
+      ? 'Skill surface -> codex-workflow skill is installed for Codex'
+      : 'Skill surface -> .agents/skills/codex-workflow/SKILL.md is missing',
+    fs.existsSync(skillPath) ? null : 'cwf update',
+  );
+
+  if (!versionMarker.exists) {
+    pushCheck(
+      'warn',
+      'Product version marker -> .workflow/VERSION.md is missing, so update drift cannot be proven',
+      'cwf update',
+    );
+  } else if (installedProductVersion && versionMarker.installedVersion !== installedProductVersion) {
+    pushCheck(
+      'warn',
+      `Product version marker -> marker=${versionMarker.installedVersion || 'unknown'}, manifest=${installedProductVersion}`,
+      'cwf update',
+    );
+  } else {
+    pushCheck('pass', `Product version marker -> ${versionMarker.installedVersion || installedProductVersion || 'present'}`);
+  }
+
   if (preferences.gitIsolation === 'branch' && milestone !== 'NONE') {
     pushCheck(currentBranch(cwd) !== 'main' ? 'pass' : 'warn', 'Branch isolation is expected but you are still on main');
   }
@@ -140,6 +248,9 @@ function main() {
   console.log(`\n## Checks\n`);
   for (const check of checks) {
     console.log(`- [${check.status.toUpperCase()}] ${check.message}`);
+    if (check.fix) {
+      console.log(`  fix: \`${check.fix}\``);
+    }
   }
 
   if (args.strict && failCount > 0) {

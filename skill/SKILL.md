@@ -14,6 +14,33 @@ It is not the default path; if the user did not explicitly ask for workflow, con
 - When the user wants to continue a previously opened workflow milestone
 - When named workstreams, validation contracts, or pause/resume snapshots are explicitly needed
 
+## Quick Command Surface
+
+- `$workflow-help`
+  - `Show the short command surface and when to use quick/full/team.`
+- `$workflow-next`
+  - `Surface the single safest next move from current state.`
+- `$workflow-quick`
+  - `Start or continue quick mode for a narrow 15-60 minute task.`
+- `$workflow-checkpoint`
+  - `Write a continuity checkpoint before compaction or handoff.`
+- `$workflow-team`
+  - `Open Team Lite orchestration when the user explicitly asks for delegation or parallelism.`
+- `$workflow-review`
+  - `Generate a review-ready closeout package.`
+- `$workflow-ship`
+  - `Generate a ship-ready package.`
+
+## Alias Mapping
+
+- `$workflow-help` -> `cwf help`
+- `$workflow-next` -> `cwf next`
+- `$workflow-quick` -> `cwf quick`
+- `$workflow-checkpoint` -> `cwf checkpoint`
+- `$workflow-team` -> `cwf team`
+- `$workflow-review` -> `cwf review`
+- `$workflow-ship` -> `cwf ship`
+
 ## Granularity
 
 - The default planning unit is a single milestone.
@@ -44,7 +71,8 @@ It is not the default path; if the user did not explicitly ask for workflow, con
   - `Codex may continue phase-to-phase until blocked, complete, or window-managed`
 - Read `Automation mode` and `Automation status` from `STATUS.md`, `CONTEXT.md`, and `HANDOFF.md` as the active behavior contract.
 - Users may set or change this with:
-  - `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation phase`
+- `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation phase`
+- `cwf milestone --id Mx --name "..." --goal "..." --profile standard --automation phase`
   - `npm run workflow:automation -- --mode full`
 - When automation is active, Codex should own:
   - `discussion flow`
@@ -56,6 +84,15 @@ It is not the default path; if the user did not explicitly ask for workflow, con
 - If the client cannot open a new window/thread, compact the current context, refresh packet state, and continue from the remaining plan.
 
 ## Startup Sequence
+
+Before reopening the full contract, prefer the short layer:
+
+1. Use `$workflow-help` if the user needs orientation.
+2. Use `$workflow-next` to see the safest next operator action.
+3. If the task is narrow and short-lived, consider `$workflow-quick` before opening a full milestone.
+4. If the user explicitly requests delegation or parallelism, route through `$workflow-team`.
+
+Then follow the full startup sequence below when the milestone contract is active.
 
 1. Read `AGENTS.md`.
 2. Resolve the active workstream root from `docs/workflow/WORKSTREAMS.md`.
@@ -151,7 +188,7 @@ An active milestone always follows this loop:
 - `npm run workflow:step-fulfillment -- --utterance "plan kismini gecelim"`
 - `npm run workflow:delegation-plan`
 - `npm run workflow:plan-check -- --sync --strict`
-- `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual`
+- `cwf milestone --id Mx --name "..." --goal "..." --profile standard --automation manual`
 - `npm run workflow:automation -- --mode phase`
 - `npm run workflow:checkpoint -- --next "..."`
 - `npm run workflow:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths src/foo,tests/foo`

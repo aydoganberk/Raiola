@@ -24,9 +24,6 @@ const {
   write,
 } = require('./common');
 
-const INSTALLER_ONLY_FILES = new Set(['init.js', 'install_common.js', 'migrate.js']);
-const INSTALLER_ONLY_SCRIPTS = new Set(['workflow:init', 'workflow:migrate']);
-
 function slugifyName(value) {
   return String(value || 'workflow-repo')
     .toLowerCase()
@@ -52,9 +49,123 @@ function sourceLayout() {
     repoRoot,
     templatesDir: path.join(repoRoot, 'templates', 'workflow'),
     scriptsDir: path.join(repoRoot, 'scripts', 'workflow'),
+    cliDir: path.join(repoRoot, 'scripts', 'cli'),
+    binFile: path.join(repoRoot, 'bin', 'cwf.js'),
     compareScript: path.join(repoRoot, 'scripts', 'compare_golden_snapshots.ts'),
     skillFile: path.join(repoRoot, 'skill', 'SKILL.md'),
     packageJson: path.join(repoRoot, 'package.json'),
+  };
+}
+
+function sourcePackageVersion() {
+  const sourcePackage = readJson(sourceLayout().packageJson);
+  return String(sourcePackage.version || '0.0.0');
+}
+
+function versionMarkerPath(targetRepo) {
+  return path.join(targetRepo, '.workflow', 'VERSION.md');
+}
+
+function productManifestPath(targetRepo) {
+  return path.join(targetRepo, '.workflow', 'product-manifest.json');
+}
+
+function readInstalledVersionMarker(targetRepo) {
+  const markerPath = versionMarkerPath(targetRepo);
+  if (!fs.existsSync(markerPath)) {
+    return {
+      exists: false,
+      path: markerPath,
+      installedVersion: null,
+      previousVersion: null,
+      refreshedAt: null,
+      sourcePackage: null,
+    };
+  }
+
+  const content = fs.readFileSync(markerPath, 'utf8');
+  return {
+    exists: true,
+    path: markerPath,
+    installedVersion: getFieldValue(content, 'Installed version') || null,
+    previousVersion: getFieldValue(content, 'Previous version') || null,
+    refreshedAt: getFieldValue(content, 'Last refreshed at') || null,
+    sourcePackage: getFieldValue(content, 'Source package') || null,
+  };
+}
+
+function writeVersionMarker(targetRepo, options = {}) {
+  const {
+    mode = 'init',
+    installedVersion = sourcePackageVersion(),
+  } = options;
+  const existing = readInstalledVersionMarker(targetRepo);
+  const markerPath = versionMarkerPath(targetRepo);
+  const refreshedAt = new Date().toISOString();
+  const previousVersion = existing.exists && existing.installedVersion
+    ? existing.installedVersion
+    : 'none';
+  const content = `# WORKFLOW PRODUCT VERSION
+
+- Installed version: \`${installedVersion}\`
+- Previous version: \`${previousVersion}\`
+- Install mode: \`${mode}\`
+- Last refreshed at: \`${refreshedAt}\`
+- Source package: \`codex-workflow-kit@${installedVersion}\`
+
+## Update Guidance
+
+- \`Run cwf update after pulling a newer codex-workflow-kit release\`
+- \`Run cwf doctor --strict if package scripts, runtime files, or skill aliases look stale\`
+`;
+
+  ensureDir(path.dirname(markerPath));
+  fs.writeFileSync(markerPath, content);
+  return {
+    path: markerPath,
+    installedVersion,
+    previousVersion: existing.exists ? existing.installedVersion : null,
+    changed: !existing.exists || existing.installedVersion !== installedVersion,
+    refreshedAt,
+  };
+}
+
+function readProductManifest(targetRepo) {
+  const manifestPath = productManifestPath(targetRepo);
+  if (!fs.existsSync(manifestPath)) {
+    return null;
+  }
+  try {
+    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function writeProductManifest(targetRepo, options = {}) {
+  const installedVersion = options.installedVersion || sourcePackageVersion();
+  const manifestPath = productManifestPath(targetRepo);
+  const source = sourceLayout();
+  const runtimeFiles = [
+    ...walkFiles(source.scriptsDir).map((filePath) => relativePath(source.repoRoot, filePath)),
+    ...walkFiles(source.cliDir).map((filePath) => relativePath(source.repoRoot, filePath)),
+    relativePath(source.repoRoot, source.binFile),
+    relativePath(source.repoRoot, source.compareScript),
+  ].sort();
+  const manifest = {
+    installedVersion,
+    generatedAt: new Date().toISOString(),
+    versionMarkerPath: '.workflow/VERSION.md',
+    skillPath: '.agents/skills/codex-workflow/SKILL.md',
+    runtimeScripts: loadTargetRuntimeScripts(),
+    runtimeFiles,
+  };
+
+  ensureDir(path.dirname(manifestPath));
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  return {
+    path: manifestPath,
+    manifest,
   };
 }
 
@@ -119,7 +230,7 @@ function copyDirectoryTracked(sourceDir, targetDir, options = {}) {
 function loadTargetRuntimeScripts() {
   const sourcePackage = readJson(sourceLayout().packageJson);
   return Object.fromEntries(
-    Object.entries(sourcePackage.scripts || {}).filter(([name]) => !INSTALLER_ONLY_SCRIPTS.has(name)),
+    Object.entries(sourcePackage.scripts || {}).filter(([name]) => name.startsWith('workflow:')),
   );
 }
 
@@ -394,6 +505,8 @@ function installWorkflowSurface(targetRepo, options = {}) {
   const source = sourceLayout();
   const docsTarget = path.join(targetRepo, 'docs', 'workflow');
   const scriptsTarget = path.join(targetRepo, 'scripts', 'workflow');
+  const cliTarget = path.join(targetRepo, 'scripts', 'cli');
+  const binTarget = path.join(targetRepo, 'bin', 'cwf.js');
   const compareTarget = path.join(targetRepo, 'scripts', 'compare_golden_snapshots.ts');
   const skillTarget = path.join(targetRepo, '.agents', 'skills', 'codex-workflow', 'SKILL.md');
 
@@ -409,10 +522,14 @@ function installWorkflowSurface(targetRepo, options = {}) {
     mode,
     docs: { created: [], updated: [], skipped: [] },
     scripts: { created: [], updated: [], skipped: [] },
+    cli: { created: [], updated: [], skipped: [] },
+    bin: null,
     compareScript: null,
     skill: null,
     packageScripts: null,
     agentsTemplate: null,
+    productManifest: null,
+    versionMarker: null,
     sync: null,
     hudState: null,
   };
@@ -425,9 +542,13 @@ function installWorkflowSurface(targetRepo, options = {}) {
   copyDirectoryTracked(source.scriptsDir, scriptsTarget, {
     overwrite: true,
     bucket: report.scripts,
-    filter: (filePath) => !INSTALLER_ONLY_FILES.has(path.basename(filePath)),
+  });
+  copyDirectoryTracked(source.cliDir, cliTarget, {
+    overwrite: true,
+    bucket: report.cli,
   });
 
+  report.bin = copyFileTracked(source.binFile, binTarget, { overwrite: true });
   report.compareScript = copyFileTracked(source.compareScript, compareTarget, { overwrite: true });
   report.skill = copyFileTracked(source.skillFile, skillTarget, { overwrite: true });
   report.packageScripts = patchPackageJsonScripts(targetRepo, {
@@ -438,6 +559,8 @@ function installWorkflowSurface(targetRepo, options = {}) {
     report.agentsTemplate = writeAgentsPatchTemplate(targetRepo);
   }
 
+  report.productManifest = writeProductManifest(targetRepo);
+  report.versionMarker = writeVersionMarker(targetRepo, { mode });
   report.sync = syncDefaultWorkflowSurface(targetRepo, { setAsActive: mode === 'init' });
   if (verify) {
     report.hudState = verifyInstalledSurface(targetRepo);
@@ -454,6 +577,9 @@ function formatInstallSummary(report) {
     `- Docs updated: \`${report.docs.updated.length}\``,
     `- Scripts created: \`${report.scripts.created.length}\``,
     `- Scripts updated: \`${report.scripts.updated.length}\``,
+    `- CLI helpers created: \`${report.cli.created.length}\``,
+    `- CLI helpers updated: \`${report.cli.updated.length}\``,
+    `- Bin: \`${report.bin}\``,
     `- Compare script: \`${report.compareScript}\``,
     `- Skill: \`${report.skill}\``,
   ];
@@ -475,6 +601,18 @@ function formatInstallSummary(report) {
     lines.push(`- AGENTS patch template: \`${relativePath(targetRepo, report.agentsTemplate)}\``);
   }
 
+  if (report.versionMarker) {
+    lines.push(`- Product version: \`${report.versionMarker.installedVersion}\``);
+    lines.push(`- Version marker: \`${relativePath(targetRepo, report.versionMarker.path)}\``);
+    if (report.versionMarker.previousVersion && report.versionMarker.previousVersion !== report.versionMarker.installedVersion) {
+      lines.push(`- Previous product version: \`${report.versionMarker.previousVersion}\``);
+    }
+  }
+
+  if (report.productManifest) {
+    lines.push(`- Product manifest: \`${relativePath(targetRepo, report.productManifest.path)}\``);
+  }
+
   if (report.hudState) {
     lines.push(`- State file: \`${report.hudState.stateFileRelative || relativePath(targetRepo, report.hudState.stateFile)}\``);
     lines.push(`- HUD health: \`${report.hudState.health.status}\` (\`${report.hudState.health.failCount}\` fail / \`${report.hudState.health.warnCount}\` warn)`);
@@ -486,6 +624,14 @@ function formatInstallSummary(report) {
 module.exports = {
   formatInstallSummary,
   installWorkflowSurface,
+  loadTargetRuntimeScripts,
+  productManifestPath,
+  readProductManifest,
+  readInstalledVersionMarker,
   relativePath,
+  sourceLayout,
+  sourcePackageVersion,
   sourceRepoRoot,
+  versionMarkerPath,
+  writeProductManifest,
 };

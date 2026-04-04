@@ -1,0 +1,47 @@
+# CWF
+
+Usage:
+  cwf <command> [options]
+
+Core commands:
+  setup            Install or refresh workflow surfaces in the current repo
+  init             Bootstrap workflow control-plane files in the current repo
+  milestone        Open a new full-workflow milestone
+  doctor           Verify install/runtime integrity
+  hud              Show the current workflow HUD
+  next             Show the next safe workflow action
+  checkpoint       Write a continuity checkpoint
+  quick            Run or inspect lightweight quick mode
+  team             Plan or operate Team Lite orchestration
+  review           Generate a review-ready package
+  ship             Generate a ship-ready package
+  pr-brief         Generate a pull-request brief draft
+  release-notes    Generate a release-notes draft
+  session-report   Generate a session report
+  update           Refresh runtime scripts/templates safely
+  uninstall        Remove installed runtime surfaces safely
+  benchmark        Measure hot-path performance
+
+Examples:
+  cwf setup
+  cwf milestone --id M1 --name "Initial setup" --goal "Land the first slice"
+  cwf doctor --strict
+  cwf hud --compact
+  cwf quick start --goal "Fix a narrow bug"
+  cwf team start --activation-text "parallel yap" --write-scope src,tests
+  cwf review --json
+  cwf release-notes --json
+
+Legacy command equivalence:
+  cwf milestone      -> npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."
+  cwf doctor         -> npm run workflow:doctor -- --strict
+  cwf hud            -> npm run workflow:hud -- --compact
+  cwf next           -> npm run workflow:next
+  cwf checkpoint     -> npm run workflow:checkpoint -- --next "Resume here"
+  cwf quick          -> npm run workflow:quick
+  cwf team           -> npm run workflow:team
+  cwf review         -> npm run workflow:review
+  cwf ship           -> npm run workflow:ship
+  cwf pr-brief       -> npm run workflow:pr-brief
+  cwf release-notes  -> npm run workflow:release-notes
+  cwf session-report -> npm run workflow:session-report

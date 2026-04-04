@@ -1,123 +1,41 @@
 # codex-workflow skill
 
-`codex-workflow` is a repo-local Codex skill for running multi-session, milestone-based work with a consistent control plane.
+`codex-workflow` is the Codex-facing skill surface for the workflow product.
 
-It does not replace the default coding flow. If the user did not explicitly ask for workflow, milestone, handoff, closeout, or named workstream discipline, normal task execution should continue without activating this skill.
+It stays opt-in. If the user did not explicitly ask for workflow, milestone, handoff, closeout, quick mode, or team orchestration, normal task execution should continue without activating this skill.
 
-For repo-level setup and installation, see the root [`README.md`](../README.md).
+## Quick command layer
 
-## When to use this skill
+- `$workflow-help`
+  Show the daily-use command surface and when to use quick/full/team.
+- `$workflow-next`
+  Ask for the single safest next move.
+- `$workflow-quick`
+  Start or continue quick mode for a narrow task.
+- `$workflow-checkpoint`
+  Write a continuity checkpoint before compacting or handing off.
+- `$workflow-team`
+  Open Team Lite orchestration when the user explicitly asks for delegation/parallelism.
+- `$workflow-review`
+  Generate a review-ready package.
+- `$workflow-ship`
+  Generate a ship-ready package.
 
-Use it when:
+## CLI mapping
 
-- the work will span multiple sessions
-- you need explicit handoff or resume support
-- you want milestone-level planning and closeout
-- you need a validation contract before declaring work complete
-- you want carryforward or seed tracking
-- you need a separate `docs/<workstream>/` root for one stream of work
+- `$workflow-help` -> `cwf help`
+- `$workflow-next` -> `cwf next`
+- `$workflow-quick` -> `cwf quick`
+- `$workflow-checkpoint` -> `cwf checkpoint`
+- `$workflow-team` -> `cwf team`
+- `$workflow-review` -> `cwf review`
+- `$workflow-ship` -> `cwf ship`
 
-## When not to use it
+## Full contract
 
-Avoid using it when:
+For the detailed workflow contract, lifecycle rules, wave rules, packet behavior, and closeout expectations, read [`SKILL.md`](./SKILL.md).
 
-- the task is a simple one-shot bug fix or small refactor
-- the user did not explicitly ask for workflow discipline
-- updating workflow documents would add more overhead than value
-
-## Mental model
-
-This skill assumes one active milestone at a time.
-
-Each milestone moves through the same lifecycle:
-
-1. `discuss`
-2. `research`
-3. `plan`
-4. `execute`
-5. `audit`
-6. `complete`
-
-These are steps inside one milestone, not separate milestones.
-
-In most cases, one user request maps to one milestone.
-
-Inside that lifecycle, `discuss` is deliberately split into `intent capture -> constraint extraction -> execution shaping` so scope and validation intent are explicit before execute starts.
-
-## First 60 seconds
-
-When workflow is active, the expected startup sequence is:
-
-1. Read `AGENTS.md`.
-2. Read `docs/workflow/WORKSTREAMS.md` to find the active root.
-3. In the active root, scan:
-   - `PROJECT.md`
-   - `RUNTIME.md`
-   - `PREFERENCES.md`
-   - `EXECPLAN.md`
-   - `STATUS.md`
-   - `DECISIONS.md`
-   - `MILESTONES.md`
-   - `CONTEXT.md`
-   - `CARRYFORWARD.md`
-   - `VALIDATION.md`
-   - `HANDOFF.md`
-   - `WINDOW.md`
-   - `SEEDS.md`
-   - `MEMORY.md`
-4. Summarize the current state in `8-12` bullets.
-5. Stay strictly within the active milestone and active step scope.
-
-## Workflow profiles
-
-- `lite`
-  Low-ritual mode for smaller or shorter tasks.
-- `standard`
-  Default general-purpose workflow mode.
-- `full`
-  Stronger process mode for real handoff, closeout, and workflow-quality tracking.
-
-## Automation modes
-
-- `manual`
-  Codex pauses at major workflow transitions unless the user explicitly asks to continue.
-- `phase`
-  Codex may finish the current phase, refresh the canonical docs, and stop at the next phase boundary.
-- `full`
-  Codex may keep moving phase-to-phase until blocked, complete, or window-managed.
-
-This matters in the Codex app too: the active automation contract lives in the workflow docs, not only in CLI flags. When automation is active, Codex should manage the discuss flow, write `CONTEXT.md`, run `workflow:plan-check`, and advance phases according to the selected mode.
-
-If window pressure appears, `WINDOW.md` and `HANDOFF.md` become the control surface:
-
-- prefer a handoff/new window when the client can support it
-- otherwise compact the current context, refresh packet state, and continue from the remaining plan
-
-## Fast path
-
-Open a milestone:
-
-```bash
-npm run workflow:new-milestone -- --id M2 --name "Fix auth drift" --goal "Tighten and verify the auth flow" --profile standard --automation manual
-```
-
-See the next recommended action:
-
-```bash
-npm run workflow:next
-```
-
-Open the compact HUD:
-
-```bash
-npm run workflow:hud -- --compact
-```
-
-Build a fresh repository map:
-
-```bash
-npm run workflow:map-codebase -- --compact
-npm run workflow:map-frontend -- --compact
+For repo-level install, docs, and CLI usage, read the root [`README.md`](../README.md).
 ```
 
 Run health checks:
@@ -161,7 +79,7 @@ npm run workflow:complete-milestone -- --agents-review unchanged --summary "Auth
 ## Most-used commands
 
 ```bash
-npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual
+cwf milestone --id Mx --name "..." --goal "..." --profile standard --automation manual
 npm run workflow:automation -- --mode phase
 npm run workflow:next
 npm run workflow:hud

@@ -18,6 +18,7 @@ const {
   workflowPaths,
   write,
 } = require('./common');
+const { listIndexedRepoFiles } = require('./fs_index');
 const { writeStateSurface } = require('./state_surface');
 
 const GENERATOR_VERSION = 'phase5-frontend-v1';
@@ -105,33 +106,8 @@ function walkFiles(cwd, currentDir, files = []) {
   return files;
 }
 
-function listRepoFiles(cwd) {
-  const rg = safeExec('rg', [
-    '--files',
-    '--hidden',
-    '-g',
-    '!.git',
-    '-g',
-    '!node_modules',
-    '-g',
-    '!.next',
-    '-g',
-    '!.turbo',
-    '-g',
-    '!.workflow',
-    '-g',
-    '!dist',
-    '-g',
-    '!build',
-    '-g',
-    '!coverage',
-  ], { cwd });
-
-  if (rg.ok && rg.stdout) {
-    return rg.stdout.split('\n').map((line) => line.trim()).filter(Boolean).sort();
-  }
-
-  return walkFiles(cwd, cwd).sort();
+function listRepoFiles(cwd, refreshMode = 'incremental') {
+  return listIndexedRepoFiles(cwd, { refreshMode });
 }
 
 function maybeReadPackageJson(cwd) {
@@ -512,7 +488,8 @@ function buildFrontendProfile(cwd, rootDir, options = {}) {
   const paths = workflowPaths(rootDir);
   assertWorkflowFiles(paths);
 
-  const files = listRepoFiles(cwd);
+  const repoIndex = listRepoFiles(cwd, refresh);
+  const files = repoIndex.files;
   const fileSet = new Set(files);
   const pkg = maybeReadPackageJson(cwd);
   const deps = dependencyVersionMap(pkg);
@@ -613,6 +590,8 @@ function buildFrontendProfile(cwd, rootDir, options = {}) {
       hash: fingerprintHash,
       refreshStatus,
       inputs: fingerprintInputs,
+      indexStatus: repoIndex.refreshStatus,
+      changedFileCount: repoIndex.changedFiles.length,
     },
     framework,
     styling,
