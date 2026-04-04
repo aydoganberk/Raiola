@@ -39,6 +39,15 @@
 
 - `To be filled during research/planning for the next milestone`
 
+## Validation Core
+
+- Acceptance criteria IDs: `AC0`
+- Active validation IDs: `AC0`
+- Primary verify command: `node scripts/workflow/doctor.js --strict`
+- Validation status: `idle_until_milestone`
+- Audit readiness: `not_ready`
+- Evidence source: `docs/workflow/STATUS.md`
+
 ## Acceptance Criteria
 
 | Acceptance ID | Criterion | How to observe | Status |

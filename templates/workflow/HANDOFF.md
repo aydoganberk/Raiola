@@ -32,6 +32,17 @@
 - `Current run chunk: NONE`
 - `Chunk cursor: 0/0`
 
+## Continuity Checkpoint
+
+- Promised scope: `No continuity checkpoint yet`
+- Finished since last checkpoint: `None`
+- Remaining scope: `Open the first milestone if needed`
+- Drift from plan: `none_noted`
+- Next one action: `Open the first milestone if workflow is explicitly requested`
+- Affected files: `docs/workflow/CONTEXT.md; docs/workflow/EXECPLAN.md; docs/workflow/VALIDATION.md; docs/workflow/WINDOW.md`
+- Open requirement IDs: `R0`
+- Active validation IDs: `AC0`
+
 ## Automation Policy
 
 - `manual` -> `Resume only the explicitly requested next action`

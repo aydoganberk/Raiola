@@ -4,6 +4,7 @@ const {
   assertWorkflowFiles,
   computeWindowStatus,
   getFieldValue,
+  loadPreferences,
   parseArgs,
   parseTableSectionObjects,
   parseValidationContract,
@@ -20,6 +21,7 @@ const {
   workflowPaths,
   write,
 } = require('./common');
+const { applyContinuityCheckpoint } = require('./checkpoint');
 
 const STEP_MODE_MATRIX = Object.freeze({
   discuss: ['explicit', 'condensed'],
@@ -108,6 +110,19 @@ function fulfillmentStateForMode(mode, options = {}) {
 
 function controlIntentLabel(target, mode) {
   return `step_control(${target}, ${mode})`;
+}
+
+function phaseBucketForStep(step) {
+  if (['discuss', 'research', 'plan'].includes(step)) {
+    return 'phase-1';
+  }
+  if (['execute', 'audit'].includes(step)) {
+    return 'phase-2';
+  }
+  if (['complete'].includes(step)) {
+    return 'phase-3';
+  }
+  return 'phase-unknown';
 }
 
 function stepModePayload(target, requestedMode) {
@@ -360,6 +375,7 @@ function main() {
   const validationDoc = read(paths.validation);
   const milestone = String(getFieldValue(statusDoc, 'Current milestone') || 'NONE').trim();
   const currentStep = String(getFieldValue(statusDoc, 'Current milestone step') || 'complete').trim();
+  const preferences = loadPreferences(paths);
 
   if (milestone === 'NONE') {
     throw new Error('No active milestone is open; open a milestone before applying step fulfillment');
@@ -369,6 +385,16 @@ function main() {
   const requestedMode = String(args.mode || controlIntent?.mode || 'explicit').trim().toLowerCase();
   const modeResolution = stepModePayload(target, requestedMode);
   const intentLabel = controlIntentLabel(target, modeResolution.appliedMode);
+  const currentPhaseBucket = phaseBucketForStep(currentStep);
+  const targetPhaseBucket = phaseBucketForStep(target);
+  const crossesPhaseBoundary = currentPhaseBucket !== targetPhaseBucket && currentPhaseBucket !== 'phase-unknown' && targetPhaseBucket !== 'phase-unknown';
+  const requiresAutomationBoundaryCheckpoint = preferences.automationMode !== 'manual' && crossesPhaseBoundary;
+
+  if (requiresAutomationBoundaryCheckpoint) {
+    applyContinuityCheckpoint(paths, {
+      nextOneAction: `Resume from ${target} after the phase boundary checkpoint`,
+    });
+  }
 
   if (!modeResolution.ok) {
     const fallbackPayload = {
@@ -471,6 +497,11 @@ function main() {
     nextValidationDoc = read(paths.validation);
     writeDocs(paths, { ...nextDocs, validationDoc: nextValidationDoc });
     syncAfterUpdate(paths, target);
+    if (requiresAutomationBoundaryCheckpoint) {
+      applyContinuityCheckpoint(paths, {
+        nextOneAction: `Continue from ${target} after the automation phase boundary`,
+      });
+    }
 
     const payload = {
       rootDir: path.relative(cwd, rootDir),
@@ -526,6 +557,11 @@ function main() {
 
   writeDocs(paths, { ...nextDocs, validationDoc: nextValidationDoc });
   syncAfterUpdate(paths, target);
+  if (requiresAutomationBoundaryCheckpoint) {
+    applyContinuityCheckpoint(paths, {
+      nextOneAction: `Continue from ${target} after the automation phase boundary`,
+    });
+  }
 
   const finalState = fulfillmentStateForMode(modeResolution.appliedMode);
   const payload = {

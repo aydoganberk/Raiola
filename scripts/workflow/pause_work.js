@@ -14,6 +14,7 @@ const {
   workflowPaths,
   write,
 } = require('./common');
+const { applyContinuityCheckpoint, buildContinuityCheckpoint } = require('./checkpoint');
 
 function printHelp() {
   console.log(`
@@ -76,6 +77,18 @@ function main() {
   const refs = toList(args.refs);
   const resumeAnchor = String(args['resume-anchor'] || getSectionField(planSection, 'Resume from item') || windowStatus.resumeAnchor).trim();
   const expectedFirstCommand = String(args.expected || 'npm run workflow:health -- --strict').trim();
+  const checkpoint = dryRun ? buildContinuityCheckpoint(paths, {
+    nextOneAction: nextAction,
+    files,
+    finished: completed,
+    remaining,
+  }) : applyContinuityCheckpoint(paths, {
+    nextOneAction: nextAction,
+    files,
+    finished: completed,
+    remaining,
+  });
+  const refreshedWindowStatus = computeWindowStatus(paths);
 
   handoff = replaceField(handoff, 'Last updated', today());
   handoff = replaceField(handoff, 'Handoff status', 'ready_to_resume');
@@ -83,7 +96,7 @@ function main() {
   handoff = replaceField(handoff, 'Milestone', String(getFieldValue(status, 'Current milestone') || 'NONE'));
   handoff = replaceField(handoff, 'Step', String(getFieldValue(status, 'Current milestone step') || 'unknown'));
   handoff = replaceField(handoff, 'Resume anchor', resumeAnchor);
-  handoff = replaceField(handoff, 'Packet hash', windowStatus.packet.inputHash);
+  handoff = replaceField(handoff, 'Packet hash', refreshedWindowStatus.packet.inputHash);
   handoff = replaceField(handoff, 'Current chunk cursor', String(getSectionField(planSection, 'Chunk cursor') || '0/0'));
   handoff = replaceField(handoff, 'Expected first command', expectedFirstCommand);
   handoff = replaceSection(handoff, 'Snapshot', `- \`${summary}\``);
@@ -91,13 +104,14 @@ function main() {
   handoff = replaceSection(handoff, 'Execution Cursor', [
     `- \`Completed checklist items: ${(completed.length > 0 ? completed.join('; ') : getSectionField(planSection, 'Completed items') || 'None')}\``,
     `- \`Remaining items: ${(remaining.length > 0 ? remaining.join('; ') : getSectionField(planSection, 'Remaining items') || 'None')}\``,
-    `- \`Next unread canonical refs: ${(refs.length > 0 ? refs.join('; ') : windowStatus.packet.recommendedReadSet.join('; ') || 'None')}\``,
+    `- \`Next unread canonical refs: ${(refs.length > 0 ? refs.join('; ') : refreshedWindowStatus.packet.recommendedReadSet.join('; ') || 'None')}\``,
   ].join('\n'));
   handoff = replaceSection(handoff, 'Packet Snapshot', [
-    `- \`Packet hash: ${windowStatus.packet.inputHash}\``,
-    `- \`Current run chunk: ${windowStatus.currentRunChunk}\``,
+    `- \`Packet hash: ${refreshedWindowStatus.packet.inputHash}\``,
+    `- \`Current run chunk: ${refreshedWindowStatus.currentRunChunk}\``,
     `- \`Chunk cursor: ${getSectionField(planSection, 'Chunk cursor') || '0/0'}\``,
   ].join('\n'));
+  handoff = replaceSection(handoff, 'Continuity Checkpoint', checkpoint.body);
   handoff = replaceSection(handoff, 'Suggested Resume Commands', renderList(
     commands.length > 0 ? commands : ['npm run workflow:resume-work', 'npm run workflow:health -- --strict', 'npm run workflow:next'],
     'No resume commands provided',
@@ -107,7 +121,7 @@ function main() {
     'No open file notes',
   ));
   handoff = replaceSection(handoff, 'Risks', renderList(
-    risks.length > 0 ? risks : [`Window decision: ${windowStatus.decision}`],
+    risks.length > 0 ? risks : [`Window decision: ${refreshedWindowStatus.decision}`],
     'No specified risks',
   ));
 

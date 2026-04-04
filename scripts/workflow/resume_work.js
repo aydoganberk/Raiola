@@ -2,6 +2,7 @@ const {
   assertWorkflowFiles,
   extractSection,
   getFieldValue,
+  getSectionField,
   parseArgs,
   parseMemoryEntries,
   parseMemoryEntry,
@@ -40,8 +41,10 @@ function main() {
 
   const handoff = read(paths.handoff);
   const status = read(paths.status);
+  const execplan = read(paths.execplan);
   const memory = read(paths.memory);
   const milestone = String(getFieldValue(status, 'Current milestone') || 'NONE');
+  const planSection = extractSection(execplan, 'Plan of Record');
   const recall = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'No active recall notes yet')
     .map((entry) => parseMemoryEntry(entry))
     .filter((entry) => entry.fields.Milestone === milestone)
@@ -61,6 +64,10 @@ function main() {
     expectedFirstCommand: String(getFieldValue(handoff, 'Expected first command') || 'npm run workflow:health -- --strict'),
     snapshot: extractSection(handoff, 'Snapshot'),
     nextAction: extractSection(handoff, 'Immediate Next Action'),
+    continuityCheckpoint: extractSection(handoff, 'Continuity Checkpoint'),
+    openRequirements: extractSection(execplan, 'Open Requirements'),
+    currentCapabilitySlice: extractSection(execplan, 'Current Capability Slice'),
+    currentChunk: String(getSectionField(planSection, 'Run chunk id') || 'NONE'),
     executionCursor: extractSection(handoff, 'Execution Cursor'),
     packetSnapshot: extractSection(handoff, 'Packet Snapshot'),
     filesToReopen: extractSection(handoff, 'Files To Reopen'),
@@ -91,6 +98,14 @@ function main() {
   console.log(payload.snapshot);
   console.log(`\n## Immediate Next Action\n`);
   console.log(payload.nextAction);
+  console.log(`\n## Continuity Checkpoint\n`);
+  console.log(payload.continuityCheckpoint);
+  console.log(`\n## Open Requirements\n`);
+  console.log(payload.openRequirements);
+  console.log(`\n## Current Capability Slice\n`);
+  console.log(payload.currentCapabilitySlice);
+  console.log(`\n## Current Chunk\n`);
+  console.log(`- \`${payload.currentChunk}\``);
   console.log(`\n## Execution Cursor\n`);
   console.log(payload.executionCursor);
   console.log(`\n## Packet Snapshot\n`);

@@ -49,6 +49,8 @@ function main() {
     rootDir: path.relative(cwd, rootDir),
     decision: windowStatus.decision,
     recommendedAction: windowStatus.recommendedAction,
+    checkpointFreshness: windowStatus.checkpointFreshness,
+    checkpointReason: windowStatus.checkpointReason,
     remainingBudget: windowStatus.estimatedRemainingTokens,
     canFinishCurrentChunk: windowStatus.canFinishCurrentChunk,
     canStartNextChunk: windowStatus.canStartNextChunk,
@@ -66,6 +68,7 @@ function main() {
   console.log(`- Root: \`${payload.rootDir}\``);
   console.log(`- Decision: \`${payload.decision}\``);
   console.log(`- Recommended action: \`${payload.recommendedAction}\``);
+  console.log(`- Checkpoint freshness: \`${payload.checkpointFreshness}\``);
   console.log(`- Remaining budget: \`${payload.remainingBudget}\``);
   console.log(`- Can finish current chunk: \`${payload.canFinishCurrentChunk ? 'yes' : 'no'}\``);
   console.log(`- Can start next chunk: \`${payload.canStartNextChunk ? 'yes' : 'no'}\``);

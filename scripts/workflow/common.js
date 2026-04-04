@@ -1770,6 +1770,7 @@ function computeWindowStatus(paths, options = {}) {
   const execplan = read(paths.execplan);
   const planSection = tryExtractSection(execplan, 'Plan of Record', '');
   const windowContent = read(paths.window);
+  const handoffContent = readIfExists(paths.handoff) || '';
   const currentRunChunk = getSectionField(planSection, 'Run chunk id') || 'NONE';
   const executionOverhead = parseNumber(getSectionField(planSection, 'Estimated execution overhead'), 2000);
   const verifyOverhead = parseNumber(getSectionField(planSection, 'Estimated verify overhead'), 1000);
@@ -1823,6 +1824,26 @@ function computeWindowStatus(paths, options = {}) {
 
   const storedUsed = parseNumber(getFieldValue(windowContent, 'Estimated used tokens'), 0);
   const recentContextGrowth = Math.max(0, estimatedUsedTokens - storedUsed);
+  const continuityCoreFiles = [paths.status, paths.context, paths.execplan, paths.validation];
+  const checkpointBaseHash = hashString(
+    continuityCoreFiles
+      .filter((filePath) => fs.existsSync(filePath))
+      .map((filePath) => sanitizeContentForHash(read(filePath)))
+      .join('\n---\n'),
+  );
+  const checkpointSection = tryExtractSection(handoffContent, 'Continuity Checkpoint', '');
+  const checkpointExists = Boolean(checkpointSection) && !checkpointSection.includes('No continuity checkpoint');
+  const checkpointAnchor = getFieldValue(windowContent, 'Last safe checkpoint') || '';
+  const checkpointFreshness = checkpointExists && checkpointAnchor === checkpointBaseHash ? 'yes' : 'no';
+  const checkpointReason = checkpointFreshness === 'yes'
+    ? 'Continuity checkpoint matches the current continuity core'
+    : checkpointExists
+      ? 'Continuity checkpoint exists but continuity core drifted'
+      : 'No continuity checkpoint is recorded for the current packet';
+
+  if (checkpointFreshness !== 'yes' && ['compact', 'new-window', 'handoff'].includes(recommendedAction)) {
+    recommendedAction = 'checkpoint_then_compact';
+  }
 
   return {
     packet,
@@ -1846,8 +1867,11 @@ function computeWindowStatus(paths, options = {}) {
     executionOverhead,
     verifyOverhead,
     minimumReserve,
+    checkpointBaseHash,
+    checkpointFreshness,
+    checkpointReason,
     resumeAnchor: getSectionField(planSection, 'Resume from item') || getFieldValue(windowContent, 'Resume anchor') || 'start',
-    lastSafeCheckpoint: getFieldValue(windowContent, 'Last safe checkpoint') || packet.inputHash,
+    lastSafeCheckpoint: getFieldValue(windowContent, 'Last safe checkpoint') || checkpointBaseHash,
     budgetStatus: packet.budgetStatus === 'critical' || decision === 'handoff-required'
       ? 'critical'
       : packet.budgetStatus === 'warn' || decision !== 'continue'
@@ -1876,6 +1900,7 @@ function syncWindowDocument(paths, windowStatus) {
   content = replaceOrAppendField(content, 'Automation recommendation', status.automationRecommendation);
   content = replaceOrAppendField(content, 'Resume anchor', status.resumeAnchor);
   content = replaceOrAppendField(content, 'Last safe checkpoint', status.lastSafeCheckpoint);
+  content = replaceOrAppendField(content, 'Checkpoint freshness', status.checkpointFreshness);
   content = replaceOrAppendField(content, 'Budget status', status.budgetStatus);
   content = replaceSection(content, 'Current Packet Summary', [
     `- \`Primary doc: ${status.packet.primary.key}\``,
@@ -1894,6 +1919,11 @@ function syncWindowDocument(paths, windowStatus) {
   content = replaceSection(content, 'Recent Context Growth', [
     `- \`Delta since last window snapshot: ${status.recentContextGrowth}\``,
     `- \`Budget ratio: ${status.budgetRatio.toFixed(2)}\``,
+  ].join('\n'));
+  content = replaceOrAppendSection(content, 'Checkpoint Guard', [
+    `- \`Checkpoint freshness: ${status.checkpointFreshness}\``,
+    `- \`Reason: ${status.checkpointReason}\``,
+    `- \`Recommended action: ${status.recommendedAction}\``,
   ].join('\n'));
 
   write(paths.window, content);

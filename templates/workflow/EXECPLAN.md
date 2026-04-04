@@ -50,11 +50,12 @@ Every new Codex session should start in this order:
 
 1. Read `AGENTS.md`.
 2. Resolve the active root from `docs/workflow/WORKSTREAMS.md`.
-3. In that root, read `PROJECT.md`, `RUNTIME.md`, `PREFERENCES.md`, `EXECPLAN.md`, `STATUS.md`, `DECISIONS.md`, `MILESTONES.md`, `CONTEXT.md`, `CARRYFORWARD.md`, `VALIDATION.md`, `HANDOFF.md`, `WINDOW.md`, and `SEEDS.md`.
-4. If `MEMORY.md` contains `Active Recall Items` for the active milestone, read them automatically.
-5. Use `workflow:next` to check the recommended next move for the active step.
-6. Summarize the current state in `8-12` bullets.
-7. Operate only within the active phase, active milestone, and active milestone step.
+3. In that root, read `HANDOFF.md -> Continuity Checkpoint`, `EXECPLAN.md -> Open Requirements`, `EXECPLAN.md -> Current Capability Slice`, and the current chunk row from `EXECPLAN.md -> Plan of Record`.
+4. Only if the checkpoint is stale, missing, or obviously insufficient, reopen the broader canonical docs (`PROJECT.md`, `RUNTIME.md`, `PREFERENCES.md`, `STATUS.md`, `CONTEXT.md`, `VALIDATION.md`, `WINDOW.md`, `SEEDS.md`).
+5. If `MEMORY.md` contains `Active Recall Items` for the active milestone, read them automatically.
+6. Use `workflow:next` to check the recommended next move for the active step.
+7. Summarize the current state in `8-12` bullets.
+8. Operate only within the active phase, active milestone, and active milestone step.
 
 Additional rules:
 
@@ -209,6 +210,36 @@ Additional rules:
   - `None`
 - Out-of-scope guardrails:
   - `Do not start milestone planning without an explicit user request`
+
+## Delivery Core
+
+- Promised scope: `Open the first milestone if workflow is explicitly requested`
+- Finished since last checkpoint: `None`
+- Remaining scope: `Open the first milestone if needed`
+- Drift from plan: `none_noted`
+- Next one action: `Open the first milestone if workflow is explicitly requested`
+- Current run chunk: `NONE`
+- Completed items: `None`
+- Touched files: `None`
+- Verify command: `node scripts/workflow/doctor.js --strict`
+- Active risks: `No active workflow milestone`
+
+## Open Requirements
+
+| Requirement ID | Requirement | Status | Notes |
+| --- | --- | --- | --- |
+| `R0` | `Fill when a milestone opens` | `open` | `Replace this placeholder once a real milestone is active` |
+
+## Current Capability Slice
+
+- `No active capability slice exists while the workflow is idle`
+
+## Cold Archive Refs
+
+- Long discussions: `docs/workflow/completed_milestones/`
+- Old alternatives: `docs/workflow/completed_milestones/ and docs/workflow/DECISIONS.md`
+- Old reasoning: `docs/workflow/completed_milestones/ and docs/workflow/forensics/`
+- Completed chunk details: `docs/workflow/completed_milestones/`
 
 ## Chosen Strategy
 

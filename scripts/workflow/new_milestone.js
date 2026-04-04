@@ -701,6 +701,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
       : `- \`Automation mode is ${automationMode}; Codex may continue until the next boundary or blocker\``,
   ].join('\n'));
   status = replaceSection(status, 'Risks', '- `Do not move to planning before discuss and research are complete`');
+  status = replaceOrAppendSection(status, 'At-Risk Requirements', '- `No at-risk requirements identified yet`');
   status = replaceSection(status, 'Tests Run', '- `Milestone seeded; verify commands will be narrowed after research`');
   status = replaceSection(status, 'Suggested Next Step', '- `Fill User Intent and Requirement List first, then capture constraints and success rubric in CONTEXT.md`');
 
@@ -747,6 +748,34 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
 - Out-of-scope guardrails:
   - \`No work outside the active milestone\`
 `);
+  execplan = replaceOrAppendSection(execplan, 'Delivery Core', `
+- Promised scope: \`${milestoneGoal}\`
+- Finished since last checkpoint: \`None\`
+- Remaining scope: \`Discuss -> research -> plan -> execute -> audit -> complete\`
+- Drift from plan: \`none_noted\`
+- Next one action: \`Fill User Intent and Requirement List first\`
+- Current run chunk: \`NONE\`
+- Completed items: \`None\`
+- Touched files: \`Still unknown until discuss/research completes\`
+- Verify command: \`node scripts/workflow/next_step.js --json\`
+- Active risks: \`Do not move to planning before discuss and research are complete\`
+`);
+  execplan = replaceOrAppendSection(execplan, 'Open Requirements', renderMarkdownTable(
+    ['Requirement ID', 'Requirement', 'Status', 'Notes'],
+    [[
+      'R1',
+      milestoneGoal,
+      'open',
+      'Seeded from the milestone goal; refine after discuss',
+    ]],
+  ));
+  execplan = replaceOrAppendSection(execplan, 'Current Capability Slice', '- `Discuss packet for the active milestone is the current capability slice`');
+  execplan = replaceOrAppendSection(execplan, 'Cold Archive Refs', [
+    '- `Long discussions -> docs/workflow/completed_milestones/`',
+    '- `Old alternatives -> docs/workflow/completed_milestones/ and docs/workflow/DECISIONS.md`',
+    '- `Old reasoning -> docs/workflow/completed_milestones/ and docs/workflow/forensics/`',
+    '- `Completed chunk details -> docs/workflow/completed_milestones/`',
+  ].join('\n'));
   execplan = replaceSection(execplan, 'Chosen Strategy', '- `Fill during execution shaping and planning`');
   execplan = replaceSection(execplan, 'Wave Execution Policy', renderWaveExecutionPolicy());
   execplan = replaceSection(execplan, 'Rejected Strategies', '- `Document the alternatives that were considered but not chosen`');
@@ -802,6 +831,16 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
 - Non-goals:
   - \`${nonGoals}\`
 `);
+  context = replaceOrAppendSection(context, 'Intent Core', [
+    `- Goal: \`${milestoneGoal}\``,
+    `- Non-goals: \`${nonGoals}\``,
+    '- Explicit constraints: `Replace with the explicit constraints row summary during discuss`',
+    '- Requirement IDs: `R1`',
+    '- Open requirements: `R1`',
+    '- Acceptance criteria IDs: `AC1`',
+    '- Critical decisions: `Workflow remains markdown-first and explicit opt-in`',
+    '- Current capability slice: `Discuss packet for the active milestone`',
+  ].join('\n'));
   context = replaceSection(context, 'Discuss Breakdown', [
     '- `Intent capture -> turn the user request into concrete intent and requirements`',
     '- `Constraint extraction -> capture explicit constraints and unanswered high-leverage questions`',
@@ -867,6 +906,14 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   validation = replaceOrAppendField(validation, 'Frontend adapter route', 'none');
   validation = replaceOrAppendField(validation, 'Visual verdict required', 'no');
   validation = replaceSection(validation, 'Success Contract', `- \`${milestoneGoal}\``);
+  validation = replaceOrAppendSection(validation, 'Validation Core', [
+    '- Acceptance criteria IDs: `AC1`',
+    '- Active validation IDs: `AC1`',
+    '- Primary verify command: `node scripts/workflow/next_step.js --json`',
+    '- Validation status: `pending_research`',
+    '- Audit readiness: `not_ready`',
+    `- Evidence source: \`${statusRef}\``,
+  ].join('\n'));
   validation = replaceSection(validation, 'Acceptance Criteria', renderAcceptanceCriteriaTable(successSignal));
   validation = replaceSection(validation, 'User-visible Outcomes', renderUserVisibleOutcomesTable(successSignal));
   validation = replaceSection(validation, 'Regression Focus', renderRegressionFocusTable());
@@ -907,6 +954,16 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
 - \`Current run chunk: NONE\`
 - \`Chunk cursor: 0/0\`
 `);
+  handoff = replaceOrAppendSection(handoff, 'Continuity Checkpoint', `
+- Promised scope: \`${milestoneGoal}\`
+- Finished since last checkpoint: \`None\`
+- Remaining scope: \`Discuss -> research -> plan -> execute -> audit -> complete\`
+- Drift from plan: \`none_noted\`
+- Next one action: \`Fill User Intent and Requirement List first\`
+- Affected files: \`${path.relative(process.cwd(), paths.context)}; ${path.relative(process.cwd(), paths.execplan)}; ${path.relative(process.cwd(), paths.validation)}; ${path.relative(process.cwd(), paths.window)}\`
+- Open requirement IDs: \`R1\`
+- Active validation IDs: \`AC1\`
+`);
   handoff = replaceSection(handoff, 'Suggested Resume Commands', `
 - \`npm run workflow:resume-work -- --root ${path.relative(process.cwd(), rootDir)}\`
 - \`npm run workflow:health -- --strict --root ${path.relative(process.cwd(), rootDir)}\`
@@ -938,6 +995,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   window = replaceField(window, 'Automation recommendation', automationMode === 'manual' ? 'continue_in_current_window' : 'prefer_handoff_or_new_window');
   window = replaceField(window, 'Resume anchor', 'Discuss start');
   window = replaceField(window, 'Last safe checkpoint', 'pending_sync');
+  window = replaceOrAppendField(window, 'Checkpoint freshness', 'no');
   window = replaceField(window, 'Budget status', 'ok');
   window = replaceSection(window, 'Current Packet Summary', `
 - \`Primary doc: context\`
@@ -958,6 +1016,11 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   window = replaceSection(window, 'Recent Context Growth', `
 - \`Delta since last window snapshot: 0\`
 - \`Budget ratio: 0.00\`
+`);
+  window = replaceOrAppendSection(window, 'Checkpoint Guard', `
+- \`Checkpoint freshness: no\`
+- \`Reason: No continuity checkpoint is recorded for the current packet\`
+- \`Recommended action: continue\`
 `);
 
   const warning = warnAgentsSize(process.cwd());

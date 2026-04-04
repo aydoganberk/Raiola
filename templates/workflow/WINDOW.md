@@ -16,6 +16,7 @@
 - Automation recommendation: `continue_in_current_window`
 - Resume anchor: `Milestone open`
 - Last safe checkpoint: `pending_sync`
+- Checkpoint freshness: `no`
 - Budget status: `ok`
 
 ## Current Packet Summary
@@ -44,6 +45,12 @@
 
 - `Delta since last window snapshot: 0`
 - `Budget ratio: 0.00`
+
+## Checkpoint Guard
+
+- `Checkpoint freshness: no`
+- `Reason: No continuity checkpoint is recorded for the current packet`
+- `Recommended action: continue`
 
 ## Notes
 

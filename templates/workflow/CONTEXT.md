@@ -50,6 +50,17 @@
 - Non-goals:
   - `Starting workflow planning without an explicit user request`
 
+## Intent Core
+
+- Goal: `Provide a clean starting surface for the first workflow milestone`
+- Non-goals: `Starting workflow planning without an explicit user request`
+- Explicit constraints: `Planning should not start until the constraint surface is explicit`
+- Requirement IDs: `R0`
+- Open requirements: `R0`
+- Acceptance criteria IDs: `AC0`
+- Critical decisions: `Workflow remains explicit opt-in`
+- Current capability slice: `No active capability slice exists while the workflow is idle`
+
 ## Discuss Breakdown
 
 - `Intent capture` -> `Turn the user request into a concrete intent statement and an initial requirement list`

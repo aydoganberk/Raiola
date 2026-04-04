@@ -15,6 +15,7 @@
     "workflow:plan-check": "node scripts/workflow/plan_check.js",
     "workflow:automation": "node scripts/workflow/automation.js",
     "workflow:new-milestone": "node scripts/workflow/new_milestone.js",
+    "workflow:checkpoint": "node scripts/workflow/checkpoint.js",
     "workflow:complete-milestone": "node scripts/workflow/complete_milestone.js",
     "workflow:save-memory": "node scripts/workflow/save_memory.js",
     "workflow:packet": "node scripts/workflow/build_packet.js",
