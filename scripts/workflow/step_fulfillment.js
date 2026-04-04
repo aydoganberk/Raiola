@@ -9,6 +9,7 @@ const {
   parseTableSectionObjects,
   parseValidationContract,
   read,
+  readPlanGateStatus,
   renderMarkdownTable,
   replaceField,
   replaceOrAppendField,
@@ -389,10 +390,11 @@ function main() {
   const targetPhaseBucket = phaseBucketForStep(target);
   const crossesPhaseBoundary = currentPhaseBucket !== targetPhaseBucket && currentPhaseBucket !== 'phase-unknown' && targetPhaseBucket !== 'phase-unknown';
   const requiresAutomationBoundaryCheckpoint = preferences.automationMode !== 'manual' && crossesPhaseBoundary;
+  const planGate = readPlanGateStatus(paths);
 
   if (requiresAutomationBoundaryCheckpoint) {
     applyContinuityCheckpoint(paths, {
-      nextOneAction: `Resume from ${target} after the phase boundary checkpoint`,
+      nextOneAction: `Continue from ${target} after the automation phase boundary`,
     });
   }
 
@@ -423,6 +425,40 @@ function main() {
     console.log(`- Requested mode: \`${fallbackPayload.requestedMode}\``);
     console.log(`- Applied mode: \`${fallbackPayload.appliedMode}\``);
     console.log(`- Message: \`${fallbackPayload.message}\``);
+    return;
+  }
+
+  if (target === 'execute' && currentStep !== 'execute' && planGate !== 'pass') {
+    const blockedPayload = {
+      rootDir: path.relative(cwd, rootDir),
+      milestone,
+      currentStep,
+      target,
+      requestedMode,
+      appliedMode: modeResolution.appliedMode,
+      state: 'blocked_by_plan_gate',
+      fulfilled: false,
+      lastControlIntent: intentLabel,
+      gate: {
+        planGate,
+        command: 'npm run workflow:plan-check -- --sync --strict',
+      },
+      missingFields: ['workflow:plan-check must pass before execute can start'],
+      message: 'Execute step cannot start before workflow:plan-check passes.',
+    };
+
+    if (args.json) {
+      console.log(JSON.stringify(blockedPayload, null, 2));
+      return;
+    }
+
+    console.log('# STEP FULFILLMENT\n');
+    console.log(`- Milestone: \`${blockedPayload.milestone}\``);
+    console.log(`- Target: \`${blockedPayload.target}\``);
+    console.log(`- Applied mode: \`${blockedPayload.appliedMode}\``);
+    console.log(`- State: \`${blockedPayload.state}\``);
+    console.log(`- Plan gate: \`${blockedPayload.gate.planGate}\``);
+    console.log(`- Message: \`${blockedPayload.message}\``);
     return;
   }
 

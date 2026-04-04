@@ -706,6 +706,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   status = replaceSection(status, 'Suggested Next Step', '- `Fill User Intent and Requirement List first, then capture constraints and success rubric in CONTEXT.md`');
 
   execplan = replaceOrAppendField(execplan, 'Last updated', today());
+  execplan = replaceField(execplan, 'Packet version', '5');
   execplan = replaceField(execplan, 'Input hash', 'pending_sync');
   execplan = replaceField(execplan, 'Active milestone', milestoneLabel);
   execplan = replaceField(execplan, 'Active milestone step', 'discuss');
@@ -806,6 +807,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   context = replaceField(context, 'Automation mode', automationMode);
   context = replaceField(context, 'Automation status', automationStatus);
   context = replaceField(context, 'Plan readiness', 'not_ready');
+  context = replaceField(context, 'Packet version', '5');
   context = replaceField(context, 'Input hash', 'pending_sync');
   context = replaceField(context, 'Budget profile', effectivePreferences.budgetProfile);
   context = replaceField(context, 'Target input tokens', String(effectivePreferences.discussBudget));
@@ -895,7 +897,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   validation = replaceField(validation, 'Active milestone', milestoneLabel);
   validation = replaceField(validation, 'Validation status', 'pending_research');
   validation = replaceField(validation, 'Audit readiness', 'not_ready');
-  validation = replaceField(validation, 'Packet version', '4');
+  validation = replaceField(validation, 'Packet version', '5');
   validation = replaceField(validation, 'Input hash', 'pending_sync');
   validation = replaceField(validation, 'Target input tokens', String(effectivePreferences.auditBudget));
   validation = replaceField(validation, 'Hard cap tokens', String(effectivePreferences.auditBudget + effectivePreferences.tokenReserve));
@@ -996,10 +998,24 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   window = replaceField(window, 'Resume anchor', 'Discuss start');
   window = replaceField(window, 'Last safe checkpoint', 'pending_sync');
   window = replaceOrAppendField(window, 'Checkpoint freshness', 'no');
+  window = replaceOrAppendField(window, 'Packet loading mode', effectivePreferences.packetLoadingMode);
+  window = replaceOrAppendField(window, 'Token efficiency measures', effectivePreferences.tokenEfficiencyMeasures);
+  window = replaceOrAppendField(window, 'Core packet size', '0');
+  window = replaceOrAppendField(window, 'Loaded packet size', '0');
+  window = replaceOrAppendField(window, 'Unchanged refs omitted', '0');
+  window = replaceOrAppendField(window, 'Cold refs omitted', '0');
   window = replaceField(window, 'Budget status', 'ok');
   window = replaceSection(window, 'Current Packet Summary', `
+- \`Packet version: 5\`
 - \`Primary doc: context\`
 - \`Packet hash: pending_sync\`
+- \`Packet loading mode: ${effectivePreferences.packetLoadingMode}\`
+- \`Token efficiency measures: ${effectivePreferences.tokenEfficiencyMeasures}\`
+- \`Core packet size: 0\`
+- \`Loaded packet size: 0\`
+- \`Active read size: 0\`
+- \`Unchanged refs omitted: 0\`
+- \`Cold refs omitted: 0\`
 - \`Estimated packet tokens: 0\`
 - \`Packet budget status: ok\`
 `);
@@ -1007,6 +1023,14 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
 - \`${path.relative(process.cwd(), paths.context)}\`
 - \`${path.relative(process.cwd(), paths.execplan)}\`
 - \`${path.relative(process.cwd(), paths.validation)}\`
+`);
+  window = replaceOrAppendSection(window, 'Packet Tier Summary', `
+- \`Tier A: ${path.relative(process.cwd(), paths.handoff)}#Continuity Checkpoint; ${path.relative(process.cwd(), paths.context)}#Intent Core; ${path.relative(process.cwd(), paths.execplan)}#Delivery Core; ${path.relative(process.cwd(), paths.execplan)}#Open Requirements; ${path.relative(process.cwd(), paths.execplan)}#Current Capability Slice; ${path.relative(process.cwd(), paths.status)}#Workflow Cursor; ${path.relative(process.cwd(), paths.validation)}#Validation Core\`
+- \`Tier A omitted unchanged: None\`
+- \`Tier B: ${path.relative(process.cwd(), paths.context)}#User Intent; ${path.relative(process.cwd(), paths.context)}#Explicit Constraints; ${path.relative(process.cwd(), paths.context)}#Requirement List; ${path.relative(process.cwd(), paths.context)}#Success Rubric\`
+- \`Tier B omitted unchanged: None\`
+- \`Tier C loaded: None\`
+- \`Tier C omitted: ${workstreamsRef}; ${path.relative(process.cwd(), paths.execplan)}; ${path.relative(process.cwd(), paths.validation)}\`
 `);
   window = replaceSection(window, 'Artifact Estimate', `
 - \`Workflow artifact tokens: 0\`
@@ -1020,6 +1044,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   window = replaceOrAppendSection(window, 'Checkpoint Guard', `
 - \`Checkpoint freshness: no\`
 - \`Reason: No continuity checkpoint is recorded for the current packet\`
+- \`Checkpoint required before compaction: no\`
 - \`Recommended action: continue\`
 `);
 

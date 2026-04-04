@@ -13,7 +13,7 @@
 - Automation mode: `manual`
 - Automation status: `idle`
 - Plan readiness: `not_ready`
-- Packet version: `3`
+- Packet version: `5`
 - Input hash: `pending_sync`
 - Budget profile: `normal`
 - Target input tokens: `12000`

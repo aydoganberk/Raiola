@@ -80,10 +80,18 @@ test('workflow:workstreams progress shows stale and budget-out streams in one co
   run('node', [workstreamsScript, 'create', '--name', 'beta'], targetRepo);
 
   let alphaExecplan = readFile(targetRepo, 'docs/alpha/EXECPLAN.md');
-  alphaExecplan = alphaExecplan.replace(
-    '- `This file is not a backlog; it is only the canonical plan for the active stream`',
-    '- `This file is not a backlog; it is only the canonical plan for the active stream`\n- `Un-synced alpha drift`',
-  );
+  alphaExecplan = replaceSection(alphaExecplan, 'Delivery Core', `
+- Promised scope: \`Open the first milestone if workflow is explicitly requested\`
+- Finished since last checkpoint: \`None\`
+- Remaining scope: \`Open the first milestone if needed\`
+- Drift from plan: \`alpha drift was introduced without syncing the packet\`
+- Next one action: \`Open the first milestone if workflow is explicitly requested\`
+- Current run chunk: \`NONE\`
+- Completed items: \`None\`
+- Touched files: \`None\`
+- Verify command: \`node scripts/workflow/doctor.js --strict\`
+- Active risks: \`Alpha stream packet drift is intentionally unsynced for the test\`
+`);
   writeFile(targetRepo, 'docs/alpha/EXECPLAN.md', alphaExecplan);
 
   let betaExecplan = readFile(targetRepo, 'docs/beta/EXECPLAN.md');

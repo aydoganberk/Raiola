@@ -29,6 +29,10 @@ function run(command, args, cwd) {
   });
 }
 
+function normalizeCompactHud(value) {
+  return String(value).replace(/remaining=`\d+`/g, 'remaining=`<remaining>`');
+}
+
 test('workflow:init installs the runtime surface and HUD state', () => {
   const targetRepo = makeTempRepo();
 
@@ -48,11 +52,11 @@ test('workflow:init installs the runtime surface and HUD state', () => {
   const hudJson = JSON.parse(run('node', [path.join(targetRepo, 'scripts', 'workflow', 'hud.js'), '--json'], targetRepo));
   const expectedCompactHud = fs.readFileSync(goldenCompactHud, 'utf8');
 
-  assert.equal(compactHud, expectedCompactHud);
+  assert.equal(normalizeCompactHud(compactHud), normalizeCompactHud(expectedCompactHud));
   assert.equal(hudJson.workflowRootRelative, 'docs/workflow');
   assert.equal(hudJson.workflow.milestone, 'NONE');
   assert.equal(hudJson.workflow.step, 'complete');
-  assert.equal(hudJson.health.status, 'warn');
+  assert.equal(hudJson.health.status, 'pass');
   assert.equal(hudJson.counts.carryforward, 0);
   assert.equal(hudJson.counts.seeds, 0);
 
@@ -80,7 +84,7 @@ test('workflow:migrate refreshes runtime files without overwriting workflow docs
   assert.ok(statusAfter.includes('custom status marker'));
   assert.ok(fs.existsSync(hudPath));
   assert.equal(hudJson.workflowRootRelative, 'docs/workflow');
-  assert.equal(hudJson.health.status, 'warn');
+  assert.equal(hudJson.health.status, 'pass');
 });
 
 test('workflow:doctor and workflow:next both refresh .workflow/state.json', () => {

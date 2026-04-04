@@ -49,7 +49,7 @@ At runtime, Codex reads and updates a small set of markdown files plus helper sc
 - `HANDOFF.md`
   Captures pause/resume state between sessions.
 - `WINDOW.md`
-  Tracks packet and context-window budget decisions.
+  Tracks Packet v5, checkpoint freshness, and context-window budget decisions.
 - `CARRYFORWARD.md`
   Holds unfinished items that must survive milestone closeout.
 - `SEEDS.md`
@@ -93,6 +93,28 @@ The workflow also supports milestone-scoped automation:
   Codex may continue phase-to-phase until blocked, complete, or window-managed.
 
 This is designed to work in the Codex app as well as the CLI. The canonical contract lives in the workflow docs (`STATUS.md`, `CONTEXT.md`, `HANDOFF.md`, `WINDOW.md`), so automation state is visible and resumable across sessions.
+
+## Packet v5
+
+The current packet model is `Packet v5`.
+
+- `Tier A`
+  Continuity core refs such as `Intent Core`, `Delivery Core`, `Open Requirements`, `Current Capability Slice`, `Validation Core`, and `Continuity Checkpoint`.
+- `Tier B`
+  Active step or active chunk refs.
+- `Tier C`
+  Cold refs that are loaded only on hash drift or explicit need.
+
+The default is section-aware loading rather than full-doc loading. `WINDOW.md` surfaces `Checkpoint freshness`, `Core packet size`, and `Cold refs omitted` so compaction is driven by continuity safety, not just token pressure.
+
+`PREFERENCES.md` also exposes `Token efficiency measures`:
+
+- `auto`
+  Mode-aware default. `lite/standard` prefer delta loading; `full` and automated runs prefer `continuity_first`.
+- `on`
+  Keep delta loading active so unchanged Tier A/B sections can stay out of the next read set.
+- `off`
+  Turn token-efficiency measures off and use `continuity_first` loading to minimize context-loss risk, even if the packet gets larger.
 
 ## Install into another repository
 
@@ -157,6 +179,7 @@ During execution, the most common loop is:
 ```bash
 npm run workflow:next
 npm run workflow:packet -- --step plan --json
+npm run workflow:checkpoint -- --next "Resume here"   # before handoff/compact when needed
 npm run workflow:health -- --strict
 ```
 
@@ -170,6 +193,9 @@ npm run workflow:complete-milestone -- --agents-review unchanged --summary "Mile
 
 ```bash
 npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual
+npm run workflow:control -- --utterance "plan kısmını geçelim"
+npm run workflow:tempo -- --utterance "hızlı geç"
+npm run workflow:step-fulfillment -- --utterance "plan kısmını geçelim"
 npm run workflow:automation -- --mode phase
 npm run workflow:complete-milestone -- --agents-review unchanged --summary "..."
 npm run workflow:next
@@ -178,6 +204,7 @@ npm run workflow:map-codebase
 npm run workflow:delegation-plan
 npm run workflow:plan-check -- --sync --strict
 npm run workflow:packet -- --step plan --json
+npm run workflow:checkpoint -- --next "Resume here"
 npm run workflow:pause-work -- --summary "..."
 npm run workflow:resume-work
 npm run workflow:doctor -- --strict

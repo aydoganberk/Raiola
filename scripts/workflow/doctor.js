@@ -99,6 +99,10 @@ function main() {
     `Automation window policy -> ${preferences.automationWindowPolicy}`,
   );
   pushCheck(
+    ['auto', 'on', 'off'].includes(preferences.tokenEfficiencyMeasures) ? 'pass' : 'fail',
+    `Token efficiency measures -> ${preferences.tokenEfficiencyMeasures} (loading=${preferences.packetLoadingMode})`,
+  );
+  pushCheck(
     ['explicit_only', 'suggest', 'off'].includes(preferences.teamLiteDelegation) ? 'pass' : 'fail',
     `Team Lite delegation -> ${preferences.teamLiteDelegation}`,
   );

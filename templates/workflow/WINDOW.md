@@ -17,12 +17,26 @@
 - Resume anchor: `Milestone open`
 - Last safe checkpoint: `pending_sync`
 - Checkpoint freshness: `no`
+- Packet loading mode: `delta`
+- Token efficiency measures: `auto`
+- Core packet size: `0`
+- Loaded packet size: `0`
+- Unchanged refs omitted: `0`
+- Cold refs omitted: `0`
 - Budget status: `ok`
 
 ## Current Packet Summary
 
+- `Packet version: 5`
 - `Primary doc: idle_starter_state`
 - `Packet hash: pending_sync`
+- `Packet loading mode: delta`
+- `Token efficiency measures: auto`
+- `Core packet size: 0`
+- `Loaded packet size: 0`
+- `Active read size: 0`
+- `Unchanged refs omitted: 0`
+- `Cold refs omitted: 0`
 - `Estimated packet tokens: 0`
 - `Packet budget status: ok`
 
@@ -34,6 +48,15 @@
 - `docs/workflow/WINDOW.md`
 - `scripts/workflow/doctor.js`
 - `scripts/workflow/health.js`
+
+## Packet Tier Summary
+
+- `Tier A: docs/workflow/HANDOFF.md#Continuity Checkpoint; docs/workflow/CONTEXT.md#Intent Core; docs/workflow/EXECPLAN.md#Delivery Core; docs/workflow/EXECPLAN.md#Open Requirements; docs/workflow/EXECPLAN.md#Current Capability Slice; docs/workflow/STATUS.md#Workflow Cursor; docs/workflow/VALIDATION.md#Validation Core`
+- `Tier A omitted unchanged: None`
+- `Tier B: docs/workflow/CONTEXT.md#User Intent; docs/workflow/CONTEXT.md#Explicit Constraints; docs/workflow/CONTEXT.md#Requirement List; docs/workflow/CONTEXT.md#Success Rubric`
+- `Tier B omitted unchanged: None`
+- `Tier C loaded: None`
+- `Tier C omitted: docs/workflow/PROJECT.md; docs/workflow/WORKSTREAMS.md; docs/workflow/PREFERENCES.md; docs/workflow/EXECPLAN.md; docs/workflow/VALIDATION.md; docs/workflow/HANDOFF.md`
 
 ## Artifact Estimate
 
@@ -50,6 +73,7 @@
 
 - `Checkpoint freshness: no`
 - `Reason: No continuity checkpoint is recorded for the current packet`
+- `Checkpoint required before compaction: no`
 - `Recommended action: continue`
 
 ## Notes

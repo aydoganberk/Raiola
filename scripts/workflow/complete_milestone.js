@@ -340,6 +340,7 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   context = replaceField(context, 'Automation mode', preferences.repoAutomationMode);
   context = replaceField(context, 'Automation status', 'idle');
   context = replaceField(context, 'Plan readiness', 'not_ready');
+  context = replaceField(context, 'Packet version', '5');
   context = replaceField(context, 'Input hash', 'pending_sync');
   context = replaceField(context, 'Confidence summary', 'mixed_idle_surface');
   context = replaceSection(context, 'Problem Frame', `
@@ -418,6 +419,7 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   ].join('\n'));
   context = replaceSection(context, 'Ready For Plan', '- `No`');
 
+  execplan = replaceField(execplan, 'Packet version', '5');
   execplan = replaceOrAppendField(execplan, 'Input hash', 'pending_sync');
   execplan = replaceField(execplan, 'Active milestone', 'NONE');
   execplan = replaceField(execplan, 'Active milestone step', 'complete');
@@ -514,7 +516,7 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   validation = replaceField(validation, 'Active milestone', 'NONE');
   validation = replaceField(validation, 'Validation status', 'idle_until_milestone');
   validation = replaceField(validation, 'Audit readiness', 'not_ready');
-  validation = replaceField(validation, 'Packet version', '4');
+  validation = replaceField(validation, 'Packet version', '5');
   validation = replaceField(validation, 'Input hash', 'pending_sync');
   validation = replaceOrAppendField(validation, 'Frontend mode', 'inactive');
   validation = replaceOrAppendField(validation, 'Frontend profile ref', path.relative(process.cwd(), path.join(paths.rootDir, 'FRONTEND_PROFILE.md')).replace(/\\/g, '/'));
@@ -606,14 +608,37 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   window = replaceField(window, 'Recommended action', 'continue');
   window = replaceField(window, 'Resume anchor', 'Milestone open');
   window = replaceField(window, 'Last safe checkpoint', 'pending_sync');
+  window = replaceOrAppendField(window, 'Checkpoint freshness', 'no');
+  window = replaceOrAppendField(window, 'Packet loading mode', preferences.packetLoadingMode);
+  window = replaceOrAppendField(window, 'Token efficiency measures', preferences.tokenEfficiencyMeasures);
+  window = replaceOrAppendField(window, 'Core packet size', '0');
+  window = replaceOrAppendField(window, 'Loaded packet size', '0');
+  window = replaceOrAppendField(window, 'Unchanged refs omitted', '0');
+  window = replaceOrAppendField(window, 'Cold refs omitted', '0');
   window = replaceField(window, 'Budget status', 'ok');
   window = replaceSection(window, 'Current Packet Summary', `
+- \`Packet version: 5\`
 - \`Primary doc: validation\`
 - \`Packet hash: pending_sync\`
+- \`Packet loading mode: ${preferences.packetLoadingMode}\`
+- \`Token efficiency measures: ${preferences.tokenEfficiencyMeasures}\`
+- \`Core packet size: 0\`
+- \`Loaded packet size: 0\`
+- \`Active read size: 0\`
+- \`Unchanged refs omitted: 0\`
+- \`Cold refs omitted: 0\`
 - \`Estimated packet tokens: 0\`
 - \`Packet budget status: ok\`
 `);
   window = replaceSection(window, 'Read Set Estimate', '- `No recommended read set yet`');
+  window = replaceOrAppendSection(window, 'Packet Tier Summary', `
+- \`Tier A: ${path.relative(process.cwd(), paths.handoff)}#Continuity Checkpoint; ${path.relative(process.cwd(), paths.context)}#Intent Core; ${path.relative(process.cwd(), paths.execplan)}#Delivery Core; ${path.relative(process.cwd(), paths.execplan)}#Open Requirements; ${path.relative(process.cwd(), paths.execplan)}#Current Capability Slice; ${path.relative(process.cwd(), paths.status)}#Workflow Cursor; ${path.relative(process.cwd(), paths.validation)}#Validation Core\`
+- \`Tier A omitted unchanged: None\`
+- \`Tier B: None\`
+- \`Tier B omitted unchanged: None\`
+- \`Tier C loaded: None\`
+- \`Tier C omitted: ${path.relative(process.cwd(), paths.context)}; ${path.relative(process.cwd(), paths.execplan)}; ${path.relative(process.cwd(), paths.validation)}\`
+`);
   window = replaceSection(window, 'Artifact Estimate', `
 - \`Workflow artifact tokens: 0\`
 - \`Execution overhead: 2000\`
@@ -622,6 +647,12 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   window = replaceSection(window, 'Recent Context Growth', `
 - \`Delta since last window snapshot: 0\`
 - \`Budget ratio: 0.00\`
+`);
+  window = replaceOrAppendSection(window, 'Checkpoint Guard', `
+- \`Checkpoint freshness: no\`
+- \`Reason: No continuity checkpoint is recorded for the current packet\`
+- \`Checkpoint required before compaction: no\`
+- \`Recommended action: continue\`
 `);
 
   const warning = warnAgentsSize(process.cwd());

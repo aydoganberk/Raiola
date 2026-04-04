@@ -2,14 +2,20 @@ const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const {
+  PACKET_VERSION,
   buildPacketSnapshot,
   computeWindowStatus,
   controlPaths,
+  ensureField,
+  ensureSection,
   ensureDir,
+  extractSection,
+  getFieldValue,
   parseWorkstreamTable,
   read,
   renderWorkstreamTable,
   replaceField,
+  replaceOrAppendField,
   replaceSection,
   syncStablePacketSet,
   syncWindowDocument,
@@ -196,11 +202,86 @@ Add or adapt a short workflow section like this inside your repo's \`AGENTS.md\`
   return templatePath;
 }
 
+function seedWorkflowRootGaps(rootDir, templatesDir) {
+  const docsToSeed = [
+    {
+      file: 'PREFERENCES.md',
+      fields: [['Token efficiency measures', 'auto']],
+      sections: [],
+    },
+    {
+      file: 'STATUS.md',
+      fields: [],
+      sections: ['At-Risk Requirements'],
+    },
+    {
+      file: 'CONTEXT.md',
+      fields: [['Packet version', PACKET_VERSION]],
+      sections: ['Intent Core'],
+    },
+    {
+      file: 'EXECPLAN.md',
+      fields: [['Packet version', PACKET_VERSION]],
+      sections: ['Delivery Core', 'Open Requirements', 'Current Capability Slice', 'Cold Archive Refs'],
+    },
+    {
+      file: 'VALIDATION.md',
+      fields: [['Packet version', PACKET_VERSION]],
+      sections: ['Validation Core'],
+    },
+    {
+      file: 'HANDOFF.md',
+      fields: [],
+      sections: ['Continuity Checkpoint'],
+    },
+    {
+      file: 'WINDOW.md',
+      fields: [
+        ['Packet loading mode', 'delta'],
+        ['Token efficiency measures', 'auto'],
+        ['Core packet size', '0'],
+        ['Loaded packet size', '0'],
+        ['Unchanged refs omitted', '0'],
+        ['Cold refs omitted', '0'],
+      ],
+      sections: ['Packet Tier Summary', 'Checkpoint Guard'],
+    },
+  ];
+
+  for (const doc of docsToSeed) {
+    const targetPath = path.join(rootDir, doc.file);
+    const templatePath = path.join(templatesDir, doc.file);
+    if (!fs.existsSync(targetPath) || !fs.existsSync(templatePath)) {
+      continue;
+    }
+
+    let content = read(targetPath);
+    const template = read(templatePath);
+
+    for (const [label, valueOverride] of doc.fields) {
+      const templateValue = valueOverride ?? getFieldValue(template, label) ?? '';
+      content = ensureField(content, label, templateValue);
+      if (valueOverride != null && getFieldValue(content, label) !== valueOverride) {
+        content = replaceOrAppendField(content, label, valueOverride);
+      }
+    }
+
+    for (const heading of doc.sections) {
+      content = ensureSection(content, heading, extractSection(template, heading));
+    }
+
+    if (content !== read(targetPath)) {
+      write(targetPath, content);
+    }
+  }
+}
+
 function syncDefaultWorkflowSurface(targetRepo, options = {}) {
   const { setAsActive = false } = options;
   const rootDir = path.join(targetRepo, 'docs', 'workflow');
   const paths = workflowPaths(rootDir, targetRepo);
   const controls = controlPaths(targetRepo);
+  const { templatesDir } = sourceLayout();
 
   ensureDir(paths.archiveDir);
   if (!fs.existsSync(path.join(paths.archiveDir, 'README.md'))) {
@@ -209,6 +290,8 @@ function syncDefaultWorkflowSurface(targetRepo, options = {}) {
       '# COMPLETED MILESTONES\n\n- `Completed milestone archives are stored here`\n',
     );
   }
+
+  seedWorkflowRootGaps(rootDir, templatesDir);
 
   const {
     contextPacket,

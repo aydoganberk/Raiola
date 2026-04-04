@@ -8,7 +8,7 @@ Usage rule:
 - If a separate stream is needed, copy the same artifact set into `docs/<workstream>/` and make that root canonical.
 - If multiple active streams exist, each one should have its own `EXECPLAN.md`, `STATUS.md`, `DECISIONS.md`, `MILESTONES.md`, `CONTEXT.md`, `CARRYFORWARD.md`, `VALIDATION.md`, `HANDOFF.md`, `WINDOW.md`, `MEMORY.md`, `SEEDS.md`, and `RETRO.md`.
 
-- Packet version: `4`
+- Packet version: `5`
 - Input hash: `pending_sync`
 - Budget profile: `normal`
 - Target input tokens: `12000`

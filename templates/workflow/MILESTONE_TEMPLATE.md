@@ -9,7 +9,7 @@ Use this template when opening a new milestone so the same lifecycle can be recr
 
 ## Packet Metadata Template
 
-- Packet version: `4`
+- Packet version: `5`
 - Input hash: `pending_sync`
 - Workflow profile: `standard`
 - Budget profile: `normal`

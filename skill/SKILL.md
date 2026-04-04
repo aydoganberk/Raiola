@@ -59,24 +59,12 @@ It is not the default path; if the user did not explicitly ask for workflow, con
 
 1. Read `AGENTS.md`.
 2. Resolve the active workstream root from `docs/workflow/WORKSTREAMS.md`.
-3. In that root, read:
-   - `PROJECT.md`
-   - `RUNTIME.md`
-   - `PREFERENCES.md`
-   - `EXECPLAN.md`
-   - `STATUS.md`
-   - `DECISIONS.md`
-   - `MILESTONES.md`
-   - `CONTEXT.md`
-   - `CARRYFORWARD.md`
-   - `VALIDATION.md`
-   - `HANDOFF.md`
-   - `WINDOW.md`
-   - `SEEDS.md`
-4. If `MEMORY.md` contains `Active Recall Items` tied to the active milestone, read them automatically.
-5. Read `Durable Notes` from `MEMORY.md` only if the user asked for durable memory or if it is genuinely necessary.
-6. Summarize current state in `8-12` bullets.
-7. Operate only within the active phase, active milestone, and active milestone step.
+3. In that root, read `HANDOFF.md -> Continuity Checkpoint`, `EXECPLAN.md -> Open Requirements`, `EXECPLAN.md -> Current Capability Slice`, and the current chunk row from `EXECPLAN.md -> Plan of Record`.
+4. Only if the checkpoint is stale, missing, or obviously insufficient, reopen the broader canonical docs (`PROJECT.md`, `RUNTIME.md`, `PREFERENCES.md`, `STATUS.md`, `CONTEXT.md`, `VALIDATION.md`, `WINDOW.md`, `SEEDS.md`).
+5. If `MEMORY.md` contains `Active Recall Items` tied to the active milestone, read them automatically.
+6. Read `Durable Notes` from `MEMORY.md` only if the user asked for durable memory or if it is genuinely necessary.
+7. Summarize current state in `8-12` bullets.
+8. Operate only within the active phase, active milestone, and active milestone step.
 
 ## Milestone Loop
 
@@ -159,14 +147,18 @@ An active milestone always follows this loop:
 - `npm run workflow:hud`
 - `npm run workflow:map-codebase`
 - `npm run workflow:map-frontend`
+- `npm run workflow:control -- --utterance "plan kismini gecelim"`
+- `npm run workflow:step-fulfillment -- --utterance "plan kismini gecelim"`
 - `npm run workflow:delegation-plan`
 - `npm run workflow:plan-check -- --sync --strict`
 - `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual`
 - `npm run workflow:automation -- --mode phase`
+- `npm run workflow:checkpoint -- --next "..."`
 - `npm run workflow:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths src/foo,tests/foo`
 - `npm run workflow:save-memory -- --title "..." --note "..."`
 - `npm run workflow:packet -- --step plan --json`
 - `npm run workflow:next`
+- `npm run workflow:tempo -- --utterance "hızlı geç"`
 - `npm run workflow:pause-work -- --summary "..."`
 - `npm run workflow:resume-work`
 - `npm run workflow:plant-seed -- --title "..." --trigger "..."`
@@ -174,6 +166,22 @@ An active milestone always follows this loop:
 - `npm run workflow:doctor`
 - `npm run workflow:health -- --strict`
 - `npm run workflow:forensics`
+
+## Packet v5 Rules
+
+- `Packet v5` is section-aware by default.
+- `Tier A` keeps continuity core refs loaded.
+- `Tier B` keeps the active chunk or active step surface loaded.
+- `Tier C` is cold and should load only on hash drift or explicit need.
+- `PREFERENCES.md -> Token efficiency measures` controls whether unchanged Tier A/B refs may stay out of the next packet:
+  - `auto` is mode-aware
+  - `on` keeps delta loading active
+  - `off` switches to `continuity_first` so more context stays loaded
+- `WINDOW.md` should show both the active `Packet loading mode` and `Token efficiency measures` value so the current safety posture is visible before compacting.
+- Do not prefer full-doc reads when a section-level packet ref is available.
+- `execute` should minimize the read set to the current chunk, open requirements, acceptance rows, and touched files.
+- If `WINDOW.md` recommends `compact-now` or `do-not-start-next-step`, first check `Checkpoint freshness`.
+- If `Checkpoint freshness = no`, run `workflow:checkpoint` before compacting or handing off.
 
 ## Frontend Auto Mode
 

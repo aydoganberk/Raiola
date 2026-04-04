@@ -5,6 +5,7 @@ const {
   extractSection,
   getFieldValue,
   getSectionField,
+  normalizeWorkflowText,
   parseArgs,
   parseTableSectionObjects,
   read,
@@ -86,8 +87,8 @@ function buildContinuityCheckpoint(paths, options = {}) {
   const openRequirementIds = options.requirements?.length
     ? options.requirements
     : openRequirements
-      .filter((row) => String(row.status || '').trim().toLowerCase() !== 'closed')
-      .map((row) => String(row.requirement_id || '').trim())
+      .filter((row) => normalizeWorkflowText(row.status).toLowerCase() !== 'closed')
+      .map((row) => normalizeWorkflowText(row.requirement_id))
       .filter(Boolean);
   const activeValidationIds = options.validations?.length
     ? options.validations

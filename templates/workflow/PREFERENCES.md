@@ -4,6 +4,7 @@
 - Workflow activation: `explicit_only`
 - Workflow mode: `solo`
 - Workflow profile: `standard`
+- Token efficiency measures: `auto`
 - Automation mode: `manual`
 - Automation window policy: `handoff_then_compact`
 - Discuss mode: `assumptions`
@@ -63,6 +64,7 @@
   - `Stronger process profile for real handoff, closeout, and long-lived coordination`
   - `Suggested defaults: Budget profile=deep, Discuss=8000, Plan=16000, Audit=12000, Max refs=14`
   - `Health strict and retro expectations are assumed to be higher`
+  - `Token efficiency auto-default resolves to continuity_first unless explicitly overridden`
   - `A milestone may still override the repo default via workflow:new-milestone --profile`
 
 ## Profile Notes
@@ -70,6 +72,10 @@
 - `Workflow mode` and `Workflow profile` are different:
   - `mode` controls git and team isolation behavior
   - `profile` controls process depth and packet expectations
+- `Token efficiency measures` controls whether Packet v5 can omit unchanged refs:
+  - `auto` -> `lite/standard` prefer delta loading, `full` and automated runs prefer `continuity_first`
+  - `on` -> delta loading stays active
+  - `off` -> `continuity_first` loading keeps more context in exchange for a larger packet
 - `lite` is a good fit for smaller bug fixes or lightweight repo operations
 - `full` is a good fit for handoff, closeout, durable evidence chains, and workflow-quality tracking
 

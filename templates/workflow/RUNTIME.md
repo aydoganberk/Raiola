@@ -10,10 +10,13 @@
 - `npm run workflow:hud`
 - `npm run workflow:map-codebase`
 - `npm run workflow:map-frontend`
+- `npm run workflow:control -- --utterance "plan kismini gecelim"`
+- `npm run workflow:step-fulfillment -- --utterance "plan kismini gecelim"`
 - `npm run workflow:delegation-plan`
 - `npm run workflow:plan-check -- --strict`
 - `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual`
 - `npm run workflow:automation -- --mode phase`
+- `npm run workflow:checkpoint -- --next "..."`
 - `npm run workflow:complete-milestone -- --agents-review unchanged --summary "..."`
 - `npm run workflow:save-memory -- --title "..." --note "..."`
 - `npm run workflow:packet -- --step plan --json`
@@ -91,6 +94,31 @@
 - `pending` means the packet is incomplete but not yet structurally wrong
 - `fail` means the plan shape is wrong and must be revised
 - Use `--sync` when you want the script to write `Plan readiness: yes` only after the gate passes
+
+## Packet v5 Runtime Notes
+
+- `Packet v5` is section-aware by default; prefer `docs/...#Section` packet refs over full-doc reads.
+- Tier model:
+  - `Tier A` -> continuity core
+  - `Tier B` -> active chunk / active step surface
+  - `Tier C` -> cold refs only on hash drift or explicit need
+- `Token efficiency measures` in `PREFERENCES.md` control whether unchanged Tier A/B refs may be omitted on reruns:
+  - `auto` -> mode-aware default
+  - `on` -> delta loading stays active
+  - `off` -> continuity_first keeps the broader packet loaded to reduce context-loss risk
+- `workflow:tempo -- --utterance "hızlı geç"` or `--mode lite|standard|full` lets the user change ritual depth without hiding `Open Requirements`; `workflow:window` keeps the active token-efficiency state visible.
+- `workflow:packet` and `workflow:window` surface:
+  - `Checkpoint freshness`
+  - `Core packet size`
+  - `Loaded packet size`
+  - `Unchanged refs omitted`
+  - `Cold refs omitted`
+- `execute` should keep the read set minimal:
+  - `current chunk`
+  - `open requirements`
+  - `acceptance rows`
+  - `touched files`
+- `compact-now` and `do-not-start-next-step` should not compact blindly; if `Checkpoint freshness = no`, create a checkpoint first.
 
 ## Mapping Runtime Notes
 
@@ -182,10 +210,13 @@
 
 - `HANDOFF.md` is the session-level pause/resume layer
 - `WINDOW.md` stores the budget/orchestrator snapshot
+- `workflow:checkpoint` refreshes the continuity checkpoint before handoff or compaction
 - When automation is active and window pressure appears, prefer handoff/new-window recovery first when the client supports it; otherwise compact and continue from the remaining plan
+- If `WINDOW.md` says `Checkpoint freshness = no`, checkpoint first and only then compact or hand off
 - `MEMORY.md` stores active recall and durable memory
 - `SEEDS.md` stores ideas to carry into a later milestone or workstream
 - `.workflow/state.json` stores generated HUD/runtime state and should not be treated as canonical
+- `.workflow/packet-state.json` stores the last synced section hashes used by Packet v5 delta loading and is also non-canonical
 - `workflow:hud`, `workflow:doctor`, and `workflow:next` refresh `.workflow/state.json`
 - The first command after `resume-work` should be `workflow:health -- --strict`
 

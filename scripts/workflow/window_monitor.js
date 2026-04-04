@@ -51,11 +51,20 @@ function main() {
     recommendedAction: windowStatus.recommendedAction,
     checkpointFreshness: windowStatus.checkpointFreshness,
     checkpointReason: windowStatus.checkpointReason,
+    checkpointRequiredBeforeCompaction: windowStatus.checkpointRequiredBeforeCompaction,
     remainingBudget: windowStatus.estimatedRemainingTokens,
     canFinishCurrentChunk: windowStatus.canFinishCurrentChunk,
     canStartNextChunk: windowStatus.canStartNextChunk,
     packetHash: windowStatus.packet.inputHash,
+    packetVersion: windowStatus.packet.packetVersion,
+    packetLoadingMode: windowStatus.packet.packetLoadingMode,
+    tokenEfficiencyMeasures: windowStatus.packet.tokenEfficiencyMeasures,
     packetBudgetStatus: windowStatus.packet.budgetStatus,
+    corePacketSize: windowStatus.corePacketSizeTokens,
+    loadedPacketSize: windowStatus.loadedPacketSizeTokens,
+    unchangedRefsOmitted: windowStatus.unchangedSectionRefsOmittedCount,
+    coldRefsOmitted: windowStatus.coldRefsOmittedCount,
+    readSetTiers: windowStatus.readSetTiers,
     readSet: windowStatus.packet.recommendedReadSet,
   };
 
@@ -69,11 +78,19 @@ function main() {
   console.log(`- Decision: \`${payload.decision}\``);
   console.log(`- Recommended action: \`${payload.recommendedAction}\``);
   console.log(`- Checkpoint freshness: \`${payload.checkpointFreshness}\``);
+  console.log(`- Checkpoint required before compaction: \`${payload.checkpointRequiredBeforeCompaction ? 'yes' : 'no'}\``);
   console.log(`- Remaining budget: \`${payload.remainingBudget}\``);
   console.log(`- Can finish current chunk: \`${payload.canFinishCurrentChunk ? 'yes' : 'no'}\``);
   console.log(`- Can start next chunk: \`${payload.canStartNextChunk ? 'yes' : 'no'}\``);
   console.log(`- Packet hash: \`${payload.packetHash}\``);
+  console.log(`- Packet version: \`${payload.packetVersion}\``);
+  console.log(`- Packet loading mode: \`${payload.packetLoadingMode}\``);
+  console.log(`- Token efficiency measures: \`${payload.tokenEfficiencyMeasures}\``);
   console.log(`- Packet budget status: \`${payload.packetBudgetStatus}\``);
+  console.log(`- Core packet size: \`${payload.corePacketSize}\``);
+  console.log(`- Loaded packet size: \`${payload.loadedPacketSize}\``);
+  console.log(`- Unchanged refs omitted: \`${payload.unchangedRefsOmitted}\``);
+  console.log(`- Cold refs omitted: \`${payload.coldRefsOmitted}\``);
 }
 
 main();

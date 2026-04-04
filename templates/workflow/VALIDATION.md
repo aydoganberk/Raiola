@@ -10,7 +10,7 @@
 - Frontend adapter route: `none`
 - Visual verdict required: `no`
 - Contract owner: `audit`
-- Packet version: `4`
+- Packet version: `5`
 - Input hash: `pending_sync`
 - Budget profile: `normal`
 - Target input tokens: `9000`

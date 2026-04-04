@@ -1,9 +1,12 @@
 const {
+  extractBulletItems,
   assertWorkflowFiles,
   extractSection,
   getFieldValue,
+  normalizeWorkflowText,
   getSectionField,
   parseArgs,
+  parseTableSectionObjects,
   parseMemoryEntries,
   parseMemoryEntry,
   read,
@@ -45,6 +48,10 @@ function main() {
   const memory = read(paths.memory);
   const milestone = String(getFieldValue(status, 'Current milestone') || 'NONE');
   const planSection = extractSection(execplan, 'Plan of Record');
+  const continuityCheckpoint = extractSection(handoff, 'Continuity Checkpoint');
+  const immediateNextAction = extractSection(handoff, 'Immediate Next Action');
+  const openRequirementRows = parseTableSectionObjects(execplan, 'Open Requirements')
+    .filter((row) => normalizeWorkflowText(row.status).toLowerCase() !== 'closed');
   const recall = parseMemoryEntries(extractSection(memory, 'Active Recall Items'), 'No active recall notes yet')
     .map((entry) => parseMemoryEntry(entry))
     .filter((entry) => entry.fields.Milestone === milestone)
@@ -63,9 +70,15 @@ function main() {
     chunkCursor: String(getFieldValue(handoff, 'Current chunk cursor') || '0/0'),
     expectedFirstCommand: String(getFieldValue(handoff, 'Expected first command') || 'npm run workflow:health -- --strict'),
     snapshot: extractSection(handoff, 'Snapshot'),
-    nextAction: extractSection(handoff, 'Immediate Next Action'),
-    continuityCheckpoint: extractSection(handoff, 'Continuity Checkpoint'),
+    nextAction: immediateNextAction,
+    nextOneAction: String(
+      getSectionField(continuityCheckpoint, 'Next one action')
+      || extractBulletItems(immediateNextAction)[0]
+      || 'Current step is unknown',
+    ).trim(),
+    continuityCheckpoint,
     openRequirements: extractSection(execplan, 'Open Requirements'),
+    openRequirementCount: openRequirementRows.length,
     currentCapabilitySlice: extractSection(execplan, 'Current Capability Slice'),
     currentChunk: String(getSectionField(planSection, 'Run chunk id') || 'NONE'),
     executionCursor: extractSection(handoff, 'Execution Cursor'),
@@ -93,6 +106,8 @@ function main() {
   console.log(`- Resume anchor: \`${payload.resumeAnchor}\``);
   console.log(`- Packet hash: \`${payload.packetHash}\``);
   console.log(`- Chunk cursor: \`${payload.chunkCursor}\``);
+  console.log(`- Next one action: \`${payload.nextOneAction}\``);
+  console.log(`- Open requirement count: \`${payload.openRequirementCount}\``);
   console.log(`- First command: \`${payload.expectedFirstCommand}\``);
   console.log(`\n## Snapshot\n`);
   console.log(payload.snapshot);

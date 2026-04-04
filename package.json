@@ -13,6 +13,7 @@
     "workflow:step-fulfillment": "node scripts/workflow/step_fulfillment.js",
     "workflow:delegation-plan": "node scripts/workflow/delegation_plan.js",
     "workflow:plan-check": "node scripts/workflow/plan_check.js",
+    "workflow:tempo": "node scripts/workflow/tempo.js",
     "workflow:automation": "node scripts/workflow/automation.js",
     "workflow:new-milestone": "node scripts/workflow/new_milestone.js",
     "workflow:checkpoint": "node scripts/workflow/checkpoint.js",
