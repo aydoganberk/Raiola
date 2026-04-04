@@ -59,9 +59,7 @@ function deriveRecommendation(state) {
   };
   const controlCommand = formatWorkflowControlCommand('<user request>');
   const parallelExamples = workflowControlExamplesForFamily('parallel_control', 4);
-  const teamLiteHint = preferences.teamLiteDelegation === 'off'
-    ? null
-    : `If the user explicitly asks for parallel/subagent/delegate/team mode${parallelExamples.length > 0 ? ` (${parallelExamples.join(', ')})` : ''}, normalize it with ${controlCommand} and then route it with workflow:delegation-plan -- --activation-text "<user request>"`;
+  const teamLiteHint = `If the user explicitly asks for parallel/subagent/delegate/team mode${parallelExamples.length > 0 ? ` (${parallelExamples.join(', ')})` : ''}, normalize it with ${controlCommand} and then route it with workflow:delegation-plan -- --activation-text "<user request>"`;
   const frontendHint = frontendProfile.frontendMode.active
     ? `Frontend mode is active; adapter route=${frontendProfile.adapters.selected.join(', ') || 'none'}`
     : frontendProfile.signals.hits.length > 0
@@ -80,7 +78,7 @@ function deriveRecommendation(state) {
     return recommendation;
   }
 
-  if (windowStatus.decision !== 'continue' && milestone !== 'NONE') {
+  if (windowStatus.decision !== 'continue' && milestone !== 'NONE' && ['execute', 'audit', 'complete'].includes(step)) {
     recommendation.title = 'Do not start the next step in this window';
     recommendation.command = 'npm run workflow:pause-work -- --summary "Window budget threshold reached"';
     recommendation.checklist = [

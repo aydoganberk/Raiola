@@ -4,6 +4,9 @@
 - Current phase: `Phase 0 - Idle`
 - Current milestone: `NONE`
 - Current milestone step: `complete`
+- Current step mode: `explicit`
+- Step fulfillment state: `idle`
+- Last control intent: `none`
 - Effective workflow profile: `standard`
 - Automation mode: `manual`
 - Automation status: `idle`

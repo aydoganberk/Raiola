@@ -16,6 +16,9 @@ Usage rule:
 - Reasoning profile: `deep`
 - Confidence summary: `starter_surface_waiting_for_first_milestone`
 - Refresh policy: `refresh_when_context_hash_drifts`
+- Current step mode: `explicit`
+- Step fulfillment state: `idle`
+- Last control intent: `none`
 
 ## Canonical Refs
 

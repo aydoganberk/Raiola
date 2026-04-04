@@ -10,6 +10,7 @@
     "workflow:map-codebase": "node scripts/workflow/map_codebase.js",
     "workflow:map-frontend": "node scripts/workflow/map_frontend.js",
     "workflow:control": "node scripts/workflow/control.js",
+    "workflow:step-fulfillment": "node scripts/workflow/step_fulfillment.js",
     "workflow:delegation-plan": "node scripts/workflow/delegation_plan.js",
     "workflow:plan-check": "node scripts/workflow/plan_check.js",
     "workflow:automation": "node scripts/workflow/automation.js",

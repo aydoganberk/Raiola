@@ -5,6 +5,9 @@
 - Milestone: `NONE`
 - Milestone profile override: `none`
 - Step source: `discuss`
+- Current step mode: `explicit`
+- Step fulfillment state: `idle`
+- Last control intent: `none`
 - Context status: `idle_until_milestone`
 - Discuss subphase: `intent_capture`
 - Automation mode: `manual`

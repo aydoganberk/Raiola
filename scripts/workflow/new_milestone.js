@@ -679,6 +679,9 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   status = replaceField(status, 'Current phase', phase);
   status = replaceField(status, 'Current milestone', milestoneLabel);
   status = replaceField(status, 'Current milestone step', 'discuss');
+  status = replaceOrAppendField(status, 'Current step mode', 'explicit');
+  status = replaceOrAppendField(status, 'Step fulfillment state', 'pending_explicit');
+  status = replaceOrAppendField(status, 'Last control intent', 'none');
   status = replaceField(status, 'Effective workflow profile', effectiveProfile);
   status = replaceField(status, 'Automation mode', automationMode);
   status = replaceField(status, 'Automation status', automationStatus);
@@ -705,6 +708,9 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   execplan = replaceField(execplan, 'Input hash', 'pending_sync');
   execplan = replaceField(execplan, 'Active milestone', milestoneLabel);
   execplan = replaceField(execplan, 'Active milestone step', 'discuss');
+  execplan = replaceOrAppendField(execplan, 'Current step mode', 'explicit');
+  execplan = replaceOrAppendField(execplan, 'Step fulfillment state', 'pending_explicit');
+  execplan = replaceOrAppendField(execplan, 'Last control intent', 'none');
   execplan = replaceField(execplan, 'Current phase', phase);
   execplan = replaceSection(execplan, 'Plan of Record', `
 - Milestone: \`${milestoneLabel}\`
@@ -763,6 +769,9 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   context = replaceField(context, 'Milestone', milestoneLabel);
   context = replaceField(context, 'Milestone profile override', milestoneProfileOverride);
   context = replaceField(context, 'Step source', 'discuss');
+  context = replaceOrAppendField(context, 'Current step mode', 'explicit');
+  context = replaceOrAppendField(context, 'Step fulfillment state', 'pending_explicit');
+  context = replaceOrAppendField(context, 'Last control intent', 'none');
   context = replaceField(context, 'Context status', 'initial_from_discuss');
   context = replaceField(context, 'Discuss subphase', 'intent_capture');
   context = replaceField(context, 'Automation mode', automationMode);

@@ -415,6 +415,11 @@ function workflowControlRecommendedCommand(intent, utterance = '<user request>')
     return null;
   }
 
+  if (intent.family === 'step_control') {
+    const escaped = String(utterance).replace(/"/g, '\\"');
+    return `npm run workflow:step-fulfillment -- --utterance "${escaped}"`;
+  }
+
   if (intent.family === 'automation_control' && intent.mode) {
     return `npm run workflow:automation -- --mode ${intent.mode}`;
   }
