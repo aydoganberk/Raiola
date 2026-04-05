@@ -41,9 +41,29 @@ function writeText(filePath, content) {
   }
 }
 
+function writeTextIfChanged(filePath, content) {
+  const normalized = String(content);
+  const existing = fs.existsSync(filePath) ? readTextIfExists(filePath) : null;
+  if (existing === normalized) {
+    return {
+      changed: false,
+      filePath,
+      content: normalized,
+    };
+  }
+
+  writeText(filePath, normalized);
+  return {
+    changed: true,
+    filePath,
+    content: normalized,
+  };
+}
+
 module.exports = {
   ensureDir,
   readText,
   readTextIfExists,
   writeText,
+  writeTextIfChanged,
 };

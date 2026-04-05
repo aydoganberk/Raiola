@@ -1,1401 +1,1569 @@
-# codex-workflow-kit Roadmap
+# codex-workflow-kit — Cutting-Edge Roadmap
 
-## 1. Belgenin Amacı
+> Durum: repo-format final sürüm  
+> Tarih: 2026-04-05  
+> Kapsam: mevcut repo gerçekliği + önceki Codex-native roadmap + `oh-my-codex` ve `get-shit-done` karşılaştırmasından türetilen yeni ürün rotası  
+> Amaç: `codex-workflow-kit`'i “iyi bir repo-native workflow companion” seviyesinden “Codex-native workflow OS + evidence engine + safe runtime” seviyesine taşımak
 
-Bu belge, `codex-workflow-kit` ürünleşme yolculuğunu tek yerde toplayan ana uygulama planıdır.
+---
 
-Amaç:
+## 1. Belge Durumu
 
-- `codex-workflow-kit`i repo içine gömülen bir workflow kernel olmaktan çıkarıp kurulan, kullanılan, güven veren bir ürüne dönüştürmek
-- mevcut güçlü omurgayı koruyarak yeni kullanıcı ergonomisini ciddi biçimde iyileştirmek
-- refactor, CLI, skill, quick mode, orchestration, lifecycle ve performance işlerini tek bir sıraya bağlamak
-- her faz için kapsam, dosya etkisi, test stratejisi, risk ve kabul kriterlerini görünür hale getirmek
+Bu belge, mevcut roadmap omurgasını koruyan ama onu **uygulanabilir, fazlara bölünmüş, ekstra cutting-edge önerilerle genişletilmiş** yeni canonical `Roadmap.md` sürümüdür.
 
-Bu belge artık repo için canonical ürün planıdır. [`WORKFLOW_REDESIGN_PLAN.md`](./WORKFLOW_REDESIGN_PLAN.md) ise belirli workflow/control-plane tasarım kararlarını taşıyan yardımcı tasarım belgesi olarak kalır.
+Tarihsel olarak ürün zaten iki önemli sıçrama yaptı:
 
-## 2. Kuzey Yıldızı
+- `RP0-RP9` ile workflow kernel ve runtime companion zemini kuruldu
+- önceki Codex-native taslak ile `CN0-CN11` seviyesinde yeni yön tarif edildi
 
-`codex-workflow-kit` şu kimliğe evrilmelidir:
+Bu yeni sürüm bu iki kazanımı çöpe atmaz. Şunu yapar:
 
-- Codex içinde tek komutla kurulabilen
-- günlük kullanımda kısa komutlarla yönetilebilen
-- küçük işte hafif, büyük işte güçlü kalabilen
-- markdown-canonical state omurgasını bozmayan
-- checkpoint-first continuity garantisini kaybetmeyen
-- güvenlik, audit ve resume deneyimiyle profesyonel hissettiren
-- monorepo dahil büyük reposlarda da hızlı çalışan
-- “starter kit” değil “repo-native workflow product” gibi algılanan
+- mevcut repo gerçekliğini yeniden okur
+- önceki Codex-native roadmap’te doğru olan omurgayı korur
+- ama bunu **aşama aşama uygulanacak bir ürün rotasına** çevirir
+- ayrıca önceki roadmap’te olmayan birkaç kritik cutting-edge katmanı açıkça ekler
 
-## 3. Hedef Farkı Kapatılacak Eksenler
+Bu yüzden bu belgenin rolü:
 
-Bu ürünleşme dalgası üç ana farkı kapatmayı hedefler:
+- tarihsel programı inkâr etmek değil
+- mevcut repo ile uyumsuz hayaller kurmak değil
+- ürünün gerçekten bir sonraki 12 ayda ne yapacağını sıralamak
 
-### 3.1 OMX'ten alınacak güçlü taraf
+Kısa ifade:
 
-- runtime ergonomisi
-- kısa komut yüzeyi
-- operator-friendly doctor/setup akışı
-- install sonrası ilk 5 dakikada yön kaybettirmeyen UX
+> Bu roadmap, “ne yapabiliriz?” listesinden çıkıp “hangi sırayla, hangi risk kapılarıyla, hangi ürün hissi için yapacağız?” dokümanına dönüşür.
 
-### 3.2 GSD'den alınacak güçlü taraf
+---
 
-- lifecycle genişliği
-- small task ile long-running task arasında doğal geçiş
-- review-ready ve ship-ready closeout yüzeyi
-- hafif ama güvenli quick-mode deneyimi
+## 2. Repo Gerçeği: E2E Denetim Özeti
 
-### 3.3 Zaten güçlü olduğumuz taraf
+Bu roadmap, repodaki gerçek implementasyonu temel alır.
 
-- markdown-canonical state
-- checkpoint-first continuity
-- packet v5 ve section-level state loading
-- plan gate ve evidence-first kapanış disiplini
+### 2.1 Bugün gerçekten güçlü olan taraflar
 
-Bu planın ana kuralı şudur:
+Repo bugün şunlara sahip:
 
-`codex-workflow-kit`, OMX ve GSD’ye yaklaşırken kendi çekirdeğini zayıflatmayacak.
+- repo-native `cwf` operator shell
+- `launch`, `manager`, `hud`, `next`, `explore`
+- `doctor`, `health`, `repair`
+- `quick`, `checkpoint`, `next-prompt`
+- `review`, `ship`, `pr-brief`, `release-notes`, `session-report`
+- `team` + adapter tabanlı runtime
+- `route`, `stats`, `profile`, `workspaces`
+- benchmark ve SLO kültürü
+- markdown-canonical workflow contract
+- worktree/snapshot tabanlı bounded paralellik başlangıcı
+- browser smoke ve visual artefact başlangıcı
+- route/stats için ilk telemetry yüzeyi
+- repo-local install / update / uninstall ürünleşmesi
 
-## 4. Ürün Tanımı
+Bu çok önemli bir temel. Ürün “fikir aşamasında” değil.
 
-Ürünün hedef hali aşağıdaki yüzeyleri birlikte sunmalıdır:
+### 2.2 Bugün gerçekten eksik olan taraflar
 
-### 4.1 Kurulum Yüzeyi
+Repo incelemesinden çıkan en net boşluklar:
 
-- `npx <package> setup`
-- `cwf setup`
-- `cwf init`
-- `cwf doctor`
-- `cwf uninstall`
-- `cwf update`
+- `cwf codex` bugün gerçek bir Codex control plane değil; `launch` alias’ı
+- `setup/update/uninstall` repo-local yüzeyleri yönetiyor; `.codex` / `~/.codex` entegrasyonu yok
+- `.agents` altında skill yüzeyi var; ama role/prompt catalog yok
+- `team_runtime` bugün `plan-only` ve `worktree` adapter’larına sahip; native `subagent` veya `hybrid` runtime yok
+- `verify_browser` HTML/fetch + smoke + screenshot fallback düzeyinde; gerçek browser automation değil
+- `route` ve `stats` bugün ağırlıklı olarak heuristik; gerçek provider/model/token/latency/spend telemetry yok
+- mailbox / timeline / steering yok
+- `do`, `note`, `thread`, `backlog` yok
+- questions / claims / assumptions için first-class operator surface yok
+- secure phase çekirdeğe yakın değil
+- hooks / MCP / daemon yok
+- `workspaces` yüzeyi repo-local; cross-repo operator center değil
+- `explore` faydalı ama henüz symbol-aware impact analysis düzeyinde değil
 
-### 4.2 Günlük Operasyon Yüzeyi
+### 2.3 Doğrudan karar
 
-- `cwf hud`
-- `cwf next`
-- `cwf checkpoint`
-- `cwf quick`
+Bugünkü ürünün doğru tanımı şudur:
+
+> **Çok iyi bir repo-native workflow companion.**  
+> Henüz tam bir **Codex-native workflow OS** değil.
+
+Bu roadmap’in ana amacı da tam olarak bu farkı kapatmaktır.
+
+---
+
+## 3. Önceki Codex-Native Roadmap’ten Korunan Omurga
+
+Önceki roadmap’in ana omurgası doğrudu ve bu sürümde korunur:
+
+- safe Codex control plane
+- role / prompt / skill catalog
+- `do`, `note`, `thread`, `backlog`
+- questions / claims / assumptions ledger
+- secure phase
+- native subagent / hybrid runtime
+- mailbox / timeline / steering
+- Playwright tabanlı browser evidence
+- hooks / MCP lifecycle
+- daemon / GC / large-repo mode
+- docs / templates / upgrade safety
+
+Yani bu belge önceki yönü tersine çevirmez. Sadece onu daha da netleştirir ve üzerine yeni katmanlar ekler.
+
+---
+
+## 4. Bu Sürümün Eklediği Ekstra Cutting-Edge Öneriler
+
+Önceki roadmap güçlüydü ama hâlâ birkaç kritik fark yaratıcı eksik taşıyordu. Bu sürüm bunları açıkça ekler.
+
+| Yeni öneri | Neden kritik | Hangi fazda ürünleşir |
+| --- | --- | --- |
+| Context Compiler & Packet Lock | Runtime ve subagent kalitesini belirleyen asıl çekirdek bu; packet kalitesi artmadan paralellik kalite vermez | `CE5` |
+| Patch-First Collect & Merge OS | Worker çıktısını sadece not ve markdown değil, güvenli patch bundle olarak yönetmek gerekir | `CE7` |
+| Policy Engine & Approval Matrix | “riskli değişiklik” kavramı ürün içinde görünür ve enforce edilebilir olmalı | `CE9` |
+| Evidence Graph / Provenance OS | Hangi claim, hangi requirement, hangi verify bundle ile destekleniyor sorusu ürün içinde cevaplanmalı | `CE8` |
+| Adaptive Router & Real Telemetry | Preset seçimi heuristikten ölçülmüş veriye geçmeli | `CE10` |
+| Symbol-Aware Explore & Impact Analysis | Büyük repolarda grep yetmez; sembol, caller, callee, impact haritası gerekir | `CE12` |
+| Incident Memory & Repair Cookbook | Ürün sadece state tutmamalı; önceki failure pattern’lerinden öğrenmeli | `CE13` |
+| Cross-Repo Operator Center | `workspaces` repo-local’dan çıkarılıp gerçek operator merkezine dönüşmeli | `CE13` |
+| Repo-Derived Role Generator | Role catalog elle yazılmakla sınırlı kalmamalı; repo profilinden öneri üretebilmeli | `CE2` |
+
+Kısa ifade:
+
+> Bu roadmap’in farkı, önceki taslağı sadece sürdürmesi değil; onu **context compiler + patch runtime + policy engine + evidence graph** ile bir seviye yukarı taşımasıdır.
+
+---
+
+## 5. OMX ve GSD’den Alınacaklar, Aşılacaklar
+
+### 5.1 oh-my-codex’ten alınacaklar
+
+- gerçek `.codex` / `~/.codex` ilişkisinin ürün yüzeyi olması
+- setup / doctor / uninstall / rollback hissinin ürün kimliğinin parçası olması
+- role/prompt/skill görünürlüğü
+- team runtime ve canlı operasyon hissi
+- MCP ve runtime state katmanının product shell’e bağlanması
+
+### 5.2 oh-my-codex’ten kopyalanmaması gerekenler
+
+- rollback ve diff olmadan config mutasyonu
+- görünürlüğü zayıf process çoğalması
+- MCP lifecycle’ı büyüdükçe artan bellek riski
+- operator’a fazla mekanik yük bindiren control plane davranışları
+
+### 5.3 get-shit-done’dan alınacaklar
+
+- `do` / `note` / thread / backlog düşük sürtünmeli günlük kullanım yüzeyi
+- research gate
+- secure phase
+- claim provenance ve assumptions log
+- scope reduction detection
+- Playwright / browser doğrulama
+- verified docs ve evidence-first closeout
+
+### 5.4 get-shit-done’dan kopyalanmaması gerekenler
+
+- her görevi ağır seremonik akışa çevirme
+- komut yüzeyini aşırı genişletme
+- sade fast-path’i gölgeleyen ritüel yükü
+- ürün değerini “çok komut var” ile ölçme
+
+### 5.5 Bu ürünün ikisini de aşacağı alanlar
+
+Bu roadmap’in iddiası, yalnızca referans repoları yakalamak değildir. Aşılması hedeflenen alanlar:
+
+- context compiler
+- patch-first runtime
+- evidence graph
+- policy engine
+- adaptive router
+- symbol-aware impact analysis
+- incident memory
+- cross-repo operator center
+
+---
+
+## 6. Ürün Tezi vNext
+
+Bir sonraki sıçrama “daha fazla workflow dosyası” eklemek değildir.
+
+Bir sonraki sıçrama şudur:
+
+> `codex-workflow-kit`, repo-native workflow kernel olmaktan çıkıp Codex ile birlikte çalışan, Codex’i güvenli biçimde bootstrap eden, niyeti doğru lane’e yönlendiren, bağlamı derleyen, paralelliği görünür ve patch-safe hale getiren, evidence/provenance üreten ve hız hissini koruyan bir workflow OS olmalıdır.
+
+Hedef günlük akış:
+
+1. repo aç  
+2. `cwf codex` veya `cwf do "..."`  
+3. `cwf note` ile hızlı capture  
+4. gerekirse `cwf packet compile`  
+5. solo veya `cwf team run --adapter hybrid`  
+6. `cwf verify-*` + `cwf secure`  
+7. `cwf review` / `cwf ship`  
+8. `cwf checkpoint` / `cwf next-prompt`
+
+Kısa ifade:
+
+- workflow kernel kalacak
+- runtime companion güçlenecek
+- Codex control plane eklenecek
+- evidence + policy + scale birlikte ürünleşecek
+- paralellik “güç” değil, “kontrol edilebilir ürün yüzeyi” olacak
+
+---
+
+## 7. Değişmeyecek İlkeler
+
+- Markdown canonical source-of-truth olarak kalacak.
+- Runtime JSON, telemetry, cache ve daemon state hiçbir zaman tek gerçek olmayacak.
+- `.codex` / `~/.codex` mutasyonu diff + backup + rollback olmadan yapılamayacak.
+- Repo mode global kullanıcı kurulumunu sessizce etkilemeyecek.
+- Quick path audit spine’i by-pass etmeyecek.
+- Team runtime explicit write-scope olmadan write-capable hale gelmeyecek.
+- Hook, MCP ve daemon default kapalı olacak.
+- Browser / verify / evidence artefact’ları derived state olacak.
+- Policy engine yoksa bile ürün temel akışını sürdürebilecek.
+- Daemon kapalıyken feature parity korunacak.
+- Performans bütçesi yazılmadan feature açılmayacak.
+- “Confidence” dili kanıt, provenance ve guardrail olmadan ürün dili olmayacak.
+- Bir komut = bir zihinsel model.
+- Primary loop küçük kalacak; secondary verbs primary loop’u gölgelemeyecek.
+- Hidden DB tabanlı control plane tasarımı yapılmayacak.
+
+---
+
+## 8. Hedef Operator Loop
+
+### 8.1 Primary loop
+
+- `cwf codex`
+- `cwf do`
+- `cwf note`
+- `cwf manager`
 - `cwf team`
+- `cwf verify-shell`
+- `cwf verify-browser`
 - `cwf review`
-- `cwf ship`
+- `cwf checkpoint`
 
-### 4.3 Codex Skill Yüzeyi
+### 8.2 Secondary loop
 
-- `$workflow-help`
-- `$workflow-next`
-- `$workflow-quick`
-- `$workflow-checkpoint`
-- `$workflow-team`
-- `$workflow-review`
-- `$workflow-ship`
-
-### 4.4 Güven ve Audit Yüzeyi
-
-- markdown canonical state
-- explicit plan gate
-- quick mode dahil tüm akışlarda artifact trail
-- write-scope güvenliği
-- orchestration state visibility
-- release note ve session report yüzeyi
-
-## 5. Değişmeyecek Temel İlkeler
-
-Bu ürünleşme boyunca aşağıdaki guardrail'ler değişmez sözleşmedir:
-
-- Markdown canonical state korunacak.
-- Gizli SQLite veya opaque runtime state source-of-truth olmayacak.
-- `npm run workflow:*` komutları en az iki release boyunca geriye dönük uyumluluk için kalacak.
-- Quick mode tam milestone sistemini by-pass etmeyecek; yalnızca hafifletecek.
-- Agent orchestration, disjoint write-scope garantisi olmadan write-capable paralellik açmayacak.
-- `common.js` refactor'u davranış güvenliği oluşmadan erkene çekilmeyecek.
-- CLI katmanı ilk aşamada mevcut çekirdeği saracak; çekirdeği baştan yazmayacak.
-- Performans işi önce hot-path cache ve incremental index ile çözülecek; modüler refactor bunun arkasından gelecek.
-
-### 5.1 Yeni Yüzeyler İçin Canonical State Kuralları
-
-Yeni ürün yüzeyleri eklenirken her biri için “canonical markdown nerede, runtime cache nerede” ayrımı açıkça tanımlanmalıdır.
-
-#### Full Workflow
-
-- `docs/workflow/` veya aktif named workstream root altındaki markdown dosyaları canonical source-of-truth olmaya devam eder
-- `.workflow/state.json` ve benzeri JSON çıktılar yalnızca hız, indeksleme veya compact/hud kolaylığı içindir
-
-#### Quick Mode
-
-- quick mode altında saklanan markdown artifact'lar canonical kabul edilir
-- quick mode için JSON session dosyaları yalnızca resume cache veya index amacı taşır
-- quick mode kapanışında özet ve verify izi markdown yüzeyde kalmadan task “done” sayılmaz
-
-#### Team / Orchestration
-
-- orchestration için markdown tabanlı en az bir görünür operator yüzeyi zorunludur
-- önerilen canonical dosyalar: `.workflow/orchestration/PLAN.md`, `.workflow/orchestration/STATUS.md`, `.workflow/orchestration/RESULTS.md`, `.workflow/orchestration/WAVES.md`
-- `.workflow/orchestration/state.json` gibi dosyalar yalnızca yürütme kolaylığı için tutulur; tek başına source-of-truth olamaz
-
-#### Cache / Index / Perf Surfaces
-
-- `.workflow/cache/*`, `.workflow/fs-index.json`, section hash cache ve packet snapshot cache canonical değildir
-- bu dosyalar silinip yeniden üretilebilir olmalıdır
-- cache dosyası kaybı workflow semantiğini bozmamalı, yalnızca performansı düşürmelidir
-
-#### Merge Gate
-
-Her yeni workflow surface merge edilmeden önce şu sorular belge içinde cevaplanmış olmalıdır:
-
-- canonical markdown hangi dosyada
-- runtime cache hangi dosyada
-- resume için minimum okunacak yüzey hangisi
-- silinirse yeniden üretilebilen dosyalar hangileri
-- git’e girip girmemesi gereken dosyalar hangileri
-
-## 6. Başarı Ölçütleri
-
-### 6.1 Kullanıcı Deneyimi Ölçütleri
-
-- yeni kullanıcı 5 dakika içinde kurulumu tamamlayıp ilk task'ı başlatabilmeli
-- günlük kullanımda kullanıcı `npm run workflow:*` script adlarını bilmek zorunda olmamalı
-- Codex içinde ilk görülen işler kısa alias'larla yapılabilmeli
-- küçük işlerde quick mode, büyük işlerde full workflow doğal hissettirmeli
-
-### 6.2 Ürün Güveni Ölçütleri
-
-- repo kökü deneysel kit değil, güvenilir açık kaynak ürün hissi vermeli
-- install, update, uninstall ve doctor akışları deterministik olmalı
-- resume ve checkpoint deneyimi current baseline’dan daha güvenli ya da en az eşdeğer olmalı
-
-### 6.3 Performans Ölçütleri
-
-- `hud <300ms`
-- `next <500ms`
-- `doctor <1s`
-- `health <1s`
-- `map-codebase <2s`
-- `map-frontend <2s`
-
-Bu hedefler orta büyüklükte repo için CI benchmark ile ölçülmelidir.
-
-### 6.4 Kalite ve Adoption Ölçütleri
-
-- compatibility suite release branch üzerinde `100%` geçmeli
-- yeni kullanıcı akışı için blank repo smoke senaryosu her release öncesi yeşil olmalı
-- `cwf` yüzeyine açılan her yeni komutun help, doctor story ve migration note'u bulunmalı
-- quick mode ve full workflow arasında geçiş yapan en az bir scenario testi bulunmalı
-- orchestration yüzeyine açılan her write-capable komut overlap-safe guard testine sahip olmalı
-- performans SLO’ları release öncesi en az `3` ardışık CI koşusunda geçmeli
-
-## 7. Non-Goals
-
-İlk büyük ürünleşme dalgasında aşağıdakiler öncelik olmayacak:
-
-- workflow dışında ayrı bir hidden database control plane tasarlamak
-- security, threads, backlog, workspace gibi çok geniş operator domain'lerine yayılmak
-- GitHub entegrasyonunu ilk dalgada zorunlu hale getirmek
-- tüm runtime’ı tek seferde yeniden yazmak
-- ilk aşamada her repo tipi için kusursuz adapter yüzeyi açmak
-
-## 8. Release Dalgaları
-
-Ürünleşme çalışması dört dalga halinde yönetilmelidir:
-
-### Dalga 1: Ürüne Geçiş
-
-- `P0 + P1 + P2`
-- hedef: kernel’den usable Codex product’a geçmek
-
-### Dalga 2: Günlük Değer ve Lifecycle
-
-- `P3 + P5`
-- hedef: kısa işlerin ve kapanış yüzeylerinin günlük kullanıma oturması
-
-### Dalga 3: Hız ve Ölçek
-
-- `P6 + P7 + P8`
-- hedef: monorepo ve hot-path performansını ürün seviyesine taşımak
-
-### Dalga 4: Güven ve Adoption
-
-- `P9`
-- hedef: onboarding, docs ve release disiplini ile açık kaynak ürün olgunluğunu tamamlamak
-
-### Dalga Geçiş Gate'leri
-
-#### Dalga 1 -> Dalga 2
-
-- `cwf` kabuğu çalışır durumda olmalı
-- installer/update/uninstall smoke testleri yeşil olmalı
-- skill alias yüzeyi belgelenmiş olmalı
-- compatibility baseline stabil olmalı
-
-#### Dalga 2 -> Dalga 3
-
-- quick mode ile full mode arasında net escalation kuralı çalışıyor olmalı
-- `review` ve `ship` yüzeyleri en az fixture düzeyinde doğrulanmış olmalı
-- orchestration planı ürün sözleşmesine oturmuş olmalı
-
-#### Dalga 3 -> Dalga 4
-
-- hot-path SLO’ları ölçülür hale gelmiş ve hedefe yaklaşmış olmalı
-- incremental repo index büyük repo senaryosunda gerçek kazanç üretmeli
-- `common.js` facade refactor’u compatibility suite ile güvence altına alınmış olmalı
-
-### Önerilen Release Train
-
-- `Release A`
-  - `P0 + P1 + P2`
-  - ilk product shell release
-- `Release B`
-  - `P3 + P5`
-  - günlük kullanım ve lifecycle release
-- `Release C`
-  - `P6 + P7 + P8`
-  - performans ve maintainability release
-- `Release D`
-  - `P9`
-  - docs, trust ve OSS polish release
-
-## 9. Faz Bazlı Master Plan
-
-## P0. Compatibility Baseline ve Ürünleşme Zemini
-
-### Amaç
-
-Mevcut workflow çekirdeğini bozmayacak bir compatibility baseline kurmak ve sonraki tüm değişiklikleri contract testleri ile güvence altına almak.
-
-### Neden ilk iş bu
-
-- CLI katmanı, skill alias’ları, cache ve modüler refactor davranış drift riski taşır
-- mevcut çekirdeğin en büyük sermayesi davranış güvenidir
-- baseline olmadan ürünleşme hızı kısa vadede artsa bile güven kaybı oluşur
-
-### Kapsam
-
-- mevcut behavior surface’leri için golden/contract testleri eklemek
-- installer davranışını testlemek
-- CLI alias yüzeyi için baseline tanımlamak
-- performance baseline ölçüm altyapısının ilk sürümünü kurmak
-
-### Çıktılar
-
-- genişletilmiş golden snapshots
-- contract test paketi
-- installer baseline testleri
-- CLI alias smoke testleri
-- perf baseline harness
-
-### Öncelikli Dosyalar
-
-- `scripts/workflow/common.js`
-- `scripts/workflow/install_common.js`
-- `scripts/workflow/state_surface.js`
-- `tests/workflow_phase*.test.js`
-- `tests/golden/workflow/*`
-- gerekirse `scripts/compare_golden_snapshots.ts`
-
-### Backlog
-
-- `P0-01` mevcut `45/45` test yüzeyini dökümante et ve baseline matrisi çıkar
-- `P0-02` contract test kapsamını script bazında sınıflandır
-- `P0-03` `common.js` kritik helper behavior’ları için golden veya fixture-level test ekle
-- `P0-04` `install_common.js` için install/patch/idempotency fixture testleri ekle
-- `P0-05` `state_surface.js` çıktıları için snapshot testleri ekle
-- `P0-06` gelecekteki `cwf` alias’ları için old-to-new command equivalence baseline oluştur
-- `P0-07` `hud`, `next`, `doctor`, `health`, `map-*` için ilk perf benchmark komutlarını sabitle
-- `P0-08` test sonuçlarını “compatibility baseline” olarak belgede kaydet
-
-### Test Stratejisi
-
-- mevcut phase testleri korunacak
-- yeni golden testler CLI çıktı formatı drift’ini yakalayacak
-- installer fixture’ları blank repo ve already-installed repo için ayrı çalışacak
-- perf baseline ilk aşamada sadece ölçüm yapacak, fail threshold sonraki fazda sıkılaştırılacak
-
-### Riskler
-
-- mevcut test seti behavior’ın tamamını temsil etmiyor olabilir
-- golden snapshot’lar fazla kırılgan yazılırsa refactor hızını düşürebilir
-- installer fixture senaryoları gerçek kullanıcı repo çeşitliliğini eksik yansıtabilir
-
-### Risk Azaltma
-
-- output biçimi yerine davranış sözleşmesi odaklı assertion’lar tercih edilecek
-- her golden test için “neden önemli” notu tutulacak
-- blank repo, existing repo ve dirty repo fixture’ları ayrıştırılacak
-
-### Exit Criteria
-
-- mevcut `45/45` test korunur
-- installer, CLI alias ve perf baseline testleri eklenir
-- P1 sonrası yapılacak wrapper katmanı için güvenli baseline oluşur
-
-## P1. Gerçek Ürün Kabuğu ve Dağıtım Yüzeyi
-
-### Amaç
-
-`codex-workflow-kit`i script koleksiyonu olmaktan çıkarıp gerçek CLI giriş noktasına sahip bir ürün haline getirmek.
-
-### Temel Ürün Kararı
-
-Yeni kullanıcı `npm run workflow:*` bilmek zorunda kalmamalı. Esas yüzey:
-
-- `cwf setup`
-- `cwf init`
 - `cwf doctor`
-- `cwf hud`
-- `cwf next`
+- `cwf health`
+- `cwf secure`
+- `cwf claims`
+- `cwf questions`
+- `cwf route`
+- `cwf stats`
+- `cwf hooks`
+- `cwf mcp`
+- `cwf daemon`
+- `cwf gc`
+- `cwf benchmark`
 - `cwf update`
-- `cwf uninstall`
+
+### 8.3 Yeni kritik loop
+
+Yeni loop’un farkı şudur:
+
+- orient (`codex`, `manager`)
+- route (`do`)
+- capture (`note`, `thread`, `backlog`)
+- compile (`packet compile`)
+- execute (solo / team)
+- verify (`verify-*`, `secure`)
+- prove (`evidence`, `claims trace`)
+- close (`review`, `ship`, `checkpoint`)
+
+Bu “compile” ve “prove” adımları mevcut ürüne göre yeni cutting-edge fark yaratır.
+
+---
+
+## 9. Capability Matrix: Bugün -> Hedef
+
+| Capability | Bugün | Hedef |
+| --- | --- | --- |
+| Workflow kernel | güçlü | korunacak |
+| Runtime companion | iyi | daha görünür ve akıllı |
+| Codex control plane | zayıf | güçlü |
+| Role/prompt/skill ecosystem | sınırlı | ürünleşmiş + repo-derived |
+| Intent routing | sınırlı | `do` ile doğal |
+| Capture UX | zayıf | `note/thread/backlog` ile günlük kullanım yüzeyi |
+| Questions/claims/provenance | parça parça | first-class |
+| Secure phase | zayıf | çekirdeğe yakın + policy destekli |
+| Packet quality | belge odaklı | context compiler ile role-aware |
+| Team runtime | adapter başlangıcı | prod-grade subagent/hybrid |
+| Collect/merge | not ve sonuç odaklı | patch-first |
+| Evidence | smoke başlangıcı | graph/provenance tabanlı |
+| Telemetry | heuristik | gerçek ölçümlü |
+| Explore | repo-aware | symbol/impact-aware |
+| Hooks/MCP | yok | kontrollü |
+| Large-repo scale | erken | olgun |
+| Cross-repo operator surface | yok | güçlü |
+| Self-heal | başlangıç | repair cookbook ve incident memory ile daha akıllı |
+
+---
+
+## 10. Release Dalgaları
+
+| Release | Fazlar | Temel hedef |
+| --- | --- | --- |
+| Release A | `CE0-CE2` | ürünün Codex-native giriş katmanını güvenli hale getirmek |
+| Release B | `CE3-CE4` | günlük kullanım ve trust yüzeyini açmak |
+| Release C | `CE5-CE7` | context compiler + native runtime + patch collect |
+| Release D | `CE8-CE10` | evidence graph + policy engine + adaptive telemetry |
+| Release E | `CE11-CE12` | integrations + scale + symbol explore |
+| Release F | `CE13` | incident memory + cross-repo center + tam productization |
+
+### Release geçiş kapıları
+
+Release A -> B:
+- `.codex` kontrol plane’i idempotent olmalı
+- rollback güvenilir olmalı
+- role/prompt/skill sync drift raporlayabilmeli
+
+Release B -> C:
+- `do` ve `note` günlük kullanımda gerçek değer üretmeli
+- research/claims/security false-positive bombardımanına dönüşmemeli
+- packet compiler taslak değil, işe yarar hale gelmeli
+
+Release C -> D:
+- en az bir gerçek subagent veya hybrid adapter prod-grade olmalı
+- patch-first collect deterministik olmalı
+- manager/mailbox/timeline operasyonel değer üretmeli
+
+Release D -> E:
+- review/ship evidence graph’ten beslenmeli
+- policy engine developer experience’i bozmadan risk sınıflaması yapabilmeli
+- telemetry ölçümlü veriye dayanmalı
+
+Release E -> F:
+- daemon/GC büyük repo hissini bozmayacak şekilde olgunlaşmalı
+- hooks/MCP process budget altında kalmalı
+- symbol-aware explore yanlış pozitif üretimini kontrol altında tutmalı
+
+---
+
+## 11. Faz Bazlı Master Plan
+
+## CE0. Program Freeze, Gap Lock ve Baseline Donması
+
+### Amaç
+
+Mevcut repo gerçekliğini dondurmak, önceki roadmap’teki doğru yönü korumak ve yeni execution route’u tek canonical belge haline getirmek.
 
 ### Kapsam
 
-- `package.json` içine gerçek `bin` entry eklemek
-- `cwf` veya `codex-workflow` alias’ını ürün komutu olarak açmak
-- setup/init/update/uninstall komutlarını CLI wrapper katmanında toplamak
-- local/global install ve `npx` deneyimini netleştirmek
+- repo gerçekliği ile roadmap farklarını tek tabloya indir
+- primary / secondary verb setini dondur
+- medium / large repo benchmark profillerini yaz
+- issue/epic yapısını release dalgalarına bağla
 
 ### Çıktılar
 
-- CLI entrypoint
-- subcommand router
-- help çıktısı
-- kurulum ve upgrade akışı
-- uninstall temizliği
-- doctor-first onboarding deneyimi
+- yeni `Roadmap.md`
+- güncel `docs/roadmap-audit.md`
+- command taxonomy
+- benchmark expansion plan
+- epic listesi
 
-### Komut Sözleşmesi
+### Exit Criteria
 
-#### `cwf setup`
+- ekip ürünün bugün ne olduğunu tek cümlede anlatabilmeli
+- ekip ürünün bir sonraki 12 ayda ne yapacağını sırayla anlatabilmeli
 
-- boş repo veya mevcut repo için bootstrap yapar
-- workflow runtime yüzeyini kurar veya günceller
-- package manager surface’ini patch eder
-- kurulum sonunda doctor ve ilk next-step yönlendirmesi verir
+---
 
-#### `cwf init`
+## CE1. Safe Codex Control Plane
 
-- aktif repo içinde workflow control plane’i başlatır
-- mevcut kurulum varsa tekrar kurmak yerine init/migrate kararı verir
-- named workstream veya default root oluşturma yolunu açıkça gösterir
+### Amaç
 
-#### `cwf doctor`
+`cwf codex` komutunu alias olmaktan çıkarıp gerçek bir Codex control plane’e dönüştürmek.
 
-- install surface, script mapping, skill kurulum ve temel dosya bütünlüğünü kontrol eder
-- error yanında önerilen fix komutunu da verir
+### Mevcut açık
 
-#### `cwf hud`
+Bugün `cwf codex` launch alias’ı. Repo-local install var; ama `.codex` / `~/.codex` tarafında gerçek bir setup / diff / rollback / doctor yüzeyi yok.
 
-- mevcut state’i kısa, güven veren, günlük kullanılabilir biçimde özetler
-- yavaş veya kirli durumu da görünür kılar
+### Hedef komut yüzeyi
 
-#### `cwf next`
+- `cwf codex setup --global|--local|--repo`
+- `cwf codex doctor`
+- `cwf codex diff-config`
+- `cwf codex rollback`
+- `cwf codex uninstall`
+- `cwf codex repair`
 
-- mevcut milestone ya da quick session için bir sonraki güvenli aksiyonu önerir
-- gerekiyorsa checkpoint, doctor veya plan gate ihtiyacını öne çıkarır
+### Davranış sözleşmesi
 
-#### `cwf update`
+- parse etmeden append yapılmayacak
+- her değişiklik diff preview gösterecek
+- her değişiklik backup journal yazacak
+- rollback tek komutla yapılacak
+- repo scope global scope’u sessizce etkilemeyecek
+- doctor bozuk TOML, drift ve eksik install durumlarını net raporlayacak
 
-- güvenli migrate akışıdır
-- user-authored markdown’ı koruyarak şema, template ve script refresh yapar
-- upgrade sonrası değişen davranışı kısa changelog olarak özetler
+### Likely files
 
-#### `cwf uninstall`
-
-- varsayılan olarak güvenli modda çalışır
-- yalnızca ürünün kurduğu runtime yüzeyini kaldırır
-- user-authored milestone history ve canonical docs için explicit purge bayrağı olmadan yıkıcı temizlik yapmaz
-
-### CLI Standartları
-
-- her subcommand `--help` desteklemeli
-- destructive veya geniş etkili komutlar `--dry-run` desteğine sahip olmalı
-- insan-okunur çıktı varsayılan, `--json` ise mümkün olan yüzeylerde desteklenmeli
-- exit code sözleşmesi tutarlı olmalı
-- help metni önce intent, sonra örnek komut göstermeli
-
-### Öncelikli Dosyalar
-
-- `package.json`
-- yeni `bin/` veya `scripts/cli/` yüzeyi
-- `scripts/workflow/init.js`
-- `scripts/workflow/install_common.js`
+- `scripts/workflow/codex_control.js`
+- `scripts/workflow/io/toml_patch.js`
+- `scripts/workflow/setup.js`
+- `scripts/workflow/update.js`
+- `scripts/workflow/uninstall.js`
 - `scripts/workflow/doctor.js`
-- `README.md`
-- `skill/README.md`
-
-### Backlog
-
-- `P1-01` CLI surface naming kararını dondur: `cwf` primary alias, `codex-workflow` secondary alias
-- `P1-02` `package.json` içine `bin` entry ekle
-- `P1-03` argument router ve subcommand dispatch katmanını yaz
-- `P1-04` `cwf setup` komutunu installer ile bağla
-- `P1-05` `cwf init` komutunu mevcut workflow init akışına bağla
-- `P1-06` `cwf doctor`, `cwf hud`, `cwf next` komutlarını mevcut runtime script’lere map et
-- `P1-07` `cwf update` için migration ve runtime refresh davranışını tanımla
-- `P1-08` `cwf uninstall` için geri alma ve cleanup davranışını tanımla
-- `P1-09` global install, local install ve `npx` kullanım metinlerini yaz
-- `P1-10` backward compatibility matrix oluştur: her yeni komutun eski `workflow:*` karşılığı belgelenmiş olsun
-
-### UX Kararları
-
-- ilk aşamada CLI yalnızca wrapper olacak
-- mevcut script adları içeride korunacak
-- help çıktısı niyet merkezli olacak
-- subcommand isimleri kısa ve günlük kullanıma uygun olacak
-
-### Test Stratejisi
-
-- CLI parser testleri
-- command equivalence smoke testleri
-- blank repo setup fixture
-- existing repo upgrade fixture
-- uninstall idempotency testi
-- help output snapshot testi
-
-### Riskler
-
-- wrapper katmanı ile eski scriptlerin davranışı ayrışabilir
-- setup ve init ayrımı kullanıcıyı şaşırtabilir
-- uninstall beklenenden daha fazla dosyaya dokunursa güven kaybı yaratır
-
-### Risk Azaltma
-
-- P0 contract suite her subcommand mapping için çalıştırılacak
-- uninstall sadece workflow yüzeyine dokunacak şekilde sınırlanacak
-- CLI help içine old-to-new eşlemeyi görünür eklemek değerlendirilecek
+- `docs/codex-integration.md`
 
 ### Exit Criteria
 
-- yeni kullanıcı `npx ... setup` ile kurulumu başlatabilir
-- repo içinde `cwf init` sonrası script adı ezberlemeden ilerleyebilir
-- `npm run workflow:*` komutları çalışmaya devam eder
+- setup -> diff -> apply -> rollback zinciri güvenilir olmalı
+- bozuk config fixture’larında corruption yaşanmamalı
+- uninstall / reinstall idempotent olmalı
 
-## P2. Codex-Native Komut Yüzeyi ve Skill Deneyimi
+---
+
+## CE2. Role, Prompt, Skill Catalog ve Repo-Derived Role Generator
 
 ### Amaç
 
-Skill deneyimini uzun sözleşme belgesi olmaktan çıkarıp ilk 5 dakikada öğrenilen kısa komut yüzeyine dönüştürmek.
+Codex-specific role/prompt/skill yüzeyini ürünün doğal parçası haline getirmek.
 
-### Temel Ürün Kararı
+### Mevcut açık
 
-Teknik fiil değil niyet merkezli alias’lar öne çıkacak.
+Repo’da skill yüzeyi var; ama role/prompt catalog yok. Bu da hem router kalitesini hem team runtime yönlendirmesini sınırlar.
 
-Önerilen alias ailesi:
+### Hedef komut yüzeyi
 
-- `$workflow-help`
-- `$workflow-next`
-- `$workflow-quick`
-- `$workflow-checkpoint`
-- `$workflow-team`
-- `$workflow-review`
-- `$workflow-ship`
+- `cwf codex sync`
+- `cwf codex roles`
+- `cwf codex prompts`
+- `cwf codex install-skill --role reviewer`
+- `cwf codex scaffold-role --from repo-profile`
+- `cwf codex remove-skill --role reviewer`
 
-### Kapsam
+### Ek cutting-edge öneri
 
-- `skill/SKILL.md` içinde kısa günlük komut yüzeyi tanımlamak
-- mevcut `workflow:control` altyapısını user-facing dil ile rafine etmek
-- alias komutları ile CLI yüzeyi arasında net eşleme kurmak
-- first-session UX metinlerini kısaltmak
+Bu fazda yalnız static catalog yapılmayacak. Ayrıca:
 
-### Çıktılar
+- codebase map
+- frontend profile
+- test/CI shape
+- package ecosystem
+- repo structure
 
-- skill quick reference
-- command intent mapping tablosu
-- Codex-friendly startup pattern
-- daily loop docs
+üzerinden **önerilen role seti** üretilecek.
 
-### Öncelikli Dosyalar
+Örnek repo-derived roller:
 
-- `skill/SKILL.md`
-- `skill/README.md`
-- `README.md`
-- `scripts/workflow/control.js`
-- `scripts/workflow/next_step.js`
-- `scripts/workflow/checkpoint.js`
-- gerekirse yeni kısa komut helper dosyaları
+- `repo-explorer`
+- `frontend-verifier`
+- `release-noter`
+- `dependency-risk-auditor`
+- `migration-checker`
+- `docs-verifier`
 
-### Backlog
+### Likely files
 
-- `P2-01` skill içindeki “first 60 seconds” akışını kısa komut yüzeyiyle yeniden yaz
-- `P2-02` short alias -> CLI command -> underlying script eşleme tablosu oluştur
-- `P2-03` `$workflow-help` için hızlı onboarding yüzeyi yaz
-- `P2-04` `$workflow-next` ve `$workflow-checkpoint` davranışlarını netleştir
-- `P2-05` `$workflow-team` alias’ını delegation plan runtime’ına bağlayan language contract yaz
-- `P2-06` `$workflow-review` ve `$workflow-ship` için placeholder contract’ı P5’e hazırlanacak şekilde tanımla
-- `P2-07` `workflow:control` intent çözümleyicisinin user-facing resolution cümlelerini rafine et
-- `P2-08` günlük kullanım rehberini “tek ekranda öğrenilebilir” hale getir
-
-### Alias Sözleşmesi
-
-#### `$workflow-help`
-
-- aktif yüzeyi, kısa komutları ve ne zaman quick/full/team kullanılacağını gösterir
-
-#### `$workflow-next`
-
-- mevcut state’e göre tek cümlelik sonraki güvenli hareketi öne çıkarır
-
-#### `$workflow-quick`
-
-- küçük işlerde quick mode başlatır veya mevcut quick session’ı sürdürür
-- riskli veya büyük işte gerekirse full workflow’a yönlendirir
-
-#### `$workflow-checkpoint`
-
-- compact, handoff veya phase boundary öncesi taze checkpoint üretir
-
-#### `$workflow-team`
-
-- parallel/team/orchestration yüzeyini niyet merkezli biçimde açar
-- safety gate varsa bunu görünür söyleyerek ilerler
-
-#### `$workflow-review`
-
-- review-ready closeout paketini üretir veya eksiklerini söyler
-
-#### `$workflow-ship`
-
-- ship-ready package üretir veya eksik closeout alanlarını gösterir
-
-Bu alias’ların hiçbiri safety gate’i gizlice by-pass etmez; her biri altında açık bir CLI veya workflow command mapping’i bulunur.
-
-### UX İlkeleri
-
-- teknik fiil yerine niyet konuşulsun
-- kısa komut adı, altında açık eşleme olsun
-- ilk 5 dakikada görülen işler tek bakışta anlaşılmalı
-- skill belgesi hem sözleşme hem hızlı kullanım kılavuzu rolünü taşımalı
-
-### Test Stratejisi
-
-- skill doc lint veya snapshot testi
-- alias resolution ve suggested command snapshot testleri
-- help output ve short command examples için golden testler
-
-### Riskler
-
-- skill çok kısa yazılırsa güvenlik kuralları görünmez olabilir
-- alias sayısı artarsa öğrenme yükü yine büyüyebilir
-
-### Risk Azaltma
-
-- “quick commands” ve “full contract” bölümlerini ayır
-- günlük yüzey ile derin sözleşmeyi aynı belgede ama farklı katmanda sun
+- `.agents/roles/*`
+- `.agents/prompts/*`
+- `.agents/skills/*`
+- `templates/codex/*`
+- `scripts/workflow/codex_roles.js`
+- `scripts/workflow/repo_role_generator.js`
 
 ### Exit Criteria
 
-- “Codex aç ve kullan” deneyiminde ilk 5 dakikadaki işler kısa alias’larla yapılabilir
-- skill belgesi niyet merkezli ve günlük kullanım dostu hale gelir
+- role catalog ürün içinde görünür olacak
+- sync/install/remove güvenilir olacak
+- repo-derived role suggestions saçma gürültü üretmeden değer verecek
 
-## P3. Quick Mode
+---
+
+## CE3. Daily Intent OS: `do`, `note`, `thread`, `backlog`
 
 ### Amaç
 
-15-60 dakikalık işler için full milestone ritüelini hafifletmek ama güvenlik omurgasını korumak.
+Kullanıcının doğal niyetini doğru lane’e yönlendirmek ve günlük capture akışını sürtünmesiz hale getirmek.
 
-### Temel Ürün Kararı
+### Mevcut açık
 
-Yeni yüzey:
+Bugünkü komut yüzeyi güçlü ama hâlâ komut bilgisi gerektiriyor. Günlük kullanımda operator friction gereğinden yüksek.
 
-- `workflow:quick`
-- veya `workflow:fast`
-- tercihen CLI tarafında `cwf quick`
+### Hedef komut yüzeyi
 
-### Kapsam
+- `cwf do "..."`
+- `cwf note "..."`
+- `cwf note --promote backlog|thread|seed`
+- `cwf thread open <name>`
+- `cwf thread list`
+- `cwf thread resume <name>`
+- `cwf backlog add "..."`
+- `cwf backlog review`
 
-- `.workflow/quick/` altında minimal artifact set tasarlamak
-- mini plan, verify, handoff ve audit izi tutmak
-- full workflow ile aynı plan omurgasına uyumlu kalmak
+### Davranış sözleşmesi
 
-### Çıktılar
+`cwf do`:
+- niyeti parse eder
+- repo state’ini okur
+- quick/full/team önerir
+- research/verify/security risklerini gösterir
+- gerekiyorsa packet compile önerebilir
+- preview-first kalır
 
-- quick artifact şeması
-- quick init / quick resume yüzeyi
-- quick verify sözleşmesi
-- quick-to-full escalation kuralı
+`cwf note`:
+- zero-friction capture sunar
+- önce runtime inbox’a yazabilir
+- promote ile canonical yüzeye taşır
 
-### Önerilen Artifact Set
+### Likely files
 
-- `.workflow/quick/context.md`
-- `.workflow/quick/plan.md`
-- `.workflow/quick/verify.md`
-- `.workflow/quick/handoff.md`
-- `.workflow/quick/session.json` veya benzeri yalnızca cache amaçlı runtime dosyası
-
-### Quick Mode Kullanım Heuristiği
-
-Quick mode aşağıdaki durumlarda tercih edilmelidir:
-
-- tahmini iş süresi `15-60` dakika ise
-- tek kullanıcı tarafından yürütülecekse
-- dar bir kod yüzeyi etkileniyorsa
-- full milestone overhead’i değerden büyük görünüyorsa
-
-Quick mode aşağıdaki durumlarda tercih edilmemelidir:
-
-- birden fazla dalga veya geniş entegrasyon gerekiyorsa
-- multi-session koordinasyon ihtimali yüksekse
-- riskli migration, schema değişimi veya production closeout bekleniyorsa
-- paralel worker ihtiyacı varsa
-
-### Canonical State ve Saklama Kuralları
-
-- `.workflow/quick/*.md` altındaki markdown belgeleri quick session’ın canonical izi sayılır
-- `.workflow/quick/session.json` yalnızca hız ve resume kolaylığı sağlar
-- quick session kapanışında en az `scope`, `plan`, `verify`, `handoff/summary` alanları markdown olarak kalmalıdır
-- quick session full milestone’a terfi ederse özet, kalan işler ve verify contract full workflow root’una taşınır
-
-### Backlog
-
-- `P3-01` quick mode tasarım kontratını yaz
-- `P3-02` quick artifact set ve klasör yapısını belirle
-- `P3-03` quick init, quick status, quick closeout akışlarını yaz
-- `P3-04` full workflow ile escalation yolu tanımla
-- `P3-05` quick mode için minimum done checklist yaz
-- `P3-06` skill ve CLI yüzeyine `quick` komutunu ekle
-- `P3-07` small-task acceptance testleri yaz
-
-### Kurallar
-
-- quick mode plan gate'i tamamen atlamaz
-- quick mode minimum verify contract üretir
-- quick handoff, next action ve touched scope bilgisini tutar
-- quick task büyürse full milestone’a terfi edebilir
-
-### Test Stratejisi
-
-- 15-60 dakikalık task fixture testleri
-- quick init -> execute -> verify -> handoff -> resume senaryosu
-- quick-to-full escalation testi
-
-### Riskler
-
-- quick mode “workflow’süz workflow” gibi algılanabilir
-- artifact set fazla küçülürse audit izi zayıflar
+- `scripts/workflow/do.js`
+- `scripts/workflow/note.js`
+- `scripts/workflow/thread.js`
+- `scripts/workflow/backlog.js`
+- `.workflow/runtime/inbox.md`
+- `docs/workflow/BACKLOG.md`
+- `docs/workflow/THREADS/*`
 
 ### Exit Criteria
 
-- küçük iş tam milestone açmadan güvenli plan/checkpoint/audit yolundan geçebilir
+- kullanıcı doğal cümle ile yön bulabilmeli
+- capture akışı günlük kullanımda gerçekten kullanılmalı
+- misroute oranı kabul edilebilir seviyede olmalı
 
-## P4. Delegation Plan'dan Gerçek Orchestration'a Geçiş
+---
+
+## CE4. Trust Layer: Questions, Claims, Assumptions ve Secure Phase
 
 ### Amaç
 
-Mevcut planner’ı gerçek Codex orchestration katmanına dönüştürmek.
+“Bilmediğimizi”, “inandığımızı” ve “riskli olanı” ürün içinde first-class hale getirmek.
 
-### Temel Ürün Kararı
+### Mevcut açık
 
-Delegation artık yalnızca plan önerisi değil, güvenli çalışma runtime’ı olacak.
+Repo’da questions ve assumptions izleri var; ama operator-facing claims/questions/security yüzeyi first-class değil.
 
-### Kapsam
+### Hedef komut yüzeyi
 
-- task packet’leri gerçek agent ownership brief’lerine dönüştürmek
-- rol, write-scope, wave, dependency ve integration sırasını kalıcı halde tutmak
-- orchestration state yüzeyi eklemek
+- `cwf questions`
+- `cwf claims`
+- `cwf claims check`
+- `cwf claims trace`
+- `cwf secure`
+- `cwf review --security`
+- `cwf ship --gate secure`
 
-### Yeni Komutlar
+### Davranış sözleşmesi
 
-- `workflow:team`
-- `workflow:team-status`
-- `workflow:team-resume`
-- `workflow:team-stop`
-- CLI tarafında `cwf team ...`
+- unresolved questions görünür kalır
+- claim’ler evidence veya rationale taşır
+- assumptions ayrı işaretlenir
+- secure phase prompt injection, path traversal, secrets, risky shell, destructive ops alanlarını tarar
+- verdict standardı olur: `pass / warn / fail / inconclusive / human_needed`
 
-### Çıktılar
+### Likely files
 
-- orchestration state modeli
-- safe fan-out/fan-in döngüsü
-- task packet formatı
-- agent ownership brief şablonu
-- integration order kuralları
-
-### Canonical Orchestration Artifacts
-
-- `.workflow/orchestration/PLAN.md`
-  - wave planı, owner atamaları, write scope, dependency tablosu
-- `.workflow/orchestration/STATUS.md`
-  - aktif wave, çalışan task’lar, blocker’lar, next integrate action
-- `.workflow/orchestration/RESULTS.md`
-  - task sonuçları, evidence refs, unresolved items, retry kararları
-- `.workflow/orchestration/WAVES.md`
-  - dalga sırası, geçiş koşulları ve integration sırası
-- `.workflow/orchestration/state.json`
-  - cache/resume metadata, canonical olmayan runtime yardımcı yüzeyi
-
-### Orchestration Safety Kuralları
-
-- write-capable wave başlatılmadan önce overlap validator temiz olmalı
-- owner belirtilmemiş task çalıştırılmamalı
-- task packet, start anından sonra versiyonlanmadan sessizce değişmemeli
-- integration yalnızca orchestrator/main agent tarafından finalize edilmeli
-- blocked veya failed task, evidence ve next action kaydı olmadan kapanmamalı
-
-### Öncelikli Dosyalar
-
-- `scripts/workflow/delegation_plan.js`
-- `.workflow/orchestration/*`
-- `scripts/workflow/common.js`
-- gerekirse yeni `team_*.js` entrypoint’leri
-
-### Backlog
-
-- `P4-01` orchestration state schema’sını dondur
-- `P4-02` delegation plan output’unu execution-ready task packet haline getir
-- `P4-03` task ownership brief formatını tasarla
-- `P4-04` start/status/resume/stop yüzeyini ekle
-- `P4-05` disjoint write-scope validator’ını sıkılaştır
-- `P4-06` wave complete -> integrate -> advance döngüsünü state machine olarak yaz
-- `P4-07` blocked/failed task recovery akışını tanımla
-- `P4-08` orchestration audit trail ve evidence kaydını ekle
-
-### Test Stratejisi
-
-- wave lifecycle integration testleri
-- overlapping write-scope rejection testleri
-- paused orchestration resume testleri
-- blocked task escalation testleri
-
-### Riskler
-
-- gerçek orchestration runtime’ı state karmaşıklığını artırır
-- parallelism yanlış açılırsa temel güven vaadi zedelenir
+- `scripts/workflow/questions.js`
+- `scripts/workflow/claims.js`
+- `scripts/workflow/secure_phase.js`
+- `docs/workflow/QUESTIONS.md`
+- `docs/workflow/CLAIMS.md`
+- `docs/workflow/ASSUMPTIONS.md`
+- `docs/workflow/SECURITY.md`
 
 ### Exit Criteria
 
-- kullanıcı tek komutla güvenli paralel çalışma başlatabilir
-- aynı dosyaya çakışan worker spawn edilmez
+- ürün “önce araştır” demesi gereken yerde bunu açık biçimde söylemeli
+- secure yüzeyi geliştiriciyi boğmadan makul guardrail üretmeli
 
-## P5. Lifecycle Genişletme
+---
+
+## CE5. Context Compiler ve Packet Lock
 
 ### Amaç
 
-Milestone kapanışını “done” seviyesinden “review-ready” ve “ship-ready” seviyesine çıkarmak.
+Workflow ve runtime kalitesini belirleyen asıl katmanı kurmak: context compiler.
 
-### Kapsam
+### Bu faz neden yeni ve kritik?
 
-- review, ship, PR brief, release notes, session report ve update yüzeylerini eklemek
-- GitHub entegrasyonunu opsiyonel tutmak ama üretim çıktısını standartlaştırmak
+Önceki roadmap packet v2 diyordu. Bu sürümde packet sadece “iyileştirilmiş doküman özeti” olmayacak; doğrudan bir **context compiler** olacak.
 
-### Yeni Komutlar
+### Problem
 
-- `workflow:review`
-- `workflow:ship`
-- `workflow:pr-brief`
-- `workflow:release-notes`
-- `workflow:session-report`
-- `workflow:update`
+Native runtime, hybrid dispatch ve subagent kalitesi packet kalitesine bağlıdır. Yanlış packet, yanlış paralellik demektir.
 
-### Çıktılar
+### Hedef komut yüzeyi
 
-- operator closeout surfaces
-- review checklist üretimi
-- PR body taslağı
-- release summary taslağı
-- session report özeti
+- `cwf packet compile`
+- `cwf packet explain`
+- `cwf packet lock`
+- `cwf packet diff`
+- `cwf packet role --role reviewer`
+- `cwf packet verify`
 
-### Üretilecek Çıkış Paketleri
+### Compiler girdileri
 
-#### Review Paketi
+- aktif workstream docs
+- open requirements
+- current chunk / current step
+- write scope
+- touched files
+- codebase map
+- frontend profile
+- verify contract
+- claims/questions state
+- route/profile defaults
 
-- milestone özeti
-- scope ve touched files özeti
-- verify çıktıları
-- residual risks
-- reviewer checklist
+### Compiler çıktıları
 
-#### Ship Paketi
+- role-aware packet
+- minimal read set
+- hard refs vs optional refs
+- omitted refs explanation
+- packet hash
+- packet lock manifest
+- packet provenance
 
-- PR body taslağı
-- release notes özeti
-- migration note
-- rollback note
-- deploy veya handoff öncesi son kontrol listesi
+### Neden cutting-edge?
 
-#### Session Report
+Bu katman sayesinde:
 
-- bu oturumda ne yapıldı
-- ne kaldı
-- nerede devam edilecek
-- hangi riskler açık
-- hangi verify adımları çalıştı veya bekliyor
+- subagent’a daha az ama daha doğru bağlam gider
+- `do` yalnız route değil, packet önerisi de üretebilir
+- mailboxes ve evidence graph daha anlamlı hale gelir
+- team runtime başarısı ölçülebilir biçimde artar
 
-### Öncelikli Dosyalar
+### Likely files
 
-- yeni lifecycle script entrypoint’leri
-- `templates/workflow/VALIDATION.md`
-- `templates/workflow/HANDOFF.md`
-- `templates/workflow/RETRO.md`
-- `README.md`
-- `skill/SKILL.md`
-
-### Backlog
-
-- `P5-01` review-ready contract’ı tanımla
-- `P5-02` ship-ready contract’ı tanımla
-- `P5-03` PR brief output formatını yaz
-- `P5-04` release notes üretim şablonunu ekle
-- `P5-05` session report yüzeyini tasarla
-- `P5-06` lifecycle komutlarını CLI ve skill alias yüzeyine bağla
-- `P5-07` closeout acceptance testlerini ekle
-
-### Test Stratejisi
-
-- milestone closeout senaryoları
-- review output snapshot testleri
-- ship checklist testleri
-- release notes golden testleri
+- `scripts/workflow/packet_compile.js`
+- `scripts/workflow/build_packet.js`
+- `scripts/workflow/packet_lock.js`
+- `.workflow/packets/*`
+- `.workflow/cache/packet-locks.json`
+- `.workflow/cache/packet-provenance.json`
 
 ### Exit Criteria
 
-- milestone yalnızca “done” değil, “review-ready” ve “ship-ready” kapatılabilir
+- packet compile süreleri hot path’i bozmamalı
+- packet’ler eksik kritik ref nedeniyle worker failure yaratmamalı
+- compile explain yüzeyi operator’a güven vermeli
 
-## P6. Hot-Path Cache Dalgası
+---
+
+## CE6. Native Subagent Runtime ve Hybrid Dispatch
 
 ### Amaç
 
-En kritik darboğazları invocation-scope memoization ile düşürmek.
+Adapter başlangıcını gerçek Codex-native runtime’a taşımak.
 
-### Kritik Noktalar
+### Mevcut açık
 
-- `scripts/workflow/common.js` line 2152
-- `scripts/workflow/common.js` line 2404
-- `scripts/workflow/map_codebase.js` line 793
-- `scripts/workflow/map_frontend.js` line 509
+Bugün runtime `plan-only` ve `worktree` düzeyinde. Bu iyi bir zemin ama Codex-native child/subagent lifecycle yok.
 
-### Kapsam
+### Hedef komut yüzeyi
 
-- file read cache
-- parsed markdown section cache
-- packet snapshot cache
-- token estimate cache
-- repo file list cache
-- `package.json` parse cache
-- git status cache
-- ortak precomputed runtime bundle
+- `cwf team run --adapter subagent`
+- `cwf team run --adapter hybrid`
+- `cwf team dispatch`
+- `cwf team monitor`
+- `cwf team collect`
+- `cwf team status --live`
+- `cwf team stop`
+- `cwf team resume`
 
-### Çıktılar
+### Adapter modeli
 
-- invocation-scope cache layer
-- perf metrics hooks
-- shared runtime bundle for `doctor`, `health`, `hud`, `next`, `state_surface`, `workstreams`
+- `worktree`: write-heavy ve riskli işler
+- `subagent`: read-heavy, analysis-heavy işler
+- `hybrid`: task tipine göre adapter seçen policy layer
 
-### Benchmark Yöntemi
+### Bu fazın şartı
 
-- ölçümler cold ve warm run olarak ayrı tutulmalı
-- her komut en az `5` kez koşturulup median değer raporlanmalı
-- küçük repo, orta repo ve monorepo fixture’ları ayrı benchmark grubuna sahip olmalı
-- wall-clock süre yanında okunan dosya sayısı ve cache hit oranı da raporlanmalı
-- threshold’lar ilk ölçümde değil, baseline stabil olduktan sonra fail gate haline getirilmeli
+CE6, CE5 olmadan açılmaz. Packet compile zayıfsa native runtime erken açılmaz.
 
-### Backlog
+### Likely files
 
-- `P6-01` hot-path ölçümlerini profiler veya benchmark ile doğrula
-- `P6-02` invocation-scope cache abstraction’ını ekle
-- `P6-03` file read ve parsed markdown cache’ini uygula
-- `P6-04` packet snapshot ve token estimate cache’ini ekle
-- `P6-05` repo file list ve git status cache’ini ekle
-- `P6-06` shared runtime bundle builder yaz
-- `P6-07` perf benchmark CI threshold’larını etkinleştir
-
-### Test Stratejisi
-
-- perf regression benchmark’ları
-- cache hit/miss unit testleri
-- unchanged input için duplicate work yapılmadığını doğrulayan testler
-
-### Riskler
-
-- cache invalidation bug’ları stale state üretebilir
-- perf kazanımı davranış değişikliği pahasına gelmemeli
+- `scripts/workflow/team_runtime.js`
+- `scripts/workflow/team_adapters/subagent.js`
+- `scripts/workflow/team_adapters/hybrid.js`
+- `scripts/workflow/build_packet.js`
+- `scripts/workflow/ensure_isolation.js`
 
 ### Exit Criteria
 
-- `hud <300ms`
-- `next <500ms`
-- `doctor/health <1s`
-- `map-* <2s`
+- en az bir gerçek native/hybrid adapter prod-grade çalışmalı
+- timeout/cancel/retry semantics görünür olmalı
+- fallback olarak solo veya worktree mode mümkün kalmalı
 
-## P7. Artımlı Repo Index ve Büyük Repo Optimizasyonu
+---
+
+## CE7. Patch-First Collect, Mailbox, Timeline ve Manager 2.0
 
 ### Amaç
 
-Büyük repo ve monorepo senaryosunda full-scan davranışını kırmak.
+Runtime’ı yalnız başlatılabilir değil, güvenli biçimde toplanabilir ve merge edilebilir hale getirmek.
 
-### Kapsam
+### Bu faz neden yeni ve kritik?
 
-- `.workflow/fs-index.json` veya `.workflow/cache/fs-index.json`
-- mtime, size, short hash, git diff, ignore rules takibi
-- `map_codebase` ve `map_frontend` için incremental scan
-- section hash tabanlı disk cache
+Önceki roadmap mailbox/timeline diyordu. Bu sürüm buna bir katman daha ekler: **patch-first collect**.
 
-### Çıktılar
+### Problem
 
-- repo index builder
-- incremental refresh policy
-- section-hash disk cache
+Worker çıktısını sadece markdown sonuç ve serbest yazılmış özet olarak toplamak uzun vadede ölçeklenmez. Gerçek ürün için collect aşaması patch-aware olmalıdır.
 
-### Backlog
+### Hedef komut yüzeyi
 
-- `P7-01` fs-index schema tasarla
-- `P7-02` index build ve refresh kararlarını yaz
-- `P7-03` `map_codebase` incremental mode ekle
-- `P7-04` `map_frontend` incremental mode ekle
-- `P7-05` packet snapshot için disk-backed section hash cache ekle
-- `P7-06` monorepo benchmark senaryolarını CI’a ekle
+- `cwf team mailbox`
+- `cwf team timeline`
+- `cwf team steer`
+- `cwf team collect --as patch`
+- `cwf patch review`
+- `cwf patch apply`
+- `cwf patch rollback`
+- `cwf manager --live`
 
-### Test Stratejisi
+### Yeni runtime sözleşmesi
 
-- unchanged repo incremental speed testi
-- changed subset refresh testi
-- ignore rules doğruluk testi
-- large repo fixture benchmark testi
+Her worker çıktısı şu seçeneklerden en az birini üretir:
+
+- result summary
+- evidence refs
+- patch bundle
+- conflict note
+- next action
+- confidence / risk note
+
+### Neden cutting-edge?
+
+Bu katman sayesinde:
+
+- worker collect daha deterministik olur
+- orchestrator patch preview yapabilir
+- merge ve rollback hikâyesi daha güçlü olur
+- write-scope policy runtime seviyesinde enforce edilir
+
+### Likely files
+
+- `scripts/workflow/runtime_mailbox.js`
+- `scripts/workflow/runtime_timeline.js`
+- `scripts/workflow/patch_collect.js`
+- `scripts/workflow/patch_apply.js`
+- `scripts/workflow/patch_review.js`
+- `.workflow/orchestration/runtime/mailbox.jsonl`
+- `.workflow/orchestration/runtime/timeline.jsonl`
+- `.workflow/orchestration/patches/*`
 
 ### Exit Criteria
 
-- büyük monorepo’da her komutta tam repo tarama davranışı ortadan kalkar
+- operator worker’ları ürün içinden izleyip yönlendirebilmeli
+- patch collect rastgele değil, standart protokol ile çalışmalı
+- patch apply/rollback veri kaybı riski yaratmamalı
 
-## P8. `common.js` Modüler Çekirdeğe Bölünmesi
+---
+
+## CE8. Evidence OS, Playwright ve Evidence Graph
 
 ### Amaç
 
-Davranış değişmeden bakım ve test edilebilirlik kazanmak.
+Verification katmanını smoke helper’dan gerçek evidence engine seviyesine taşımak.
 
-### Temel Ürün Kararı
+### Mevcut açık
 
-Bu faz, cache ve benchmark güvenliği geldikten sonra yapılacak. Erken yapılmayacak.
+Bugünkü `verify-browser` fetch + HTML signal + visual fallback düzeyinde. Bu iyi başlangıç; ama gerçek UI closeout için yetmez.
 
-### Hedef Modüller
+### Hedef komut yüzeyi
 
-- `io/files.js`
-- `markdown/sections.js`
-- `packet/build.js`
-- `packet/cache.js`
-- `window/budget.js`
-- `workflow/control.js`
-- `workflow/checkpoint.js`
-- `workflow/state.js`
-- `git/isolation.js`
-- `perf/metrics.js`
+- `cwf verify-browser --adapter playwright`
+- `cwf verify-browser --smoke`
+- `cwf verify-browser --assert selector=...`
+- `cwf evidence`
+- `cwf evidence graph`
+- `cwf claims trace`
+- `cwf review --require-evidence`
+- `cwf ship --gate evidence`
 
-### Kapsam
+### Bu sürümün ekstra önerisi
 
-- `common.js` facade olarak kalacak
-- dış API kırılmayacak
-- hot-path hesaplamaları modül bazında izole edilecek
+Önceki roadmap evidence bundle diyordu. Bu sürüm evidence’i **graph** haline getirir.
 
-### Backlog
+Graph düğümleri:
 
-- `P8-01` `common.js` responsibility map çıkar
-- `P8-02` modül taşıma sırasını belirle
-- `P8-03` facade ve adapter layer kur
-- `P8-04` file I/O ve markdown helpers’ı ayır
-- `P8-05` packet ve cache logic’ini ayır
-- `P8-06` workflow control/state logic’ini ayır
-- `P8-07` git isolation ve perf metric logic’ini ayır
-- `P8-08` her modül için ayrı test dosyası ekle
+- requirement
+- claim
+- touched file
+- verify run
+- screenshot
+- console/network log
+- manual verdict
+- reviewer note
 
-### Test Stratejisi
+### Neden cutting-edge?
 
-- contract suite tam çalışacak
-- modül bazlı unit testler eklenecek
-- facade üzerinden backwards compatibility testleri korunacak
+Bu sayede ürün şu sorulara cevap verir:
+
+- Hangi requirement henüz verify edilmedi?
+- Hangi claim’in evidence’i yok?
+- Hangi değişiklik UI smoke geçti ama network error verdi?
+- Review niye `human_needed` dedi?
+
+### Likely files
+
+- `scripts/workflow/verify_browser.js`
+- `scripts/workflow/browser_adapters/playwright.js`
+- `scripts/workflow/evidence_graph.js`
+- `scripts/workflow/evidence_check.js`
+- `.workflow/verifications/browser/*`
+- `.workflow/evidence-graph/*.json`
+- `docs/workflow/EVIDENCE.md`
 
 ### Exit Criteria
 
-- davranış değişmeden modüler çekirdek elde edilir
-- her modülün kendi test dosyası vardır
+- frontend closeout güveni ciddi biçimde artmalı
+- review/ship evidence graph’ten yararlanmalı
+- uncovered requirement’lar görünür olmalı
 
-## P9. Güven, Dokümantasyon ve Release Disiplini
+---
+
+## CE9. Policy Engine ve Approval Matrix
 
 ### Amaç
 
-Repo’nun ilk bakışta deneysel araç değil, güvenilir ürün gibi görünmesini sağlamak.
+Riskli işlemleri ürün içinde first-class hale getirmek.
 
-### Yeni Belgeler
+### Bu faz neden yeni ve kritik?
 
-- `LICENSE`
-- `CHANGELOG.md`
-- `CONTRIBUTING.md`
-- `DEMO.md`
+Secure phase önemli ama tek başına yeterli değil. Çünkü sorun yalnız tehlikeyi tespit etmek değil; **hangi riske hangi onay modeli uygulanacak** sorusudur.
+
+### Hedef komut yüzeyi
+
+- `cwf policy`
+- `cwf policy check`
+- `cwf approvals`
+- `cwf approvals grant`
+- `cwf review --policy`
+- `cwf team run --policy strict|standard|open`
+
+### Politika alanları
+
+- file domain: `src`, `docs`, `tests`, `config`, `infra`, `migrations`, `secrets`
+- operation type: `read`, `edit`, `delete`, `move`, `install`, `network`, `browser`, `git`, `shell`
+- actor type: `solo`, `worker`, `subagent`, `hook`, `mcp`
+- approval mode: `auto`, `warn`, `human_needed`, `block`
+
+### Neden cutting-edge?
+
+Çünkü ürün artık yalnız “risk var” demez; şunu da söyler:
+
+- bu risk niye var
+- hangi policy bunu tetikledi
+- nasıl override edilir
+- override sonucu ne olur
+- review ve ship’te bunun izi kalır mı
+
+### Likely files
+
+- `scripts/workflow/policy.js`
+- `scripts/workflow/approvals.js`
+- `docs/workflow/POLICY.md`
+- `.workflow/runtime/policy.json`
+- `.workflow/runtime/approvals.json`
+
+### Exit Criteria
+
+- destructive / config / secret / migration riskleri görünür olmalı
+- developer experience bozulmadan policy enforce edilebilmeli
+- worker policy’si solo policy’den farklılaştırılabilmeli
+
+---
+
+## CE10. Telemetry v2 ve Adaptive Router
+
+### Amaç
+
+Route ve stats yüzeyini heuristikten ölçülmüş veriye taşımak.
+
+### Mevcut açık
+
+Bugünkü `model_route.js` ve `stats.js` kullanışlı ama ağırlıklı olarak heuristik. Bu, ürünün uzun vadede optimize olmasını sınırlar.
+
+### Hedef komut yüzeyi
+
+- `cwf route --explain`
+- `cwf route tune`
+- `cwf stats --perf`
+- `cwf stats --spend`
+- `cwf stats --runtime`
+- `cwf stats --quality`
+
+### Ölçülecek alanlar
+
+- provider/model
+- reasoning profile
+- latency
+- retries
+- tool errors
+- token count
+- spend
+- verification pass rate
+- human_needed rate
+- worker success rate
+- patch conflict rate
+
+### Adaptive davranış
+
+Router şu tip öneriler verebilmeli:
+
+- bu task için `balanced` yerine `deep`
+- bu role için `fast` yeterli
+- browser verify için önce smoke sonra Playwright
+- large-repo modunda packet budget düşür
+- bu repo’da `frontend-verifier` rolü değer üretiyor / üretmiyor
+
+### Likely files
+
+- `scripts/workflow/model_route.js`
+- `scripts/workflow/stats.js`
+- `scripts/workflow/telemetry_store.js`
+- `.workflow/cache/model-routing.json`
+- `.workflow/cache/telemetry/*.jsonl`
+
+### Exit Criteria
+
+- router gerçek ölçümlerle iyileşmeli
+- route önerileri “neden” açıklamasıyla gelmeli
+- spend/perf görünürlüğü operator’a karar avantajı vermeli
+
+---
+
+## CE11. Hooks, MCP ve Notification Layer
+
+### Amaç
+
+Ürünü kontrollü entegrasyonlara açmak; ama bunu kontrollü ve ölçülü yapmak.
+
+### Mevcut açık
+
+Hooks / MCP bugün yok. Bu alan büyük güç yaratır ama erken ve kontrolsüz açılırsa güvenilirliği düşürür.
+
+### Hedef komut yüzeyi
+
+- `cwf hooks init`
+- `cwf hooks validate`
+- `cwf hooks list`
+- `cwf mcp install`
+- `cwf mcp doctor`
+- `cwf mcp status`
+- `cwf notify test`
+
+### Başlangıç paketi
+
+Hook olayları:
+- `session_start`
+- `question_needed`
+- `verify_failed`
+- `phase_complete`
+- `session_idle`
+- `session_end`
+
+MCP başlangıç seti:
+- workflow-state
+- packet
+- evidence
+- mailbox
+- thread/memory
+- policy
+
+Notification seti:
+- verify fail
+- blocked worker
+- stalled session
+- handoff ready
+- review ready
+
+### Likely files
+
+- `scripts/workflow/hooks.js`
+- `scripts/workflow/mcp.js`
+- `scripts/workflow/mcp_servers/*`
+- `scripts/workflow/notify.js`
+- `.workflow/runtime/hooks/*`
+- `.workflow/runtime/mcp/*`
+
+### Exit Criteria
+
+- hooks/MCP default kapalı olmalı
+- açıldığında lifecycle budget ve process budget görünür olmalı
+- failure ana akışı bozmamalı
+
+---
+
+## CE12. Scale OS: Daemon, GC, Large-Repo Mode ve Symbol-Aware Explore
+
+### Amaç
+
+Yeni katmanlar açılırken hız hissini korumak ve büyük repolarda ürünün akıcılığını kaybetmesini engellemek.
+
+### Bu sürümün ekstra önerisi
+
+Önceki roadmap daemon/GC diyordu. Bu sürüm buna symbol-aware explore ve impact analysis katıyor.
+
+### Hedef komut yüzeyi
+
+- `cwf daemon status`
+- `cwf daemon restart`
+- `cwf gc`
+- `cwf benchmark --profile medium|large`
+- `cwf stats --perf`
+- `cwf explore --symbol <name>`
+- `cwf explore --callers <symbol>`
+- `cwf explore --impact <file|symbol>`
+
+### Teknik yön
+
+- optional daemon / sidecar
+- persistent metadata store
+- watcher-based refresh
+- event log compaction
+- artefact retention policy
+- packet cache reuse
+- symbol index
+- impact graph
+- tree-sitter veya LSP-when-available yaklaşımı
+
+### Neden cutting-edge?
+
+Çünkü ürün artık yalnız “dosya ara” değil, “bu değişiklik neyi etkiler?” sorusunu da cevaplar.
+
+### Likely files
+
+- `scripts/workflow/daemon.js`
+- `scripts/workflow/gc.js`
+- `scripts/workflow/fs_index.js`
+- `scripts/workflow/symbol_index.js`
+- `scripts/workflow/impact_analysis.js`
+- `.workflow/cache/symbols/*`
+- `.workflow/cache/impact/*`
+
+### Exit Criteria
+
+- large repo modunda hot-path SLO’lar korunmalı
+- daemon kapalıyken parity korunmalı
+- symbol explore yanlış pozitif patlaması yaratmamalı
+
+---
+
+## CE13. Incident Memory, Cross-Repo Operator Center ve Productization
+
+### Amaç
+
+Ürünü sadece çalışan değil, öğrenen ve çok-repo kullanıma hazır bir ürüne dönüştürmek.
+
+### Bu faz neden yeni ve kritik?
+
+Self-heal başlangıcı var; ama ürün failure pattern’lerini öğrenmiyor. `workspaces` var; ama cross-repo operator center değil. Docs/templates var; ama cutting-edge ürünleşme için henüz erken.
+
+### Hedef komut yüzeyi
+
+- `cwf incident open`
+- `cwf incident list`
+- `cwf repair learn`
+- `cwf fleet status`
+- `cwf sessions`
+- `cwf init --template nextjs|library|monorepo|frontend-app`
+- `cwf update --channel stable|canary`
+- `cwf doctor --compat`
+
+### Incident memory alanı
+
+- failure signature
+- trigger surface
+- touched files
+- broken command / verify
+- repair recipe
+- human note
+- recurrence count
+
+### Cross-repo center alanı
+
+- birden fazla repo’nun aktif session görünümü
+- handoff-ready repo’lar
+- blocked runtime’lar
+- verify debt
+- release-ready queue
+
+### Likely files
+
+- `scripts/workflow/incident.js`
+- `scripts/workflow/repair_learning.js`
+- `scripts/workflow/fleet.js`
+- `scripts/workflow/session_registry.js`
+- `templates/*`
 - `docs/getting-started.md`
 - `docs/commands.md`
-- `docs/architecture.md`
-- `docs/performance.md`
-
-### README Hedefi
-
-`README.md` artık “starter kit açıklaması” değil şu soruların cevabı olmalı:
-
-- bu ürün neden var
-- kim için
-- 5 dakikada nasıl başlarım
-- günlük akış nasıl
-- quick mode ne zaman, full workflow ne zaman
-- güven ve audit omurgası ne
-
-### Backlog
-
-- `P9-01` lisans ve katkı belgelerini ekle
-- `P9-02` changelog sürecini tanımla
-- `P9-03` demo akışını belgeye dök
-- `P9-04` getting started rehberi yaz
-- `P9-05` commands reference yaz
-- `P9-06` architecture belgesi yaz
-- `P9-07` performance ve SLO belgesi yaz
-- `P9-08` README’yi ürün odaklı baştan yapılandır
-
-### Test ve Quality Gate
-
-- docs lint
-- README command accuracy review
-- install path smoke verification
+- `CHANGELOG.md`
 
 ### Exit Criteria
 
-- repo kökü açık kaynak ürün güveni verir
-- onboarding ve operator surfaces net, kısa ve örnekli görünür
+- ürün “repo içi shell” olmaktan çıkıp operator-grade product shell hissi vermeli
+- upgrade ve compatibility story güvenli olmalı
+- incident memory repair kalitesini gerçekten iyileştirmeli
 
-## 10. Fazlar Arası Bağımlılık Haritası
+---
 
-- `P0`, tüm diğer fazların ön koşuludur
-- `P1`, `P2` için gerekli ürün kabuğunu sağlar
-- `P2`, `P3` ve `P5` için user-facing dil zeminini hazırlar
-- `P3`, lifecycle genişlemesinin küçük task yüzeyini açar
-- `P4`, orchestration ürünü için kritik bağımlılıktır ama ilk release dalgasına alınmak zorunda değildir
-- `P5`, `P2` alias’larının tam değer üretmesini sağlar
-- `P6` ve `P7`, `P8` öncesi güvenli performans zeminidir
-- `P9`, önceki fazların ürün güvenini paketler
+## 12. Aşama Aşama Uygulanacak Rota
 
-## 11. Sprint Bazlı Uygulama Planı
+## 12.1 İlk kritik yol
 
-### Hafta 1
+Sıkı ekip / az kapasite durumunda izlenecek gerçek kritik yol:
 
-- contract/golden testleri
-- installer baseline
-- CLI kabuk tasarımı
+`CE1 -> CE3 -> CE4 -> CE5 -> CE6 -> CE7 -> CE8 -> CE12 -> CE13`
 
-### Hafta 2
+### Neden bu yol?
 
-- `cwf` CLI
-- global/local setup
-- uninstall/update
-- ilk-run doctor
+- `CE1` olmadan gerçek Codex-native his oluşmaz
+- `CE3` olmadan günlük adoption düşer
+- `CE4` olmadan güven yüzeyi zayıf kalır
+- `CE5` olmadan runtime kalitesi yükselmez
+- `CE6-CE7` olmadan team/runtime sıçraması olmaz
+- `CE8` olmadan verify closeout zayıf kalır
+- `CE12` olmadan yeni katmanlar ürünü ağırlaştırır
+- `CE13` olmadan ürün tam product shell’e dönüşmez
 
-### Hafta 3
+## 12.2 Paralel yürütülebilecek yan yollar
 
-- Codex skill alias’ları
-- kısa komut UX’i
+- `CE2`, `CE1` sonrasında paralel açılabilir
+- `CE9`, `CE4` sonrasında paralel açılabilir
+- `CE10`, `CE5` sonrasında paralel açılabilir
+- `CE11`, `CE7` sonrasında açılmalı
 
-### Hafta 4
+## 12.3 Küçük ekip için scope trim sırası
 
-- quick mode artifact modeli
-- quick mode testleri
+Kapasite daralırsa önce ertelenecekler:
 
-### Hafta 5-6
+1. Cross-repo operator center
+2. Notification layer genişlemesi
+3. Symbol-aware explore’un LSP derinliği
+4. Adaptive router’ın ileri otomasyonu
+5. Repo-derived role generator’ın zengin varyantları
 
-- gerçek team/orchestration akışı
+Ama ertelenmemesi gerekenler:
 
-### Hafta 7
+- safe Codex control plane
+- `do` / `note`
+- trust layer
+- context compiler
+- native runtime çekirdeği
+- patch-first collect
+- Playwright evidence
+- daemon/GC temel hattı
 
-- review/ship/operator surfaces
+---
 
-### Hafta 8-9
+## 13. İlk 90 Gün İçin Somut Uygulama Planı
 
-- cache
-- fs-index
-- benchmark CI
-- hot-path SLO
+### Gün 0-14
 
-### Hafta 10
+- `CE0` tamamlanır
+- `CE1` contract dondurulur
+- command taxonomy dondurulur
+- benchmark profile expansion çıkarılır
+- issue epics açılır
 
-- `common.js` modüler refactor
-- release docs
+### Gün 15-30
 
-## 12. İlk Release Dalgası İçin Epic Yapısı
+- `CE1` MVP: `setup`, `diff-config`, `doctor`, `rollback`
+- bozuk TOML fixture’ları
+- backup journal layer
+- docs’ta Codex control plane görünür hale gelir
 
-İlk release dalgası doğrudan aşağıdaki epikler halinde planlanmalıdır:
+### Gün 31-45
 
-### Epic A: Compatibility Baseline
+- `CE2` role/prompt/skill catalog v1
+- `CE3` için `cwf do` MVP
+- `cwf note` runtime inbox MVP
+- manager entegrasyonu
 
-- sahibi: core runtime
-- faz: `P0`
-- çıktı: golden/contract/perf baseline
+### Gün 46-60
 
-### Epic B: CLI Product Shell
+- `CE3` thread/backlog yüzeyleri
+- `CE4` claims/questions/assumptions ledger
+- `CE4` secure baseline
+- review/security gates başlangıcı
 
-- sahibi: install + runtime UX
-- faz: `P1`
-- çıktı: `cwf` komut yüzeyi
+### Gün 61-75
 
-### Epic C: Codex-Native Skill Experience
+- `CE5` context compiler spike
+- `packet compile`, `packet explain`, `packet lock` MVP
+- `CE6` subagent adapter spike
+- write-scope safety testleri
 
-- sahibi: skill + docs UX
-- faz: `P2`
-- çıktı: kısa komutlar, alias yüzeyi, onboarding kısalığı
+### Gün 76-90
 
-Bu üç epic birlikte ilk kullanılabilir ürün dalgasını oluşturur.
+- `CE7` mailbox/timeline schema
+- patch bundle protokolü taslağı
+- `CE8` Playwright smoke slice
+- `CE12` GC baseline ve large-repo fixture başlangıcı
 
-## 12A. İlk Release Dalgasının Kritik Yolu
+---
+
+## 14. 12 Sprintlik Pratik Yürütme Planı
 
-İlk release dalgası için önerilen uygulama sırası aşağıdaki gibi olmalıdır:
+### Sprint 1
+- `CE1` control plane contract
+- TOML patch engine skeleton
+- preview / journal / rollback API
 
-### Slice 1: Test Freeze
+### Sprint 2
+- `cwf codex setup/doctor/diff-config/rollback` MVP
+- property testler
+- docs quick-start güncellemesi
+
+### Sprint 3
+- role catalog v1
+- prompt catalog v1
+- repo-derived role suggestion skeleton
 
-- compatibility baseline en başta dondurulur
-- golden snapshot ve fixture altyapısı genişletilir
-- mevcut davranış için “korunacak yüzey” listesi yazılır
+### Sprint 4
+- `cwf do` MVP
+- route preview
+- manager integration
+
+### Sprint 5
+- `cwf note`, `thread`, `backlog` MVP
+- runtime inbox + promote akışı
 
-### Slice 2: CLI Skeleton
+### Sprint 6
+- questions / claims / assumptions ledger
+- secure baseline
+- review/ship gate taslağı
+
+### Sprint 7
+- packet compile / explain / lock MVP
+- packet provenance taslağı
+
+### Sprint 8
+- subagent adapter spike
+- hybrid dispatch heuristic taslağı
+
+### Sprint 9
+- mailbox / timeline / steering
+- patch bundle schema
+- collect --as patch MVP
+
+### Sprint 10
+- Playwright smoke
+- evidence bundle schema
+- review --require-evidence
+
+### Sprint 11
+- policy engine v1
+- telemetry probes
+- route explain / stats perf-spend
+
+### Sprint 12
+- daemon feasibility
+- GC policy
+- large-repo benchmark
+- symbol index spike
+
+---
+
+## 15. 12 Aylık Delivery Takvimi
+
+### 5 Nisan 2026 - 31 Mayıs 2026
+- `CE0`
+- `CE1`
+- `CE2`
+
+### 1 Haziran 2026 - 31 Temmuz 2026
+- `CE3`
+- `CE4`
+
+### 1 Ağustos 2026 - 30 Eylül 2026
+- `CE5`
+- `CE6`
+
+### 1 Ekim 2026 - 30 Kasım 2026
+- `CE7`
+- `CE8`
+
+### 1 Aralık 2026 - 31 Ocak 2027
+- `CE9`
+- `CE10`
+
+### 1 Şubat 2027 - 31 Mart 2027
+- `CE11`
+- `CE12`
+
+### 1 Nisan 2027 - 30 Nisan 2027
+- `CE13`
+- productization closeout
+- public benchmark / docs / templates finalization
+
+---
+
+## 16. KPI ve Success Dashboard
+
+## 16.1 Adoption KPI’ları
+
+- install -> first-success rate
+- `cwf codex` / `cwf do` session entry usage rate
+- `note` usage rate
+- thread/backlog promote rate
+- resume success rate
 
-- `bin` entry
-- subcommand router
-- help ve exit-code sözleşmesi
+## 16.2 Trust KPI’ları
+
+- unresolved-question detection precision
+- secure false-positive rate
+- human_needed doğru sınıflama oranı
+- rollback success rate
+- evidence coverage ratio
 
-### Slice 3: Setup / Init / Update / Uninstall
+## 16.3 Runtime KPI’ları
+
+- subagent dispatch success rate
+- blocked worker resolution time
+- collect success rate
+- patch apply success rate
+- patch rollback success rate
+- mailbox latency
 
-- installer wrapper
-- safe uninstall
-- migrate/update flow
-- blank repo ve existing repo smoke senaryoları
+## 16.4 Performance KPI’ları
+
+- `cwf codex doctor <400ms warm`
+- `cwf codex diff-config <100ms warm`
+- `cwf do <150ms warm`
+- `cwf note <100ms`
+- `cwf packet compile <250ms warm`
+- `cwf manager --live refresh <200ms warm`
+- `cwf team mailbox <200ms warm`
+- `subagent dispatch overhead <750ms`
+- `verify-browser --smoke <10s`
+- `verify-browser --adapter playwright <30s` basit akışta
+- `cwf gc <300ms`
+- `large-repo manager <350ms warm` daemon açıkken
 
-### Slice 4: Günlük Operasyon Komutları
-
-- `cwf doctor`
-- `cwf hud`
-- `cwf next`
-- command equivalence testleri
-
-### Slice 5: Skill Alias ve Codex UX
-
-- `$workflow-help`
-- `$workflow-next`
-- `$workflow-checkpoint`
-- kısa kullanım tablosu
-
-### Slice 6: Release Hardening
-
-- README ve getting-started yüzeyi
-- first-run demo akışı
-- final smoke verification
-
-## 13. Backward Compatibility Planı
-
-En az iki release boyunca aşağıdaki eski yüzeyler korunacaktır:
-
-- `npm run workflow:init`
-- `npm run workflow:migrate`
-- `npm run workflow:hud`
-- `npm run workflow:next`
-- `npm run workflow:doctor`
-- `npm run workflow:health`
-- diğer tüm `workflow:*` scriptleri
-
-Yeni yüzey eski yüzeyi sarar; eski yüzey yeni yüzeyin içine gömülmez. Bu ayrım önemlidir çünkü compatibility yönü hep içeriye doğru korunmalıdır.
-
-## 14. Komut Eşleme Politikası
-
-### Kurulum ve Yönetim
-
-- `cwf setup` -> installer bootstrap
-- `cwf init` -> workflow init
-- `cwf update` -> migrate + runtime refresh
-- `cwf uninstall` -> workflow cleanup
-
-### Günlük Kullanım
-
-- `cwf hud` -> `workflow:hud`
-- `cwf next` -> `workflow:next`
-- `cwf doctor` -> `workflow:doctor`
-- `cwf checkpoint` -> `workflow:checkpoint`
-- `cwf quick` -> yeni quick runtime
-- `cwf team` -> delegation/orchestration runtime
-
-### Closeout
-
-- `cwf review` -> `workflow:review`
-- `cwf ship` -> `workflow:ship`
-
-## 15. Test Matrisi
-
-Her faz aşağıdaki test katmanlarından en az birini genişletmelidir:
-
-### Unit
-
-- parser davranışları
-- helper logic
-- cache invalidation logic
-- index freshness logic
-
-### Integration
-
-- CLI subcommand dispatch
-- install/update/uninstall lifecycle
-- quick mode lifecycle
-- orchestration wave lifecycle
-
-### Golden
-
-- help output
-- compact HUD
-- state surface
-- review/release notes gibi metinsel yüzeyler
-
-### Scenario
-
-- blank repo onboarding
-- existing repo migration
-- quick task flow
-- full milestone flow
-- team orchestration flow
-
-### Performance
-
-- hot-path benchmark
-- large repo benchmark
-- incremental refresh benchmark
-
-## 15A. Migration, Versioning ve Rollback Politikası
-
-### Versioning Prensibi
-
-- additive user-facing surfaces minor release ile gelebilir
-- compatibility kıran veya migration gerektiren değişiklikler major-level ciddiyetle ele alınmalıdır
-- deprecation duyurusu en az iki release boyunca görünür kalmalıdır
-
-### Schema ve Template Versiyonlama
-
-- workflow templates veya runtime surface için görünür bir version marker eklenmelidir
-- `cwf update` bu marker üzerinden migrate gerekip gerekmediğini anlamalıdır
-- marker canonical markdown veya görünür runtime surface içinde bulunmalı; gizli bir source-of-truth olmamalıdır
-
-### Migration Politikası
-
-- upgrade sırasında user-authored markdown korunur
-- eksik section ekleme güvenli default olmalıdır
-- overwrite gerektiren davranışlar explicit onay veya açık flag istemelidir
-- migration sonunda ne değiştiği özetlenmelidir
-
-### Rollback Politikası
-
-- migrate öncesi etkilenecek kritik dosyalar için backup veya diff özeti oluşturulmalıdır
-- rollback story docs seviyesinde yazılı olmalıdır
-- uninstall ve update komutları geri dönüşsüz hissettirmemelidir
-
-### Compatibility Penceresi
-
-- eski `workflow:*` script yüzeyi en az iki release korunur
-- alias değişirse eski alias aynı süre boyunca warning ile yaşamaya devam eder
-- breaking değişiklikler changelog ve getting-started belgelerinde açıkça işaretlenir
-
-## 16. Risk Kaydı
-
-### Risk 1: Ürünleşme sırasında çekirdek drift
-
-- etki: yüksek
-- olasılık: orta
-- azaltma: `P0` contract suite ve eski komutların korunması
-
-### Risk 2: CLI yüzeyi ile script yüzeyi ayrışması
-
-- etki: yüksek
-- olasılık: orta
-- azaltma: subcommand equivalence testleri ve tek mapping tablosu
-
-### Risk 3: Quick mode’un disiplini sulandırması
-
-- etki: yüksek
-- olasılık: orta
-- azaltma: minimum artifact contract ve escalation kuralı
-
-### Risk 4: Paralel orchestration’da write-scope çakışması
-
-- etki: çok yüksek
-- olasılık: orta
-- azaltma: strict overlap validator ve explicit ownership brief
-
-### Risk 5: Cache invalidation ve stale output
-
-- etki: yüksek
-- olasılık: orta-yüksek
-- azaltma: freshness metadata, hash-based invalidation ve scenario testleri
-
-### Risk 6: Modüler refactor’un erken yapılması
-
-- etki: yüksek
-- olasılık: orta
-- azaltma: `P8`’i cache sonrası konumlandırmak
-
-### Risk 7: Dokümantasyonun ürün gerçekliğiyle drift etmesi
-
-- etki: orta
-- olasılık: orta
-- azaltma: docs review checklist ve release gate’e command accuracy kontrolü eklemek
-
-## 17. Operasyonel Kararlar
-
-### Karar 1
-
-İlk kullanıcı deneyimi “install -> doctor -> init -> next” akışına dayanmalı.
-
-### Karar 2
-
-İlk release dalgasında CLI wrapper katmanı kurulacak; çekirdek behavior agresif biçimde yeniden yazılmayacak.
-
-### Karar 3
-
-Quick mode ve full workflow aynı marka altında sunulacak; ayrı ürünler gibi davranmayacak.
-
-### Karar 4
-
-Team/orchestration gerçek runtime olacaksa state ve safety görünür olmak zorunda.
-
-### Karar 5
-
-Performans işi refactor’dan önce kullanıcıya hissedilen hız kazancı üretmeli.
-
-## 18. Done Tanımı
-
-Her epic veya issue aşağıdaki sorulara cevap vermeden “done” sayılmamalı:
-
-- user-facing davranış net mi
-- eski sözleşmeye uyum kanıtlandı mı
-- test eklendi mi
-- docs güncellendi mi
-- residual risk yazıldı mı
-- benchmark veya smoke verification yapıldı mı
-
-## 19. Önerilen Issue Şablonu
-
-Her implementasyon işi aşağıdaki alanlarla açılmalıdır:
-
-- Problem
-- User-facing outcome
-- Scope
-- Out of scope
-- Files to touch
-- Tests to add
-- Risks
-- Acceptance criteria
-- Migration or compatibility note
-
-## 19A. Açık Sorular ve Karara Bağlanacak Noktalar
-
-Bu planın uygulamaya başlamadan önce dondurması gereken bazı kararlar vardır:
-
-- npm package adı ve publish scope ne olacak
-- primary kullanıcı komutu kesin olarak `cwf` mi, yoksa çift komut mu desteklenecek
-- quick canonical path kesin olarak `.workflow/quick/` mı olacak, yoksa `docs/workflow/quick/` alternatifi mi açılacak
-- orchestration için canonical markdown seti tam olarak hangi dosyalardan oluşacak
-- `cwf uninstall` varsayılan güvenli mod ve explicit purge modu nasıl ayrılacak
-- `cwf setup` current repo default mu olacak, yoksa `--target` gerektiren bir model mi seçilecek
-- hangi generated dosyalar default olarak commit edilir, hangileri `.gitignore` altında kalır
-- version marker hangi dosyada tutulacak
-
-Bu sorular implementation öncesi netleşirse issue backlog daha az churn ile ilerler.
-
-## 20. Bir Sonraki Operasyonel Adım
-
-Bu master planın doğal devamı şudur:
-
-- `P0/P1/P2` için ayrı epic backlog dosyaları açmak
-- her epic altında issue listesi, dosya listesi, test listesi ve risk listesini çıkarmak
-- ilk release dalgası için acceptance checklist ve milestone board oluşturmak
-
-Bu belge stratejik ve uygulamaya dönük ana plan olarak kalmalı; issue-level ayrıştırma bunun üzerine kurulmalıdır.
+## 16.5 Product Feel KPI’ları
+
+- time to orientation
+- command discoverability
+- perceived confidence after verify/review
+- manual recovery steps per week
+- “neden böyle önerdi?” sorusuna ürün içinden cevap verebilme
+
+---
+
+## 17. Definition of Ready / Done
+
+## 17.1 Definition of Ready
+
+Her iş için şunlar yazılmadan iş başlamaz:
+
+- kullanıcı problemi
+- command surface
+- canonical/runtime/home etkisi
+- failure mode
+- perf budget
+- test fikri
+- docs etkisi
+- kill switch veya safe default
+
+## 17.2 Definition of Done
+
+Bir iş done değildir, eğer:
+
+- intent net değilse
+- `--json` yüzeyi yoksa
+- canonical/runtime/home contract yazılmadıysa
+- failure mode görünür değilse
+- perf etkisi ölçülmediyse
+- docs/help örneği yoksa
+- fixture veya scenario testi yoksa
+
+### Codex home’a dokunan işler için ekstra done şartı
+
+- diff preview
+- backup journal
+- rollback
+- property tests
+- scope isolation
+
+### Runtime işleri için ekstra done şartı
+
+- write-scope refusal testleri
+- timeout/cancel/retry testi
+- orphan cleanup testi
+- fallback story
+
+### Evidence işleri için ekstra done şartı
+
+- verdict protocol
+- evidence bundle
+- uncovered requirement report
+- flaky budget tanımı
+
+---
+
+## 18. Fail-Fast ve Kill Switch Kuralları
+
+## 18.1 Immediate stop kriterleri
+
+- Codex config corruption
+- rollback failure
+- silent canonical mutation
+- packet compiler kritik ref’i yanlış dışarıda bırakıyor olması
+- uncontrolled process explosion
+- patch apply veri kaybı riski
+- evidence graph false-pass üretiyor olması
+
+## 18.2 Kill switch kriterleri
+
+- daemon tek flag ile kapanabilmeli
+- hooks tek flag ile kapanabilmeli
+- MCP layer tümden kapanabilmeli
+- subagent runtime worktree/solo fallback verebilmeli
+- adaptive router ölçüm moduna geri çekilebilmeli
+- patch-first collect klasik summary collect’e geri dönebilmeli
+
+## 18.3 Scope trim kriterleri
+
+- `do` adoption düşükse komut yüzeyi büyütülmez
+- role catalog karmaşıklaşıyorsa repo-derived rol jeneratörü bekletilir
+- hybrid runtime karmaşıksa önce pure subagent veya pure worktree ile sınırlanır
+- policy engine gürültü üretiyorsa önce warn-only modda kalır
+- symbol explore erken karmaşıklaşıyorsa grep+index hibritinde tutulur
+
+---
+
+## 19. İlk Öncelikli Backlog
+
+### P0 — Hemen yapılacaklar
+
+- safe TOML patch engine
+- `cwf codex setup/doctor/diff-config/rollback`
+- role/prompt/skill catalog v1
+- repo-derived role suggestion v0
+- `cwf do`
+- `cwf note`
+- thread/backlog MVP
+- questions/claims/assumptions ledger
+- secure phase baseline
+- context compiler spike
+- subagent adapter spike
+- Playwright smoke slice
+
+### P1 — Yakın vade
+
+- packet lock / provenance
+- mailbox/timeline/steering
+- patch bundle schema
+- collect --as patch
+- evidence graph v1
+- policy engine v1
+- telemetry probes
+- hooks/MCP baseline
+- GC policy
+- large-repo benchmarks
+
+### P2 — Orta vade
+
+- adaptive routing
+- notification layer
+- symbol-aware explore
+- incident memory
+- cross-repo operator center
+- public benchmark publishing
+- stable/canary update engine
+
+---
+
+## 20. Non-Goals
+
+- hidden DB tabanlı source-of-truth
+- preview’siz global config yazımı
+- görünmez agent swarm
+- evidence olmadan autonomous closeout
+- default açık hook/MCP/daemon
+- ilk fazda tüm runtime’ları desteklemek
+- ilk fazda tam LSP parity kovalamak
+- shell yüzeyini tamamen öldürmek
+- çok sayıda primary komut eklemek
+- patch-first collect gelmeden kontrolsüz write-capable swarm açmak
+
+---
+
+## 21. Repo İçi Ownership Önerisi
+
+- Stream A: Codex control plane
+- Stream B: daily UX / router / capture
+- Stream C: trust / secure / policy
+- Stream D: packet compiler / runtime / patch collect
+- Stream E: verify / evidence / Playwright
+- Stream F: telemetry / scale / daemon / explore
+- Stream G: docs / templates / release / fleet
+
+### Her sprint için kural
+
+- 1 adet user-facing primary win
+- 1 adet trust/perf guardrail işi
+- 1 adet docs işi
+
+---
+
+## 22. Yönetici Özeti
+
+Bu roadmap’in net sonucu şudur:
+
+1. Ürün bugün iyi durumda; çekirdek güçlü.
+2. En büyük açık, Codex-native son katmanların eksik olması.
+3. Önceki roadmap’in ana yönü doğruydu ve korunuyor.
+4. Ama cutting-edge ürün olmak için yalnız CN omurgası yetmez.
+5. Bu yüzden bu sürüm şu yeni katmanları ekliyor:
+   - context compiler
+   - patch-first runtime
+   - policy engine
+   - evidence graph
+   - adaptive router
+   - symbol-aware explore
+   - incident memory
+   - cross-repo operator center
+6. Uygulama sırası rastgele değil:
+   - önce control plane
+   - sonra daily loop
+   - sonra trust
+   - sonra context compiler
+   - sonra native runtime
+   - sonra evidence/policy
+   - sonra scale/integrations
+   - en son cross-repo/productization
+
+Kısa ifade:
+
+> `codex-workflow-kit` bundan sonra “workflow dosyaları olan iyi bir CLI” değil, Codex kullanan geliştirici için güvenilir, hızlı, kanıt üreten ve paralelliği kontrol eden bir çalışma işletim sistemi olarak tasarlanmalıdır.
+
+---
+
+## 23. Bir Sonraki Somut Paket
+
+İlk merge sırası:
+
+1. `CE1` contract + TOML patch engine skeleton
+2. `cwf codex setup/doctor/diff-config/rollback` MVP
+3. `CE2` role/prompt catalog v1
+4. `CE3` için `cwf do` + `cwf note` MVP
+5. `CE4` claims/questions/secure baseline
+6. `CE5` packet compile spike
+7. `CE6` subagent adapter spike
+8. `CE8` Playwright smoke slice
+
+İlk büyük kazanımın formülü:
+
+> `codex control plane + do + note + claims + packet compile + subagent spike`
+
+---
+
+## 24. Referans Girdiler
+
+Bu roadmap şu girdilerden türetildi:
+
+- mevcut repo implementasyonu
+- mevcut repo roadmap ve audit yüzeyleri
+- `oh-my-codex`’in Codex control plane, runtime ve MCP yaklaşımı
+- `get-shit-done`’ın `do/note/thread/backlog`, secure phase, research gate, provenance ve browser verification yaklaşımı
+
+Bu belge, bu girdilerin aynısını kopyalamaz; onları repo gerçekliğiyle uyumlu bir ürün rotasına çevirir.

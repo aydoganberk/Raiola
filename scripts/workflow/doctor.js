@@ -15,6 +15,7 @@ const {
   workflowPaths,
 } = require('./common');
 const { readProductManifest, readInstalledVersionMarker } = require('./product_manifest');
+const { applyRepairPlan, buildRepairPlan } = require('./repair');
 const { writeStateSurface } = require('./state_surface');
 
 function summarizeItems(items, limit = 3) {
@@ -39,18 +40,13 @@ Usage:
 Options:
   --root <path>     Workflow root. Defaults to active workstream root
   --strict          Exit non-zero when a fail check exists
+  --repair          Print a dry-run repair plan for safe runtime fixes
+  --apply           Apply the safe runtime fixes from the repair plan
+  --json            Print machine-readable output
   `);
 }
 
-function main() {
-  const args = parseArgs(process.argv.slice(2));
-  if (args.help || args._.includes('help')) {
-    printHelp();
-    return;
-  }
-
-  const cwd = process.cwd();
-  const rootDir = resolveWorkflowRoot(cwd, args.root);
+function buildDoctorReport(cwd, rootDir) {
   const paths = workflowPaths(rootDir);
   assertWorkflowFiles(paths);
 
@@ -232,30 +228,97 @@ function main() {
 
   const failCount = checks.filter((item) => item.status === 'fail').length;
   const warnCount = checks.filter((item) => item.status === 'warn').length;
+  return {
+    rootDir,
+    rootDirRelative: path.relative(cwd, rootDir),
+    failCount,
+    warnCount,
+    checks,
+  };
+}
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.help || args._.includes('help')) {
+    printHelp();
+    return;
+  }
+
+  const cwd = process.cwd();
+  const rootDir = resolveWorkflowRoot(cwd, args.root);
+  const report = buildDoctorReport(cwd, rootDir);
+  const repairPlan = args.repair || args.apply
+    ? buildRepairPlan(cwd, rootDir, { kind: 'doctor' })
+    : null;
+  const appliedRepair = args.apply ? applyRepairPlan(cwd, rootDir, repairPlan) : null;
   writeStateSurface(cwd, rootDir, {
     doctor: {
-      failCount,
-      warnCount,
-      checks,
-      rootDir: path.relative(cwd, rootDir),
+      failCount: report.failCount,
+      warnCount: report.warnCount,
+      checks: report.checks,
+      rootDir: report.rootDirRelative,
     },
   }, { updatedBy: 'doctor' });
 
+  if (args.json) {
+    console.log(JSON.stringify({
+      ...report,
+      repair: repairPlan
+        ? {
+          safeActionCount: repairPlan.safeActionCount,
+          runtimeIssues: repairPlan.runtimeIssues,
+          manualIssues: repairPlan.manualIssues,
+          actions: repairPlan.actions.map((action) => action.label),
+          applied: appliedRepair,
+        }
+        : null,
+    }, null, 2));
+    if (args.strict && report.failCount > 0) {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   console.log(`# WORKFLOW DOCTOR\n`);
-  console.log(`- Root: \`${rootDir}\``);
-  console.log(`- Fail count: \`${failCount}\``);
-  console.log(`- Warn count: \`${warnCount}\``);
+  console.log(`- Root: \`${report.rootDir}\``);
+  console.log(`- Fail count: \`${report.failCount}\``);
+  console.log(`- Warn count: \`${report.warnCount}\``);
   console.log(`\n## Checks\n`);
-  for (const check of checks) {
+  for (const check of report.checks) {
     console.log(`- [${check.status.toUpperCase()}] ${check.message}`);
     if (check.fix) {
       console.log(`  fix: \`${check.fix}\``);
     }
   }
 
-  if (args.strict && failCount > 0) {
+  if (repairPlan) {
+    console.log(`\n## Repair\n`);
+    if (repairPlan.actions.length === 0) {
+      console.log('- `No safe runtime repair action is pending`');
+    } else {
+      for (const action of repairPlan.actions) {
+        console.log(`- ${action.label}`);
+      }
+    }
+    for (const issue of repairPlan.manualIssues) {
+      console.log(`- manual: \`${issue.command}\` -> ${issue.reason}`);
+    }
+    if (appliedRepair) {
+      console.log('- `Safe runtime fixes were applied.`');
+    } else {
+      console.log('- `Dry run only. Re-run with --repair --apply to execute safe fixes.`');
+    }
+  }
+
+  if (args.strict && report.failCount > 0) {
     process.exitCode = 1;
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  buildDoctorReport,
+};

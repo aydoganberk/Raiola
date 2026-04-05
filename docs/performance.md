@@ -10,6 +10,9 @@ Current product targets for medium-size repos:
 - `health <1s`
 - `map-codebase <2s`
 - `map-frontend <2s`
+- `launch <800ms cold / <300ms warm`
+- `manager <400ms warm`
+- `next-prompt <150ms warm`
 
 ## Implemented performance surfaces
 
@@ -19,6 +22,11 @@ Current product targets for medium-size repos:
 - token estimate cache
 - cached `safeExec` results within a single invocation
 - repo fs index at `.workflow/fs-index.json`
+- write-on-change state surfaces for `.workflow/state.json` and `.workflow/fs-index.json`
+- shared in-process runtime collector for `launch`, `hud`, `manager`, and `next-prompt`
+- repo-local Codex control mirror under `.workflow/runtime/codex-control/`
+- packet lock and provenance cache under `.workflow/cache/packet-locks.json` and `.workflow/cache/packet-provenance.json`
+- mailbox/timeline logs under `.workflow/orchestration/runtime/*.jsonl`
 
 ## Benchmarking
 
@@ -44,6 +52,8 @@ cwf benchmark --assert-slo --thresholds hud=300,next=500,doctor=1000
 
 Release CI runs the benchmark with `--assert-slo` from [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
 
+Route and stats telemetry write `.workflow/cache/model-routing.json`, verify surfaces write evidence under `.workflow/verifications/`, and evidence graph refreshes write `.workflow/evidence-graph/latest.json`.
+
 ## Perf metrics
 
 When benchmark mode is active, commands write latest counters to `.workflow/cache/perf-metrics/latest.json`.
@@ -58,3 +68,5 @@ Useful counters include:
 ## Index semantics
 
 `.workflow/fs-index.json` is not canonical. It stores repo file metadata so repeated map runs can tell whether the repo surface is current or changed without redoing all higher-level work.
+
+`.workflow/state.json`, `.workflow/runtime/*.json`, and `.workflow/runtime/*.md` are also non-canonical. They now use write-on-change semantics so watch/manager refreshes avoid unnecessary disk churn.

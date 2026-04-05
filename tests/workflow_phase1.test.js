@@ -57,11 +57,13 @@ test('workflow:init installs the runtime surface and HUD state', () => {
 
   assert.equal(normalizeCompactHud(compactHud), normalizeCompactHud(expectedCompactHud));
   assert.equal(hudJson.workflowRootRelative, 'docs/workflow');
+  assert.equal(hudJson.runtimeFileRelative, '.workflow/runtime/hud.json');
   assert.equal(hudJson.workflow.milestone, 'NONE');
   assert.equal(hudJson.workflow.step, 'complete');
   assert.equal(hudJson.health.status, 'pass');
   assert.equal(hudJson.counts.carryforward, 0);
   assert.equal(hudJson.counts.seeds, 0);
+  assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'runtime', 'hud.json')));
 
   run('npm', ['run', 'workflow:doctor', '--', '--strict'], targetRepo);
   run('npm', ['run', 'workflow:health', '--', '--strict'], targetRepo);
@@ -87,6 +89,7 @@ test('workflow:migrate refreshes runtime files without overwriting workflow docs
   assert.ok(statusAfter.includes('custom status marker'));
   assert.ok(fs.existsSync(hudPath));
   assert.equal(hudJson.workflowRootRelative, 'docs/workflow');
+  assert.equal(hudJson.runtimeFileRelative, '.workflow/runtime/hud.json');
   assert.equal(hudJson.health.status, 'pass');
 });
 

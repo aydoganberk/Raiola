@@ -1295,9 +1295,18 @@ if (require.main === module) {
 
 module.exports = {
   ROLE_CATALOG,
+  advanceWave,
   buildDelegationPlan,
   detectParallelIntent,
+  loadRuntimeState,
+  markTaskCompleted,
+  markTaskStarted,
+  orchestrationPaths,
+  persistRuntimeState,
   renderPlanMarkdown,
+  renderTaskPacket,
+  resumeOrchestration,
   startOrchestration,
+  stopOrchestration,
   summarizeState,
 };

@@ -1,13 +1,10 @@
-const fs = require('node:fs');
 const path = require('node:path');
-const childProcess = require('node:child_process');
 const {
-  assertWorkflowFiles,
   parseArgs,
   resolveWorkflowRoot,
-  workflowPaths,
 } = require('./common');
-const { writeStateSurface } = require('./state_surface');
+const { collectRuntimeState } = require('./runtime_collector');
+const { writeRuntimeJson } = require('./runtime_helpers');
 
 function printHelp() {
   console.log(`
@@ -19,6 +16,9 @@ Usage:
 Options:
   --root <path>     Workflow root. Defaults to active workstream root
   --compact         Print compact summary output
+  --watch           Refresh continuously
+  --interval <sec>  Watch refresh interval. Defaults to 2 seconds
+  --iterations <n>  Optional watch iteration cap for tests
   --json            Print machine-readable JSON
   `);
 }
@@ -27,62 +27,19 @@ function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
 }
 
-function runJsonSibling(scriptName, cwd, rootDir) {
-  const rootRelative = relativePath(cwd, rootDir);
-  const raw = childProcess.execFileSync(
-    'node',
-    [path.join(__dirname, scriptName), '--json', '--root', rootRelative],
-    {
-      cwd,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    },
-  );
-  return JSON.parse(raw);
-}
-
-function healthStatus(health) {
-  if (health.failCount > 0) {
-    return 'fail';
-  }
-  if (health.warnCount > 0) {
-    return 'warn';
-  }
-  return 'pass';
-}
-
 function collectHudState(cwd, rootDir) {
-  const paths = workflowPaths(rootDir);
-  assertWorkflowFiles(paths);
-  const health = runJsonSibling('health.js', cwd, rootDir);
-  const next = runJsonSibling('next_step.js', cwd, rootDir);
-  return writeStateSurface(cwd, rootDir, {
-    health: {
-      status: healthStatus(health),
-      failCount: health.failCount,
-      warnCount: health.warnCount,
-      topChecks: health.checks.slice(0, 5).map((check) => ({
-        status: check.status,
-        message: check.message,
-      })),
-    },
-    window: {
-      decision: next.windowStatus.decision,
-      remainingBudget: next.windowStatus.remainingBudget,
-      canStartNextStep: next.windowStatus.canStartNextStep,
-      canFinishCurrentChunk: next.windowStatus.canFinishCurrentChunk,
-      automationRecommendation: next.windowStatus.automationRecommendation,
-      packetHash: next.packetHash,
-      estimatedTokens: next.estimatedTokens,
-      budgetStatus: next.budgetStatus,
-    },
-    next: {
-      title: next.recommendation.title,
-      command: next.recommendation.command,
-      note: next.recommendation.note,
-      checklist: next.recommendation.checklist,
-    },
-  }, { updatedBy: 'hud' });
+  const state = collectRuntimeState(cwd, rootDir, {
+    updatedBy: 'hud',
+  }).state;
+  const runtimeFile = writeRuntimeJson(cwd, 'hud.json', {
+    ...state,
+    runtimeFileRelative: '.workflow/runtime/hud.json',
+  });
+
+  return {
+    ...state,
+    runtimeFileRelative: relativePath(cwd, runtimeFile),
+  };
 }
 
 function printCompact(state) {
@@ -100,6 +57,7 @@ function printCompact(state) {
   console.log(`- packets=\`${packetSummary}\``);
   console.log(`- counts=\`carryforward:${state.counts.carryforward} seeds:${state.counts.seeds} recall:${state.counts.activeRecall}\``);
   console.log(`- next=\`${state.next.title}\` command=\`${state.next.command}\``);
+  console.log(`- team=\`${state.orchestration?.status || 'idle'}\` verify_shell=\`${state.verifications?.shell?.latest?.verdict || 'none'}\` verify_browser=\`${state.verifications?.browser?.latest?.verdict || 'none'}\``);
   console.log(`- state=\`${state.stateFileRelative}\``);
 }
 
@@ -151,9 +109,20 @@ function printStandard(state) {
   console.log(`- Resume anchor: \`${state.handoff.resumeAnchor}\``);
   console.log(`- Expected first command: \`${state.handoff.expectedFirstCommand}\``);
   console.log(`- Next action: ${state.handoff.nextAction}`);
+
+  if (state.repair?.hints?.length > 0) {
+    console.log(`\n## Repair Hints\n`);
+    for (const hint of state.repair.hints) {
+      console.log(`- \`${hint.command}\` -> ${hint.reason}`);
+    }
+  }
 }
 
-function main() {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runHud() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help || args._.includes('help')) {
     printHelp();
@@ -162,23 +131,36 @@ function main() {
 
   const cwd = process.cwd();
   const rootDir = resolveWorkflowRoot(cwd, args.root);
-  const state = collectHudState(cwd, rootDir);
+  const watch = Boolean(args.watch);
+  const intervalMs = Math.max(1, Number(args.interval || 2)) * 1000;
+  const iterationLimit = args.iterations ? Math.max(1, Number(args.iterations)) : null;
+  let iterations = 0;
 
-  if (args.json) {
-    console.log(JSON.stringify(state, null, 2));
-    return;
+  while (true) {
+    const state = collectHudState(cwd, rootDir);
+
+    if (args.json) {
+      console.log(JSON.stringify(state, null, 2));
+    } else if (args.compact) {
+      printCompact(state);
+    } else {
+      printStandard(state);
+    }
+
+    iterations += 1;
+    if (!watch || (iterationLimit && iterations >= iterationLimit)) {
+      return;
+    }
+    console.log('\n---\n');
+    await sleep(intervalMs);
   }
-
-  if (args.compact) {
-    printCompact(state);
-    return;
-  }
-
-  printStandard(state);
 }
 
 if (require.main === module) {
-  main();
+  runHud().catch((error) => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
 }
 
 module.exports = {

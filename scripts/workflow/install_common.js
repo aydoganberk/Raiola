@@ -235,9 +235,12 @@ function loadTargetRuntimeScripts() {
 }
 
 function patchPackageJsonScripts(targetRepo, options = {}) {
-  const { overwriteConflicts = false } = options;
+  const {
+    overwriteConflicts = false,
+    runtimeScriptsOverride = null,
+  } = options;
   const packageJsonPath = path.join(targetRepo, 'package.json');
-  const runtimeScripts = loadTargetRuntimeScripts();
+  const runtimeScripts = runtimeScriptsOverride || loadTargetRuntimeScripts();
   let createdPackageJson = false;
 
   if (!fs.existsSync(packageJsonPath)) {
@@ -625,6 +628,7 @@ module.exports = {
   formatInstallSummary,
   installWorkflowSurface,
   loadTargetRuntimeScripts,
+  patchPackageJsonScripts,
   productManifestPath,
   readProductManifest,
   readInstalledVersionMarker,
@@ -634,4 +638,5 @@ module.exports = {
   sourceRepoRoot,
   versionMarkerPath,
   writeProductManifest,
+  writeVersionMarker,
 };

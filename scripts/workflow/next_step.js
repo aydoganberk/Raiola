@@ -365,15 +365,7 @@ function deriveRecommendation(state) {
   return recommendation;
 }
 
-function main() {
-  const args = parseArgs(process.argv.slice(2));
-  if (args.help || args._.includes('help')) {
-    printHelp();
-    return;
-  }
-
-  const cwd = process.cwd();
-  const rootDir = resolveWorkflowRoot(cwd, args.root);
+function buildNextPayload(cwd, rootDir) {
   const paths = workflowPaths(rootDir);
   assertWorkflowFiles(paths);
 
@@ -445,6 +437,21 @@ function main() {
     recommendation,
   };
 
+  return payload;
+}
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.help || args._.includes('help')) {
+    printHelp();
+    return;
+  }
+
+  const cwd = process.cwd();
+  const rootDir = resolveWorkflowRoot(cwd, args.root);
+  const payload = buildNextPayload(cwd, rootDir);
+  const { milestone, step, planGate, contextReadiness, preferences, recommendation } = payload;
+
   writeStateSurface(cwd, rootDir, {
     window: {
       decision: payload.windowStatus.decision,
@@ -509,4 +516,11 @@ function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  buildNextPayload,
+  deriveRecommendation,
+};

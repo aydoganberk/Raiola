@@ -522,6 +522,10 @@ function write(filePath, content) {
   fileIo.writeText(filePath, content);
 }
 
+function writeIfChanged(filePath, content) {
+  return fileIo.writeTextIfChanged(filePath, content);
+}
+
 function ensureDir(dirPath) {
   fileIo.ensureDir(dirPath);
 }
@@ -2816,4 +2820,5 @@ module.exports = {
   resolveWorkflowControlIntent,
   workflowPaths,
   write,
+  writeIfChanged,
 };

@@ -16,6 +16,7 @@ const {
   readIfExists,
   workflowPaths,
   write,
+  writeIfChanged,
 } = require('./common');
 
 function relativePath(fromDir, targetPath) {
@@ -149,20 +150,43 @@ function readExistingState(cwd) {
   }
 }
 
+function stripRuntimeTimestamps(state) {
+  if (!state || typeof state !== 'object') {
+    return state;
+  }
+
+  const next = { ...state };
+  delete next.generatedAt;
+  delete next.updatedAt;
+  return next;
+}
+
 function writeStateSurface(cwd, rootDir, patch = {}, options = {}) {
   const base = buildBaseState(cwd, rootDir);
   const existing = options.preserveExisting === false ? null : readExistingState(cwd);
   const merged = deepMerge(existing || {}, base);
   const state = deepMerge(merged, patch);
-  state.generatedAt = existing?.generatedAt || new Date().toISOString();
-  state.updatedAt = new Date().toISOString();
+  const stableExisting = stripRuntimeTimestamps(existing);
+  const stableNext = stripRuntimeTimestamps(state);
+  const unchanged = stableExisting && JSON.stringify(stableExisting) === JSON.stringify(stableNext);
+  const now = new Date().toISOString();
+  state.generatedAt = unchanged
+    ? existing.generatedAt
+    : (existing?.generatedAt || now);
+  state.updatedAt = unchanged
+    ? existing.updatedAt
+    : now;
   if (options.updatedBy) {
     state.updatedBy = options.updatedBy;
   }
 
   ensureDir(path.dirname(base.stateFile));
-  write(base.stateFile, `${JSON.stringify(state, null, 2)}\n`);
-  return state;
+  if (!unchanged) {
+    writeIfChanged(base.stateFile, `${JSON.stringify(state, null, 2)}\n`);
+    return state;
+  }
+
+  return existing || state;
 }
 
 module.exports = {

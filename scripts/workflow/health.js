@@ -22,6 +22,7 @@ const {
   warnAgentsSize,
   workflowPaths,
 } = require('./common');
+const { applyRepairPlan, buildRepairPlan } = require('./repair');
 
 function printHelp() {
   console.log(`
@@ -33,6 +34,8 @@ Usage:
 Options:
   --root <path>     Workflow root. Defaults to active workstream root
   --strict          Exit non-zero on fail checks
+  --repair          Print a dry-run repair plan for safe runtime fixes
+  --apply           Apply the safe runtime fixes from the repair plan
   --json            Print machine-readable output
   `);
 }
@@ -45,19 +48,13 @@ function safeExtract(content, heading) {
   }
 }
 
-function main() {
-  const args = parseArgs(process.argv.slice(2));
-  if (args.help || args._.includes('help')) {
-    printHelp();
-    return;
-  }
-
-  const cwd = process.cwd();
-  const rootDir = resolveWorkflowRoot(cwd, args.root);
+function buildHealthReport(cwd, rootDir, options = {}) {
   const paths = workflowPaths(rootDir);
   assertWorkflowFiles(paths);
   const preferences = loadPreferences(paths);
-  const strictMode = Boolean(args.strict) || Boolean(preferences.healthStrictRequired);
+  const strictMode = Object.prototype.hasOwnProperty.call(options, 'strictMode')
+    ? Boolean(options.strictMode)
+    : Boolean(preferences.healthStrictRequired);
 
   const checks = [];
   const pushCheck = (status, message, extra = {}) => checks.push({ status, message, ...extra });
@@ -213,35 +210,93 @@ function main() {
   const failCount = checks.filter((item) => item.status === 'fail').length;
   const warnCount = checks.filter((item) => item.status === 'warn').length;
 
+  return {
+    rootDir: path.relative(cwd, rootDir),
+    strictMode,
+    failCount,
+    warnCount,
+    checks,
+    packetHashes: packets.map((packet) => ({ doc: packet.primary.key, hash: packet.inputHash })),
+    window: {
+      decision: windowStatus.decision,
+      remaining: windowStatus.estimatedRemainingTokens,
+    },
+  };
+}
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.help || args._.includes('help')) {
+    printHelp();
+    return;
+  }
+
+  const cwd = process.cwd();
+  const rootDir = resolveWorkflowRoot(cwd, args.root);
+  const report = buildHealthReport(
+    cwd,
+    rootDir,
+    Boolean(args.strict) ? { strictMode: true } : {},
+  );
+  const repairPlan = args.repair || args.apply
+    ? buildRepairPlan(cwd, rootDir, { kind: 'health', healthReport: report })
+    : null;
+  const appliedRepair = args.apply ? applyRepairPlan(cwd, rootDir, repairPlan) : null;
+
   if (args.json) {
     console.log(JSON.stringify({
-      rootDir: path.relative(cwd, rootDir),
-      strictMode,
-      failCount,
-      warnCount,
-      checks,
-      packetHashes: packets.map((packet) => ({ doc: packet.primary.key, hash: packet.inputHash })),
-      window: {
-        decision: windowStatus.decision,
-        remaining: windowStatus.estimatedRemainingTokens,
-      },
+      ...report,
+      repair: repairPlan
+        ? {
+          safeActionCount: repairPlan.safeActionCount,
+          runtimeIssues: repairPlan.runtimeIssues,
+          manualIssues: repairPlan.manualIssues,
+          actions: repairPlan.actions.map((action) => action.label),
+          applied: appliedRepair,
+        }
+        : null,
     }, null, 2));
     return;
   }
 
   console.log(`# WORKFLOW HEALTH\n`);
-  console.log(`- Root: \`${path.relative(cwd, rootDir)}\``);
-  console.log(`- Fail count: \`${failCount}\``);
-  console.log(`- Warn count: \`${warnCount}\``);
-  console.log(`- Strict mode: \`${strictMode ? 'on' : 'off'}\``);
+  console.log(`- Root: \`${report.rootDir}\``);
+  console.log(`- Fail count: \`${report.failCount}\``);
+  console.log(`- Warn count: \`${report.warnCount}\``);
+  console.log(`- Strict mode: \`${report.strictMode ? 'on' : 'off'}\``);
   console.log(`\n## Checks\n`);
-  for (const check of checks) {
+  for (const check of report.checks) {
     console.log(`- [${check.status.toUpperCase()}] ${check.message}`);
   }
 
-  if (strictMode && failCount > 0) {
+  if (repairPlan) {
+    console.log(`\n## Repair\n`);
+    if (repairPlan.actions.length === 0) {
+      console.log('- `No safe runtime repair action is pending`');
+    } else {
+      for (const action of repairPlan.actions) {
+        console.log(`- ${action.label}`);
+      }
+    }
+    for (const issue of repairPlan.manualIssues) {
+      console.log(`- manual: \`${issue.command}\` -> ${issue.reason}`);
+    }
+    if (appliedRepair) {
+      console.log('- `Safe runtime fixes were applied.`');
+    } else {
+      console.log('- `Dry run only. Re-run with --repair --apply to execute safe fixes.`');
+    }
+  }
+
+  if (report.strictMode && report.failCount > 0) {
     process.exitCode = 1;
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  buildHealthReport,
+};

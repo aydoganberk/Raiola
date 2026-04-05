@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { ensureDir, readTextIfExists, writeText } = require('./io/files');
+const { ensureDir, readTextIfExists, writeTextIfChanged } = require('./io/files');
 const { safeExecCached } = require('./perf/runtime_cache');
 
 const IGNORED_DIRS = new Set([
@@ -111,7 +111,7 @@ function listIndexedRepoFiles(cwd, options = {}) {
 
   const payload = {
     version: 1,
-    generatedAt: new Date().toISOString(),
+    generatedAt: previous?.generatedAt || new Date().toISOString(),
     refreshMode,
     refreshStatus: !previous
       ? 'new'
@@ -123,8 +123,29 @@ function listIndexedRepoFiles(cwd, options = {}) {
     entries,
   };
 
+  if (previous) {
+    const stablePrevious = {
+      ...previous,
+      generatedAt: payload.generatedAt,
+      refreshMode,
+      refreshStatus: payload.refreshStatus,
+    };
+    if (JSON.stringify(stablePrevious.entries || {}) === JSON.stringify(payload.entries)
+      && JSON.stringify(stablePrevious.changedFiles || []) === JSON.stringify(payload.changedFiles)
+      && stablePrevious.fileCount === payload.fileCount
+      && stablePrevious.refreshStatus === payload.refreshStatus) {
+      return {
+        ...previous,
+        refreshMode,
+        refreshStatus: payload.refreshStatus,
+        files,
+        indexPath: indexPath(cwd),
+      };
+    }
+  }
+
   ensureDir(path.dirname(indexPath(cwd)));
-  writeText(indexPath(cwd), `${JSON.stringify(payload, null, 2)}\n`);
+  writeTextIfChanged(indexPath(cwd), `${JSON.stringify(payload, null, 2)}\n`);
   return {
     ...payload,
     files,
