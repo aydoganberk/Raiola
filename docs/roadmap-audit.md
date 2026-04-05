@@ -13,7 +13,7 @@ This document cross-checks [`ROADMAP.md`](../ROADMAP.md) against the current rep
 - On `2026-04-06`, the latest local audit pass succeeded for `node --test tests/*.test.js`, `node bin/cwf.js doctor --strict`, and `node scripts/workflow/benchmark.js --runs 3 --assert-slo --json`.
 - The latest local test result is `67/67` pass.
 - The latest local doctor result is `0 fail / 0 warn`.
-- The latest benchmark stayed under SLO with warm medians of `hud 121ms`, `next 109ms`, `doctor 81ms`, `health 88ms`, `map-codebase 117ms`, and `map-frontend 106ms`.
+- The latest benchmark stayed under SLO with warm medians of `hud 167ms`, `next 125ms`, `doctor 85ms`, `health 86ms`, `map-codebase 140ms`, and `map-frontend 117ms`.
 - The roadmap audit now reflects the repo-local fallback behavior for the virtual `.codex` root and the `playwright` browser adapter fallback when Playwright is unavailable.
 
 ## CE Matrix

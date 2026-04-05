@@ -5,6 +5,8 @@
 > Kapsam: mevcut repo gerçekliği + önceki Codex-native roadmap + `oh-my-codex` ve `get-shit-done` karşılaştırmasından türetilen yeni ürün rotası  
 > Amaç: `codex-workflow-kit`'i “iyi bir repo-native workflow companion” seviyesinden “Codex-native workflow OS + evidence engine + safe runtime” seviyesine taşımak
 
+> Not: Bu dokümandaki “bugün eksik” ve faz bazlı boşluk anlatımı, `2026-04-05` tarihli baseline snapshot’ı temsil eder. Güncel uygulanma durumu ve doğrulama sonuçları için `docs/roadmap-audit.md` canonical audit yüzeyi olarak takip edilmelidir.
+
 ---
 
 ## 1. Belge Durumu
