@@ -1,6 +1,5 @@
-const path = require('node:path');
 const { parseArgs } = require('./common');
-const { readJsonFile, relativePath, writeJsonFile } = require('./roadmap_os');
+const { readApprovals, grantApproval } = require('./policy');
 
 function printHelp() {
   console.log(`
@@ -17,32 +16,6 @@ Options:
   `);
 }
 
-function approvalsPath(cwd) {
-  return path.join(cwd, '.workflow', 'runtime', 'approvals.json');
-}
-
-function readApprovals(cwd) {
-  return readJsonFile(approvalsPath(cwd), {
-    generatedAt: new Date().toISOString(),
-    grants: [],
-  });
-}
-
-function grantApproval(cwd, target, reason) {
-  const payload = readApprovals(cwd);
-  payload.grants.push({
-    target,
-    reason,
-    grantedAt: new Date().toISOString(),
-  });
-  writeJsonFile(approvalsPath(cwd), payload);
-  return {
-    action: 'grant',
-    file: relativePath(cwd, approvalsPath(cwd)),
-    grant: payload.grants[payload.grants.length - 1],
-  };
-}
-
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const action = args._[0] || 'list';
@@ -55,7 +28,7 @@ function main() {
     ? grantApproval(cwd, String(args.target || ''), String(args.reason || ''))
     : {
       action: 'list',
-      file: relativePath(cwd, approvalsPath(cwd)),
+      file: 'docs/workflow/POLICY.md',
       grants: readApprovals(cwd).grants,
     };
   if (args.json) {

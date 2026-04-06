@@ -1,20 +1,42 @@
+const fs = require('node:fs');
 const path = require('node:path');
-const { parseArgs } = require('./common');
-const { readJsonFile, relativePath, writeJsonFile } = require('./roadmap_os');
+const {
+  parseArgs,
+  read,
+  renderMarkdownTable,
+  writeIfChanged,
+} = require('./common');
+const {
+  relativePath,
+  readTableDocument,
+  writeJsonFile,
+} = require('./roadmap_os');
 
-const DEFAULT_POLICY = Object.freeze({
-  generatedAt: null,
-  mode: 'standard',
-  matrix: {
-    docs: { edit: 'auto', delete: 'warn' },
-    tests: { edit: 'auto', delete: 'warn' },
-    src: { edit: 'warn', delete: 'human_needed' },
-    config: { edit: 'human_needed', delete: 'block' },
-    infra: { edit: 'human_needed', delete: 'block' },
-    migrations: { edit: 'human_needed', delete: 'block' },
-    secrets: { edit: 'block', delete: 'block' },
-  },
-});
+const DOMAIN_HEADERS = Object.freeze(['Domain', 'Read', 'Edit', 'Delete', 'Move', 'Notes']);
+const OPERATION_HEADERS = Object.freeze(['Operation', 'Decision', 'Notes']);
+const APPROVAL_HEADERS = Object.freeze(['Target', 'Reason', 'Granted At']);
+
+const DEFAULT_DOMAIN_ROWS = Object.freeze([
+  ['docs', 'auto', 'auto', 'warn', 'warn', 'Canonical markdown can change quickly, but destructive edits stay visible.'],
+  ['tests', 'auto', 'auto', 'warn', 'warn', 'Test updates are encouraged, but deletions and moves should be explicit.'],
+  ['src', 'auto', 'warn', 'human_needed', 'human_needed', 'Source edits are allowed with review; destructive refactors need approval.'],
+  ['config', 'auto', 'human_needed', 'block', 'block', 'Config drift can break installs, CI, or routing unexpectedly.'],
+  ['infra', 'auto', 'human_needed', 'block', 'human_needed', 'Infra changes can affect deployment or remote environments.'],
+  ['migrations', 'auto', 'human_needed', 'block', 'human_needed', 'Schema moves need a deliberate rollout plan and rollback story.'],
+  ['secrets', 'human_needed', 'block', 'block', 'block', 'Secrets stay guarded unless a human explicitly approves access.'],
+]);
+
+const DEFAULT_OPERATION_ROWS = Object.freeze([
+  ['read', 'auto', 'Read-only inspection is safe by default outside secret surfaces.'],
+  ['edit', 'warn', 'Edits should stay reviewable and tied to the current scope.'],
+  ['delete', 'human_needed', 'Destructive changes require an explicit acknowledgement.'],
+  ['move', 'warn', 'Moves can hide churn or break paths and deserve visibility.'],
+  ['install', 'human_needed', 'Dependency and tool installs mutate the runtime surface.'],
+  ['network', 'human_needed', 'Network access can leak data or mutate remote systems.'],
+  ['browser', 'warn', 'Browser verification is allowed, but it should remain intentional and evidence-backed.'],
+  ['git', 'warn', 'Git mutations should remain preview-first and rollback-aware.'],
+  ['shell', 'warn', 'Shell execution is allowed when bounded and justified by the workflow.'],
+]);
 
 function printHelp() {
   console.log(`
@@ -33,21 +55,238 @@ Options:
   `);
 }
 
-function policyFile(cwd) {
+function canonicalPolicyFile(cwd) {
+  return path.join(cwd, 'docs', 'workflow', 'POLICY.md');
+}
+
+function runtimePolicyFile(cwd) {
   return path.join(cwd, '.workflow', 'runtime', 'policy.json');
 }
 
-function loadPolicy(cwd) {
-  const current = readJsonFile(policyFile(cwd), null);
-  if (current) {
-    return current;
+function approvalsFile(cwd) {
+  return path.join(cwd, '.workflow', 'runtime', 'approvals.json');
+}
+
+function defaultPolicyContent() {
+  return [
+    '# POLICY',
+    '',
+    'This document is the canonical workflow policy surface.',
+    'Runtime mirrors under `.workflow/runtime/policy.json` and `.workflow/runtime/approvals.json` are derived state only.',
+    '',
+    `## Domain Matrix\n${renderMarkdownTable(DOMAIN_HEADERS, DEFAULT_DOMAIN_ROWS)}`,
+    '',
+    `## Operation Defaults\n${renderMarkdownTable(OPERATION_HEADERS, DEFAULT_OPERATION_ROWS)}`,
+    '',
+    `## Approval Grants\n${renderMarkdownTable(APPROVAL_HEADERS, [])}`,
+  ].join('\n');
+}
+
+function ensurePolicyDocument(cwd) {
+  const filePath = canonicalPolicyFile(cwd);
+  if (!fs.existsSync(filePath)) {
+    writeIfChanged(filePath, `${defaultPolicyContent().trimEnd()}\n`);
   }
-  const seeded = {
-    ...DEFAULT_POLICY,
+  return filePath;
+}
+
+function normalizeDomainRows(rows) {
+  return (rows.length > 0 ? rows : DEFAULT_DOMAIN_ROWS).map((cells) => ([
+    String(cells[0] || '').trim(),
+    String(cells[1] || '').trim(),
+    String(cells[2] || '').trim(),
+    String(cells[3] || '').trim(),
+    String(cells[4] || '').trim(),
+    String(cells[5] || '').trim(),
+  ]));
+}
+
+function normalizeOperationRows(rows) {
+  return (rows.length > 0 ? rows : DEFAULT_OPERATION_ROWS).map((cells) => ([
+    String(cells[0] || '').trim(),
+    String(cells[1] || '').trim(),
+    String(cells[2] || '').trim(),
+  ]));
+}
+
+function normalizeApprovalRows(rows) {
+  return rows
+    .map((cells) => ([
+      String(cells[0] || '').trim(),
+      String(cells[1] || '').trim(),
+      String(cells[2] || '').trim(),
+    ]))
+    .filter((cells) => cells[0] || cells[1] || cells[2]);
+}
+
+function writePolicyDocument(cwd, payload) {
+  const filePath = canonicalPolicyFile(cwd);
+  const content = [
+    '# POLICY',
+    '',
+    'This document is the canonical workflow policy surface.',
+    'Runtime mirrors under `.workflow/runtime/policy.json` and `.workflow/runtime/approvals.json` are derived state only.',
+    '',
+    `## Domain Matrix\n${renderMarkdownTable(DOMAIN_HEADERS, payload.domainRows)}`,
+    '',
+    `## Operation Defaults\n${renderMarkdownTable(OPERATION_HEADERS, payload.operationRows)}`,
+    '',
+    `## Approval Grants\n${renderMarkdownTable(APPROVAL_HEADERS, payload.approvalRows)}`,
+  ].join('\n');
+  writeIfChanged(filePath, `${content.trimEnd()}\n`);
+}
+
+function derivePolicyRuntime(doc) {
+  return {
     generatedAt: new Date().toISOString(),
+    mode: 'standard',
+    matrix: Object.fromEntries(
+      doc.domainRows.map((row) => [
+        row[0],
+        {
+          read: row[1],
+          edit: row[2],
+          delete: row[3],
+          move: row[4],
+          notes: row[5],
+        },
+      ]),
+    ),
+    operationDefaults: Object.fromEntries(
+      doc.operationRows.map((row) => [
+        row[0],
+        {
+          decision: row[1],
+          notes: row[2],
+        },
+      ]),
+    ),
   };
-  writeJsonFile(policyFile(cwd), seeded);
-  return seeded;
+}
+
+function deriveApprovalsRuntime(doc) {
+  return {
+    generatedAt: new Date().toISOString(),
+    grants: doc.approvalRows.map((row) => ({
+      target: row[0],
+      reason: row[1],
+      grantedAt: row[2],
+    })),
+  };
+}
+
+function syncRuntimeFromDocument(cwd, doc) {
+  const policy = derivePolicyRuntime(doc);
+  const approvals = deriveApprovalsRuntime(doc);
+  writeJsonFile(runtimePolicyFile(cwd), policy);
+  writeJsonFile(approvalsFile(cwd), approvals);
+  return {
+    policy,
+    approvals,
+  };
+}
+
+function readPolicyDocument(cwd) {
+  const filePath = ensurePolicyDocument(cwd);
+  const domainTable = readTableDocument(filePath, 'Domain Matrix', {
+    title: 'POLICY',
+    headers: DOMAIN_HEADERS,
+  });
+  const operationTable = readTableDocument(filePath, 'Operation Defaults', {
+    title: 'POLICY',
+    headers: OPERATION_HEADERS,
+  });
+  const approvalsTable = readTableDocument(filePath, 'Approval Grants', {
+    title: 'POLICY',
+    headers: APPROVAL_HEADERS,
+  });
+  const doc = {
+    filePath,
+    content: read(filePath),
+    domainRows: normalizeDomainRows(domainTable.rows),
+    operationRows: normalizeOperationRows(operationTable.rows),
+    approvalRows: normalizeApprovalRows(approvalsTable.rows),
+  };
+  writePolicyDocument(cwd, doc);
+  syncRuntimeFromDocument(cwd, doc);
+  return doc;
+}
+
+function loadPolicy(cwd) {
+  return derivePolicyRuntime(readPolicyDocument(cwd));
+}
+
+function readApprovals(cwd) {
+  return deriveApprovalsRuntime(readPolicyDocument(cwd));
+}
+
+function grantApproval(cwd, target, reason) {
+  const normalizedTarget = String(target || '').trim();
+  const normalizedReason = String(reason || '').trim();
+  if (!normalizedTarget) {
+    throw new Error('Approval target is required.');
+  }
+  if (!normalizedReason) {
+    throw new Error('Approval reason is required.');
+  }
+  const doc = readPolicyDocument(cwd);
+  const row = [
+    normalizedTarget,
+    normalizedReason,
+    new Date().toISOString(),
+  ];
+  const next = {
+    ...doc,
+    approvalRows: [...doc.approvalRows, row],
+  };
+  writePolicyDocument(cwd, next);
+  syncRuntimeFromDocument(cwd, next);
+  return {
+    action: 'grant',
+    file: relativePath(cwd, next.filePath),
+    grant: {
+      target: row[0],
+      reason: row[1],
+      grantedAt: row[2],
+    },
+  };
+}
+
+function resolveOperationDefault(policy, operation) {
+  return policy.operationDefaults[operation]
+    || policy.operationDefaults.edit
+    || { decision: operation === 'read' ? 'auto' : 'warn', notes: 'Fallback workflow decision.' };
+}
+
+function findMatchingApproval(approvals, filePath, domain, operation) {
+  const normalizedPath = String(filePath || '').trim();
+  const candidates = new Set([
+    normalizedPath,
+    domain,
+    operation,
+    `operation:${operation}`,
+    '*',
+  ]);
+  return approvals.grants.find((grant) => candidates.has(String(grant.target || '').trim())) || null;
+}
+
+function applyApproval(decision, approval) {
+  if (!approval) {
+    return {
+      decision,
+      approved: false,
+    };
+  }
+  if (decision === 'block') {
+    return {
+      decision,
+      approved: false,
+    };
+  }
+  return {
+    decision: 'auto',
+    approved: true,
+  };
 }
 
 function domainForFile(filePath) {
@@ -77,7 +316,7 @@ function escalate(decision, mode, actor) {
   if (mode === 'open') {
     return decision === 'block' ? 'human_needed' : 'auto';
   }
-  if (mode === 'strict' && actor === 'worker') {
+  if (mode === 'strict' && ['worker', 'subagent', 'hook', 'mcp'].includes(actor)) {
     if (decision === 'warn') {
       return 'human_needed';
     }
@@ -87,6 +326,7 @@ function escalate(decision, mode, actor) {
 
 function checkPolicy(cwd, args) {
   const policy = loadPolicy(cwd);
+  const approvals = readApprovals(cwd);
   const files = String(args.files || '')
     .split(';')
     .map((item) => item.trim())
@@ -97,18 +337,31 @@ function checkPolicy(cwd, args) {
   const results = files.map((filePath) => {
     const domain = domainForFile(filePath);
     const domainPolicy = policy.matrix[domain] || {};
-    const rawDecision = domainPolicy[operation] || (operation === 'read' ? 'auto' : 'warn');
+    const operationDefault = resolveOperationDefault(policy, operation);
+    const rawDecision = domainPolicy[operation] || operationDefault.decision;
+    const matchingApproval = findMatchingApproval(approvals, filePath, domain, operation);
+    const escalatedDecision = escalate(rawDecision, mode, actor);
+    const approvalOutcome = applyApproval(escalatedDecision, matchingApproval);
     return {
       file: filePath,
       domain,
       operation,
       actor,
-      decision: escalate(rawDecision, mode, actor),
+      decision: approvalOutcome.decision,
+      rawDecision,
+      rule: domainPolicy[operation] ? `domain:${domain}:${operation}` : `operation:${operation}`,
+      notes: domainPolicy[operation] ? domainPolicy.notes || '' : operationDefault.notes || '',
+      approved: approvalOutcome.approved,
+      approvalTarget: matchingApproval ? matchingApproval.target : '',
+      overrideHint: escalatedDecision === 'block'
+        ? 'No override available in-product; change scope or review the policy doc.'
+        : `Run cwf approvals grant --target ${domain} --reason "Document the approval"` ,
     };
   });
   return {
     action: 'check',
-    policyFile: relativePath(cwd, policyFile(cwd)),
+    policyFile: relativePath(cwd, runtimePolicyFile(cwd)),
+    canonicalFile: relativePath(cwd, canonicalPolicyFile(cwd)),
     mode,
     results,
     verdict: results.some((item) => item.decision === 'block')
@@ -131,8 +384,10 @@ function main() {
     ? checkPolicy(cwd, args)
     : {
       action: 'status',
-      policyFile: relativePath(cwd, policyFile(cwd)),
+      policyFile: relativePath(cwd, runtimePolicyFile(cwd)),
+      canonicalFile: relativePath(cwd, canonicalPolicyFile(cwd)),
       policy: loadPolicy(cwd),
+      approvals: readApprovals(cwd).grants,
     };
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -140,10 +395,11 @@ function main() {
   }
   console.log('# POLICY\n');
   console.log(`- Action: \`${payload.action}\``);
+  console.log(`- Canonical file: \`${payload.canonicalFile}\``);
   console.log(`- File: \`${payload.policyFile}\``);
   if (payload.results) {
     for (const row of payload.results) {
-      console.log(`- \`${row.file}\` -> \`${row.domain}\` / \`${row.decision}\``);
+      console.log(`- \`${row.file}\` -> \`${row.domain}\` / \`${row.decision}\` via \`${row.rule}\``);
     }
   }
 }
@@ -158,7 +414,13 @@ if (require.main === module) {
 }
 
 module.exports = {
+  APPROVAL_HEADERS,
   checkPolicy,
+  DOMAIN_HEADERS,
   domainForFile,
+  grantApproval,
   loadPolicy,
+  OPERATION_HEADERS,
+  readApprovals,
+  readPolicyDocument,
 };

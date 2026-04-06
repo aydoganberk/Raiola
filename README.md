@@ -176,6 +176,7 @@ Canonical markdown lives in `docs/workflow/` or the active named workstream root
 - `VALIDATION.md`
 - `HANDOFF.md`
 - `WINDOW.md`
+- `POLICY.md`
 
 ### Team Lite orchestration
 
@@ -197,6 +198,7 @@ These rules are the core contract:
 - Markdown remains canonical.
 - Runtime JSON is cache, index, HUD, manager, launch, or telemetry convenience only.
 - `.workflow/runtime/*.json` and `.workflow/runtime/*.md` are derived operator surfaces only.
+- `cwf policy` and `cwf approvals` keep `docs/workflow/POLICY.md` canonical and mirror it into `.workflow/runtime/policy.json` plus `.workflow/runtime/approvals.json`.
 - Visible product version metadata lives at `.workflow/VERSION.md` so `cwf update` can reason about install drift.
 - Quick mode does not bypass the plan/checkpoint/audit spine.
 - Write-capable parallel work requires explicit disjoint write scope.

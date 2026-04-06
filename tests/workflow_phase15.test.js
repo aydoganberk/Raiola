@@ -163,7 +163,11 @@ test('roadmap governance and operator-center surfaces stay scriptable', () => {
 
   assert.equal(policy.results.length, 2);
   assert.ok(['warn', 'fail', 'pass'].includes(policy.verdict));
+  assert.match(policy.canonicalFile, /docs\/workflow\/POLICY\.md$/);
   assert.equal(approval.grant.target, 'config');
+  assert.match(approval.file, /docs\/workflow\/POLICY\.md$/);
+  assert.match(readFile(targetRepo, 'docs/workflow/POLICY.md'), /Allow package edits/);
+  assert.equal(JSON.parse(readFile(targetRepo, '.workflow/runtime/approvals.json')).grants.length, 1);
   assert.equal(hooks.action, 'init');
   assert.equal(mcp.manifest.enabled, false);
   assert.equal(notify.event.event, 'test');

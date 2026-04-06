@@ -55,9 +55,9 @@
 - `cwf team`
   Plan or operate Team Lite orchestration and the adapter runtime.
 - `cwf policy`
-  Evaluate the approval matrix for file domains, operations, actors, and policy modes.
+  Evaluate the approval matrix for file domains, operations, actors, and policy modes from `docs/workflow/POLICY.md`.
 - `cwf approvals`
-  Record explicit human approvals for risky actions.
+  Record explicit human approvals in `docs/workflow/POLICY.md` and refresh the derived runtime mirror.
 - `cwf route`
   Recommend a model preset for the current phase.
 - `cwf stats`
@@ -143,6 +143,7 @@
 - `cwf team timeline` -> `.workflow/orchestration/runtime/timeline.jsonl`
 - `cwf patch-review` -> `.workflow/orchestration/patches/*`
 - `cwf route` -> `.workflow/cache/model-routing.json`
+- `cwf policy` / `cwf approvals` -> canonical `docs/workflow/POLICY.md` plus derived `.workflow/runtime/policy.json` and `.workflow/runtime/approvals.json`
 
 ## Backward-compatible scripts
 

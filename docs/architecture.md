@@ -6,6 +6,8 @@ The product keeps markdown canonical.
 
 Full workflow canonical files live under `docs/workflow/` or the active named workstream root.
 
+That canonical set now includes governance surfaces such as `docs/workflow/POLICY.md`; runtime mirrors remain derived state only.
+
 Quick mode canonical files live under `.workflow/quick/*.md`.
 
 Team Lite orchestration canonical files live under `.workflow/orchestration/PLAN.md`, `STATUS.md`, `WAVES.md`, and `RESULTS.md`.
@@ -45,6 +47,7 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 - `do.js`, `note.js`, `thread.js`, and `backlog.js` add the daily intent/capture surfaces.
 - `questions.js`, `claims.js`, `secure_phase.js`, `packet.js`, and `evidence.js` add the trust, packet-lock, and provenance layer.
 - `policy.js`, `approvals.js`, `hooks.js`, `mcp.js`, `notify.js`, `daemon.js`, `gc.js`, `incident.js`, `fleet.js`, and `sessions.js` add the governance, integration, scale, and operator-center layer.
+- `policy.js` and `approvals.js` treat `docs/workflow/POLICY.md` as the source of truth and keep `.workflow/runtime/policy.json` plus `.workflow/runtime/approvals.json` in sync as derived mirrors.
 - `cwf doctor` audits both canonical workflow health and install-surface integrity, including package scripts, runtime files, skill installation, and the visible version marker.
 
 ## Workflow lanes
