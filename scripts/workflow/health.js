@@ -23,6 +23,7 @@ const {
   workflowPaths,
 } = require('./common');
 const { applyRepairPlan, buildRepairPlan } = require('./repair');
+const { buildRiskSummary } = require('./risk_score');
 
 function printHelp() {
   console.log(`
@@ -209,6 +210,7 @@ function buildHealthReport(cwd, rootDir, options = {}) {
 
   const failCount = checks.filter((item) => item.status === 'fail').length;
   const warnCount = checks.filter((item) => item.status === 'warn').length;
+  const risk = buildRiskSummary(checks);
 
   return {
     rootDir: path.relative(cwd, rootDir),
@@ -216,6 +218,7 @@ function buildHealthReport(cwd, rootDir, options = {}) {
     failCount,
     warnCount,
     checks,
+    risk,
     packetHashes: packets.map((packet) => ({ doc: packet.primary.key, hash: packet.inputHash })),
     window: {
       decision: windowStatus.decision,
@@ -263,10 +266,18 @@ function main() {
   console.log(`- Root: \`${report.rootDir}\``);
   console.log(`- Fail count: \`${report.failCount}\``);
   console.log(`- Warn count: \`${report.warnCount}\``);
+  console.log(`- Risk: \`${report.risk.level}\` (\`${report.risk.score}/100\`)`);
   console.log(`- Strict mode: \`${report.strictMode ? 'on' : 'off'}\``);
   console.log(`\n## Checks\n`);
   for (const check of report.checks) {
     console.log(`- [${check.status.toUpperCase()}] ${check.message}`);
+  }
+
+  if (report.risk.factors.length > 0) {
+    console.log(`\n## Risk Factors\n`);
+    for (const factor of report.risk.factors) {
+      console.log(`- [${String(factor.status).toUpperCase()}] impact=\`${factor.impact}\` ${factor.message}`);
+    }
   }
 
   if (repairPlan) {

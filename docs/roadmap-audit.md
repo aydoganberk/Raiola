@@ -7,6 +7,7 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 - The historical `P0` through `P9` product surfaces remain intact.
 - The roadmap command families now exist as first-class repo-local product surfaces: Codex control, daily intent/capture, trust, packet lock, team runtime, evidence, policy, integrations, scale, and incident/operator-center layers.
 - Intent OS v2, Codex profile/bootstrap surfaces, Review OS, Frontend OS, and fixture-backed Scale OS are now implemented as repo-local command families rather than roadmap placeholders.
+- Truth-reset instrumentation now has a measurable audit surface via `node scripts/workflow/roadmap_audit.js --assert`, backed by intent/review/frontend corpora plus doctor/health risk scores.
 - The canonical contract remains markdown-first; runtime metadata, mirrors, caches, telemetry, and fallback control-plane files remain derived state.
 
 ## Latest Local Audit
@@ -15,6 +16,7 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 - The latest local test result now includes the new phase-16 suite for intent/review/frontend/fixture coverage.
 - The latest local doctor result is `0 fail / 0 warn`.
 - The latest benchmark stayed under SLO with warm medians of `hud 69ms`, `next 60ms`, `doctor 48ms`, `health 50ms`, `map-codebase 59ms`, and `map-frontend 56ms`.
+- The measured roadmap audit now enforces `216` intent utterances, `26` review diff scenarios, and `12` frontend audit scenarios with intent top-1 accuracy `100%`, top-3 coverage `100%`, review pass-rate `100%`, and frontend pass-rate `100%`.
 - The roadmap audit now reflects the repo-local fallback behavior for the virtual `.codex` root, the `playwright` browser adapter fallback when Playwright is unavailable, and the canonical `POLICY.md` governance surface.
 
 ## CE Matrix
@@ -48,9 +50,11 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 - `cwf policy` and `cwf approvals` now treat `docs/workflow/POLICY.md` as the canonical ledger and keep runtime JSON mirrors derived from that document.
 - `cwf stats` now exposes perf/runtime/quality/spend slices from local benchmark, verification, evidence, route, and orchestration state.
 - `cwf route` now records explainable capability choices, confidence, ambiguity, replay, and eval state.
+- `doctor` and `health` now emit a real `risk` payload with score, level, and top contributing factors instead of only raw fail/warn counts.
 - `cwf codex` now suggests profiles, bootstraps task packets, generates resume cards, and suggests bounded subagent plans.
 - `cwf review` now emits findings, heatmap, blockers, replay, and patch suggestions in `.workflow/reports/`.
-- `cwf ui-spec`, `ui-plan`, `ui-review`, `component-map`, `responsive-matrix`, `design-debt`, and `preview` now generate canonical frontend review artifacts.
+- `cwf ui-spec`, `ui-plan`, `ui-review`, `component-map`, `responsive-matrix`, `design-debt`, and `preview` now generate canonical frontend review artifacts, including missing-state and token-drift signals.
+- `scripts/workflow/roadmap_audit.js` writes `.workflow/reports/roadmap-audit.json` so corpus quality stays reviewable in CI and local audits.
 
 ## Regression Evidence
 
@@ -62,3 +66,4 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 ## CI Benchmark Status
 
 - Performance targets remain enforced through [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), which runs the full Node test suite plus `node scripts/workflow/benchmark.js --runs 3 --assert-slo`.
+- The same CI workflow now runs `node scripts/workflow/roadmap_audit.js --assert --json` and uploads the audit report artifact.

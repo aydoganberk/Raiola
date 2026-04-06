@@ -3,6 +3,8 @@ const { parseArgs, resolveWorkflowRoot } = require('./common');
 const {
   buildDesignDebt,
   buildFrontendProfile,
+  buildMissingStateAudit,
+  buildTokenDriftAudit,
   collectComponentInventory,
   latestBrowserArtifacts,
   relativePath,
@@ -13,7 +15,12 @@ function buildDesignDebtDoc(cwd, rootDir) {
   const profile = buildFrontendProfile(cwd, rootDir, { scope: 'workstream', refresh: 'incremental' });
   const inventory = collectComponentInventory(cwd);
   const browserArtifacts = latestBrowserArtifacts(cwd);
-  const debt = buildDesignDebt(profile, inventory, browserArtifacts);
+  const missingStateAudit = buildMissingStateAudit(cwd, inventory);
+  const tokenDriftAudit = buildTokenDriftAudit(cwd, inventory);
+  const debt = buildDesignDebt(profile, inventory, browserArtifacts, {
+    missingStateAudit,
+    tokenDriftAudit,
+  });
   const body = `
 - Debt count: \`${debt.length}\`
 

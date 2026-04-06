@@ -4,8 +4,10 @@ const { runVerifyBrowser } = require('./verify_browser');
 const {
   buildDesignDebt,
   buildFrontendProfile,
+  buildMissingStateAudit,
   buildResponsiveMatrix,
   buildScorecard,
+  buildTokenDriftAudit,
   collectComponentInventory,
   latestBrowserArtifacts,
   relativePath,
@@ -27,7 +29,12 @@ async function buildUiReview(cwd, rootDir, args = {}) {
   }
 
   const browserArtifacts = latestBrowserArtifacts(cwd);
-  const debt = buildDesignDebt(profile, inventory, browserArtifacts);
+  const missingStateAudit = buildMissingStateAudit(cwd, inventory);
+  const tokenDriftAudit = buildTokenDriftAudit(cwd, inventory);
+  const debt = buildDesignDebt(profile, inventory, browserArtifacts, {
+    missingStateAudit,
+    tokenDriftAudit,
+  });
   const scorecard = buildScorecard(profile, inventory, debt, browserArtifacts);
   const body = `
 - Frontend mode: \`${profile.frontendMode.status}\`
@@ -55,6 +62,18 @@ ${inventory.length > 0 ? inventory.slice(0, 12).map((item) => `- \`${item.name}\
 
 ${debt.length > 0 ? debt.map((item) => `- [${item.severity}] \`${item.area}\` ${item.detail}`).join('\n') : '- `No material design debt signals were detected.`'}
 
+## Missing States
+
+${missingStateAudit.missing.length > 0
+    ? `- Missing coverage: \`${missingStateAudit.missing.join(', ')}\``
+    : '- `Core loading/empty/error/success/disabled/interaction states were detected in the UI surface.`'}
+
+## Token Drift
+
+${tokenDriftAudit.totalIssues > 0
+    ? tokenDriftAudit.issues.slice(0, 8).map((issue) => `- [${issue.severity}] \`${issue.kind}\` ${issue.file} -> ${issue.detail}`).join('\n')
+    : '- `No obvious token drift signals were detected in the scanned UI files.`'}
+
 ## Browser Evidence
 
 ${browserArtifacts.length > 0
@@ -68,6 +87,8 @@ ${browserArtifacts.length > 0
     scorecard,
     browserArtifacts,
     debt,
+    missingStateAudit,
+    tokenDriftAudit,
   };
   return payload;
 }

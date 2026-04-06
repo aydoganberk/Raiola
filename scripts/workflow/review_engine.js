@@ -46,6 +46,9 @@ function runGit(cwd, args) {
 }
 
 function loadDiff(cwd, options = {}) {
+  if (options.diffText) {
+    return String(options.diffText);
+  }
   if (options.diffFile) {
     return fs.readFileSync(path.resolve(cwd, options.diffFile), 'utf8');
   }
@@ -116,6 +119,21 @@ function fileCategory(filePath) {
   return 'source';
 }
 
+function isMigrationFile(filePath, file) {
+  return /(^|\/)(migrations?|prisma\/migrations|db\/migrate|database\/migrations)\//.test(filePath)
+    || /\.(sql|prisma)$/i.test(filePath)
+    || [...(file.addedLines || []), ...(file.deletedLines || [])].some((line) => /\b(create table|alter table|drop table|create index|drop index)\b/i.test(line));
+}
+
+function isApiSurface(filePath, file) {
+  if (/(^|\/)(app\/api|api|routes?|controllers?)\//.test(filePath) || /(route|controller|handler|schema)\.(ts|tsx|js|jsx)$/.test(filePath)) {
+    return true;
+  }
+  return [...(file.addedLines || []), ...(file.deletedLines || [])].some((line) => (
+    /\b(export async function (GET|POST|PUT|PATCH|DELETE)|router\.(get|post|put|patch|delete)|app\.(get|post|put|patch|delete)|graphql|openapi)\b/i.test(line)
+  ));
+}
+
 function createFinding(file, category, severity, title, detail, pass) {
   return {
     file,
@@ -181,6 +199,26 @@ function runPasses(files, context) {
         'must_fix',
         'Sensitive configuration changed',
         'The diff touches secret-like strings or credential-sensitive code; confirm no secrets are hard-coded and update the verification plan.',
+        'architecture-security',
+      ));
+    }
+    if (isMigrationFile(file.file, file)) {
+      findings.push(createFinding(
+        file.file,
+        'data/migration',
+        'must_fix',
+        'Migration diff needs rollback and verification notes',
+        'Schema or migration changes should record rollback expectations and targeted verification before ship.',
+        'architecture-security',
+      ));
+    }
+    if (isApiSurface(file.file, file)) {
+      findings.push(createFinding(
+        file.file,
+        'API drift',
+        'should_fix',
+        'API-facing diff needs contract review',
+        'An API or route surface changed; confirm downstream callers, schema expectations, and verification coverage stay aligned.',
         'architecture-security',
       ));
     }
@@ -321,6 +359,7 @@ function renderPatchSuggestions(payload) {
 async function runReviewEngine(cwd, rootDir, options = {}) {
   const context = baseLifecycleContext(cwd, rootDir);
   const diffText = loadDiff(cwd, {
+    diffText: options.diffText,
     diffFile: options.diffFile,
     range: options.range,
     staged: options.staged,
@@ -340,12 +379,14 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
     shipReadiness: blockers.length > 0 ? 'blocked' : findings.length > 0 ? 'needs_follow_up' : 'ready',
   };
 
-  const previousHistory = readJson(reviewHistoryPath(cwd), {
-    runs: [],
-  });
+  const recordHistory = options.recordHistory !== false;
+  const writeArtifacts = options.writeArtifacts !== false;
+  const previousHistory = recordHistory
+    ? readJson(reviewHistoryPath(cwd), { runs: [] })
+    : { runs: [] };
   const replay = buildReplay(previousHistory.runs[0]?.findings || [], findings);
   const frontendTouched = files.some((file) => fileCategory(file.file) === 'frontend');
-  const uiReview = frontendTouched
+  const uiReview = frontendTouched && options.includeUiReview !== false
     ? await buildUiReview(cwd, rootDir, {})
     : null;
 
@@ -367,46 +408,57 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
     uiReview,
   };
 
-  const reportsDir = reviewReportsDir(cwd);
-  fs.mkdirSync(reportsDir, { recursive: true });
-  const markdownPath = path.join(reportsDir, 'review.md');
-  const findingsPath = path.join(reportsDir, 'review-findings.json');
-  const heatmapPath = path.join(reportsDir, 'risk-heatmap.json');
-  const blockersPath = path.join(reportsDir, 'review-blockers.md');
-  const replayPath = path.join(reportsDir, 'review-replay.json');
-  const suggestionsPath = path.join(reportsDir, 'review-patch-suggestions.json');
-  fs.writeFileSync(markdownPath, `${renderMarkdownReport(payload).trimEnd()}\n`);
-  writeJson(findingsPath, payload.findings);
-  writeJson(heatmapPath, payload.heatmap);
-  fs.writeFileSync(blockersPath, `${renderBlockersMarkdown(payload).trimEnd()}\n`);
-  writeJson(replayPath, payload.replay);
-  writeJson(suggestionsPath, payload.patchSuggestions);
-  writeJson(reviewHistoryPath(cwd), {
-    generatedAt: payload.generatedAt,
-    runs: [
-      {
-        at: payload.generatedAt,
-        mode: payload.mode,
-        findings: payload.findings,
-      },
-      ...(previousHistory.runs || []),
-    ].slice(0, 10),
-  });
+  if (writeArtifacts) {
+    const reportsDir = reviewReportsDir(cwd);
+    fs.mkdirSync(reportsDir, { recursive: true });
+    const markdownPath = path.join(reportsDir, 'review.md');
+    const findingsPath = path.join(reportsDir, 'review-findings.json');
+    const heatmapPath = path.join(reportsDir, 'risk-heatmap.json');
+    const blockersPath = path.join(reportsDir, 'review-blockers.md');
+    const replayPath = path.join(reportsDir, 'review-replay.json');
+    const suggestionsPath = path.join(reportsDir, 'review-patch-suggestions.json');
+    fs.writeFileSync(markdownPath, `${renderMarkdownReport(payload).trimEnd()}\n`);
+    writeJson(findingsPath, payload.findings);
+    writeJson(heatmapPath, payload.heatmap);
+    fs.writeFileSync(blockersPath, `${renderBlockersMarkdown(payload).trimEnd()}\n`);
+    writeJson(replayPath, payload.replay);
+    writeJson(suggestionsPath, payload.patchSuggestions);
+    if (recordHistory) {
+      writeJson(reviewHistoryPath(cwd), {
+        generatedAt: payload.generatedAt,
+        runs: [
+          {
+            at: payload.generatedAt,
+            mode: payload.mode,
+            findings: payload.findings,
+          },
+          ...(previousHistory.runs || []),
+        ].slice(0, 10),
+      });
+    }
 
-  payload.artifacts = {
-    markdown: relativePath(cwd, markdownPath),
-    findings: relativePath(cwd, findingsPath),
-    heatmap: relativePath(cwd, heatmapPath),
-    blockers: relativePath(cwd, blockersPath),
-    replay: relativePath(cwd, replayPath),
-    patchSuggestions: relativePath(cwd, suggestionsPath),
-  };
-  payload.outputPath = markdownPath;
-  payload.outputPathRelative = payload.artifacts.markdown;
+    payload.artifacts = {
+      markdown: relativePath(cwd, markdownPath),
+      findings: relativePath(cwd, findingsPath),
+      heatmap: relativePath(cwd, heatmapPath),
+      blockers: relativePath(cwd, blockersPath),
+      replay: relativePath(cwd, replayPath),
+      patchSuggestions: relativePath(cwd, suggestionsPath),
+    };
+    payload.outputPath = markdownPath;
+    payload.outputPathRelative = payload.artifacts.markdown;
+  } else {
+    payload.artifacts = null;
+    payload.outputPath = null;
+    payload.outputPathRelative = null;
+  }
 
   return payload;
 }
 
 module.exports = {
+  fileCategory,
+  parseDiff,
   runReviewEngine,
+  runPasses,
 };

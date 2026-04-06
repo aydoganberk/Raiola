@@ -16,6 +16,7 @@ const {
 } = require('./common');
 const { readProductManifest, readInstalledVersionMarker } = require('./product_manifest');
 const { applyRepairPlan, buildRepairPlan } = require('./repair');
+const { buildRiskSummary } = require('./risk_score');
 const { writeStateSurface } = require('./state_surface');
 
 function summarizeItems(items, limit = 3) {
@@ -228,12 +229,14 @@ function buildDoctorReport(cwd, rootDir) {
 
   const failCount = checks.filter((item) => item.status === 'fail').length;
   const warnCount = checks.filter((item) => item.status === 'warn').length;
+  const risk = buildRiskSummary(checks);
   return {
     rootDir,
     rootDirRelative: path.relative(cwd, rootDir),
     failCount,
     warnCount,
     checks,
+    risk,
   };
 }
 
@@ -255,6 +258,7 @@ function main() {
     doctor: {
       failCount: report.failCount,
       warnCount: report.warnCount,
+      risk: report.risk,
       checks: report.checks,
       rootDir: report.rootDirRelative,
     },
@@ -283,11 +287,19 @@ function main() {
   console.log(`- Root: \`${report.rootDir}\``);
   console.log(`- Fail count: \`${report.failCount}\``);
   console.log(`- Warn count: \`${report.warnCount}\``);
+  console.log(`- Risk: \`${report.risk.level}\` (\`${report.risk.score}/100\`)`);
   console.log(`\n## Checks\n`);
   for (const check of report.checks) {
     console.log(`- [${check.status.toUpperCase()}] ${check.message}`);
     if (check.fix) {
       console.log(`  fix: \`${check.fix}\``);
+    }
+  }
+
+  if (report.risk.factors.length > 0) {
+    console.log(`\n## Risk Factors\n`);
+    for (const factor of report.risk.factors) {
+      console.log(`- [${String(factor.status).toUpperCase()}] impact=\`${factor.impact}\` ${factor.message}`);
     }
   }
 

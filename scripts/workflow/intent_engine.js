@@ -7,7 +7,7 @@ const {
   workflowPaths,
 } = require('./common');
 const { buildFrontendProfile } = require('./map_frontend');
-const { listCapabilities, capabilityAliases } = require('./capability_registry');
+const { listCapabilities } = require('./capability_registry');
 const { buildPackageGraph } = require('./package_graph');
 const { selectCodexProfile } = require('./codex_profile_engine');
 
@@ -38,26 +38,26 @@ function writeJson(filePath, payload) {
 
 function detectSteering(text) {
   return {
-    preferReview: /\b(review|code review|review mode|review modu)\b/i.test(text),
-    preferBrowser: /\b(browser|preview|screenshot|visual|playwright)\b/i.test(text),
-    researchFirst: /\b(research first|once ara|once arastir|investigate first|araştır sonra uygula)\b/i.test(text),
-    patchFirst: /\b(patch first|patch-first|dogrudan patch|direkt patch)\b/i.test(text),
-    strictVerify: /\b(strict verify|strict|kati verify|siki verify)\b/i.test(text),
+    preferReview: /\b(review|code review|review mode|review modu|gozden gecir|gözden geçir)\b/i.test(text),
+    preferBrowser: /\b(browser|preview|screenshot|visual|playwright|onizleme|önizleme)\b/i.test(text),
+    researchFirst: /\b(research first|once ara|once arastir|önce araştır|önce ara|investigate first|araştır sonra uygula)\b/i.test(text),
+    patchFirst: /\b(patch first|patch-first|dogrudan patch|doğrudan patch|direkt patch)\b/i.test(text),
+    strictVerify: /\b(strict verify|strict|kati verify|katı verify|siki verify|sıkı verify)\b/i.test(text),
   };
 }
 
 function inferIntent(text) {
   return {
-    research: /(why|investigate|compare|audit|analyse|analyze|incele|arastir|araştır)/i.test(text),
-    plan: /(plan|roadmap|packet|approach|milestone|strategy)/i.test(text),
-    implement: /(fix|implement|patch|build|land|tamamla|duzelt|ekle)/i.test(text),
-    review: /(review|pr review|code review|regression|risk heatmap|blocker)/i.test(text),
-    frontend: /(ui|frontend|screen|responsive|visual|a11y|accessibility|component|design)/i.test(text),
-    verify: /(verify|test|lint|typecheck|smoke|browser|preview)/i.test(text),
-    ship: /(ship|release|handoff|closeout)/i.test(text),
-    incident: /(incident|regression|outage|hotfix|urgent|prod)/i.test(text),
-    parallel: /(parallel|paralel|delegate|delegation|subagent|team)/i.test(text),
-    monorepo: /(workspace|monorepo|package graph|package|repo-wide)/i.test(text),
+    research: /(why|investigate|compare|audit|analyse|analyze|deep dive|incele|inceleme|arastir|araştır|neden)/i.test(text),
+    plan: /(plan|roadmap|packet|approach|milestone|strategy|spec|taslak|yol haritasi|yol haritası)/i.test(text),
+    implement: /(fix|implement|build|land|tamamla|duzelt|düzelt|ekle|uygula|kodla)/i.test(text),
+    review: /(review|pr review|code review|regression|risk heatmap|blocker|gozden gecir|gözden geçir)/i.test(text),
+    frontend: /(ui|frontend|screen|ekran|responsive|visual|a11y|accessibility|component|design|tasarim|tasarım)/i.test(text),
+    verify: /(verify|verification|test|tests|lint|typecheck|smoke|browser|preview|assert|screenshot|snapshot|dogrula|doğrula|dogrulama|doğrulama)/i.test(text),
+    ship: /(release|handoff|closeout|deploy|yayinla|yayınla|surum|sürüm)/i.test(text),
+    incident: /(incident|outage|hotfix|urgent|prod|production issue|olay|kritik hata|sev1|sev-1)/i.test(text),
+    parallel: /(parallel|paralel|delegate|delegation|subagent|team|dagit|dağıt)/i.test(text),
+    monorepo: /(workspace|monorepo|package graph|package|repo-wide|workspace-wide|cok paketli|çok paketli)/i.test(text),
   };
 }
 
@@ -107,6 +107,23 @@ function persistSteeringMemory(cwd, goal, steering) {
   return next;
 }
 
+function buildEphemeralSteeringMemory(goal, steering, seedPreferences = {}) {
+  return {
+    updatedAt: null,
+    preferences: {
+      ...seedPreferences,
+      ...Object.fromEntries(Object.entries(steering).filter(([, value]) => value)),
+    },
+    history: [
+      {
+        at: null,
+        goal,
+        steering,
+      },
+    ],
+  };
+}
+
 function buildRepoSignals(cwd, rootDir) {
   const workflowState = buildBaseState(cwd, rootDir).workflow;
   const paths = workflowPaths(rootDir, cwd);
@@ -139,20 +156,59 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
   let score = 0;
   const reasons = [];
   const tokens = new Set(normalizedGoal.split(' ').filter(Boolean));
-  for (const alias of capabilityAliases(capability)) {
+  const hasPhrase = (phrase) => {
+    const escaped = String(phrase).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(?:^|\\s)${escaped}(?=\\s|$)`, 'i').test(normalizedGoal);
+  };
+  const startsWithPhrase = (phrase) => {
+    const escaped = String(phrase).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`^${escaped}(?=\\s|$)`, 'i').test(normalizedGoal);
+  };
+  const aliases = (capability.aliases || []).map((entry) => normalizeWorkflowControlUtterance(entry)).filter(Boolean);
+  const keywords = (capability.keywords || [])
+    .map((entry) => normalizeWorkflowControlUtterance(entry))
+    .filter((entry) => entry && !aliases.includes(entry));
+
+  for (const alias of aliases) {
     const aliasTokens = alias.split(' ').filter(Boolean);
-    if (aliasTokens.every((token) => tokens.has(token))) {
-      score += 5;
-      reasons.push(`Matched alias: ${alias}`);
+    if (hasPhrase(alias)) {
+      score += aliasTokens.length > 1 ? 7 : (startsWithPhrase(alias) ? 5 : 3);
+      reasons.push(`Matched alias phrase: ${alias}`);
+      if (startsWithPhrase(alias)) {
+        score += 2;
+        reasons.push(`Matched leading alias: ${alias}`);
+      }
+    } else if (aliasTokens.every((token) => tokens.has(token))) {
+      score += aliasTokens.length > 1 ? 4 : 3;
+      reasons.push(`Matched alias tokens: ${alias}`);
     } else if (aliasTokens.some((token) => tokens.has(token))) {
-      score += 2;
-      reasons.push(`Partial keyword hit: ${alias}`);
+      score += 1;
+      reasons.push(`Partial alias hit: ${alias}`);
+    }
+  }
+
+  for (const keyword of keywords) {
+    const keywordTokens = keyword.split(' ').filter(Boolean);
+    if (hasPhrase(keyword)) {
+      score += keywordTokens.length > 1 ? 3 : 2;
+      reasons.push(`Matched keyword: ${keyword}`);
+    } else if (keywordTokens.every((token) => tokens.has(token))) {
+      score += 1;
+      reasons.push(`Matched keyword tokens: ${keyword}`);
     }
   }
 
   if (capability.domain === 'review' && intent.review) {
     score += 8;
     reasons.push('Review intent detected.');
+    if (/^(review|audit|inspect|re-review|rerun review|follow-up review)\b/i.test(normalizedGoal)) {
+      score += 4;
+      reasons.push('Review-oriented opener detected.');
+    }
+    if (/^(ship|release|deploy|handoff|closeout|yayinla|yayınla|surum|sürüm)\b/i.test(normalizedGoal)) {
+      score -= 6;
+      reasons.push('Review language appears secondary to an explicit ship request.');
+    }
   }
   if (capability.domain === 'frontend' && (intent.frontend || repoSignals.frontendActive)) {
     score += 8;
@@ -165,6 +221,10 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
   if (capability.domain === 'research' && intent.research) {
     score += 7;
     reasons.push('Research intent detected.');
+    if (/^(investigate|analyze|analyse|audit|incele|arastir|araştır)\b/i.test(normalizedGoal)) {
+      score += 4;
+      reasons.push('Research-oriented opener detected.');
+    }
   }
   if (capability.domain === 'plan' && intent.plan) {
     score += 7;
@@ -178,7 +238,31 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
     score += 10;
     reasons.push('Explicit parallel/delegation request detected.');
   }
-  if (capability.id === 'ship.release' && intent.ship) {
+  if (capability.id === 'execute.quick_patch' && /^(fix|implement|patch|build|land|tamamla|duzelt|düzelt|ekle|uygula|kodla)\b/i.test(normalizedGoal)) {
+    score += 8;
+    reasons.push('Execution-oriented opener detected.');
+  }
+  if (capability.id === 'review.re_review' && /^(re-review|rerun review|follow-up review)\b/i.test(normalizedGoal)) {
+    score += 10;
+    reasons.push('Re-review specific opener detected.');
+  }
+  if (capability.id === 'review.deep_review' && /\b(write findings|risk heatmap|blockers?)\b/i.test(normalizedGoal)) {
+    score += 4;
+    reasons.push('Review findings language detected.');
+  }
+  if (capability.id === 'verify.shell' && /^(verify|run|check)\b/i.test(normalizedGoal) && /\b(test suite|shell verification|lint|typecheck|tests?)\b/i.test(normalizedGoal)) {
+    score += 12;
+    reasons.push('Shell verification opener detected.');
+  }
+  if (capability.id === 'ship.release' && /^(ship|release|deploy|handoff|closeout|yayinla|yayınla|surum|sürüm)\b/i.test(normalizedGoal)) {
+    score += 14;
+    reasons.push('Ship-oriented opener detected.');
+    if (/\b(after|sonra)\s+(final\s+)?review\b/i.test(normalizedGoal)) {
+      score += 4;
+      reasons.push('Ship request explicitly names review as a prerequisite, not the primary lane.');
+    }
+  }
+  if (capability.id === 'ship.release' && intent.ship && !intent.review && !intent.verify) {
     score += 8;
     reasons.push('Ship/release language detected.');
   }
@@ -347,7 +431,9 @@ function analyzeIntent(cwd, rootDir, goal, options = {}) {
   const intent = inferIntent(goal);
   const risk = inferRisk(goal);
   const steering = detectSteering(goal);
-  const steeringMemory = persistSteeringMemory(cwd, goal, steering);
+  const steeringMemory = options.persistSteering === false
+    ? buildEphemeralSteeringMemory(goal, steering, options.seedSteeringPreferences || {})
+    : persistSteeringMemory(cwd, goal, steering);
   const repoSignals = buildRepoSignals(cwd, rootDir);
   const capabilities = listCapabilities();
   const scored = capabilities

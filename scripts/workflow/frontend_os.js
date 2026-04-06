@@ -34,6 +34,105 @@ function collectComponentInventory(cwd) {
   });
 }
 
+function collectUiFiles(cwd) {
+  const repo = listIndexedRepoFiles(cwd, { refreshMode: 'incremental' });
+  return repo.files.filter((filePath) => (
+    /\.(tsx|jsx|ts|js|css|scss|sass)$/.test(filePath)
+      && /(^|\/)(app|pages|components|src|ui)\//.test(filePath)
+  )).slice(0, 80);
+}
+
+function readText(cwd, relativeFile) {
+  try {
+    return fs.readFileSync(path.join(cwd, relativeFile), 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+function buildMissingStateAudit(cwd, inventory = collectComponentInventory(cwd)) {
+  const files = [...new Set([
+    ...inventory.map((item) => item.file),
+    ...collectUiFiles(cwd),
+  ])].slice(0, 80);
+  const definitions = {
+    loading: /\b(loading|spinner|skeleton|pending)\b/i,
+    empty: /\b(empty state|no results|no items|nothing here|empty)\b/i,
+    error: /\b(error|retry|failed|try again)\b/i,
+    success: /\b(success|done|saved|completed)\b/i,
+    disabled: /\b(disabled|aria-disabled|isDisabled)\b/i,
+    interaction: /\b(hover|focus|active|focus-visible)\b/i,
+  };
+  const evidence = Object.fromEntries(Object.keys(definitions).map((key) => [key, []]));
+
+  for (const file of files) {
+    const content = readText(cwd, file);
+    for (const [state, pattern] of Object.entries(definitions)) {
+      if (pattern.test(content)) {
+        evidence[state].push(file);
+      }
+    }
+  }
+
+  const missing = Object.entries(evidence)
+    .filter(([, hits]) => hits.length === 0)
+    .map(([state]) => state);
+
+  return {
+    filesScanned: files.length,
+    evidence: Object.fromEntries(Object.entries(evidence).map(([state, hits]) => [state, hits.slice(0, 5)])),
+    missing,
+  };
+}
+
+function buildTokenDriftAudit(cwd, inventory = collectComponentInventory(cwd)) {
+  const files = [...new Set([
+    ...inventory.map((item) => item.file),
+    ...collectUiFiles(cwd),
+  ])].slice(0, 80);
+  const issues = [];
+
+  for (const file of files) {
+    const content = readText(cwd, file);
+    const pushIssue = (kind, detail, severity = 'medium') => {
+      if (issues.length >= 20) {
+        return;
+      }
+      issues.push({
+        kind,
+        file,
+        detail,
+        severity,
+      });
+    };
+
+    if (/style=\{\{/.test(content)) {
+      pushIssue('inline-style', 'Inline style objects can bypass the shared token layer.', 'high');
+    }
+    if (/#[0-9a-fA-F]{3,8}\b/.test(content) || /\brgba?\(/.test(content)) {
+      pushIssue('hardcoded-color', 'Hard-coded color values were detected instead of shared tokens.', 'medium');
+    }
+    if (/\b\d+px\b/.test(content)) {
+      pushIssue('raw-px', 'Raw pixel values were detected; verify spacing and radius stay token-driven.', 'medium');
+    }
+    if (/\[[^\]]+\]/.test(content) && /class(Name)?=/.test(content)) {
+      pushIssue('arbitrary-tailwind', 'Arbitrary utility values were detected; review whether a shared token should exist.', 'low');
+    }
+  }
+
+  const counts = issues.reduce((accumulator, issue) => {
+    accumulator[issue.kind] = (accumulator[issue.kind] || 0) + 1;
+    return accumulator;
+  }, {});
+
+  return {
+    filesScanned: files.length,
+    totalIssues: issues.length,
+    counts,
+    issues,
+  };
+}
+
 function buildResponsiveMatrix(profile, inventory) {
   const breakpoints = profile.styling.detected.includes('Tailwind')
     ? [
@@ -63,8 +162,10 @@ function latestBrowserArtifacts(cwd) {
   }));
 }
 
-function buildDesignDebt(profile, inventory, browserArtifacts) {
+function buildDesignDebt(profile, inventory, browserArtifacts, audits = {}) {
   const debt = [];
+  const missingStateAudit = audits.missingStateAudit || { missing: [] };
+  const tokenDriftAudit = audits.tokenDriftAudit || { totalIssues: 0, issues: [] };
   if (!profile.stack.presence.storybook) {
     debt.push({
       area: 'component preview',
@@ -100,6 +201,20 @@ function buildDesignDebt(profile, inventory, browserArtifacts) {
       detail: 'No Figma or external design reference was linked into the workflow surface.',
     });
   }
+  if (missingStateAudit.missing.length > 0) {
+    debt.push({
+      area: 'missing states',
+      severity: missingStateAudit.missing.some((state) => ['loading', 'error', 'success'].includes(state)) ? 'high' : 'medium',
+      detail: `State coverage is incomplete for: ${missingStateAudit.missing.join(', ')}.`,
+    });
+  }
+  if (tokenDriftAudit.totalIssues > 0) {
+    debt.push({
+      area: 'token drift',
+      severity: tokenDriftAudit.issues.some((issue) => issue.severity === 'high') ? 'high' : 'medium',
+      detail: `${tokenDriftAudit.totalIssues} token drift signal(s) were detected across UI files.`,
+    });
+  }
   return debt;
 }
 
@@ -124,9 +239,12 @@ function buildScorecard(profile, inventory, debt, browserArtifacts) {
 
 module.exports = {
   buildDesignDebt,
+  buildMissingStateAudit,
   buildResponsiveMatrix,
   buildScorecard,
   buildFrontendProfile,
+  buildTokenDriftAudit,
+  collectUiFiles,
   collectComponentInventory,
   latestBrowserArtifacts,
   relativePath,

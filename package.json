@@ -97,6 +97,7 @@
     "workflow:component-map": "node scripts/workflow/component_map.js",
     "workflow:responsive-matrix": "node scripts/workflow/responsive_matrix.js",
     "workflow:design-debt": "node scripts/workflow/design_debt.js",
+    "workflow:roadmap-audit": "node scripts/workflow/roadmap_audit.js --assert",
     "workflow:compare-golden": "node scripts/compare_golden_snapshots.ts"
   }
 }

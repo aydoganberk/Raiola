@@ -251,6 +251,12 @@ Run the benchmark harness:
 cwf benchmark
 ```
 
+Run the roadmap truth-reset audit:
+
+```bash
+npm run workflow:roadmap-audit
+```
+
 Or:
 
 ```bash

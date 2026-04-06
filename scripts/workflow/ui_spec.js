@@ -2,7 +2,9 @@ const path = require('node:path');
 const { parseArgs, readIfExists, resolveWorkflowRoot, tryExtractSection } = require('./common');
 const {
   buildFrontendProfile,
+  buildMissingStateAudit,
   buildResponsiveMatrix,
+  buildTokenDriftAudit,
   collectComponentInventory,
   latestBrowserArtifacts,
   relativePath,
@@ -26,6 +28,8 @@ function buildUiSpec(cwd, rootDir) {
   const profile = buildFrontendProfile(cwd, rootDir, { scope: 'workstream', refresh: 'incremental' });
   const inventory = collectComponentInventory(cwd);
   const matrix = buildResponsiveMatrix(profile, inventory);
+  const missingStateAudit = buildMissingStateAudit(cwd, inventory);
+  const tokenDriftAudit = buildTokenDriftAudit(cwd, inventory);
   const browserArtifacts = latestBrowserArtifacts(cwd);
   const contextDoc = readIfExists(path.join(rootDir, 'CONTEXT.md')) || '';
   const userIntent = tryExtractSection(contextDoc, 'User Intent', '').trim() || 'No explicit UI intent note was recorded.';
@@ -53,7 +57,7 @@ ${inventory.length > 0 ? inventory.slice(0, 15).map((item) => `- \`${item.name}\
 
 ## State Map
 
-- \`empty\` content should explain what the user can do next
+- \`Detected missing states: ${missingStateAudit.missing.length > 0 ? missingStateAudit.missing.join(', ') : 'none'}\`
 - \`loading\` should preserve layout stability
 - \`error\` should expose recovery language
 - \`success\` should confirm completion and next action
@@ -76,10 +80,13 @@ ${matrix.map((item) => `- \`${item.viewport} ${item.width}\` -> ${item.expectati
 
 - \`Styling layers: ${profile.styling.detected.join(', ')}\`
 - \`Prefer shared tokens/components before page-local styling.\`
+- \`Token drift issues detected: ${tokenDriftAudit.totalIssues}\`
 
 ## Empty/Loading/Error/Success States
 
-- \`Required for every UI slice in this roadmap.\`
+${missingStateAudit.missing.length > 0
+    ? `- \`Missing state coverage for: ${missingStateAudit.missing.join(', ')}\``
+    : '- `Core empty/loading/error/success states have code-level evidence.`'}
 
 ## Evidence Plan
 
@@ -93,6 +100,8 @@ ${browserArtifacts.length > 0
     profile,
     inventory,
     matrix,
+    missingStateAudit,
+    tokenDriftAudit,
     file: relativePath(cwd, filePath),
   };
 }

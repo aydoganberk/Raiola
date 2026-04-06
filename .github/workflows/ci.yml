@@ -15,6 +15,12 @@ jobs:
         with:
           node-version: 20
       - run: npm test
+      - run: node scripts/workflow/roadmap_audit.js --assert --json > roadmap-audit-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workflow-roadmap-audit
+          path: roadmap-audit-report.json
 
   benchmark:
     runs-on: ubuntu-latest
