@@ -147,9 +147,29 @@ function buildRepoSignals(cwd, rootDir) {
     browserNeeded: Boolean(frontend?.signals?.previewNeed),
     monorepo: packageGraph.repoShape === 'monorepo',
     packageCount: packageGraph.packageCount,
+    changedPackages: packageGraph.changedPackages || [],
+    impactedPackages: packageGraph.impactedPackages || [],
     repoShape: packageGraph.repoShape,
     changedContextMentionsBrowser: /\b(browser|preview|screenshot|responsive)\b/i.test(changedContext),
   };
+}
+
+function deterministicMatches(normalizedGoal) {
+  const rules = [
+    ['review.re_review', /(?:^|\b)(re-review|rerun review|follow-up review|yeniden review|review tekrar)(?:\b|$)/i],
+    ['review.deep_review', /(?:^|\b)(review mode|code review|pr review|risk heatmap|blocker review|gözden geçir)(?:\b|$)/i],
+    ['frontend.ui_review', /(?:^|\b)(ui review|visual audit|responsive audit|a11y audit|tasarim denetimi)(?:\b|$)/i],
+    ['frontend.ui_spec', /(?:^|\b)(ui spec|design contract|ui plan|tasarim kontrati)(?:\b|$)/i],
+    ['verify.browser', /(?:^|\b)(verify browser|browser verify|preview build|smoke the preview|tarayici doğrula)(?:\b|$)/i],
+    ['verify.shell', /(?:^|\b)(verify shell|test suite|lint and typecheck|shell verification)(?:\b|$)/i],
+    ['ship.release', /(?:^|\b)(ship this|release this|closeout package|yayinla bunu)(?:\b|$)/i],
+    ['team.parallel', /(?:^|\b)(parallelize|delegate this|subagent plan|paralel yurut)(?:\b|$)/i],
+    ['incident.triage', /(?:^|\b)(incident triage|urgent outage|prod regression|kritik incident)(?:\b|$)/i],
+  ];
+
+  return rules
+    .filter(([, pattern]) => pattern.test(normalizedGoal))
+    .map(([capabilityId]) => capabilityId);
 }
 
 function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeringPreferences) {
@@ -168,6 +188,12 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
   const keywords = (capability.keywords || [])
     .map((entry) => normalizeWorkflowControlUtterance(entry))
     .filter((entry) => entry && !aliases.includes(entry));
+  const deterministic = deterministicMatches(normalizedGoal);
+
+  if (deterministic.includes(capability.id)) {
+    score += 18;
+    reasons.push('Deterministic grammar matched an explicit command-like intent.');
+  }
 
   for (const alias of aliases) {
     const aliasTokens = alias.split(' ').filter(Boolean);
@@ -385,6 +411,62 @@ function ambiguityReasons(candidates, intent) {
   return reasons;
 }
 
+function chooseSecondaryCapability(candidates, chosenCapability, repoSignals, steeringPreferences) {
+  if (!chosenCapability) {
+    return null;
+  }
+  const fallback = candidates.find((candidate) => candidate.id !== chosenCapability.id) || null;
+  if (chosenCapability.id === 'review.deep_review') {
+    return candidates.find((candidate) => candidate.id === 'verify.browser')
+      || candidates.find((candidate) => candidate.id === 'frontend.ui_review')
+      || fallback;
+  }
+  if (chosenCapability.id === 'frontend.ui_review' || chosenCapability.id === 'frontend.ui_spec') {
+    return candidates.find((candidate) => candidate.id === 'verify.browser')
+      || candidates.find((candidate) => candidate.id === 'review.deep_review')
+      || fallback;
+  }
+  if (chosenCapability.id === 'ship.release') {
+    return candidates.find((candidate) => candidate.id === 'review.deep_review')
+      || fallback;
+  }
+  if (chosenCapability.id === 'execute.quick_patch' && (repoSignals.frontendActive || steeringPreferences.preferBrowser)) {
+    return candidates.find((candidate) => candidate.id === 'verify.browser')
+      || candidates.find((candidate) => candidate.id === 'frontend.ui_review')
+      || fallback;
+  }
+  if (chosenCapability.id === 'verify.shell' && repoSignals.frontendActive) {
+    return candidates.find((candidate) => candidate.id === 'frontend.ui_review')
+      || fallback;
+  }
+  return fallback;
+}
+
+function buildRerouteRecommendation(payload) {
+  if (payload.repoSignals.frontendActive && !payload.verificationPlan.some((item) => item.includes('ui-review'))) {
+    return {
+      capability: 'frontend.ui_review',
+      command: 'cwf ui-review',
+      reason: 'Frontend-active work should escalate into the UI review lane.',
+    };
+  }
+  if (payload.risk.level === 'high' && !payload.verificationPlan.some((item) => item.includes('review'))) {
+    return {
+      capability: 'review.deep_review',
+      command: 'cwf review --heatmap',
+      reason: 'High-risk work should add a deep review pass before ship or release.',
+    };
+  }
+  if (payload.confidence < 0.65) {
+    return {
+      capability: payload.fallbackCapability.id,
+      command: `cwf do --explain "${payload.goal}"`,
+      reason: 'Routing confidence is low, so the fallback capability should be rechecked with explanation.',
+    };
+  }
+  return null;
+}
+
 function recordRouteHistory(cwd, payload) {
   const previous = readJson(routeHistoryPath(cwd), {
     generatedAt: null,
@@ -423,6 +505,7 @@ function evaluateRoutePayload(payload) {
     verdict: warnings.length === 0 ? 'pass' : 'warn',
     warnings,
     rerouteSuggested: warnings.length > 0,
+    rerouteRecommendation: warnings.length > 0 ? buildRerouteRecommendation(payload) : null,
   };
 }
 
@@ -450,6 +533,7 @@ function analyzeIntent(cwd, rootDir, goal, options = {}) {
   const candidates = scored.length > 0 ? scored : capabilities.slice(0, 3).map((capability) => ({ ...capability, score: 0, reasons: ['Fallback candidate.'] }));
   const chosenCapability = candidates[0];
   const fallbackCapability = candidates[1] || candidates[0];
+  const secondaryCapability = chooseSecondaryCapability(candidates, chosenCapability, repoSignals, steeringMemory.preferences || {});
   const confidence = confidenceForCandidates(candidates);
   const profile = selectCodexProfile({
     analysis: {
@@ -467,6 +551,7 @@ function analyzeIntent(cwd, rootDir, goal, options = {}) {
     lane: laneForCapability(chosenCapability),
     chosenCapability,
     fallbackCapability,
+    secondaryCapability,
     candidates: candidates.slice(0, 6).map((item) => ({
       id: item.id,
       domain: item.domain,

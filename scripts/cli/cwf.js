@@ -11,6 +11,7 @@ const CLI_COMMANDS = {
   thread: { script: 'thread.js', description: 'Open, list, and resume named workflow threads.' },
   backlog: { script: 'backlog.js', description: 'Capture and review workflow backlog items.' },
   manager: { script: 'manager.js', description: 'Show the operator manager surface.' },
+  dashboard: { script: 'dashboard.js', description: 'Generate the local operator dashboard HTML surface.' },
   setup: { script: 'setup.js', description: 'Install or refresh the workflow product in the current repo.' },
   init: { script: 'init.js', description: 'Bootstrap workflow control-plane files in the current repo.' },
   milestone: { script: 'new_milestone.js', description: 'Open a new full-workflow milestone.' },
@@ -84,6 +85,7 @@ const LEGACY_EQUIVALENTS = [
   ['cwf next', 'npm run workflow:next'],
   ['cwf launch', 'npm run workflow:launch'],
   ['cwf manager', 'npm run workflow:manager'],
+  ['cwf dashboard', 'npm run workflow:dashboard'],
   ['cwf do', 'npm run workflow:do -- "..."'],
   ['cwf note', 'npm run workflow:note -- "..."'],
   ['cwf packet', 'npm run workflow:packet -- --step plan'],
@@ -129,6 +131,7 @@ Core commands:
   thread           Open, list, and resume workflow threads
   backlog          Add or review backlog items
   manager          Show the operator manager surface
+  dashboard        Build the local operator dashboard
   setup            Install or refresh workflow surfaces in the current repo
   init             Bootstrap workflow control-plane files in the current repo
   milestone        Open a new full-workflow milestone
@@ -196,6 +199,7 @@ Examples:
   cwf do "land the next safe slice"
   cwf note "Investigate route drift" --promote backlog
   cwf manager
+  cwf dashboard --open
   cwf setup
   cwf milestone --id M1 --name "Initial setup" --goal "Land the first slice"
   cwf doctor --strict

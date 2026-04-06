@@ -29,6 +29,7 @@ It helps when you need:
 - `cwf thread`
 - `cwf backlog`
 - `cwf manager`
+- `cwf dashboard`
 - `cwf setup`
 - `cwf init`
 - `cwf milestone`
@@ -122,6 +123,7 @@ cwf codex setup --repo
 cwf do "Land the first slice"
 cwf note "Capture the first risk" --promote backlog
 cwf manager
+cwf dashboard --open
 cwf doctor --strict
 cwf discuss --goal "Clarify the next slice"
 cwf hud --compact
@@ -142,6 +144,7 @@ Use the product shell when the repo already has workflow installed:
 ```bash
 cwf do "resume the current slice"
 cwf manager
+cwf dashboard
 cwf hud --compact
 cwf explore --changed
 cwf packet compile --step plan

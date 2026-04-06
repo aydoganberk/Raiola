@@ -16,6 +16,8 @@
   Add and review canonical backlog items.
 - `cwf manager`
   Single-screen operator view with health, next route, team runtime, verify queue, and repair hints.
+- `cwf dashboard`
+  Generate `.workflow/runtime/dashboard/index.html`, a local HTML operator surface for route, verify, review, and screenshot state.
 - `cwf setup`
   Install or refresh the workflow product in the current repo.
 - `cwf init`
@@ -180,6 +182,7 @@
 - `cwf patch-review` -> `.workflow/orchestration/patches/*`
 - `cwf route` -> `.workflow/cache/model-routing.json`
 - `cwf do` / `cwf route` -> `.workflow/cache/intent-route-history.json`
+- `cwf dashboard` -> `.workflow/runtime/dashboard/{index.html,state.json}`
 - `cwf ui-spec` -> `docs/workflow/UI-SPEC.md`
 - `cwf ui-plan` -> `docs/workflow/UI-PLAN.md`
 - `cwf ui-review` -> `docs/workflow/UI-REVIEW.md`
@@ -198,6 +201,7 @@
 - `npm run workflow:thread`
 - `npm run workflow:backlog`
 - `npm run workflow:manager`
+- `npm run workflow:dashboard`
 - `npm run workflow:setup`
 - `npm run workflow:init`
 - `npm run workflow:hud`

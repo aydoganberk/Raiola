@@ -202,5 +202,6 @@ module.exports = {
   indexPath,
   listIndexedRepoFiles,
   readWorkflowIgnore,
+  shouldIgnoreFile,
   workflowIgnorePath,
 };

@@ -1,7 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { safeExecCached } = require('./perf/runtime_cache');
+const { listGitChangesCached, safeExecCached } = require('./perf/runtime_cache');
 const { ensureDir, writeTextIfChanged } = require('./io/files');
+const { readWorkflowIgnore, shouldIgnoreFile } = require('./fs_index');
 
 function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
@@ -23,6 +24,17 @@ function readJson(filePath, fallback = null) {
 }
 
 function listRepoFiles(cwd) {
+  const workflowIgnore = readWorkflowIgnore(cwd);
+  const git = safeExecCached('git', ['ls-files', '--cached', '--others', '--exclude-standard'], { cwd });
+  if (git.ok && git.stdout) {
+    return git.stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((filePath) => !shouldIgnoreFile(cwd, filePath, workflowIgnore))
+      .sort();
+  }
+
   const result = safeExecCached('rg', [
     '--files',
     '--hidden',
@@ -31,7 +43,12 @@ function listRepoFiles(cwd) {
     '-g', '!node_modules',
   ], { cwd });
   if (result.ok && result.stdout) {
-    return result.stdout.split('\n').map((line) => line.trim()).filter(Boolean).sort();
+    return result.stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((filePath) => !shouldIgnoreFile(cwd, filePath, workflowIgnore))
+      .sort();
   }
 
   const files = [];
@@ -44,7 +61,10 @@ function listRepoFiles(cwd) {
       if (entry.isDirectory()) {
         visit(fullPath);
       } else if (entry.isFile()) {
-        files.push(relativePath(cwd, fullPath));
+        const filePath = relativePath(cwd, fullPath);
+        if (!shouldIgnoreFile(cwd, filePath, workflowIgnore)) {
+          files.push(filePath);
+        }
       }
     }
   }
@@ -97,6 +117,44 @@ function dependencyNames(pkg) {
   });
 }
 
+function uniqueSorted(values) {
+  return [...new Set(values.filter(Boolean))].sort();
+}
+
+function ownerForFile(filePath, packages) {
+  return packages
+    .filter((item) => item.path === '.' || filePath === item.path || filePath.startsWith(`${item.path}/`))
+    .sort((left, right) => right.path.length - left.path.length)[0] || null;
+}
+
+function expandImpactedPackages(changedPackageIds, packages, packageNameMap) {
+  const packageById = new Map(packages.map((item) => [item.id, item]));
+  const dependentsById = new Map(packages.map((item) => [item.id, []]));
+  for (const item of packages) {
+    for (const dependencyName of item.internalDependencies) {
+      const dependencyId = packageNameMap.get(dependencyName);
+      if (!dependencyId) {
+        continue;
+      }
+      dependentsById.get(dependencyId).push(item.id);
+    }
+  }
+
+  const queue = [...changedPackageIds];
+  const seen = new Set(queue);
+  while (queue.length > 0) {
+    const current = queue.shift();
+    for (const dependentId of dependentsById.get(current) || []) {
+      if (seen.has(dependentId) || !packageById.has(dependentId)) {
+        continue;
+      }
+      seen.add(dependentId);
+      queue.push(dependentId);
+    }
+  }
+  return [...seen].sort();
+}
+
 function buildPackageGraph(cwd, options = {}) {
   const rootPkg = readJson(path.join(cwd, 'package.json'), {});
   const workspaceDirs = workspaceRoots(cwd, rootPkg);
@@ -132,9 +190,7 @@ function buildPackageGraph(cwd, options = {}) {
   const files = listRepoFiles(cwd);
   const ownership = {};
   for (const filePath of files) {
-    const owner = packages
-      .filter((item) => item.path === '.' || filePath === item.path || filePath.startsWith(`${item.path}/`))
-      .sort((left, right) => right.path.length - left.path.length)[0];
+    const owner = ownerForFile(filePath, packages);
     if (!owner) {
       continue;
     }
@@ -142,12 +198,24 @@ function buildPackageGraph(cwd, options = {}) {
     owner.fileCount += 1;
   }
 
+  const changedFiles = uniqueSorted((options.changedFiles || listGitChangesCached(cwd))
+    .map((filePath) => String(filePath || '').trim())
+    .filter(Boolean)
+    .filter((filePath) => !shouldIgnoreFile(cwd, filePath)));
+  const changedPackages = uniqueSorted(changedFiles
+    .map((filePath) => ownerForFile(filePath, packages)?.id)
+    .filter(Boolean));
+  const impactedPackages = expandImpactedPackages(changedPackages, packages, packageNameMap);
+
   const payload = {
     generatedAt: new Date().toISOString(),
     repoShape: workspaceDirs.length > 0 ? 'monorepo' : 'single-package',
     packageCount: packages.length,
     packages,
     ownership,
+    changedFiles,
+    changedPackages,
+    impactedPackages,
   };
 
   if (options.writeFiles !== false) {

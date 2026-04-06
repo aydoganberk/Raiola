@@ -11,6 +11,7 @@ Core commands:
   thread           Open, list, and resume workflow threads
   backlog          Add or review backlog items
   manager          Show the operator manager surface
+  dashboard        Build the local operator dashboard
   setup            Install or refresh workflow surfaces in the current repo
   init             Bootstrap workflow control-plane files in the current repo
   milestone        Open a new full-workflow milestone
@@ -78,6 +79,7 @@ Examples:
   cwf do "land the next safe slice"
   cwf note "Investigate route drift" --promote backlog
   cwf manager
+  cwf dashboard --open
   cwf setup
   cwf milestone --id M1 --name "Initial setup" --goal "Land the first slice"
   cwf doctor --strict
@@ -114,6 +116,7 @@ Legacy command equivalence:
   cwf next           -> npm run workflow:next
   cwf launch         -> npm run workflow:launch
   cwf manager        -> npm run workflow:manager
+  cwf dashboard      -> npm run workflow:dashboard
   cwf do             -> npm run workflow:do -- "..."
   cwf note           -> npm run workflow:note -- "..."
   cwf packet         -> npm run workflow:packet -- --step plan
@@ -143,3 +146,4 @@ Legacy command equivalence:
   cwf pr-brief       -> npm run workflow:pr-brief
   cwf release-notes  -> npm run workflow:release-notes
   cwf session-report -> npm run workflow:session-report
+

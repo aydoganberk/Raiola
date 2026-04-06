@@ -10,6 +10,7 @@ const {
 const { listIndexedRepoFiles } = require('./fs_index');
 const { buildCodebaseMap } = require('./map_codebase');
 const { buildFrontendProfile } = require('./map_frontend');
+const { buildPackageGraph } = require('./package_graph');
 
 function printHelp() {
   console.log(`
@@ -83,6 +84,33 @@ function runRg(cwd, pattern) {
     .slice(0, 40);
 }
 
+function impactedPackagesFor(packageGraph, ownerPackages) {
+  const packageByName = new Map((packageGraph.packages || []).map((item) => [item.name, item.id]));
+  const dependentsById = new Map((packageGraph.packages || []).map((item) => [item.id, []]));
+  for (const item of packageGraph.packages || []) {
+    for (const dependencyName of item.internalDependencies || []) {
+      const dependencyId = packageByName.get(dependencyName);
+      if (!dependencyId) {
+        continue;
+      }
+      dependentsById.get(dependencyId).push(item.id);
+    }
+  }
+  const queue = [...ownerPackages];
+  const seen = new Set(queue);
+  while (queue.length > 0) {
+    const current = queue.shift();
+    for (const dependentId of dependentsById.get(current) || []) {
+      if (seen.has(dependentId)) {
+        continue;
+      }
+      seen.add(dependentId);
+      queue.push(dependentId);
+    }
+  }
+  return [...seen].sort();
+}
+
 function symbolSearch(cwd, symbol) {
   return {
     symbol,
@@ -97,20 +125,28 @@ function callerSearch(cwd, symbol) {
   };
 }
 
-function impactSearch(cwd, target) {
+function impactSearch(cwd, target, packageGraph) {
   const normalized = String(target || '').trim();
   if (!normalized) {
     return {
       target: normalized,
       matches: [],
+      ownerPackages: [],
+      impactedPackages: [],
     };
   }
   const matches = normalized.includes('/')
     ? runRg(cwd, normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     : runRg(cwd, `\\b${normalized}\\b`);
+  const matchedFiles = [...new Set(matches.map((line) => line.split(':').slice(0, 1)[0]).filter(Boolean))];
+  const ownerPackages = [...new Set(matchedFiles
+    .map((filePath) => packageGraph.ownership?.[filePath])
+    .filter(Boolean))].sort();
   return {
     target: normalized,
     matches,
+    ownerPackages,
+    impactedPackages: impactedPackagesFor(packageGraph, ownerPackages),
   };
 }
 
@@ -138,6 +174,7 @@ function buildExplorePayload(cwd, rootDir, args) {
   const callers = args.callers ? String(args.callers).trim() : '';
   const impact = args.impact ? String(args.impact).trim() : '';
   const repoLens = Boolean(args.repo) || (!changed && !workflow && !frontend && !query && !symbol && !callers && !impact);
+  const packageGraph = buildPackageGraph(cwd, { writeFiles: false });
   const payload = {
     generatedAt: new Date().toISOString(),
     rootDir: relativePath(cwd, rootDir),
@@ -151,10 +188,16 @@ function buildExplorePayload(cwd, rootDir, args) {
       scopeKind: 'workstream',
       writeFiles: false,
     }) : null,
+    packageGraph: repoLens ? {
+      repoShape: packageGraph.repoShape,
+      packageCount: packageGraph.packageCount,
+      changedPackages: packageGraph.changedPackages,
+      impactedPackages: packageGraph.impactedPackages,
+    } : null,
     search: query ? searchFiles(cwd, query) : null,
     symbol: symbol ? symbolSearch(cwd, symbol) : null,
     callers: callers ? callerSearch(cwd, callers) : null,
-    impact: impact ? impactSearch(cwd, impact) : null,
+    impact: impact ? impactSearch(cwd, impact, packageGraph) : null,
   };
 
   const topFiles = [];
@@ -179,6 +222,8 @@ function buildExplorePayload(cwd, rootDir, args) {
   payload.relatedFiles = [...new Set(topFiles)].slice(0, 10);
   payload.recommendedNextCommand = frontend
     ? 'cwf verify-browser --smoke'
+    : payload.impact?.impactedPackages?.length > 1
+      ? 'cwf review --heatmap'
     : changed
       ? 'cwf verify-shell --cmd "npm test"'
       : workflow

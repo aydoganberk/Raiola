@@ -53,6 +53,7 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 - `doctor` and `health` now emit a real `risk` payload with score, level, and top contributing factors instead of only raw fail/warn counts.
 - `cwf codex` now suggests profiles, bootstraps task packets, generates resume cards, and suggests bounded subagent plans.
 - `cwf review` now emits findings, heatmap, blockers, replay, and patch suggestions in `.workflow/reports/`.
+- `cwf dashboard` now composes route, review, verification, package heatmap, and browser gallery state into a repo-local operator HTML surface at `.workflow/runtime/dashboard/index.html`.
 - `cwf ui-spec`, `ui-plan`, `ui-review`, `component-map`, `responsive-matrix`, `design-debt`, and `preview` now generate canonical frontend review artifacts, including missing-state and token-drift signals.
 - `cwf verify-work`, `cwf approval plan`, and `cwf ship-readiness` now close the roadmap Phase 8 trust gap by generating actionable fix plans, pending approval requests, and a ship gate score.
 - `scripts/workflow/roadmap_audit.js` writes `.workflow/reports/roadmap-audit.json` so corpus quality stays reviewable in CI and local audits.

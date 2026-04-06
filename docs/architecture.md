@@ -48,6 +48,7 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 - `codex_control.js` adds the safe Codex control-plane layer with diff, journal, rollback, and repo-derived role generation.
 - `do.js`, `note.js`, `thread.js`, and `backlog.js` add the daily intent/capture surfaces.
 - `capability_registry.js`, `intent_engine.js`, and `codex_profile_engine.js` add the explainable capability graph, route confidence, steering memory, and task-aware Codex profile selection.
+- `dashboard.js` turns the file-based runtime into a local HTML operator surface so route/review/frontend state can be consumed outside the CLI.
 - `questions.js`, `claims.js`, `secure_phase.js`, `packet.js`, and `evidence.js` add the trust, packet-lock, and provenance layer.
 - `policy.js`, `approvals.js`, `hooks.js`, `mcp.js`, `notify.js`, `daemon.js`, `gc.js`, `incident.js`, `fleet.js`, and `sessions.js` add the governance, integration, scale, and operator-center layer.
 - `review_engine.js` and `review_findings.js` add the multi-pass Review OS with findings, heatmap, blockers, replay, and patch suggestions.

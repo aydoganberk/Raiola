@@ -4,6 +4,52 @@ const childProcess = require('node:child_process');
 const { baseLifecycleContext } = require('./lifecycle_common');
 const { blockersFromFindings, findingsBySeverity, heatmapFromFindings, severityScore } = require('./review_findings');
 const { buildUiReview } = require('./ui_review');
+const { buildPackageGraph } = require('./package_graph');
+
+const REVIEW_PERSONAS = Object.freeze([
+  {
+    id: 'correctness',
+    label: 'correctness reviewer',
+    categories: ['API drift', 'test gap', 'data/migration'],
+    fileKinds: ['source', 'frontend'],
+    focus: 'Behavioral regressions, contract drift, and missing coverage.',
+  },
+  {
+    id: 'performance',
+    label: 'perf reviewer',
+    categories: ['performance'],
+    fileKinds: ['source', 'dependency'],
+    focus: 'Hot-path cost, sync I/O, and broad-diff regressions.',
+  },
+  {
+    id: 'security',
+    label: 'security reviewer',
+    categories: ['security', 'data/migration'],
+    fileKinds: ['source', 'dependency'],
+    focus: 'Secrets, risky data changes, and release safety.',
+  },
+  {
+    id: 'architecture',
+    label: 'architecture reviewer',
+    categories: ['architecture', 'API drift', 'dependency'],
+    fileKinds: ['source', 'dependency'],
+    focus: 'Change surface width, boundaries, and package-level drift.',
+  },
+  {
+    id: 'frontend',
+    label: 'frontend reviewer',
+    categories: ['frontend ux/a11y'],
+    fileKinds: ['frontend'],
+    focus: 'Visual evidence, state coverage, and interaction quality.',
+  },
+  {
+    id: 'dx',
+    label: 'DX reviewer',
+    categories: ['maintainability', 'dependency', 'test gap'],
+    fileKinds: ['source', 'frontend', 'dependency'],
+    focus: 'Debug residue, TODO debt, and operator friction.',
+  },
+]);
 
 function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
@@ -142,6 +188,282 @@ function createFinding(file, category, severity, title, detail, pass) {
     title,
     detail,
     pass,
+  };
+}
+
+function normalizeTokens(value) {
+  return String(value || '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 3);
+}
+
+function packageForFile(filePath, packageGraph) {
+  if (!packageGraph) {
+    return '.';
+  }
+  if (packageGraph.ownership?.[filePath]) {
+    return packageGraph.ownership[filePath];
+  }
+  const normalized = String(filePath || '');
+  const owner = (packageGraph.packages || [])
+    .filter((pkg) => pkg.path === '.' || normalized === pkg.path || normalized.startsWith(`${pkg.path}/`))
+    .sort((left, right) => right.path.length - left.path.length)[0];
+  return owner?.id || '.';
+}
+
+function buildConcernSummary(findings) {
+  const buckets = new Map();
+  for (const finding of findings) {
+    const bucket = buckets.get(finding.category) || {
+      category: finding.category,
+      count: 0,
+      files: new Set(),
+      maxSeverity: 'nice_to_have',
+    };
+    bucket.count += 1;
+    bucket.files.add(finding.file);
+    if (severityScore(finding.severity) > severityScore(bucket.maxSeverity)) {
+      bucket.maxSeverity = finding.severity;
+    }
+    buckets.set(finding.category, bucket);
+  }
+
+  return [...buckets.values()]
+    .map((bucket) => ({
+      category: bucket.category,
+      count: bucket.count,
+      maxSeverity: bucket.maxSeverity,
+      files: [...bucket.files].sort(),
+    }))
+    .sort((left, right) => (
+      severityScore(right.maxSeverity) - severityScore(left.maxSeverity)
+      || right.count - left.count
+      || left.category.localeCompare(right.category)
+    ));
+}
+
+function buildPackageHeatmap(files, fileHeatmap, packageGraph) {
+  const buckets = new Map();
+  for (const file of files) {
+    const packageId = packageForFile(file.file, packageGraph);
+    const heat = fileHeatmap.find((entry) => entry.file === file.file) || {
+      severityScore: 0,
+      findings: 0,
+      categories: [],
+    };
+    const bucket = buckets.get(packageId) || {
+      package: packageId,
+      files: new Set(),
+      findings: 0,
+      severityScore: 0,
+      added: 0,
+      deleted: 0,
+      categories: new Set(),
+    };
+    bucket.files.add(file.file);
+    bucket.findings += heat.findings || 0;
+    bucket.severityScore += heat.severityScore || 0;
+    bucket.added += file.added || 0;
+    bucket.deleted += file.deleted || 0;
+    for (const category of heat.categories || []) {
+      bucket.categories.add(category);
+    }
+    buckets.set(packageId, bucket);
+  }
+
+  return [...buckets.values()]
+    .map((bucket) => ({
+      package: bucket.package,
+      files: [...bucket.files].sort(),
+      fileCount: bucket.files.size,
+      findings: bucket.findings,
+      severityScore: bucket.severityScore,
+      added: bucket.added,
+      deleted: bucket.deleted,
+      categories: [...bucket.categories].sort(),
+    }))
+    .sort((left, right) => (
+      right.severityScore - left.severityScore
+      || right.findings - left.findings
+      || left.package.localeCompare(right.package)
+    ));
+}
+
+function buildReviewPersonas(findings, files, uiReview = null) {
+  return REVIEW_PERSONAS.map((persona) => {
+    const relevantFindings = findings.filter((finding) => persona.categories.includes(finding.category));
+    const relevantFiles = files
+      .filter((file) => persona.fileKinds.includes(fileCategory(file.file)))
+      .map((file) => file.file);
+    const highSeverity = relevantFindings.some((finding) => severityScore(finding.severity) >= severityScore('must_fix'));
+    const verdict = highSeverity
+      ? 'blocked'
+      : relevantFindings.length > 0
+        ? 'attention'
+        : uiReview && persona.id === 'frontend' && uiReview.debt?.length > 0
+          ? 'attention'
+          : 'clear';
+    return {
+      id: persona.id,
+      label: persona.label,
+      focus: persona.focus,
+      verdict,
+      findingCount: relevantFindings.length,
+      categories: [...new Set(relevantFindings.map((finding) => finding.category))],
+      topFiles: [...new Set(relevantFindings.map((finding) => finding.file).concat(relevantFiles))].slice(0, 6),
+      summary: relevantFindings.length > 0
+        ? `Raised ${relevantFindings.length} relevant finding(s) for ${persona.label}.`
+        : verdict === 'attention'
+          ? `${persona.label} stays active because frontend debt remains visible.`
+          : `No active findings for ${persona.label}.`,
+    };
+  });
+}
+
+function overlapCount(left, right) {
+  const rightSet = right instanceof Set ? right : new Set(right);
+  return [...left].filter((token) => rightSet.has(token)).length;
+}
+
+function buildTraceability(context, files, packageGraph) {
+  const fileEntries = files.map((file) => {
+    const packageId = packageForFile(file.file, packageGraph);
+    return {
+      file: file.file,
+      package: packageId,
+      fileTokens: new Set([
+        ...normalizeTokens(file.file),
+        ...normalizeTokens(path.basename(file.file)),
+        ...normalizeTokens(packageId),
+      ]),
+    };
+  });
+
+  const rows = (context.validationRows || []).map((row, index) => {
+    const rowText = [
+      row.deliverable,
+      row.verify_command,
+      row.expected_signal,
+      row.manual_check,
+      row.evidence,
+      row.audit_owner,
+      row.status,
+    ].join(' ');
+    const rowTokens = new Set(normalizeTokens(rowText));
+    const matchedFiles = fileEntries.filter((entry) => {
+      if (String(row.evidence || '').includes(entry.file)) {
+        return true;
+      }
+      if (entry.package !== '.' && String(row.evidence || '').includes(entry.package)) {
+        return true;
+      }
+      return overlapCount(entry.fileTokens, rowTokens) >= 2;
+    });
+    return {
+      id: row.deliverable || `validation-row-${index + 1}`,
+      deliverable: row.deliverable || `validation-row-${index + 1}`,
+      status: row.status || 'unknown',
+      verifyCommand: row.verify_command || '',
+      evidence: row.evidence || '',
+      matchedFiles: matchedFiles.map((entry) => entry.file),
+      matchedPackages: [...new Set(matchedFiles.map((entry) => entry.package))],
+      coverage: matchedFiles.length > 0 ? 'linked' : 'unlinked',
+    };
+  });
+
+  const linkedFiles = new Set(rows.flatMap((row) => row.matchedFiles));
+  const unmappedFiles = fileEntries
+    .filter((entry) => !linkedFiles.has(entry.file))
+    .map((entry) => ({
+      file: entry.file,
+      package: entry.package,
+    }));
+
+  return {
+    validationRows: rows,
+    linkedCount: rows.filter((row) => row.coverage === 'linked').length,
+    unlinkedCount: rows.filter((row) => row.coverage === 'unlinked').length,
+    unmappedFiles,
+    openRequirements: context.openRequirements || [],
+  };
+}
+
+function buildFollowUpTickets(findings, traceability, personas) {
+  const tickets = [];
+  const blockers = findings.filter((finding) => severityScore(finding.severity) >= severityScore('must_fix'));
+  for (const finding of blockers.slice(0, 5)) {
+    tickets.push({
+      title: finding.title,
+      severity: finding.severity,
+      ownerLane: finding.category === 'frontend ux/a11y' ? 'frontend' : finding.category === 'security' ? 'security' : 'review',
+      rationale: finding.detail,
+      file: finding.file,
+    });
+  }
+  if (traceability.unmappedFiles.length > 0) {
+    tickets.push({
+      title: 'Align validation contract with changed scope',
+      severity: 'should_fix',
+      ownerLane: 'review',
+      rationale: `${traceability.unmappedFiles.length} changed file(s) are not linked to the validation contract.`,
+      file: traceability.unmappedFiles[0].file,
+    });
+  }
+  const personaWatch = personas.filter((persona) => persona.verdict === 'attention');
+  if (personaWatch.length > 0) {
+    tickets.push({
+      title: `Resolve ${personaWatch[0].label} concerns`,
+      severity: 'nice_to_have',
+      ownerLane: personaWatch[0].id,
+      rationale: personaWatch[0].summary,
+      file: personaWatch[0].topFiles[0] || '',
+    });
+  }
+  return tickets.slice(0, 8);
+}
+
+function buildOutcome(files, findings, blockers, traceability, packageHeatmap, uiReview) {
+  const validationCoverage = traceability.validationRows.length > 0
+    ? traceability.linkedCount / traceability.validationRows.length
+    : 0.6;
+  const packagePenalty = Math.max(0, packageHeatmap.length - 2) * 0.03;
+  const unmappedPenalty = Math.min(0.18, traceability.unmappedFiles.length * 0.03);
+  const blockerPenalty = blockers.length * 0.06;
+  const uiBonus = uiReview ? 0.04 : 0;
+  const confidence = Number(Math.max(
+    0.4,
+    Math.min(
+      0.98,
+      0.62
+      + Math.min(files.length, 6) * 0.02
+      + (validationCoverage * 0.08)
+      + uiBonus
+      - blockerPenalty
+      - packagePenalty
+      - unmappedPenalty,
+    ),
+  ).toFixed(2));
+
+  return {
+    confidence,
+    severityWeightedScore: findings.reduce((sum, finding) => sum + severityScore(finding.severity), 0),
+    shipReadiness: blockers.length > 0
+      ? 'blocked'
+      : findings.length > 0 || traceability.unmappedFiles.length > 0
+        ? 'needs_follow_up'
+        : 'ready',
+    confidenceFactors: [
+      `validation_coverage=${traceability.linkedCount}/${traceability.validationRows.length || 0}`,
+      `unmapped_files=${traceability.unmappedFiles.length}`,
+      `packages_touched=${packageHeatmap.length}`,
+      `ui_review=${uiReview ? 'yes' : 'no'}`,
+    ],
+    shipRecommendation: blockers.length > 0
+      ? 'hold_for_fixes'
+      : confidence >= 0.8 && traceability.unmappedFiles.length === 0
+        ? 'ship_with_standard_checks'
+        : 'ship_after_follow_up',
   };
 }
 
@@ -302,6 +624,7 @@ function renderMarkdownReport(payload) {
 - Mode: \`${payload.mode}\`
 - Ship readiness: \`${payload.outcome.shipReadiness}\`
 - Confidence: \`${payload.outcome.confidence}\`
+- Ship recommendation: \`${payload.outcome.shipRecommendation}\`
 - Files reviewed: \`${payload.files.length}\`
 - Findings: \`${payload.findings.length}\`
 - Blockers: \`${payload.blockers.length}\`
@@ -325,11 +648,35 @@ ${payload.heatmap.length > 0
     ? payload.heatmap.slice(0, 10).map((item) => `- \`${item.file}\` severity=${item.severityScore} findings=${item.findings} categories=${item.categories.join(', ') || 'none'}`).join('\n')
     : '- `No changed files were available for heatmap generation.`'}
 
+## Package Heatmap
+
+${payload.packageHeatmap.length > 0
+    ? payload.packageHeatmap.slice(0, 8).map((item) => `- \`${item.package}\` severity=${item.severityScore} findings=${item.findings} files=${item.fileCount}`).join('\n')
+    : '- `No package ownership signals were available.`'}
+
+## Review Personas
+
+${payload.personas.length > 0
+    ? payload.personas.map((persona) => `- [${persona.verdict}] \`${persona.label}\` findings=${persona.findingCount} ${persona.summary}`).join('\n')
+    : '- `No persona summary was generated.`'}
+
+## Traceability
+
+${payload.traceability.validationRows.length > 0
+    ? payload.traceability.validationRows.slice(0, 10).map((row) => `- [${row.coverage}] \`${row.deliverable}\` files=${row.matchedFiles.length}`).join('\n')
+    : '- `No validation contract rows were available for traceability.`'}
+
 ## Blockers
 
 ${payload.blockers.length > 0
     ? payload.blockers.map((finding) => `- \`${finding.file}\` ${finding.title}`).join('\n')
     : '- `No blocker or must-fix items were found.`'}
+
+## Follow-up Tickets
+
+${payload.followUpTickets.length > 0
+    ? payload.followUpTickets.map((ticket) => `- [${ticket.severity}] \`${ticket.ownerLane}\` ${ticket.title}: ${ticket.rationale}`).join('\n')
+    : '- `No follow-up tickets were generated.`'}
 `;
 }
 
@@ -367,18 +714,13 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
   });
   const files = parseDiff(diffText);
   const browserEvidencePresent = fs.existsSync(path.join(cwd, '.workflow', 'verifications', 'browser'));
+  const packageGraph = buildPackageGraph(cwd, { writeFiles: true });
   const findings = runPasses(files, {
     ...context,
     browserEvidencePresent,
   });
   const heatmap = heatmapFromFindings(files, findings);
   const blockers = blockersFromFindings(findings);
-  const outcome = {
-    confidence: Number((Math.max(0.45, Math.min(0.98, 0.62 + (files.length * 0.02) - (blockers.length * 0.05))).toFixed(2))),
-    severityWeightedScore: findings.reduce((sum, finding) => sum + severityScore(finding.severity), 0),
-    shipReadiness: blockers.length > 0 ? 'blocked' : findings.length > 0 ? 'needs_follow_up' : 'ready',
-  };
-
   const recordHistory = options.recordHistory !== false;
   const writeArtifacts = options.writeArtifacts !== false;
   const previousHistory = recordHistory
@@ -389,6 +731,12 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
   const uiReview = frontendTouched && options.includeUiReview !== false
     ? await buildUiReview(cwd, rootDir, {})
     : null;
+  const packageHeatmap = buildPackageHeatmap(files, heatmap, packageGraph);
+  const concernSummary = buildConcernSummary(findings);
+  const traceability = buildTraceability(context, files, packageGraph);
+  const personas = buildReviewPersonas(findings, files, uiReview);
+  const followUpTickets = buildFollowUpTickets(findings, traceability, personas);
+  const outcome = buildOutcome(files, findings, blockers, traceability, packageHeatmap, uiReview);
 
   const payload = {
     generatedAt: new Date().toISOString(),
@@ -401,10 +749,21 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
     files,
     findings,
     heatmap,
+    packageHeatmap,
+    concernSummary,
     blockers,
     replay,
     outcome,
     patchSuggestions: renderPatchSuggestions({ findings }),
+    personas,
+    traceability,
+    followUpTickets,
+    packageGraph: {
+      repoShape: packageGraph.repoShape,
+      packageCount: packageGraph.packageCount,
+      changedPackages: packageGraph.changedPackages || [],
+      impactedPackages: packageGraph.impactedPackages || [],
+    },
     uiReview,
   };
 
@@ -414,15 +773,25 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
     const markdownPath = path.join(reportsDir, 'review.md');
     const findingsPath = path.join(reportsDir, 'review-findings.json');
     const heatmapPath = path.join(reportsDir, 'risk-heatmap.json');
+    const packageHeatmapPath = path.join(reportsDir, 'review-package-heatmap.json');
+    const concernSummaryPath = path.join(reportsDir, 'review-concerns.json');
     const blockersPath = path.join(reportsDir, 'review-blockers.md');
     const replayPath = path.join(reportsDir, 'review-replay.json');
     const suggestionsPath = path.join(reportsDir, 'review-patch-suggestions.json');
+    const personasPath = path.join(reportsDir, 'review-personas.json');
+    const traceabilityPath = path.join(reportsDir, 'review-traceability.json');
+    const followUpsPath = path.join(reportsDir, 'review-follow-ups.json');
     fs.writeFileSync(markdownPath, `${renderMarkdownReport(payload).trimEnd()}\n`);
     writeJson(findingsPath, payload.findings);
     writeJson(heatmapPath, payload.heatmap);
+    writeJson(packageHeatmapPath, payload.packageHeatmap);
+    writeJson(concernSummaryPath, payload.concernSummary);
     fs.writeFileSync(blockersPath, `${renderBlockersMarkdown(payload).trimEnd()}\n`);
     writeJson(replayPath, payload.replay);
     writeJson(suggestionsPath, payload.patchSuggestions);
+    writeJson(personasPath, payload.personas);
+    writeJson(traceabilityPath, payload.traceability);
+    writeJson(followUpsPath, payload.followUpTickets);
     if (recordHistory) {
       writeJson(reviewHistoryPath(cwd), {
         generatedAt: payload.generatedAt,
@@ -441,9 +810,14 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
       markdown: relativePath(cwd, markdownPath),
       findings: relativePath(cwd, findingsPath),
       heatmap: relativePath(cwd, heatmapPath),
+      packageHeatmap: relativePath(cwd, packageHeatmapPath),
+      concerns: relativePath(cwd, concernSummaryPath),
       blockers: relativePath(cwd, blockersPath),
       replay: relativePath(cwd, replayPath),
       patchSuggestions: relativePath(cwd, suggestionsPath),
+      personas: relativePath(cwd, personasPath),
+      traceability: relativePath(cwd, traceabilityPath),
+      followUps: relativePath(cwd, followUpsPath),
     };
     payload.outputPath = markdownPath;
     payload.outputPathRelative = payload.artifacts.markdown;

@@ -123,6 +123,7 @@ function buildRoutePayload(cwd, rootDir, options = {}) {
     why: {
       chosenCapability: intentAnalysis.chosenCapability.id,
       fallbackCapability: intentAnalysis.fallbackCapability.id,
+      secondaryCapability: intentAnalysis.secondaryCapability?.id || intentAnalysis.fallbackCapability.id,
       chosenReasons: intentAnalysis.chosenCapability.reasons,
       ambiguityReasons: intentAnalysis.ambiguityReasons,
     },
@@ -241,6 +242,11 @@ function main() {
         console.log(`- \`${warning}\``);
       }
     }
+    if (payload.evaluation.rerouteRecommendation) {
+      console.log('\n## Reroute\n');
+      console.log(`- \`${payload.evaluation.rerouteRecommendation.reason}\``);
+      console.log(`- Command: \`${payload.evaluation.rerouteRecommendation.command}\``);
+    }
     return;
   }
 
@@ -262,6 +268,11 @@ function main() {
       for (const reason of payload.why.ambiguityReasons) {
         console.log(`- \`${reason}\``);
       }
+    }
+    if (payload.routeEvaluation?.rerouteRecommendation) {
+      console.log('\n## Reroute\n');
+      console.log(`- \`${payload.routeEvaluation.rerouteRecommendation.reason}\``);
+      console.log(`- Command: \`${payload.routeEvaluation.rerouteRecommendation.command}\``);
     }
   }
 }

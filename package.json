@@ -16,6 +16,7 @@
     "workflow:thread": "node scripts/workflow/thread.js",
     "workflow:backlog": "node scripts/workflow/backlog.js",
     "workflow:manager": "node scripts/workflow/manager.js",
+    "workflow:dashboard": "node scripts/workflow/dashboard.js",
     "workflow:setup": "node scripts/workflow/setup.js",
     "workflow:init": "node scripts/workflow/init.js",
     "workflow:migrate": "node scripts/workflow/migrate.js",

@@ -9,6 +9,7 @@ const { buildReviewDiffCorpus } = require('./corpus/review_diff.corpus');
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
 const cwfBin = path.join(repoRoot, 'bin', 'cwf.js');
+const { buildPackageGraph } = require(path.join(repoRoot, 'scripts', 'workflow', 'package_graph.js'));
 
 function makeTempRepo() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase17-'));
@@ -146,4 +147,24 @@ test('review engine detects API drift and data migration risks in diff mode', ()
 
   assert.ok(categories.includes('API drift'));
   assert.ok(categories.includes('data/migration'));
+});
+
+test('package graph exposes changed and impacted packages for monorepo deltas', () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase17-graph-'));
+  const fixture = path.join(repoRoot, 'tests', 'fixtures', 'large-monorepo');
+  fs.cpSync(fixture, tempDir, { recursive: true });
+
+  run('git', ['init'], tempDir);
+  run('git', ['config', 'user.email', 'graph@example.com'], tempDir);
+  run('git', ['config', 'user.name', 'Graph Runner'], tempDir);
+  run('git', ['add', '.'], tempDir);
+  run('git', ['commit', '-m', 'baseline graph fixture'], tempDir);
+
+  fs.writeFileSync(path.join(tempDir, 'packages', 'data', 'src', 'client.ts'), 'export const client = "updated";\n');
+
+  const graph = buildPackageGraph(tempDir, { writeFiles: false });
+
+  assert.ok(graph.changedPackages.includes('packages/data'));
+  assert.ok(graph.impactedPackages.includes('packages/auth'));
+  assert.ok(graph.impactedPackages.includes('apps/admin'));
 });

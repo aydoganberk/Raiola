@@ -46,6 +46,7 @@ function buildDoPayload(cwd, rootDir, goal) {
     lane: analysis.lane,
     capability: analysis.chosenCapability.id,
     fallbackCapability: analysis.fallbackCapability.id,
+    secondaryCapability: analysis.secondaryCapability?.id || analysis.fallbackCapability.id,
     confidence: analysis.confidence,
     recommendedPreset: analysis.profile.preset,
     profile: analysis.profile,
@@ -93,6 +94,7 @@ function main() {
   console.log(`- Goal: \`${payload.goal}\``);
   console.log(`- Lane: \`${payload.lane}\``);
   console.log(`- Capability: \`${payload.capability}\``);
+  console.log(`- Secondary capability: \`${payload.secondaryCapability}\``);
   console.log(`- Fallback capability: \`${payload.fallbackCapability}\``);
   console.log(`- Confidence: \`${payload.confidence}\``);
   console.log(`- Preset: \`${payload.recommendedPreset}\``);
@@ -118,6 +120,11 @@ function main() {
       for (const reason of payload.ambiguityReasons) {
         console.log(`- \`${reason}\``);
       }
+    }
+    if (payload.routeEvaluation?.rerouteRecommendation) {
+      console.log('\n## Reroute\n');
+      console.log(`- \`${payload.routeEvaluation.rerouteRecommendation.reason}\``);
+      console.log(`- Command: \`${payload.routeEvaluation.rerouteRecommendation.command}\``);
     }
   }
 }
