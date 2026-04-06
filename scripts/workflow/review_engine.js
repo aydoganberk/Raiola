@@ -5,12 +5,14 @@ const { baseLifecycleContext } = require('./lifecycle_common');
 const { blockersFromFindings, findingsBySeverity, heatmapFromFindings, severityScore } = require('./review_findings');
 const { buildUiReview } = require('./ui_review');
 const { buildPackageGraph } = require('./package_graph');
+const { buildSemanticAnalysis } = require('./review_semantic');
+const { buildSymbolGraph, findSymbolMatches } = require('./symbol_graph');
 
 const REVIEW_PERSONAS = Object.freeze([
   {
     id: 'correctness',
     label: 'correctness reviewer',
-    categories: ['API drift', 'test gap', 'data/migration'],
+    categories: ['correctness', 'API drift', 'test gap', 'data/migration'],
     fileKinds: ['source', 'frontend'],
     focus: 'Behavioral regressions, contract drift, and missing coverage.',
   },
@@ -191,11 +193,103 @@ function createFinding(file, category, severity, title, detail, pass) {
   };
 }
 
+function semanticSignalSummary(filePath, analysis) {
+  return {
+    file: filePath,
+    source: analysis.source,
+    removedExports: analysis.diff.removedExports,
+    addedExports: analysis.diff.addedExports,
+    changedSignatures: analysis.diff.changedSignatures,
+    removedRouteHandlers: analysis.diff.removedRouteHandlers,
+    addedRouteHandlers: analysis.diff.addedRouteHandlers,
+    authSignalsDropped: analysis.diff.authSignalsDropped,
+    errorSignalsDropped: analysis.diff.errorSignalsDropped,
+    accessibilitySignalsAdded: analysis.diff.addedImageAltIssues || analysis.diff.addedButtonLabelIssues,
+  };
+}
+
+function semanticFindingsForFile(cwd, file, symbolGraph) {
+  const findings = [];
+  const analysis = buildSemanticAnalysis(cwd, file);
+  const diff = analysis.diff;
+  const details = [];
+  if (diff.removedExports.length > 0) {
+    details.push(`removed exports: ${diff.removedExports.join(', ')}`);
+  }
+  if (diff.changedSignatures.length > 0) {
+    details.push(`changed signatures: ${diff.changedSignatures.join(', ')}`);
+  }
+  if (diff.addedRouteHandlers.length > 0 || diff.removedRouteHandlers.length > 0) {
+    details.push(`route handlers changed: +${diff.addedRouteHandlers.join(', ') || 'none'} -${diff.removedRouteHandlers.join(', ') || 'none'}`);
+  }
+
+  if (details.length > 0) {
+    const impactedCallers = uniqueSorted([
+      ...diff.removedExports.flatMap((symbol) => findSymbolMatches(symbolGraph, symbol).importers),
+      ...diff.changedSignatures.flatMap((symbol) => findSymbolMatches(symbolGraph, symbol).references),
+    ]).filter((entry) => entry !== file.file).slice(0, 4);
+    findings.push(createFinding(
+      file.file,
+      'correctness',
+      'should_fix',
+      'Public behavior changed in a semantically meaningful way',
+      `${details.join('; ')}.${impactedCallers.length > 0 ? ` Likely downstream files: ${impactedCallers.join(', ')}.` : ''}`,
+      'semantic-contract',
+    ));
+  }
+
+  if (diff.authSignalsDropped && file.deletedLines.some((line) => /\b(auth|session|permission|authorize|middleware)\b/i.test(line))) {
+    findings.push(createFinding(
+      file.file,
+      'security',
+      'must_fix',
+      'Auth or permission guard appears to be reduced',
+      'Authentication or authorization-related signals decreased across the diff. Confirm this was intentional and preserve route or component guards.',
+      'semantic-security',
+    ));
+  }
+
+  if (diff.errorSignalsDropped && [...file.addedLines, ...file.deletedLines].some((line) => /\b(fetch|await|Response\.json|db\.|query|mutation)\b/.test(line))) {
+    findings.push(createFinding(
+      file.file,
+      'correctness',
+      'should_fix',
+      'Error-handling signals decreased on an active code path',
+      'The diff appears to remove error-handling cues while keeping async or data-path logic active. Re-check failure behavior and recovery semantics.',
+      'semantic-correctness',
+    ));
+  }
+
+  if (diff.addedInlineStyles || diff.addedImageAltIssues || diff.addedButtonLabelIssues) {
+    findings.push(createFinding(
+      file.file,
+      'frontend ux/a11y',
+      'should_fix',
+      'Semantic frontend review found accessibility or token-drift risk',
+      [
+        diff.addedInlineStyles ? 'Inline style usage increased.' : '',
+        diff.addedImageAltIssues ? 'Image alt coverage regressed.' : '',
+        diff.addedButtonLabelIssues ? 'Button accessible naming regressed.' : '',
+      ].filter(Boolean).join(' '),
+      'semantic-frontend',
+    ));
+  }
+
+  return {
+    analysis,
+    findings,
+  };
+}
+
 function normalizeTokens(value) {
   return String(value || '')
     .toLowerCase()
     .split(/[^a-z0-9]+/)
     .filter((token) => token.length >= 3);
+}
+
+function uniqueSorted(values) {
+  return [...new Set((values || []).filter(Boolean))].sort();
 }
 
 function packageForFile(filePath, packageGraph) {
@@ -467,8 +561,9 @@ function buildOutcome(files, findings, blockers, traceability, packageHeatmap, u
   };
 }
 
-function runPasses(files, context) {
+function runPasses(files, context, packageGraph, symbolGraph, cwd) {
   const findings = [];
+  const semanticSignals = [];
   const sourceFiles = files.filter((file) => ['source', 'frontend', 'dependency'].includes(fileCategory(file.file)));
   const testFiles = files.filter((file) => fileCategory(file.file) === 'test');
 
@@ -564,15 +659,23 @@ function runPasses(files, context) {
         'architecture-security',
       ));
     }
+    if (cwd && ['source', 'frontend'].includes(category)) {
+      const semantic = semanticFindingsForFile(cwd, file, symbolGraph);
+      semanticSignals.push(semanticSignalSummary(file.file, semantic.analysis));
+      findings.push(...semantic.findings);
+    }
   }
 
   if (sourceFiles.length > 0 && testFiles.length === 0) {
+    const suggestedTests = (packageGraph?.impactedTests || []).slice(0, 5);
     findings.push(createFinding(
       sourceFiles[0].file,
       'test gap',
       'must_fix',
       'Source changes landed without test coverage deltas',
-      'Code changed but no test files changed in the same diff. Add tests or record why existing coverage is sufficient.',
+      suggestedTests.length > 0
+        ? `Code changed but no test files changed in the same diff. Add or exercise impacted tests such as: ${suggestedTests.join(', ')}.`
+        : 'Code changed but no test files changed in the same diff. Add tests or record why existing coverage is sufficient.',
       'verify-gap',
     ));
   }
@@ -588,7 +691,10 @@ function runPasses(files, context) {
     ));
   }
 
-  return findingsBySeverity(findings);
+  return {
+    findings: findingsBySeverity(findings),
+    semanticSignals,
+  };
 }
 
 function buildReplay(previousFindings, currentFindings) {
@@ -677,6 +783,12 @@ ${payload.blockers.length > 0
 ${payload.followUpTickets.length > 0
     ? payload.followUpTickets.map((ticket) => `- [${ticket.severity}] \`${ticket.ownerLane}\` ${ticket.title}: ${ticket.rationale}`).join('\n')
     : '- `No follow-up tickets were generated.`'}
+
+## Semantic Signals
+
+${payload.semanticSignals.length > 0
+    ? payload.semanticSignals.slice(0, 10).map((item) => `- \`${item.file}\` removedExports=${item.removedExports.length} changedSignatures=${item.changedSignatures.length} authDrop=${item.authSignalsDropped ? 'yes' : 'no'} a11yRisk=${item.accessibilitySignalsAdded ? 'yes' : 'no'}`).join('\n')
+    : '- `No semantic review signals were collected for the changed files.`'}
 `;
 }
 
@@ -715,10 +827,12 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
   const files = parseDiff(diffText);
   const browserEvidencePresent = fs.existsSync(path.join(cwd, '.workflow', 'verifications', 'browser'));
   const packageGraph = buildPackageGraph(cwd, { writeFiles: true });
-  const findings = runPasses(files, {
+  const symbolGraph = buildSymbolGraph(cwd, { writeFiles: true, refreshMode: 'incremental' });
+  const reviewPass = runPasses(files, {
     ...context,
     browserEvidencePresent,
-  });
+  }, packageGraph, symbolGraph, cwd);
+  const findings = reviewPass.findings;
   const heatmap = heatmapFromFindings(files, findings);
   const blockers = blockersFromFindings(findings);
   const recordHistory = options.recordHistory !== false;
@@ -755,6 +869,7 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
     replay,
     outcome,
     patchSuggestions: renderPatchSuggestions({ findings }),
+    semanticSignals: reviewPass.semanticSignals,
     personas,
     traceability,
     followUpTickets,
@@ -763,6 +878,12 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
       packageCount: packageGraph.packageCount,
       changedPackages: packageGraph.changedPackages || [],
       impactedPackages: packageGraph.impactedPackages || [],
+      impactedTests: packageGraph.impactedTests || [],
+    },
+    symbolGraph: {
+      symbolCount: symbolGraph.symbolCount,
+      importEdgeCount: symbolGraph.importEdgeCount,
+      refreshStatus: symbolGraph.refreshStatus,
     },
     uiReview,
   };
@@ -775,9 +896,11 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
     const heatmapPath = path.join(reportsDir, 'risk-heatmap.json');
     const packageHeatmapPath = path.join(reportsDir, 'review-package-heatmap.json');
     const concernSummaryPath = path.join(reportsDir, 'review-concerns.json');
+    const packageGraphPath = path.join(reportsDir, 'review-package-graph.json');
     const blockersPath = path.join(reportsDir, 'review-blockers.md');
     const replayPath = path.join(reportsDir, 'review-replay.json');
     const suggestionsPath = path.join(reportsDir, 'review-patch-suggestions.json');
+    const semanticPath = path.join(reportsDir, 'review-semantic-signals.json');
     const personasPath = path.join(reportsDir, 'review-personas.json');
     const traceabilityPath = path.join(reportsDir, 'review-traceability.json');
     const followUpsPath = path.join(reportsDir, 'review-follow-ups.json');
@@ -786,9 +909,11 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
     writeJson(heatmapPath, payload.heatmap);
     writeJson(packageHeatmapPath, payload.packageHeatmap);
     writeJson(concernSummaryPath, payload.concernSummary);
+    writeJson(packageGraphPath, payload.packageGraph);
     fs.writeFileSync(blockersPath, `${renderBlockersMarkdown(payload).trimEnd()}\n`);
     writeJson(replayPath, payload.replay);
     writeJson(suggestionsPath, payload.patchSuggestions);
+    writeJson(semanticPath, payload.semanticSignals);
     writeJson(personasPath, payload.personas);
     writeJson(traceabilityPath, payload.traceability);
     writeJson(followUpsPath, payload.followUpTickets);
@@ -812,9 +937,11 @@ async function runReviewEngine(cwd, rootDir, options = {}) {
       heatmap: relativePath(cwd, heatmapPath),
       packageHeatmap: relativePath(cwd, packageHeatmapPath),
       concerns: relativePath(cwd, concernSummaryPath),
+      packageGraph: relativePath(cwd, packageGraphPath),
       blockers: relativePath(cwd, blockersPath),
       replay: relativePath(cwd, replayPath),
       patchSuggestions: relativePath(cwd, suggestionsPath),
+      semantic: relativePath(cwd, semanticPath),
       personas: relativePath(cwd, personasPath),
       traceability: relativePath(cwd, traceabilityPath),
       followUps: relativePath(cwd, followUpsPath),

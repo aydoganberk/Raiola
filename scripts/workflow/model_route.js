@@ -126,6 +126,9 @@ function buildRoutePayload(cwd, rootDir, options = {}) {
       secondaryCapability: intentAnalysis.secondaryCapability?.id || intentAnalysis.fallbackCapability.id,
       chosenReasons: intentAnalysis.chosenCapability.reasons,
       ambiguityReasons: intentAnalysis.ambiguityReasons,
+      ambiguityClass: intentAnalysis.ambiguityClass,
+      rejectedAlternatives: intentAnalysis.rejectedAlternatives,
+      languageMix: intentAnalysis.languageMix,
     },
     confidence: intentAnalysis.confidence,
     recommendedCapability: intentAnalysis.chosenCapability.id,
@@ -265,10 +268,19 @@ function main() {
     }
     if (payload.why.ambiguityReasons.length > 0) {
       console.log('\n## Ambiguity\n');
+      console.log(`- class=\`${payload.why.ambiguityClass}\``);
       for (const reason of payload.why.ambiguityReasons) {
         console.log(`- \`${reason}\``);
       }
     }
+    if (payload.why.rejectedAlternatives.length > 0) {
+      console.log('\n## Rejected Alternatives\n');
+      for (const alternative of payload.why.rejectedAlternatives) {
+        console.log(`- \`${alternative.id}\` score=\`${alternative.score}\``);
+      }
+    }
+    console.log('\n## Language Mix\n');
+    console.log(`- \`tr=${payload.why.languageMix.turkishSignals ? 'yes' : 'no'} en=${payload.why.languageMix.englishSignals ? 'yes' : 'no'}\``);
     if (payload.routeEvaluation?.rerouteRecommendation) {
       console.log('\n## Reroute\n');
       console.log(`- \`${payload.routeEvaluation.rerouteRecommendation.reason}\``);

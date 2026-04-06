@@ -120,7 +120,11 @@ test('ui review exposes missing-state and token-drift audits', () => {
   assert.ok(uiReview.missingStateAudit.missing.includes('loading'));
   assert.ok(uiReview.tokenDriftAudit.totalIssues >= 1);
   assert.ok(uiReview.debt.some((item) => item.area === 'token drift'));
+  assert.ok(['pass', 'warn', 'fail', 'inconclusive'].includes(uiReview.accessibilityAudit.verdict));
+  assert.ok(['pass', 'warn', 'incomplete', 'inconclusive'].includes(uiReview.journeyAudit.coverage));
   assert.ok(uiSpec.missingStateAudit.missing.includes('loading'));
+  assert.ok(uiSpec.accessibilityAudit);
+  assert.ok(uiSpec.journeyAudit);
 });
 
 test('review engine detects API drift and data migration risks in diff mode', () => {
@@ -149,6 +153,49 @@ test('review engine detects API drift and data migration risks in diff mode', ()
   assert.ok(categories.includes('data/migration'));
 });
 
+test('review engine semantic pass catches auth regressions and frontend accessibility drift', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run(
+    'node',
+    [
+      path.join(targetRepo, 'scripts', 'workflow', 'new_milestone.js'),
+      '--id', 'M44',
+      '--name', 'Semantic review audit',
+      '--goal', 'Exercise semantic review signals',
+    ],
+    targetRepo,
+  );
+
+  const diffPath = path.join(targetRepo, 'semantic.diff');
+  fs.writeFileSync(diffPath, [
+    'diff --git a/src/auth.ts b/src/auth.ts',
+    '--- a/src/auth.ts',
+    '+++ b/src/auth.ts',
+    '@@',
+    '-export async function getSecret(session) { if (!session) throw new Error("auth"); return db.secret; }',
+    '+export async function getSecret() { return db.secret; }',
+    '',
+    'diff --git a/components/Card.tsx b/components/Card.tsx',
+    '--- a/components/Card.tsx',
+    '+++ b/components/Card.tsx',
+    '@@',
+    '-export function Card() { return <button aria-label="close"></button>; }',
+    '+export function Card() { return <button></button>; }',
+    '',
+  ].join('\n'));
+
+  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const review = JSON.parse(run('node', [targetBin, 'review', '--diff-file', diffPath, '--json'], targetRepo));
+  const categories = review.findings.map((finding) => finding.category);
+
+  assert.ok(categories.includes('security'));
+  assert.ok(categories.includes('correctness'));
+  assert.ok(categories.includes('frontend ux/a11y'));
+  assert.ok(review.semanticSignals.length >= 2);
+  assert.ok(fs.existsSync(path.join(targetRepo, review.artifacts.semantic)));
+});
+
 test('package graph exposes changed and impacted packages for monorepo deltas', () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase17-graph-'));
   const fixture = path.join(repoRoot, 'tests', 'fixtures', 'large-monorepo');
@@ -167,4 +214,6 @@ test('package graph exposes changed and impacted packages for monorepo deltas', 
   assert.ok(graph.changedPackages.includes('packages/data'));
   assert.ok(graph.impactedPackages.includes('packages/auth'));
   assert.ok(graph.impactedPackages.includes('apps/admin'));
+  assert.equal(graph.testOwnership['tests/smoke.test.js'], '.');
+  assert.ok(graph.impactedTests.includes('tests/smoke.test.js'));
 });

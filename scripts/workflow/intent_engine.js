@@ -411,6 +411,33 @@ function ambiguityReasons(candidates, intent) {
   return reasons;
 }
 
+function ambiguityClass(candidates, intent, confidence) {
+  const activeDomains = Object.entries(intent).filter(([, value]) => value).map(([key]) => key);
+  if (confidence < 0.65) {
+    return 'low-confidence';
+  }
+  if ((candidates[0]?.score || 0) - (candidates[1]?.score || 0) <= 2) {
+    return 'close-call';
+  }
+  if (activeDomains.length >= 3) {
+    return 'mixed-intent';
+  }
+  return confidence >= 0.8 ? 'clear' : 'moderate';
+}
+
+function buildRejectedAlternatives(candidates, chosenCapability) {
+  return candidates
+    .filter((candidate) => candidate.id !== chosenCapability.id)
+    .slice(0, 3)
+    .map((candidate) => ({
+      id: candidate.id,
+      domain: candidate.domain,
+      risk: candidate.risk,
+      score: candidate.score,
+      reasons: candidate.reasons,
+    }));
+}
+
 function chooseSecondaryCapability(candidates, chosenCapability, repoSignals, steeringPreferences) {
   if (!chosenCapability) {
     return null;
@@ -561,9 +588,11 @@ function analyzeIntent(cwd, rootDir, goal, options = {}) {
     })),
     confidence,
     ambiguityReasons: ambiguityReasons(candidates, intent),
+    ambiguityClass: ambiguityClass(candidates, intent, confidence),
     intent,
     risk,
     languageMix: inferLanguageMix(normalizedGoal),
+    rejectedAlternatives: buildRejectedAlternatives(candidates, chosenCapability),
     repoSignals,
     steering: steeringMemory.preferences || {},
     verificationPlan: verificationPlanFor(chosenCapability, repoSignals, steeringMemory.preferences || {}),

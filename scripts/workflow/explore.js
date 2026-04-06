@@ -11,6 +11,7 @@ const { listIndexedRepoFiles } = require('./fs_index');
 const { buildCodebaseMap } = require('./map_codebase');
 const { buildFrontendProfile } = require('./map_frontend');
 const { buildPackageGraph } = require('./package_graph');
+const { buildSymbolGraph, findSymbolMatches } = require('./symbol_graph');
 
 function printHelp() {
   console.log(`
@@ -111,21 +112,37 @@ function impactedPackagesFor(packageGraph, ownerPackages) {
   return [...seen].sort();
 }
 
-function symbolSearch(cwd, symbol) {
+function testsForPackages(packageGraph, packageIds = []) {
+  return uniqueSorted(packageIds.flatMap((packageId) => packageGraph.testsByPackage?.[packageId] || [])).slice(0, 12);
+}
+
+function uniqueSorted(values) {
+  return [...new Set((values || []).filter(Boolean))].sort();
+}
+
+function symbolSearch(cwd, symbol, symbolGraph) {
+  const graphMatches = findSymbolMatches(symbolGraph, symbol);
+  const grepMatches = runRg(cwd, `\\b${symbol}\\b`);
   return {
     symbol,
-    matches: runRg(cwd, `\\b${symbol}\\b`),
+    definitions: graphMatches.definitions,
+    references: graphMatches.references,
+    importers: graphMatches.importers,
+    matches: grepMatches,
   };
 }
 
-function callerSearch(cwd, symbol) {
+function callerSearch(cwd, symbol, symbolGraph) {
+  const graphMatches = findSymbolMatches(symbolGraph, symbol);
+  const callers = graphMatches.references.filter((filePath) => !graphMatches.definitions.includes(filePath));
   return {
     symbol,
+    callers,
     matches: runRg(cwd, `${symbol}\\(`),
   };
 }
 
-function impactSearch(cwd, target, packageGraph) {
+function impactSearch(cwd, target, packageGraph, symbolGraph) {
   const normalized = String(target || '').trim();
   if (!normalized) {
     return {
@@ -133,20 +150,37 @@ function impactSearch(cwd, target, packageGraph) {
       matches: [],
       ownerPackages: [],
       impactedPackages: [],
+      impactedTests: [],
+      callers: [],
     };
   }
+  const isFileTarget = normalized.includes('/');
+  const graphMatch = !isFileTarget ? findSymbolMatches(symbolGraph, normalized) : null;
   const matches = normalized.includes('/')
     ? runRg(cwd, normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     : runRg(cwd, `\\b${normalized}\\b`);
-  const matchedFiles = [...new Set(matches.map((line) => line.split(':').slice(0, 1)[0]).filter(Boolean))];
+  const matchedFiles = uniqueSorted([
+    ...matches.map((line) => line.split(':').slice(0, 1)[0]).filter(Boolean),
+    ...(graphMatch?.definitions || []),
+    ...(graphMatch?.references || []),
+    ...(isFileTarget
+      ? (symbolGraph.importEdges || []).filter((edge) => edge.to === normalized).map((edge) => edge.from)
+      : []),
+  ]);
   const ownerPackages = [...new Set(matchedFiles
     .map((filePath) => packageGraph.ownership?.[filePath])
     .filter(Boolean))].sort();
+  const impactedPackages = impactedPackagesFor(packageGraph, ownerPackages);
   return {
     target: normalized,
     matches,
     ownerPackages,
-    impactedPackages: impactedPackagesFor(packageGraph, ownerPackages),
+    impactedPackages,
+    impactedTests: testsForPackages(packageGraph, impactedPackages),
+    callers: isFileTarget
+      ? uniqueSorted((symbolGraph.importEdges || []).filter((edge) => edge.to === normalized).map((edge) => edge.from))
+      : graphMatch?.importers || [],
+    definitions: graphMatch?.definitions || [],
   };
 }
 
@@ -175,6 +209,7 @@ function buildExplorePayload(cwd, rootDir, args) {
   const impact = args.impact ? String(args.impact).trim() : '';
   const repoLens = Boolean(args.repo) || (!changed && !workflow && !frontend && !query && !symbol && !callers && !impact);
   const packageGraph = buildPackageGraph(cwd, { writeFiles: false });
+  const symbolGraph = buildSymbolGraph(cwd, { writeFiles: true, refreshMode: 'incremental' });
   const payload = {
     generatedAt: new Date().toISOString(),
     rootDir: relativePath(cwd, rootDir),
@@ -193,11 +228,19 @@ function buildExplorePayload(cwd, rootDir, args) {
       packageCount: packageGraph.packageCount,
       changedPackages: packageGraph.changedPackages,
       impactedPackages: packageGraph.impactedPackages,
+      impactedTests: packageGraph.impactedTests,
+    } : null,
+    symbolGraph: repoLens || symbol || callers || impact ? {
+      parsedFileCount: symbolGraph.parsedFileCount,
+      symbolCount: symbolGraph.symbolCount,
+      importEdgeCount: symbolGraph.importEdgeCount,
+      refreshStatus: symbolGraph.refreshStatus,
+      refreshedFiles: symbolGraph.refreshedFiles.slice(0, 12),
     } : null,
     search: query ? searchFiles(cwd, query) : null,
-    symbol: symbol ? symbolSearch(cwd, symbol) : null,
-    callers: callers ? callerSearch(cwd, callers) : null,
-    impact: impact ? impactSearch(cwd, impact, packageGraph) : null,
+    symbol: symbol ? symbolSearch(cwd, symbol, symbolGraph) : null,
+    callers: callers ? callerSearch(cwd, callers, symbolGraph) : null,
+    impact: impact ? impactSearch(cwd, impact, packageGraph, symbolGraph) : null,
   };
 
   const topFiles = [];
@@ -216,13 +259,21 @@ function buildExplorePayload(cwd, rootDir, args) {
   if (payload.callers?.matches?.length > 0) {
     topFiles.push(...payload.callers.matches.map((line) => line.split(':').slice(0, 1)[0]).slice(0, 6));
   }
+  if (payload.callers?.callers?.length > 0) {
+    topFiles.push(...payload.callers.callers.slice(0, 6));
+  }
   if (payload.impact?.matches?.length > 0) {
     topFiles.push(...payload.impact.matches.map((line) => line.split(':').slice(0, 1)[0]).slice(0, 6));
+  }
+  if (payload.impact?.callers?.length > 0) {
+    topFiles.push(...payload.impact.callers.slice(0, 6));
   }
   payload.relatedFiles = [...new Set(topFiles)].slice(0, 10);
   payload.recommendedNextCommand = frontend
     ? 'cwf verify-browser --smoke'
-    : payload.impact?.impactedPackages?.length > 1
+    : payload.impact?.impactedTests?.length > 0
+      ? 'cwf verify-shell --cmd "npm test"'
+      : payload.impact?.impactedPackages?.length > 1
       ? 'cwf review --heatmap'
     : changed
       ? 'cwf verify-shell --cmd "npm test"'

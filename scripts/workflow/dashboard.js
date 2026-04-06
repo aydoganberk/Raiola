@@ -56,17 +56,78 @@ function readLatestArtifactMeta(cwd, kind, limit = 6) {
   });
 }
 
+function compactList(items, limit = 8) {
+  return [...new Set((items || []).map((item) => String(item || '').trim()).filter(Boolean))].slice(0, limit);
+}
+
+function buildQuickActions(payload) {
+  const actions = [];
+  const pushAction = (group, label, command, reason, tone = 'neutral') => {
+    if (!command || actions.some((item) => item.command === command)) {
+      return;
+    }
+    actions.push({ group, label, command, reason, tone });
+  };
+
+  for (const command of payload.route?.verificationPlan || []) {
+    pushAction('route', 'Run planned verification', command, 'Chosen route asked for this verification.', 'neutral');
+  }
+  if (payload.route?.routeEvaluation?.rerouteRecommendation?.command) {
+    pushAction('route', 'Re-route if needed', payload.route.routeEvaluation.rerouteRecommendation.command, payload.route.routeEvaluation.rerouteRecommendation.reason, 'warn');
+  }
+  for (const command of payload.shipReadiness?.nextActions || []) {
+    pushAction('ship', 'Clear ship gate', command, 'Ship-readiness flagged this as a next safe action.', 'risk');
+  }
+  for (const item of payload.verifyWork?.fixPlan || []) {
+    const command = item.lane === 'browser'
+      ? 'cwf ui-review'
+      : item.lane === 'review'
+        ? 'cwf review --blockers'
+        : item.lane === 'claims'
+          ? 'cwf claims check'
+          : item.lane === 'requirements'
+            ? 'cwf packet explain --step plan'
+            : item.lane === 'shell'
+              ? 'cwf verify-shell --cmd "npm test"'
+              : 'cwf verify-work';
+    pushAction('trust', item.action, command, item.evidence || 'Verify-work generated this fix-plan item.', item.priority === 'high' ? 'risk' : 'warn');
+  }
+  if (payload.frontendReview?.accessibilityAudit?.verdict && payload.frontendReview.accessibilityAudit.verdict !== 'pass') {
+    pushAction('frontend', 'Address accessibility audit', 'cwf ui-review', payload.frontendReview.accessibilityAudit.guidance, 'risk');
+  }
+  if (payload.frontendReview?.journeyAudit?.coverage && payload.frontendReview.journeyAudit.coverage !== 'pass') {
+    pushAction('frontend', 'Tighten journey coverage', 'cwf verify-browser --smoke', payload.frontendReview.journeyAudit.guidance, 'warn');
+  }
+  if (payload.packetContext?.packet?.budgetStatus && payload.packetContext.packet.budgetStatus !== 'ok') {
+    pushAction('context', 'Rebuild packet budget', `cwf packet explain --step ${payload.packetContext.packet.step || 'plan'}`, 'Packet budget is no longer in the safe zone.', 'warn');
+  }
+  if ((payload.review?.traceability?.unlinkedCount || 0) > 0) {
+    pushAction('review', 'Close traceability gaps', 'cwf validation-map', 'Changed scope is not fully linked to the validation contract.', 'warn');
+  }
+  if ((payload.review?.packageGraph?.impactedTests || []).length > 0) {
+    pushAction('scale', 'Exercise impacted tests', 'cwf verify-shell --cmd "npm test"', 'Package graph identified impacted test ownership.', 'neutral');
+  }
+  return actions.slice(0, 12);
+}
+
 function readDashboardData(cwd, rootDir) {
   const routeCache = readJsonIfExists(path.join(cwd, '.workflow', 'cache', 'model-routing.json')) || {};
   const latestDo = readJsonIfExists(path.join(cwd, '.workflow', 'runtime', 'do-latest.json'));
   const reviewFindings = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'review-findings.json')) || [];
   const reviewHeatmap = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'risk-heatmap.json')) || [];
   const reviewPackageHeatmap = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'review-package-heatmap.json')) || [];
+  const reviewPackageGraph = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'review-package-graph.json')) || null;
   const reviewPersonas = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'review-personas.json')) || [];
   const reviewFollowUps = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'review-follow-ups.json')) || [];
+  const reviewTraceability = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'review-traceability.json')) || null;
+  const reviewConcerns = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'review-concerns.json')) || [];
   const shipReadiness = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'ship-readiness.json'));
   const verifyWork = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'verify-work.json'));
   const benchmark = readJsonIfExists(path.join(cwd, '.workflow', 'benchmarks', 'latest.json'));
+  const packetLatest = readJsonIfExists(path.join(cwd, '.workflow', 'packets', 'latest.json'));
+  const packetContext = readJsonIfExists(path.join(cwd, '.workflow', 'packets', 'latest-context.json'));
+  const frontendReview = readJsonIfExists(path.join(cwd, '.workflow', 'runtime', 'frontend-review.json'));
+  const frontendSpec = readJsonIfExists(path.join(cwd, '.workflow', 'runtime', 'frontend-spec.json'));
   const state = buildBaseState(cwd, rootDir);
   const browserArtifacts = readLatestArtifactMeta(cwd, 'browser', 6);
   const shellArtifacts = readLatestArtifactMeta(cwd, 'shell', 4);
@@ -87,12 +148,19 @@ function readDashboardData(cwd, rootDir) {
       findings: reviewFindings,
       heatmap: reviewHeatmap,
       packageHeatmap: reviewPackageHeatmap,
+      packageGraph: reviewPackageGraph,
       personas: reviewPersonas,
       followUps: reviewFollowUps,
+      traceability: reviewTraceability,
+      concerns: reviewConcerns,
     },
     verifyWork,
     shipReadiness,
     benchmark,
+    packetLatest,
+    packetContext,
+    frontendReview,
+    frontendSpec,
     browserArtifacts,
     shellArtifacts,
     changedFiles,
@@ -127,9 +195,21 @@ function renderScreenshotCard(cwd, entry) {
   </article>`;
 }
 
+function renderActionCard(action) {
+  return `<button type="button" class="action-card action-${escapeHtml(action.tone)}" data-action-card data-search="${escapeHtml([action.group, action.label, action.command, action.reason].join(' '))}" data-command="${escapeHtml(action.command)}">
+    <span class="action-group">${escapeHtml(action.group)}</span>
+    <strong>${escapeHtml(action.label)}</strong>
+    <span class="action-command mono">${escapeHtml(action.command)}</span>
+    <small>${escapeHtml(action.reason)}</small>
+  </button>`;
+}
+
 function renderDashboardHtml(cwd, payload) {
   const route = payload.route || {};
   const routeProfile = route.suggestedCodexProfile || route.profile || {};
+  const packetContext = payload.packetContext || {};
+  const frontendReview = payload.frontendReview || {};
+  const quickActions = buildQuickActions(payload);
   const summaryMetrics = [
     renderMetric('milestone', payload.state.workflow.milestone, 'neutral'),
     renderMetric('step', payload.state.workflow.step, 'neutral'),
@@ -139,6 +219,7 @@ function renderDashboardHtml(cwd, payload) {
     renderMetric('risk', routeProfile.riskBudget || payload.shipReadiness?.verdict || 'n/a', payload.shipReadiness?.verdict === 'blocked' ? 'risk' : 'warn'),
     renderMetric('review findings', String(payload.review.findings.length), payload.review.findings.length === 0 ? 'good' : 'warn'),
     renderMetric('changed files', String(payload.changedFiles.length), payload.changedFiles.length <= 3 ? 'good' : 'warn'),
+    renderMetric('quick actions', String(quickActions.length), quickActions.length >= 1 ? 'good' : 'warn'),
   ].join('');
 
   const benchmarkRows = (payload.benchmark?.results || []).slice(0, 6).map((result) => (
@@ -148,6 +229,12 @@ function renderDashboardHtml(cwd, payload) {
   const verificationPlan = (route.verificationPlan || [])
     .concat(payload.shipReadiness?.nextActions || [])
     .slice(0, 8);
+  const whyReasons = route.why?.chosenReasons || route.routeRationale || [];
+  const rejectedAlternatives = route.why?.rejectedAlternatives || route.rejectedAlternatives || [];
+  const packetSummary = packetContext.packet || payload.packetLatest || {};
+  const frontendScorecard = frontendReview.scorecard || {};
+  const accessibilityAudit = frontendReview.accessibilityAudit || frontendReview.accessibility || {};
+  const journeyAudit = frontendReview.journeyAudit || frontendReview.journey || {};
 
   return `<!doctype html>
 <html lang="en">
@@ -347,6 +434,73 @@ function renderDashboardHtml(cwd, payload) {
       color: var(--muted);
       word-break: break-all;
     }
+    .action-toolbar {
+      display: grid;
+      gap: 14px;
+    }
+    .action-search {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.82);
+      padding: 14px 16px;
+      color: var(--text);
+      font: inherit;
+    }
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .action-card {
+      text-align: left;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.78);
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+      color: inherit;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    .action-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(73, 49, 21, 0.1);
+    }
+    .action-risk { border-color: rgba(179, 38, 30, 0.28); }
+    .action-warn { border-color: rgba(157, 104, 0, 0.28); }
+    .action-group {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    }
+    .action-card small {
+      color: var(--muted);
+    }
+    .split-copy {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .board-copy {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.78);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .board-copy:hover {
+      background: rgba(255,255,255,0.98);
+    }
     @media (max-width: 980px) {
       body { padding: 18px; }
       .hero { grid-template-columns: 1fr; }
@@ -384,7 +538,8 @@ function renderDashboardHtml(cwd, payload) {
             ['preset', route.recommendedPreset || route.preset || 'n/a'],
             ['confidence', route.confidence != null ? route.confidence : 'n/a'],
             ['fallback', route.why?.fallbackCapability || route.fallbackCapability || 'n/a'],
-            ['packet', route.packet || 'n/a'],
+            ['packet', packetSummary.primaryDoc || route.packet || 'n/a'],
+            ['ambiguity', route.why?.ambiguityClass || route.ambiguityClass || 'n/a'],
           ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No route data yet.')}
         </ul>
       </article>
@@ -393,6 +548,36 @@ function renderDashboardHtml(cwd, payload) {
         <h2>Next Safe Actions</h2>
         <ul>
           ${renderList(verificationPlan, (item) => `<li><span>${escapeHtml(item)}</span><strong class="mono">queued</strong></li>`, 'No queued next actions yet.')}
+        </ul>
+      </article>
+
+      <article class="panel span-12">
+        <h2>Command Palette</h2>
+        <div class="action-toolbar">
+          <input id="command-search" class="action-search" type="search" placeholder="Filter actions, commands, or reasons..." />
+          <div class="action-grid" id="action-grid">
+            ${quickActions.length > 0
+              ? quickActions.map((action) => renderActionCard(action)).join('')
+              : '<div class="gallery-card"><div class="gallery-fallback">No quick actions yet</div><p>Run route, review, verify-work, or ship-readiness to populate command suggestions.</p></div>'}
+          </div>
+        </div>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Why This Tool</h2>
+        <ul>
+          ${renderList(whyReasons.slice(0, 6), (item) => `<li><span>${escapeHtml(item)}</span><strong class="mono">chosen</strong></li>`, 'No route rationale recorded yet.')}
+        </ul>
+        <div class="split-copy">
+          <span>Rejected alternatives and ambiguity stay visible so manual override is easier.</span>
+          ${route.recommendedCapability ? `<button type="button" class="board-copy" data-copy-command="${escapeHtml(`cwf route --goal "${route.goal || ''}" --why`)}">copy route probe</button>` : ''}
+        </div>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Rejected Alternatives</h2>
+        <ul>
+          ${renderList(rejectedAlternatives.slice(0, 6), (item) => `<li><span>${escapeHtml(item.id)}</span><strong class="mono">${escapeHtml(`score ${item.score}`)}</strong></li>`, 'No rejected alternatives were recorded.')}
         </ul>
       </article>
 
@@ -422,6 +607,20 @@ function renderDashboardHtml(cwd, payload) {
         </ul>
       </article>
 
+      <article class="panel span-8">
+        <h2>Context Compiler</h2>
+        <ul>
+          ${renderList([
+            ['task brief', (packetContext.taskBrief || []).join(' | ') || 'n/a'],
+            ['primary doc', packetSummary.primaryDoc || packetSummary.primary?.key || 'n/a'],
+            ['budget', packetSummary.budgetStatus || 'n/a'],
+            ['touched packages', (packetContext.scope?.changedPackages || []).join(', ') || 'none'],
+            ['impacted packages', (packetContext.scope?.impactedPackages || []).join(', ') || 'none'],
+            ['impacted tests', (packetContext.scope?.impactedTests || []).join(', ') || 'none'],
+          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No packet compiler context yet.')}
+        </ul>
+      </article>
+
       <article class="panel span-6">
         <h2>Changed Files</h2>
         <ul>
@@ -433,6 +632,31 @@ function renderDashboardHtml(cwd, payload) {
         <h2>Follow-up Tickets</h2>
         <ul>
           ${renderList(payload.review.followUps.slice(0, 8), (item) => `<li><span>${escapeHtml(item.title)}</span><strong class="mono">${escapeHtml(item.ownerLane)}</strong></li>`, 'No follow-up tickets were generated.')}
+        </ul>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Traceability</h2>
+        <ul>
+          ${renderList([
+            ['validation rows', payload.review.traceability?.validationRows?.length || 0],
+            ['linked rows', payload.review.traceability?.linkedCount || 0],
+            ['unlinked rows', payload.review.traceability?.unlinkedCount || 0],
+            ['unmapped files', payload.review.traceability?.unmappedFiles?.length || 0],
+          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No traceability data yet.')}
+        </ul>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Frontend Board</h2>
+        <ul>
+          ${renderList([
+            ['overall score', frontendScorecard.overall ? `${frontendScorecard.overall}/5` : 'n/a'],
+            ['accessibility', accessibilityAudit.verdict || 'n/a'],
+            ['journey', journeyAudit.coverage || 'n/a'],
+            ['debt items', frontendReview.debt?.length || 0],
+            ['browser evidence', payload.browserArtifacts.length],
+          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No frontend review data yet.')}
         </ul>
       </article>
 
@@ -458,8 +682,52 @@ function renderDashboardHtml(cwd, payload) {
           ${renderList(payload.review.findings.slice(0, 8), (finding) => `<li><span>${escapeHtml(finding.title)}</span><strong class="mono">${escapeHtml(finding.severity)}</strong></li>`, 'No review findings yet.')}
         </ul>
       </article>
+
+      <article class="panel span-6">
+        <h2>Trust Board</h2>
+        <ul>
+          ${renderList([
+            ['pending approvals', payload.shipReadiness?.approvalPlan?.pending?.length || 0],
+            ['verify reasons', payload.verifyWork?.reasons?.length || 0],
+            ['open questions', packetContext.context?.openQuestions?.length || 0],
+            ['active assumptions', packetContext.context?.assumptions?.length || 0],
+            ['evidence slots', packetContext.context?.evidenceSlots?.length || 0],
+          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No trust data yet.')}
+        </ul>
+      </article>
     </section>
   </main>
+  <script>
+    const search = document.getElementById('command-search');
+    const actionCards = Array.from(document.querySelectorAll('[data-action-card]'));
+    const copyButtons = Array.from(document.querySelectorAll('[data-copy-command]'));
+    if (search) {
+      search.addEventListener('input', () => {
+        const query = search.value.trim().toLowerCase();
+        for (const card of actionCards) {
+          const haystack = (card.dataset.search || '').toLowerCase();
+          card.hidden = query ? !haystack.includes(query) : false;
+        }
+      });
+    }
+    async function copyCommand(value, element) {
+      const label = element.textContent;
+      try {
+        await navigator.clipboard.writeText(value);
+        element.textContent = 'copied';
+        setTimeout(() => { element.textContent = label; }, 1200);
+      } catch {
+        element.textContent = 'copy failed';
+        setTimeout(() => { element.textContent = label; }, 1200);
+      }
+    }
+    for (const button of copyButtons) {
+      button.addEventListener('click', () => copyCommand(button.dataset.copyCommand || '', button));
+    }
+    for (const card of actionCards) {
+      card.addEventListener('click', () => copyCommand(card.dataset.command || '', card));
+    }
+  </script>
 </body>
 </html>`;
 }
@@ -497,6 +765,7 @@ function main() {
   const rootDir = resolveWorkflowRoot(cwd, args.root);
   const payload = readDashboardData(cwd, rootDir);
   const written = writeDashboard(cwd, payload);
+  const quickActions = buildQuickActions(payload);
   const opened = args.open ? maybeOpenDashboard(written.htmlPath) : false;
   const result = {
     generatedAt: payload.generatedAt,
@@ -508,6 +777,7 @@ function main() {
       browserArtifacts: payload.browserArtifacts.length,
       changedFiles: payload.changedFiles.length,
       shipVerdict: payload.shipReadiness?.verdict || 'n/a',
+      quickActions: quickActions.length,
     },
   };
 
@@ -522,6 +792,7 @@ function main() {
   console.log(`- Review findings: \`${result.summary.reviewFindings}\``);
   console.log(`- Browser artifacts: \`${result.summary.browserArtifacts}\``);
   console.log(`- Ship verdict: \`${result.summary.shipVerdict}\``);
+  console.log(`- Quick actions: \`${result.summary.quickActions}\``);
   if (args.open) {
     console.log(`- Opened: \`${opened ? 'yes' : 'no'}\``);
   }

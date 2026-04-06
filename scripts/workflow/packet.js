@@ -2,13 +2,20 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   buildPacketSnapshot,
+  extractBulletItems,
   parseArgs,
+  readIfExists,
   resolveWorkflowRoot,
   syncPacketHash,
+  tryExtractSection,
   workflowPaths,
 } = require('./common');
+const { baseLifecycleContext } = require('./lifecycle_common');
+const { buildPackageGraph } = require('./package_graph');
+const { latestReviewData, latestVerifyWork, readAssumptions } = require('./trust_os');
 const {
   makeId,
+  readTableDocument,
   readJsonFile,
   relativePath,
   writeJsonFile,
@@ -45,6 +52,144 @@ function provenanceFile(cwd) {
   return path.join(cwd, '.workflow', 'cache', 'packet-provenance.json');
 }
 
+function contextSummaryFile(cwd) {
+  return path.join(packetsDir(cwd), 'latest-context.json');
+}
+
+function compactList(items, limit = 6) {
+  return [...new Set((items || []).map((item) => String(item || '').trim()).filter(Boolean))].slice(0, limit);
+}
+
+function nonPlaceholderItems(items) {
+  return (items || []).filter((item) => item && !/^No /i.test(item));
+}
+
+function questionRows(cwd) {
+  const filePath = path.join(cwd, 'docs', 'workflow', 'QUESTIONS.md');
+  const table = readTableDocument(filePath, 'Open Questions', {
+    title: 'QUESTIONS',
+    headers: ['Id', 'Question', 'Status', 'Opened At', 'Resolution'],
+  });
+  return table.rows
+    .map((row) => ({
+      id: row[0] || '',
+      question: row[1] || '',
+      status: row[2] || '',
+      resolution: row[4] || '',
+    }))
+    .filter((row) => row.question);
+}
+
+function claimRows(cwd) {
+  const filePath = path.join(cwd, 'docs', 'workflow', 'CLAIMS.md');
+  const table = readTableDocument(filePath, 'Claims Ledger', {
+    title: 'CLAIMS',
+    headers: ['Id', 'Claim', 'Status', 'Evidence', 'Rationale'],
+  });
+  return table.rows
+    .map((row) => ({
+      id: row[0] || '',
+      claim: row[1] || '',
+      status: row[2] || '',
+      evidence: row[3] || '',
+    }))
+    .filter((row) => row.claim);
+}
+
+function buildCompilerSummary(cwd, rootDir, packet, role) {
+  const context = baseLifecycleContext(cwd, rootDir);
+  const packageGraph = buildPackageGraph(cwd, { writeFiles: true });
+  const route = readJsonFile(path.join(cwd, '.workflow', 'cache', 'model-routing.json'), {}).lastRecommendation
+    || readJsonFile(path.join(cwd, '.workflow', 'runtime', 'do-latest.json'), null);
+  const verifyWork = latestVerifyWork(cwd);
+  const shipReadiness = readJsonFile(path.join(cwd, '.workflow', 'reports', 'ship-readiness.json'), null);
+  const review = latestReviewData(cwd);
+  const frontendReview = readJsonFile(path.join(cwd, '.workflow', 'runtime', 'frontend-review.json'), null);
+  const frontendSpec = readJsonFile(path.join(cwd, '.workflow', 'runtime', 'frontend-spec.json'), null);
+  const assumptions = readAssumptions(cwd).filter((item) => !/closed/i.test(item.status || ''));
+  const questions = questionRows(cwd).filter((item) => !/resolved/i.test(item.status || ''));
+  const claims = claimRows(cwd);
+  const handoffContent = readIfExists(path.join(rootDir, 'HANDOFF.md')) || '';
+  const resumeHere = extractBulletItems(tryExtractSection(handoffContent, 'Immediate Next Action', ''));
+  const taskBrief = compactList([
+    route?.goal,
+    ...resumeHere,
+    ...nonPlaceholderItems(context.nextActions),
+  ], 3);
+  const evidenceSlots = compactList([
+    ...context.validationRows.flatMap((row) => [row.deliverable, row.evidence, row.verify_command, row.manual_check]),
+    ...claims.map((row) => row.evidence),
+    ...review.findings.slice(0, 4).map((finding) => `${finding.file}:${finding.category}`),
+  ], 10);
+  const verificationChecklist = compactList([
+    ...(route?.verificationPlan || []),
+    ...nonPlaceholderItems(context.testsRun),
+    ...(verifyWork?.manualChecks || []).map((item) => `${item.status}: ${item.label}`),
+    ...(shipReadiness?.nextActions || []),
+  ], 10);
+  const activeRisks = compactList([
+    ...nonPlaceholderItems(context.residualRisks),
+    ...review.blockers.slice(0, 4).map((finding) => `${finding.category}: ${finding.title}`),
+    ...((shipReadiness?.reasons) || []),
+  ], 10);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    role,
+    taskBrief,
+    workflow: {
+      milestone: context.milestone,
+      step: context.step,
+      rootDir: context.workflowRootRelative,
+      routeCapability: route?.recommendedCapability || route?.capability || 'n/a',
+    },
+    packet: {
+      id: packet.packetId || null,
+      primaryDoc: packet.primary.key,
+      step: packet.step,
+      budgetStatus: packet.budgetStatus,
+      packetLoadingMode: packet.packetLoadingMode,
+      estimatedTotalTokens: packet.estimatedTotalTokens,
+      recommendedReadSet: packet.recommendedReadSet.slice(0, 10),
+      openRequirementIds: packet.openRequirementIds.slice(0, 10),
+      activeValidationIds: packet.activeValidationIds.slice(0, 10),
+    },
+    scope: {
+      touchedFiles: nonPlaceholderItems(context.touchedFiles).slice(0, 10),
+      changedPackages: (packageGraph.changedPackages || []).slice(0, 10),
+      impactedPackages: (packageGraph.impactedPackages || []).slice(0, 10),
+      impactedTests: (packageGraph.impactedTests || []).slice(0, 10),
+    },
+    context: {
+      openQuestions: questions.slice(0, 10),
+      assumptions: assumptions.slice(0, 10),
+      claims: claims.slice(0, 10),
+      evidenceSlots,
+      verificationChecklist,
+      activeRisks,
+    },
+    review: {
+      findingCount: review.findings.length,
+      blockerCount: review.blockers.length,
+      blockerTitles: review.blockers.slice(0, 6).map((finding) => finding.title),
+    },
+    frontend: frontendReview || frontendSpec
+      ? {
+        scorecard: frontendReview?.scorecard || null,
+        accessibility: frontendReview?.accessibilityAudit || frontendSpec?.accessibilityAudit || null,
+        journey: frontendReview?.journeyAudit || frontendSpec?.journeyAudit || null,
+        debtCount: frontendReview?.debt?.length || 0,
+      }
+      : null,
+    trust: {
+      verifyWorkVerdict: verifyWork?.verdict || 'n/a',
+      verifyWorkReasons: (verifyWork?.reasons || []).slice(0, 6),
+      shipVerdict: shipReadiness?.verdict || 'n/a',
+      pendingApprovalCount: shipReadiness?.approvalPlan?.pending?.length || 0,
+    },
+  };
+}
+
 function compilePacket(cwd, rootDir, args) {
   const paths = workflowPaths(rootDir, cwd);
   const packet = buildPacketSnapshot(paths, {
@@ -55,24 +200,33 @@ function compilePacket(cwd, rootDir, args) {
   const role = args.role ? String(args.role) : 'default';
   const packetId = makeId(`packet-${packet.primary.key}-${packet.step}`, role);
   const artifactPath = path.join(packetsDir(cwd), `${packetId}.json`);
+  const compilerSummary = buildCompilerSummary(cwd, rootDir, {
+    ...packet,
+    packetId,
+  }, role);
   writeJsonFile(artifactPath, {
     ...packet,
     role,
     packetId,
     rootDir: relativePath(cwd, rootDir),
+    compilerSummary,
   });
   writeJsonFile(path.join(packetsDir(cwd), 'latest.json'), {
     ...packet,
     role,
     packetId,
     artifact: relativePath(cwd, artifactPath),
+    compilerSummary,
   });
+  writeJsonFile(contextSummaryFile(cwd), compilerSummary);
   return {
     action: 'compile',
     packetId,
     role,
     artifact: relativePath(cwd, artifactPath),
     packet,
+    compilerSummary,
+    contextArtifact: relativePath(cwd, contextSummaryFile(cwd)),
   };
 }
 
@@ -90,6 +244,8 @@ function explainPacket(cwd, rootDir, args) {
       omittedRefs: compiled.packet.unchangedSectionRefsOmittedCount + compiled.packet.coldRefsOmittedCount,
       recommendedReadSet: compiled.packet.recommendedReadSet,
     },
+    compilerSummary: compiled.compilerSummary,
+    contextArtifact: compiled.contextArtifact,
   };
 }
 
@@ -194,6 +350,9 @@ function main() {
   console.log(`- Action: \`${payload.action}\``);
   if (payload.packetId) {
     console.log(`- Packet: \`${payload.packetId}\``);
+  }
+  if (payload.contextArtifact) {
+    console.log(`- Context summary: \`${payload.contextArtifact}\``);
   }
   if (payload.key) {
     console.log(`- Key: \`${payload.key}\``);

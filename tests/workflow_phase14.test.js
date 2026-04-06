@@ -60,6 +60,32 @@ test('launch, manager, next-prompt, explore, route, profile, and workspaces expo
   assert.equal(workspaces.activeName, 'workflow');
 });
 
+test('explore and daemon use persistent symbol and scale caches', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+
+  fs.mkdirSync(path.join(targetRepo, 'src'), { recursive: true });
+  fs.mkdirSync(path.join(targetRepo, 'tests'), { recursive: true });
+  writeFile(targetRepo, 'src/service.ts', 'export async function fetchData(id) { return { id }; }\n');
+  writeFile(targetRepo, 'src/api.ts', 'import { fetchData } from "./service"; export async function loadRoute(id) { return fetchData(id); }\n');
+  writeFile(targetRepo, 'tests/service.test.js', 'const { test } = require("node:test"); test("service", () => {});\n');
+
+  const bin = path.join(targetRepo, 'bin', 'cwf.js');
+  const symbol = JSON.parse(run('node', [bin, 'explore', '--symbol', 'fetchData', '--json'], targetRepo));
+  const callers = JSON.parse(run('node', [bin, 'explore', '--callers', 'fetchData', '--json'], targetRepo));
+  const impact = JSON.parse(run('node', [bin, 'explore', '--impact', 'src/service.ts', '--json'], targetRepo));
+  const daemon = JSON.parse(run('node', [bin, 'daemon', 'restart', '--json'], targetRepo));
+
+  assert.ok(symbol.symbol.definitions.includes('src/service.ts'));
+  assert.ok(symbol.symbol.references.includes('src/api.ts'));
+  assert.ok(callers.callers.callers.includes('src/api.ts'));
+  assert.ok(impact.impact.callers.includes('src/api.ts'));
+  assert.ok(impact.impact.impactedTests.includes('tests/service.test.js'));
+  assert.equal(daemon.daemon.running, true);
+  assert.ok(daemon.daemon.caches.symbolGraph.symbolCount >= 1);
+  assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'cache', 'symbol-graph.json')));
+});
+
 test('verify-shell and verify-browser store normalized evidence artifacts', async () => {
   const targetRepo = makeTempRepo();
   run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);

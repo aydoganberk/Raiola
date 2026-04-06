@@ -172,6 +172,8 @@ test('roadmap governance and operator-center surfaces stay scriptable', () => {
   assert.equal(mcp.manifest.enabled, false);
   assert.equal(notify.event.event, 'test');
   assert.equal(daemon.daemon.running, true);
+  assert.ok(daemon.daemon.caches.fsIndex.fileCount >= 1);
+  assert.ok(daemon.daemon.caches.symbolGraph.symbolCount >= 0);
   assert.match(incident.file, /verify-regression\.md$/);
   assert.ok(fleet.workspaceCount >= 1);
   assert.equal(sessions.workflow.milestone, 'NONE');

@@ -24,6 +24,8 @@ Current product targets for medium-size repos:
 - repo fs index at `.workflow/fs-index.json`
 - repo-specific `.workflowignore` support to keep hot paths out of noisy directories
 - package graph cache at `.workflow/cache/package-graph.json`
+- impacted test ownership and internal dependency edges in the package graph cache
+- symbol graph cache at `.workflow/cache/symbol-graph.json`
 - write-on-change state surfaces for `.workflow/state.json` and `.workflow/fs-index.json`
 - shared in-process runtime collector for `launch`, `hud`, `manager`, and `next-prompt`
 - repo-local Codex control mirror under `.workflow/runtime/codex-control/`
@@ -78,6 +80,8 @@ Useful counters include:
 ## Index semantics
 
 `.workflow/fs-index.json` is not canonical. It stores repo file metadata so repeated map runs can tell whether the repo surface is current or changed without redoing all higher-level work.
+
+`.workflow/cache/symbol-graph.json` is also non-canonical. It stores incremental symbol, export, and local import edges so `explore`, `review`, and `daemon` can reason about impacted callers and tests without paying full grep cost each time.
 
 `.workflowignore` lets a repo denylist additional large or noisy paths without changing the product code.
 

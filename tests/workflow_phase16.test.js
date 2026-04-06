@@ -45,6 +45,8 @@ test('intent engine, route replay/eval, and codex bootstrap surfaces are scripta
   assert.ok(route.confidence >= 0.55);
   assert.ok(route.why.secondaryCapability);
   assert.notEqual(route.why.secondaryCapability, route.recommendedCapability);
+  assert.ok(route.why.rejectedAlternatives.length >= 1);
+  assert.ok(typeof route.why.ambiguityClass === 'string');
   assert.ok(replay.entries.length >= 1);
   assert.ok(['pass', 'warn'].includes(evaluation.evaluation.verdict));
   assert.equal(profile.profile.id, 'review-deep');
@@ -106,6 +108,7 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
   const designDebt = JSON.parse(run('node', [targetBin, 'design-debt', '--json'], targetRepo));
   const uiReview = JSON.parse(run('node', [targetBin, 'ui-review', '--url', './preview.html', '--json'], targetRepo));
   const review = JSON.parse(run('node', [targetBin, 'review', '--json'], targetRepo));
+  const packetExplain = JSON.parse(run('node', [targetBin, 'packet', 'explain', '--step', 'plan', '--json'], targetRepo));
   const dashboard = JSON.parse(run('node', [targetBin, 'dashboard', '--json'], targetRepo));
 
   assert.ok(fs.existsSync(path.join(targetRepo, uiSpec.file)));
@@ -115,11 +118,14 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
   assert.ok(fs.existsSync(path.join(targetRepo, designDebt.file)));
   assert.ok(fs.existsSync(path.join(targetRepo, uiReview.file)));
   assert.ok(uiReview.browserArtifacts.length >= 1);
+  assert.ok(['pass', 'warn', 'fail', 'inconclusive'].includes(uiReview.accessibilityAudit.verdict));
+  assert.ok(['pass', 'warn', 'incomplete', 'inconclusive'].includes(uiReview.journeyAudit.coverage));
   assert.ok(review.findings.length >= 1);
   assert.ok(review.packageHeatmap.length >= 1);
   assert.ok(review.personas.length >= 1);
   assert.ok(review.traceability.validationRows.length >= 1);
   assert.ok(review.followUpTickets.length >= 1);
+  assert.ok(Array.isArray(review.packageGraph.impactedTests));
   assert.ok(fs.existsSync(path.join(targetRepo, review.artifacts.findings)));
   assert.ok(fs.existsSync(path.join(targetRepo, review.artifacts.heatmap)));
   assert.ok(fs.existsSync(path.join(targetRepo, review.artifacts.packageHeatmap)));
@@ -127,8 +133,17 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
   assert.ok(fs.existsSync(path.join(targetRepo, review.artifacts.traceability)));
   assert.ok(fs.existsSync(path.join(targetRepo, review.artifacts.blockers)));
   assert.ok(review.uiReview);
+  assert.ok(packetExplain.compilerSummary);
+  assert.ok(Array.isArray(packetExplain.compilerSummary.scope.impactedPackages));
+  assert.ok(fs.existsSync(path.join(targetRepo, packetExplain.contextArtifact)));
   assert.ok(fs.existsSync(path.join(targetRepo, dashboard.file)));
-  assert.match(fs.readFileSync(path.join(targetRepo, dashboard.file), 'utf8'), /workflow dashboard/i);
+  const dashboardHtml = fs.readFileSync(path.join(targetRepo, dashboard.file), 'utf8');
+  assert.match(dashboardHtml, /workflow dashboard/i);
+  assert.match(dashboardHtml, /command palette/i);
+  assert.match(dashboardHtml, /context compiler/i);
+  const dashboardState = readJson(targetRepo, dashboard.stateFile);
+  assert.ok(dashboardState.packetContext);
+  assert.ok(dashboard.summary.quickActions >= 1);
 });
 
 test('benchmark fixtures support medium and large monorepo runs', () => {

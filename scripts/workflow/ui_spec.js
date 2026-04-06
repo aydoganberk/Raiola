@@ -1,7 +1,9 @@
 const path = require('node:path');
 const { parseArgs, readIfExists, resolveWorkflowRoot, tryExtractSection } = require('./common');
 const {
+  buildAccessibilityAudit,
   buildFrontendProfile,
+  buildJourneyAudit,
   buildMissingStateAudit,
   buildResponsiveMatrix,
   buildTokenDriftAudit,
@@ -10,6 +12,7 @@ const {
   relativePath,
   writeDoc,
 } = require('./frontend_os');
+const { writeRuntimeJson } = require('./runtime_helpers');
 
 function printHelp() {
   console.log(`
@@ -31,6 +34,8 @@ function buildUiSpec(cwd, rootDir) {
   const missingStateAudit = buildMissingStateAudit(cwd, inventory);
   const tokenDriftAudit = buildTokenDriftAudit(cwd, inventory);
   const browserArtifacts = latestBrowserArtifacts(cwd);
+  const accessibilityAudit = buildAccessibilityAudit(profile, browserArtifacts);
+  const journeyAudit = buildJourneyAudit(profile, browserArtifacts, inventory);
   const contextDoc = readIfExists(path.join(rootDir, 'CONTEXT.md')) || '';
   const userIntent = tryExtractSection(contextDoc, 'User Intent', '').trim() || 'No explicit UI intent note was recorded.';
   const touchedFiles = tryExtractSection(contextDoc, 'Touched Files', '').trim();
@@ -50,6 +55,7 @@ function buildUiSpec(cwd, rootDir) {
 
 - \`${userIntent}\`
 - \`Primary flow should cover empty/loading/error/success states before ship.\`
+- \`Journey coverage status: ${journeyAudit.coverage} (${journeyAudit.missing.length > 0 ? `missing ${journeyAudit.missing.join(', ')}` : 'core signals present'})\`
 
 ## Component Inventory
 
@@ -75,6 +81,7 @@ ${matrix.map((item) => `- \`${item.viewport} ${item.width}\` -> ${item.expectati
 - \`Semantic landmarks remain intact.\`
 - \`Interactive controls expose labels and focus states.\`
 - \`Color/contrast issues are reviewed during UI review.\`
+- \`Accessibility audit verdict: ${accessibilityAudit.verdict} (${accessibilityAudit.issueCount} issue signals)\`
 
 ## Design Token Usage
 
@@ -96,14 +103,18 @@ ${browserArtifacts.length > 0
 `;
 
   const filePath = writeDoc(path.join(rootDir, 'UI-SPEC.md'), 'UI SPEC', body);
-  return {
+  const payload = {
     profile,
     inventory,
     matrix,
     missingStateAudit,
     tokenDriftAudit,
+    accessibilityAudit,
+    journeyAudit,
     file: relativePath(cwd, filePath),
   };
+  writeRuntimeJson(cwd, 'frontend-spec.json', payload);
+  return payload;
 }
 
 function main(argv = process.argv.slice(2)) {

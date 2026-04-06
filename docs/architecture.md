@@ -48,12 +48,14 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 - `codex_control.js` adds the safe Codex control-plane layer with diff, journal, rollback, and repo-derived role generation.
 - `do.js`, `note.js`, `thread.js`, and `backlog.js` add the daily intent/capture surfaces.
 - `capability_registry.js`, `intent_engine.js`, and `codex_profile_engine.js` add the explainable capability graph, route confidence, steering memory, and task-aware Codex profile selection.
-- `dashboard.js` turns the file-based runtime into a local HTML operator surface so route/review/frontend state can be consumed outside the CLI.
+- `dashboard.js` turns the file-based runtime into a local HTML control room with command palette, context compiler, route/review/frontend boards, and screenshot state.
 - `questions.js`, `claims.js`, `secure_phase.js`, `packet.js`, and `evidence.js` add the trust, packet-lock, and provenance layer.
 - `policy.js`, `approvals.js`, `hooks.js`, `mcp.js`, `notify.js`, `daemon.js`, `gc.js`, `incident.js`, `fleet.js`, and `sessions.js` add the governance, integration, scale, and operator-center layer.
+- `symbol_graph.js` plus the richer `daemon.js` move Scale OS beyond file lists into persistent symbol/import graphs and refreshable cache summaries.
 - `review_engine.js` and `review_findings.js` add the multi-pass Review OS with findings, heatmap, blockers, replay, and patch suggestions.
+- `review_semantic.js` deepens Review OS with exported-surface, auth-guard, error-path, and frontend semantic analysis on top of raw diff heuristics.
 - `frontend_os.js`, `ui_spec.js`, `ui_plan.js`, `ui_review.js`, `component_inventory.js`, `responsive_matrix.js`, `design_debt.js`, and `preview.js` add the Frontend OS surface.
-- `package_graph.js` plus `.workflowignore`-aware `fs_index.js` add the first Scale OS package graph and denylist layer.
+- `package_graph.js` plus `.workflowignore`-aware `fs_index.js` add the first Scale OS package graph, impacted-test visibility, and denylist layer.
 - `policy.js` and `approvals.js` treat `docs/workflow/POLICY.md` as the source of truth and keep `.workflow/runtime/policy.json` plus `.workflow/runtime/approvals.json` in sync as derived mirrors.
 - `cwf doctor` audits both canonical workflow health and install-surface integrity, including package scripts, runtime files, skill installation, and the visible version marker.
 
@@ -71,5 +73,8 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 - `cwf manager` and `cwf hud --watch` provide live operator visibility.
 - `cwf explore`, `cwf verify-shell`, and `cwf verify-browser` provide purpose-built exploration and evidence capture.
 - `cwf route`, `cwf stats`, `cwf profile`, and `cwf workspaces` provide operator routing, telemetry, and workspace center surfaces.
+- `cwf route --why` and `cwf do --explain` now expose rejected alternatives, ambiguity class, and language-mix grounding for the chosen lane.
+- `cwf packet explain` now emits a compiler summary that condenses route, scope, risks, questions, claims, impacted packages/tests, and evidence slots into a task-aware context packet.
 - `cwf route replay`, `cwf route eval`, `cwf codex bootstrap`, and `cwf codex resume-card` extend the operator surface from phase-only routing into task-aware bootstrap packets and resume cards.
 - `cwf team mailbox`, `cwf team timeline`, and `cwf patch-review` expose runtime collect/merge state directly in-product.
+- `cwf verify-browser` and `cwf ui-review` now carry browser-level accessibility and journey audits alongside visual evidence.

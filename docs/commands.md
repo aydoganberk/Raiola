@@ -17,7 +17,7 @@
 - `cwf manager`
   Single-screen operator view with health, next route, team runtime, verify queue, and repair hints.
 - `cwf dashboard`
-  Generate `.workflow/runtime/dashboard/index.html`, a local HTML operator surface for route, verify, review, and screenshot state.
+  Generate `.workflow/runtime/dashboard/index.html`, a local HTML operator surface with command palette, context compiler, route/review/frontend boards, and screenshot state.
 - `cwf setup`
   Install or refresh the workflow product in the current repo.
 - `cwf init`

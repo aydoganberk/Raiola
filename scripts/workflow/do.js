@@ -52,6 +52,9 @@ function buildDoPayload(cwd, rootDir, goal) {
     profile: analysis.profile,
     routeRationale: analysis.chosenCapability.reasons,
     ambiguityReasons: analysis.ambiguityReasons,
+    ambiguityClass: analysis.ambiguityClass,
+    languageMix: analysis.languageMix,
+    rejectedAlternatives: analysis.rejectedAlternatives,
     packet,
     trust: {
       researchNeeded,
@@ -64,6 +67,17 @@ function buildDoPayload(cwd, rootDir, goal) {
     previewFirst: true,
     dryRunSafe: true,
   };
+}
+
+function formatLanguageMix(languageMix) {
+  const labels = [];
+  if (languageMix.turkishSignals) {
+    labels.push('tr');
+  }
+  if (languageMix.englishSignals) {
+    labels.push('en');
+  }
+  return labels.length > 0 ? labels.join('+') : 'neutral';
 }
 
 function main() {
@@ -97,6 +111,7 @@ function main() {
   console.log(`- Secondary capability: \`${payload.secondaryCapability}\``);
   console.log(`- Fallback capability: \`${payload.fallbackCapability}\``);
   console.log(`- Confidence: \`${payload.confidence}\``);
+  console.log(`- Ambiguity class: \`${payload.ambiguityClass}\``);
   console.log(`- Preset: \`${payload.recommendedPreset}\``);
   console.log(`- Profile: \`${payload.profile.id}\``);
   console.log(`- Packet: \`${payload.packet}\``);
@@ -106,6 +121,7 @@ function main() {
   console.log(`- Research needed: \`${payload.trust.researchNeeded ? 'yes' : 'no'}\``);
   console.log(`- Verify needed: \`${payload.trust.verifyNeeded ? 'yes' : 'no'}\``);
   console.log(`- Secure needed: \`${payload.trust.secureNeeded ? 'yes' : 'no'}\``);
+  console.log(`- Language mix: \`${formatLanguageMix(payload.languageMix)}\``);
   console.log('\n## Suggested Commands\n');
   for (const command of payload.suggestedCommands) {
     console.log(`- \`${command.replace('<goal>', payload.goal)}\``);
@@ -119,6 +135,12 @@ function main() {
       console.log('\n## Ambiguity\n');
       for (const reason of payload.ambiguityReasons) {
         console.log(`- \`${reason}\``);
+      }
+    }
+    if (payload.rejectedAlternatives.length > 0) {
+      console.log('\n## Rejected Alternatives\n');
+      for (const alternative of payload.rejectedAlternatives) {
+        console.log(`- \`${alternative.id}\` score=\`${alternative.score}\``);
       }
     }
     if (payload.routeEvaluation?.rerouteRecommendation) {

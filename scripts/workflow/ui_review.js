@@ -3,7 +3,9 @@ const { parseArgs, resolveWorkflowRoot } = require('./common');
 const { runVerifyBrowser } = require('./verify_browser');
 const {
   buildDesignDebt,
+  buildAccessibilityAudit,
   buildFrontendProfile,
+  buildJourneyAudit,
   buildMissingStateAudit,
   buildResponsiveMatrix,
   buildScorecard,
@@ -13,6 +15,7 @@ const {
   relativePath,
   writeDoc,
 } = require('./frontend_os');
+const { writeRuntimeJson } = require('./runtime_helpers');
 
 async function buildUiReview(cwd, rootDir, args = {}) {
   const profile = buildFrontendProfile(cwd, rootDir, { scope: 'workstream', refresh: 'incremental' });
@@ -31,11 +34,18 @@ async function buildUiReview(cwd, rootDir, args = {}) {
   const browserArtifacts = latestBrowserArtifacts(cwd);
   const missingStateAudit = buildMissingStateAudit(cwd, inventory);
   const tokenDriftAudit = buildTokenDriftAudit(cwd, inventory);
+  const accessibilityAudit = buildAccessibilityAudit(profile, browserArtifacts);
+  const journeyAudit = buildJourneyAudit(profile, browserArtifacts, inventory);
   const debt = buildDesignDebt(profile, inventory, browserArtifacts, {
     missingStateAudit,
     tokenDriftAudit,
+    accessibilityAudit,
+    journeyAudit,
   });
-  const scorecard = buildScorecard(profile, inventory, debt, browserArtifacts);
+  const scorecard = buildScorecard(profile, inventory, debt, browserArtifacts, {
+    accessibilityAudit,
+    journeyAudit,
+  });
   const body = `
 - Frontend mode: \`${profile.frontendMode.status}\`
 - Browser artifacts: \`${browserArtifacts.length}\`
@@ -68,6 +78,18 @@ ${missingStateAudit.missing.length > 0
     ? `- Missing coverage: \`${missingStateAudit.missing.join(', ')}\``
     : '- `Core loading/empty/error/success/disabled/interaction states were detected in the UI surface.`'}
 
+## Accessibility Audit
+
+${accessibilityAudit.issueCount > 0
+    ? accessibilityAudit.issues.slice(0, 8).map((issue) => `- [${issue.severity}] \`${issue.rule}\` ${issue.detail}`).join('\n')
+    : `- \`${accessibilityAudit.guidance}\``}
+
+## Journey Audit
+
+- Coverage: \`${journeyAudit.coverage}\`
+- Missing signals: \`${journeyAudit.missing.join(', ') || 'none'}\`
+- Guidance: \`${journeyAudit.guidance}\`
+
 ## Token Drift
 
 ${tokenDriftAudit.totalIssues > 0
@@ -89,7 +111,10 @@ ${browserArtifacts.length > 0
     debt,
     missingStateAudit,
     tokenDriftAudit,
+    accessibilityAudit,
+    journeyAudit,
   };
+  writeRuntimeJson(cwd, 'frontend-review.json', payload);
   return payload;
 }
 

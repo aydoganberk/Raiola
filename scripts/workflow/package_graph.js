@@ -121,6 +121,15 @@ function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort();
 }
 
+function isTestFile(filePath) {
+  const normalized = String(filePath || '');
+  if (/(^|\/)(fixtures|corpus)\//.test(normalized)) {
+    return false;
+  }
+  return /\.(test|spec)\.[^.]+$/.test(normalized)
+    || /(^|\/)(__tests__|test)\//.test(normalized);
+}
+
 function ownerForFile(filePath, packages) {
   return packages
     .filter((item) => item.path === '.' || filePath === item.path || filePath.startsWith(`${item.path}/`))
@@ -189,6 +198,7 @@ function buildPackageGraph(cwd, options = {}) {
 
   const files = listRepoFiles(cwd);
   const ownership = {};
+  const testOwnership = {};
   for (const filePath of files) {
     const owner = ownerForFile(filePath, packages);
     if (!owner) {
@@ -196,6 +206,9 @@ function buildPackageGraph(cwd, options = {}) {
     }
     ownership[filePath] = owner.id;
     owner.fileCount += 1;
+    if (isTestFile(filePath)) {
+      testOwnership[filePath] = owner.id;
+    }
   }
 
   const changedFiles = uniqueSorted((options.changedFiles || listGitChangesCached(cwd))
@@ -206,16 +219,46 @@ function buildPackageGraph(cwd, options = {}) {
     .map((filePath) => ownerForFile(filePath, packages)?.id)
     .filter(Boolean));
   const impactedPackages = expandImpactedPackages(changedPackages, packages, packageNameMap);
+  const testsByPackage = packages.reduce((accumulator, pkg) => {
+    accumulator[pkg.id] = [];
+    return accumulator;
+  }, {});
+  testsByPackage['.'] = testsByPackage['.'] || [];
+  for (const [filePath, packageId] of Object.entries(testOwnership)) {
+    if (!testsByPackage[packageId]) {
+      testsByPackage[packageId] = [];
+    }
+    testsByPackage[packageId].push(filePath);
+  }
+  for (const packageId of Object.keys(testsByPackage)) {
+    testsByPackage[packageId] = testsByPackage[packageId].sort();
+  }
+  const impactedTests = uniqueSorted(Object.entries(testOwnership)
+    .filter(([, packageId]) => (
+      packageId === '.'
+        ? changedPackages.length > 0
+        : impactedPackages.includes(packageId)
+    ))
+    .map(([filePath]) => filePath));
+  const edges = packages.flatMap((pkg) => pkg.internalDependencies.map((dependencyName) => ({
+    from: pkg.id,
+    to: packageNameMap.get(dependencyName),
+    type: 'internal',
+  }))).filter((edge) => edge.to);
 
   const payload = {
     generatedAt: new Date().toISOString(),
     repoShape: workspaceDirs.length > 0 ? 'monorepo' : 'single-package',
     packageCount: packages.length,
     packages,
+    edges,
     ownership,
+    testOwnership,
+    testsByPackage,
     changedFiles,
     changedPackages,
     impactedPackages,
+    impactedTests,
   };
 
   if (options.writeFiles !== false) {

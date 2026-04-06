@@ -123,6 +123,106 @@ function extractVisualSignals(body) {
   };
 }
 
+function stripTagContents(value) {
+  return stripTags(String(value || ''));
+}
+
+function collectTagMatches(body, tagName) {
+  return [...String(body || '').matchAll(new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'gi'))];
+}
+
+function extractAccessibilitySignals(body) {
+  const issues = [];
+  const pushIssue = (severity, rule, detail) => {
+    issues.push({ severity, rule, detail });
+  };
+  const htmlTag = body.match(/<html\b([^>]*)>/i)?.[1] || '';
+  const hasLang = /\blang\s*=\s*["'][^"']+["']/i.test(htmlTag);
+  if (!hasLang) {
+    pushIssue('medium', 'document-lang', 'The root html element does not declare a lang attribute.');
+  }
+  if (!/<main[\s>]/i.test(body)) {
+    pushIssue('medium', 'landmark-main', 'A main landmark was not detected in the document.');
+  }
+
+  const images = [...String(body || '').matchAll(/<img\b([^>]*)>/gi)];
+  const imagesWithoutAlt = images.filter((match) => !/\balt\s*=\s*["'][^"']*["']/i.test(match[1] || '')).length;
+  if (imagesWithoutAlt > 0) {
+    pushIssue('high', 'image-alt', `${imagesWithoutAlt} image element(s) are missing alt text.`);
+  }
+
+  const labelsByFor = new Set([...String(body || '').matchAll(/<label\b[^>]*for=["']([^"']+)["'][^>]*>/gi)].map((match) => match[1]));
+  const fields = [...String(body || '').matchAll(/<(input|select|textarea)\b([^>]*)>/gi)];
+  const unlabeledFields = fields.filter((match) => {
+    const attrs = match[2] || '';
+    if (/\btype=["']?(hidden|submit|button|reset)["']?/i.test(attrs)) {
+      return false;
+    }
+    if (/\b(aria-label|aria-labelledby|title)\s*=/i.test(attrs)) {
+      return false;
+    }
+    const id = attrs.match(/\bid=["']([^"']+)["']/i)?.[1];
+    return !id || !labelsByFor.has(id);
+  }).length;
+  if (unlabeledFields > 0) {
+    pushIssue('high', 'form-label', `${unlabeledFields} form control(s) do not have an obvious accessible label.`);
+  }
+
+  const unlabeledButtons = collectTagMatches(body, 'button').filter((match) => {
+    const full = match[0] || '';
+    const attrs = full.match(/<button\b([^>]*)>/i)?.[1] || '';
+    const text = stripTagContents(match[1] || '');
+    return !text && !/\b(aria-label|aria-labelledby|title)\s*=/i.test(attrs);
+  }).length;
+  if (unlabeledButtons > 0) {
+    pushIssue('high', 'button-name', `${unlabeledButtons} button element(s) do not expose an accessible name.`);
+  }
+
+  return {
+    verdict: issues.some((issue) => issue.severity === 'high')
+      ? 'fail'
+      : issues.length > 0
+        ? 'warn'
+        : 'pass',
+    issueCount: issues.length,
+    issues,
+    checks: {
+      hasLang,
+      hasMain: /<main[\s>]/i.test(body),
+      imagesWithoutAlt,
+      unlabeledFields,
+      unlabeledButtons,
+    },
+  };
+}
+
+function extractJourneySignals(body) {
+  const signals = {
+    nav: /<nav[\s>]/i.test(body),
+    main: /<main[\s>]/i.test(body),
+    heading: /<h[1-2][\s>]/i.test(body),
+    primaryAction: /<button[\s>]|type=["']submit["']|<a\b[^>]*>([\s\S]*?(start|get started|continue|save|submit|buy|ship|next))/i.test(body),
+    form: /<form[\s>]|<(input|select|textarea)\b/i.test(body),
+    feedback: /\b(loading|spinner|skeleton|error|retry|success|saved|empty state|no results|aria-live)\b/i.test(body),
+  };
+  const missing = Object.entries(signals)
+    .filter(([, present]) => !present)
+    .map(([key]) => key)
+    .filter((key) => !['form', 'feedback', 'nav'].includes(key));
+  return {
+    coverage: missing.length === 0
+      ? 'pass'
+      : missing.length <= 2
+        ? 'warn'
+        : 'incomplete',
+    signals,
+    missing,
+    summary: missing.length === 0
+      ? 'Core journey signals were detected.'
+      : `Missing journey signals: ${missing.join(', ')}.`,
+  };
+}
+
 function wrapText(value, limit = 72, maxLines = 4) {
   const words = String(value || '').split(/\s+/).filter(Boolean);
   if (words.length === 0) {
@@ -317,6 +417,8 @@ async function runVerifyBrowser(cwd, options = {}) {
   const finishedAt = new Date().toISOString();
   const htmlLike = /<html|<!doctype html/i.test(response.body);
   const visualSignals = extractVisualSignals(response.body);
+  const accessibility = extractAccessibilitySignals(response.body);
+  const journey = extractJourneySignals(response.body);
   const adapterName = String(options.adapter || 'smoke').trim().toLowerCase() || 'smoke';
   const adapter = adapterName === 'playwright' ? runPlaywrightAdapter() : {
     supported: true,
@@ -374,6 +476,8 @@ async function runVerifyBrowser(cwd, options = {}) {
     visualVerdict,
     selectorAssertion,
     visualSignals,
+    accessibility,
+    journey,
     renderer: adapter.supported ? visualArtifact.renderer : adapter.renderer,
     adapterFallbackReason: adapter.reason || '',
     renderError: renderedPreview.ok ? '' : renderedPreview.error,
@@ -396,6 +500,8 @@ async function runVerifyBrowser(cwd, options = {}) {
 - Status code: \`${meta.statusCode}\`
 - Summary: \`${meta.summary}\`
 - Renderer: \`${meta.renderer}\`
+- Accessibility: \`${meta.accessibility.verdict}\`
+- Journey: \`${meta.journey.coverage}\`
 - Artifact dir: \`${path.relative(cwd, artifactDir).replace(/\\/g, '/')}\`
 `);
 
@@ -431,6 +537,8 @@ async function main() {
   console.log(`- Adapter: \`${payload.adapter}\``);
   console.log(`- Renderer: \`${payload.renderer}\``);
   console.log(`- Summary: \`${payload.summary}\``);
+  console.log(`- Accessibility: \`${payload.accessibility.verdict}\` issues=\`${payload.accessibility.issueCount}\``);
+  console.log(`- Journey: \`${payload.journey.coverage}\``);
   if (payload.selectorAssertion?.checked) {
     console.log(`- Selector assertion: \`${payload.selectorAssertion.selector}\` -> \`${payload.selectorAssertion.matched ? 'matched' : 'missing'}\``);
   }
@@ -446,5 +554,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  extractAccessibilitySignals,
+  extractJourneySignals,
   runVerifyBrowser,
 };

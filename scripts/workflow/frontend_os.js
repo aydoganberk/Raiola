@@ -162,10 +162,87 @@ function latestBrowserArtifacts(cwd) {
   }));
 }
 
+function buildAccessibilityAudit(profile, browserArtifacts = []) {
+  const issues = browserArtifacts.flatMap((entry) => (
+    entry.meta?.accessibility?.issues || []
+  )).slice(0, 20);
+  const failingArtifacts = browserArtifacts.filter((entry) => (
+    entry.meta?.accessibility?.verdict === 'fail'
+  )).length;
+  const warningArtifacts = browserArtifacts.filter((entry) => (
+    entry.meta?.accessibility?.verdict === 'warn'
+  )).length;
+  const verdict = failingArtifacts > 0
+    ? 'fail'
+    : warningArtifacts > 0
+      ? 'warn'
+      : browserArtifacts.length > 0
+        ? 'pass'
+        : 'inconclusive';
+  return {
+    verdict,
+    artifactCount: browserArtifacts.length,
+    failingArtifacts,
+    warningArtifacts,
+    issueCount: issues.length,
+    issues,
+    guidance: verdict === 'inconclusive'
+      ? 'Capture browser evidence to validate landmarks, labels, and accessible names.'
+      : verdict === 'pass'
+        ? 'No browser-level accessibility issues were detected in the latest evidence.'
+        : 'Address the browser-level accessibility issues before ship.',
+    framework: profile.framework.primary,
+  };
+}
+
+function buildJourneyAudit(profile, browserArtifacts = [], inventory = []) {
+  const signalCounts = {
+    nav: 0,
+    main: 0,
+    heading: 0,
+    primaryAction: 0,
+    form: 0,
+    feedback: 0,
+  };
+  for (const artifact of browserArtifacts) {
+    const signals = artifact.meta?.journey?.signals || {};
+    for (const key of Object.keys(signalCounts)) {
+      if (signals[key]) {
+        signalCounts[key] += 1;
+      }
+    }
+  }
+  const missing = Object.entries(signalCounts)
+    .filter(([, count]) => count === 0)
+    .map(([key]) => key)
+    .filter((key) => !(key === 'form' && !inventory.some((item) => /Form|Field|Input/i.test(item.name))));
+  const coverage = browserArtifacts.length === 0
+    ? 'inconclusive'
+    : missing.length === 0
+      ? 'pass'
+      : missing.length <= 2
+        ? 'warn'
+        : 'incomplete';
+  return {
+    coverage,
+    artifactCount: browserArtifacts.length,
+    missing,
+    signalCounts,
+    expectedSurface: profile.framework.primary,
+    guidance: coverage === 'pass'
+      ? 'Core user-journey signals are represented in the latest preview evidence.'
+      : coverage === 'inconclusive'
+        ? 'Capture preview evidence to validate headings, landmarks, and primary actions.'
+        : `Review journey coverage for: ${missing.join(', ')}.`,
+  };
+}
+
 function buildDesignDebt(profile, inventory, browserArtifacts, audits = {}) {
   const debt = [];
   const missingStateAudit = audits.missingStateAudit || { missing: [] };
   const tokenDriftAudit = audits.tokenDriftAudit || { totalIssues: 0, issues: [] };
+  const accessibilityAudit = audits.accessibilityAudit || { verdict: 'inconclusive', issueCount: 0 };
+  const journeyAudit = audits.journeyAudit || { coverage: 'inconclusive', missing: [] };
   if (!profile.stack.presence.storybook) {
     debt.push({
       area: 'component preview',
@@ -215,17 +292,37 @@ function buildDesignDebt(profile, inventory, browserArtifacts, audits = {}) {
       detail: `${tokenDriftAudit.totalIssues} token drift signal(s) were detected across UI files.`,
     });
   }
+  if (accessibilityAudit.verdict !== 'pass') {
+    debt.push({
+      area: 'a11y',
+      severity: accessibilityAudit.verdict === 'fail' ? 'high' : 'medium',
+      detail: accessibilityAudit.issueCount > 0
+        ? `${accessibilityAudit.issueCount} accessibility issue(s) were detected in browser evidence.`
+        : 'No browser evidence is available to validate accessibility expectations.',
+    });
+  }
+  if (journeyAudit.coverage !== 'pass') {
+    debt.push({
+      area: 'journey coverage',
+      severity: journeyAudit.coverage === 'incomplete' ? 'high' : 'medium',
+      detail: journeyAudit.missing?.length > 0
+        ? `Journey evidence is missing for: ${journeyAudit.missing.join(', ')}.`
+        : 'User-journey evidence is still incomplete.',
+    });
+  }
   return debt;
 }
 
-function buildScorecard(profile, inventory, debt, browserArtifacts) {
+function buildScorecard(profile, inventory, debt, browserArtifacts, audits = {}) {
+  const accessibilityAudit = audits.accessibilityAudit || { verdict: 'inconclusive', issueCount: 0 };
+  const journeyAudit = audits.journeyAudit || { coverage: 'inconclusive', missing: [] };
   const penalty = debt.reduce((sum, item) => sum + (item.severity === 'high' ? 1.2 : item.severity === 'medium' ? 0.7 : 0.3), 0);
   const browserPass = browserArtifacts.find((entry) => entry.meta?.visualVerdict === 'pass');
   const base = {
     visualConsistency: 4.2,
-    interactionClarity: 4.0,
+    interactionClarity: journeyAudit.coverage === 'pass' ? 4.3 : journeyAudit.coverage === 'warn' ? 3.9 : 3.4,
     responsiveCorrectness: 4.0,
-    accessibility: 3.8,
+    accessibility: accessibilityAudit.verdict === 'pass' ? 4.2 : accessibilityAudit.verdict === 'warn' ? 3.5 : accessibilityAudit.verdict === 'fail' ? 2.8 : 3.2,
     componentHygiene: inventory.filter((item) => item.shared).length >= 3 ? 4.2 : 3.6,
     copyConsistency: 4.0,
   };
@@ -239,6 +336,8 @@ function buildScorecard(profile, inventory, debt, browserArtifacts) {
 
 module.exports = {
   buildDesignDebt,
+  buildAccessibilityAudit,
+  buildJourneyAudit,
   buildMissingStateAudit,
   buildResponsiveMatrix,
   buildScorecard,
