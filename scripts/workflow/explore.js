@@ -1,3 +1,4 @@
+const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const {
@@ -75,6 +76,9 @@ function runRg(cwd, pattern) {
     encoding: 'utf8',
     stdio: 'pipe',
   });
+  if (result.error) {
+    return runBuiltInSearch(cwd, pattern);
+  }
   if (result.status !== 0 && !result.stdout) {
     return [];
   }
@@ -83,6 +87,42 @@ function runRg(cwd, pattern) {
     .map((line) => line.trim())
     .filter(Boolean)
     .slice(0, 40);
+}
+
+function runBuiltInSearch(cwd, pattern) {
+  const query = String(pattern || '').trim().toLowerCase();
+  if (!query) {
+    return [];
+  }
+
+  const repo = listIndexedRepoFiles(cwd, { refreshMode: 'incremental' });
+  const matches = [];
+  for (const filePath of repo.files) {
+    if (matches.length >= 40) {
+      break;
+    }
+
+    try {
+      const stats = fs.statSync(filePath);
+      if (!stats.isFile() || stats.size > 262144) {
+        continue;
+      }
+      const lines = read(filePath).split('\n');
+      for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index];
+        if (!line.toLowerCase().includes(query)) {
+          continue;
+        }
+        matches.push(`${relativePath(cwd, filePath)}:${index + 1}:${line.trim()}`.slice(0, 240));
+        if (matches.length >= 40) {
+          break;
+        }
+      }
+    } catch {
+      // Ignore unreadable and binary-looking files in the fallback path.
+    }
+  }
+  return matches;
 }
 
 function impactedPackagesFor(packageGraph, ownerPackages) {

@@ -92,6 +92,13 @@ node bin/cwf.js help
 node bin/cwf.js doctor --strict
 ```
 
+## Runtime support
+
+- Node.js: `>=20` (`.nvmrc` is pinned to `20` for local development)
+- Full support: macOS and Linux
+- Smoke-tested install/help flows: Windows
+- `cwf doctor --strict` now checks runtime prerequisites such as Git, ripgrep, platform support, and browser-opening helpers
+
 ## Daily loop
 
 Use the product shell when the repo already has workflow installed:
@@ -138,13 +145,17 @@ The current build adds repo-native surfaces aimed at making Codex materially str
 - `cwf do "请做代码审查并验证浏览器"` or `cwf do "revisa el frontend y mejora el diseño"`  
   Multilingual routing now grounds intent, steering, and deterministic capability picks across major languages instead of assuming English-only prompts.
 - `cwf codex promptpack --goal "review the auth diff"`  
-  Writes a ready-to-paste Codex prompt pack with profile, verify contract, repo signals, optional UI direction, optional monorepo shards, and the latest review orchestration context.
-- `cwf ui-direction`  
-  Produces a taste-aware design brief (`docs/workflow/UI-DIRECTION.md`) so frontend work is not just “correct” but intentionally styled.
+  Writes a ready-to-paste Codex prompt pack with profile, verify contract, repo signals, the generated context pack, optional UI direction, monorepo hotspots, and the latest review orchestration/task-graph context.
+- `cwf codex contextpack --goal "review the auth diff"`  
+  Produces a budgeted context pack for Codex app/CLI sessions with ordered attachments, focus files, compact/balanced/deep presets, and explicit avoid-patterns to fight context rot on wide repos.
+- `cwf ui-direction --goal "premium minimal analytics dashboard" --taste premium-minimal`  
+  Produces a taste-aware design brief (`docs/workflow/UI-DIRECTION.md`) with archetype-aware design tokens, component cues, interaction cues, and style guardrails so frontend work is not just “correct” but intentionally styled.
+- `cwf review-tasks`  
+  Converts review findings into a blocker-first four-wave task graph (triage → synthesis → fix → verify) that can drive large-repo review and re-review loops.
 - `cwf review-orchestrate`  
   Converts review findings into package/persona/wave-based review work for large repos and monorepos.
 - `cwf monorepo`  
-  Builds package-aware write scopes, review shards, verify plans, and performance-risk notes for broad repos.
+  Builds package-aware write scopes, review shards, hotspots, context slices, context budgets, targeted verify plans, and performance-risk notes for broad repos.
 
 These surfaces are designed to stay backward-compatible with the canonical markdown workflow instead of replacing it.
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1 - 2026-04-07
+
+- Fixed command-reference drift so the documented `cwf` surface matches the shipped CLI, including `cwf review-tasks`.
+- Added an explicit publish whitelist, `.npmignore`, and a tarball smoke-install script to keep the npm package focused on runtime assets.
+- Declared the supported Node.js baseline (`>=20`) and added repo-local `.nvmrc`.
+- Expanded runtime prerequisite diagnostics in `doctor` and `health`, and reduced child-process `node` PATH coupling by using `process.execPath`.
+- Added cross-platform install/release workflows, smoke-install checks, and repository governance files (`SECURITY.md`, `CODEOWNERS`).
+- Reduced maintenance blast radius by extracting workflow-control, milestone seed content, and delegation runtime logic into dedicated modules.
+
 ## 0.3.0 - 2026-04-06
 
 - Added multilingual intent grounding and deterministic capability matching for major non-English prompt surfaces.

@@ -233,7 +233,7 @@ function maybeOpenFullWorkflow(cwd, session, args) {
 
   const workflowRoot = path.join(cwd, 'docs', 'workflow');
   if (!fs.existsSync(workflowRoot)) {
-    childProcess.execFileSync('node', [path.join(__dirname, 'setup.js'), '--target', cwd, '--skip-verify'], {
+    childProcess.execFileSync(process.execPath, [path.join(__dirname, 'setup.js'), '--target', cwd, '--skip-verify'], {
       cwd,
       stdio: 'pipe',
       encoding: 'utf8',
@@ -245,7 +245,7 @@ function maybeOpenFullWorkflow(cwd, session, args) {
   const milestoneGoal = String(args['milestone-goal'] || session.goal).trim();
 
   try {
-    childProcess.execFileSync('node', [
+    childProcess.execFileSync(process.execPath, [
       path.join(__dirname, 'new_milestone.js'),
       '--id', milestoneId,
       '--name', milestoneName,

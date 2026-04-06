@@ -479,7 +479,7 @@ function syncDefaultWorkflowSurface(targetRepo, options = {}) {
 
 function runTargetScript(targetRepo, scriptFile, args = []) {
   return childProcess.execFileSync(
-    'node',
+    process.execPath,
     [path.join(targetRepo, 'scripts', 'workflow', scriptFile), ...args],
     {
       cwd: targetRepo,

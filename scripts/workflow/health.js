@@ -24,6 +24,7 @@ const {
 } = require('./common');
 const { applyRepairPlan, buildRepairPlan } = require('./repair');
 const { buildRiskSummary } = require('./risk_score');
+const { buildRuntimePrerequisiteChecks } = require('./runtime_prereqs');
 
 function printHelp() {
   console.log(`
@@ -38,6 +39,8 @@ Options:
   --repair          Print a dry-run repair plan for safe runtime fixes
   --apply           Apply the safe runtime fixes from the repair plan
   --json            Print machine-readable output
+
+Health verifies canonical workflow state and flags prerequisite drift that can break runtime surfaces.
   `);
 }
 
@@ -152,6 +155,9 @@ function buildHealthReport(cwd, rootDir, options = {}) {
       : 'fail',
     `WINDOW decision -> ${windowStatus.decision}`,
   );
+  for (const check of buildRuntimePrerequisiteChecks(cwd)) {
+    pushCheck(check.status, check.message, { fix: check.fix || null });
+  }
 
   for (const check of runEvidenceChecks(paths)) {
     pushCheck(check.status, `${check.kind}: ${check.claim} -> ${check.message}${check.ref ? ` (${check.ref})` : ''}`);

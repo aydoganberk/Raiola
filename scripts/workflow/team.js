@@ -64,7 +64,7 @@ function main() {
   const action = ACTIONS[first];
   const targetScript = path.join(__dirname, action.script);
   const forwarded = [...action.args, ...rest];
-  const result = childProcess.spawnSync('node', [targetScript, ...forwarded], {
+  const result = childProcess.spawnSync(process.execPath, [targetScript, ...forwarded], {
     cwd: process.cwd(),
     stdio: 'inherit',
     encoding: 'utf8',

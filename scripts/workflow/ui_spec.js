@@ -23,14 +23,16 @@ Usage:
   node scripts/workflow/ui_spec.js
 
 Options:
+  --goal <text>  Optional product/UI goal to steer the brief
+  --taste <id>   Optional explicit taste profile override
   --root <path>  Workflow root. Defaults to active workstream root
   --json         Print machine-readable output
   `);
 }
 
-function buildUiSpec(cwd, rootDir) {
+function buildUiSpec(cwd, rootDir, options = {}) {
   const profile = buildFrontendProfile(cwd, rootDir, { scope: 'workstream', refresh: 'incremental' });
-  const direction = buildUiDirection(cwd, rootDir);
+  const direction = buildUiDirection(cwd, rootDir, options);
   const inventory = collectComponentInventory(cwd);
   const matrix = buildResponsiveMatrix(profile, inventory);
   const missingStateAudit = buildMissingStateAudit(cwd, inventory);
@@ -48,6 +50,7 @@ function buildUiSpec(cwd, rootDir) {
 - UI system: \`${profile.uiSystem.primary}\`
 - Frontend mode: \`${profile.frontendMode.status}\`
 - UI direction: \`${direction.file}\`
+- Taste profile: \`${direction.taste.profile.label}\`
 - Taste signature: \`${direction.taste.tagline}\`
 
 ## Information Architecture
@@ -62,7 +65,22 @@ function buildUiSpec(cwd, rootDir) {
 - \`Visual tone: ${direction.taste.visualTone}\`
 - \`Hierarchy: ${direction.taste.hierarchy}\`
 - \`Motion: ${direction.taste.motion}\`
+- \`Taste profile source: ${direction.taste.profile.source}\`
 - \`Codex should respect the UI direction document before improvising new aesthetics.\`
+
+## Experience Thesis
+
+- \`${direction.experienceThesis.title}\`
+- \`${direction.experienceThesis.thesis}\`
+- \`${direction.experienceThesis.signature}\`
+
+## Signature Moments
+
+${direction.signatureMoments.map((item) => `- \`${item.title}: ${item.description}\``).join('\n')}
+
+## Screen Blueprints
+
+${direction.screenBlueprints.map((item) => `- \`${item.title}: ${item.recipe}\``).join('\n')}
 
 ## User Flows
 
@@ -87,7 +105,9 @@ ${matrix.map((item) => `- \`${item.viewport} ${item.width}\` -> ${item.expectati
 
 ## Copy Tone
 
-- \`Concise, directive, and product-consistent language.\`
+- \`${direction.copyVoice.tone}\`
+${direction.copyVoice.dos.map((item) => `- \`Do: ${item}\``).join('\n')}
+${direction.copyVoice.donts.map((item) => `- \`Avoid: ${item}\``).join('\n')}
 
 ## Accessibility Checklist
 
@@ -101,6 +121,10 @@ ${matrix.map((item) => `- \`${item.viewport} ${item.width}\` -> ${item.expectati
 - \`Styling layers: ${profile.styling.detected.join(', ')}\`
 - \`Prefer shared tokens/components before page-local styling.\`
 - \`Token drift issues detected: ${tokenDriftAudit.totalIssues}\`
+- \`Taste token targets: ${Object.entries(direction.designTokens).map(([key, value]) => `${key}=${value}`).join(' | ')}\`
+- \`Component cues: ${direction.componentCues.slice(0, 3).join(' | ')}\`
+${direction.designSystemActions.map((item) => `- \`${item}\``).join('\n')}
+${direction.implementationPrompts.map((item) => `- \`Prompt: ${item}\``).join('\n')}
 
 ## Empty/Loading/Error/Success States
 
@@ -139,7 +163,10 @@ function main(argv = process.argv.slice(2)) {
   }
   const cwd = process.cwd();
   const rootDir = resolveWorkflowRoot(cwd, args.root);
-  const payload = buildUiSpec(cwd, rootDir);
+  const payload = buildUiSpec(cwd, rootDir, {
+    goal: args.goal ? String(args.goal).trim() : '',
+    taste: args.taste ? String(args.taste).trim() : '',
+  });
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
     return;

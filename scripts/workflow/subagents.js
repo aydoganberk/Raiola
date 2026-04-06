@@ -25,7 +25,7 @@ function main() {
   }
   const forwarded = action === 'plan' ? argv.slice(1) : argv;
   const targetScript = path.join(__dirname, 'codex_control.js');
-  const result = childProcess.spawnSync('node', [targetScript, 'plan-subagents', ...forwarded], {
+  const result = childProcess.spawnSync(process.execPath, [targetScript, 'plan-subagents', ...forwarded], {
     cwd: process.cwd(),
     stdio: 'inherit',
     encoding: 'utf8',

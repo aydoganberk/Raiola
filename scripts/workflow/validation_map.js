@@ -20,7 +20,7 @@ function main() {
     return;
   }
   const targetScript = path.join(__dirname, 'validate_contract.js');
-  const result = childProcess.spawnSync('node', [targetScript, ...argv], {
+  const result = childProcess.spawnSync(process.execPath, [targetScript, ...argv], {
     cwd: process.cwd(),
     stdio: 'inherit',
     encoding: 'utf8',

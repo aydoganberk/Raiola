@@ -5,6 +5,7 @@ const { writeRuntimeJson } = require('./runtime_helpers');
 const { buildUiSpec } = require('./ui_spec');
 const { buildUiDirection } = require('./design_intelligence');
 const { buildMonorepoIntelligence } = require('./monorepo');
+const { buildCommandPlan } = require('./command_plan');
 
 function printHelp() {
   console.log(`
@@ -39,7 +40,7 @@ function buildDoPayload(cwd, rootDir, goal) {
   if (packet !== 'optional' && !suggestedCommands.includes('cwf packet compile')) {
     suggestedCommands.unshift('cwf packet compile');
   }
-  return {
+  const payload = {
     generatedAt: new Date().toISOString(),
     goal,
     rootDir: path.relative(cwd, rootDir).replace(/\\/g, '/'),
@@ -70,6 +71,8 @@ function buildDoPayload(cwd, rootDir, goal) {
     previewFirst: true,
     dryRunSafe: true,
   };
+  payload.commandPlan = buildCommandPlan(payload);
+  return payload;
 }
 
 function formatLanguageMix(languageMix) {
@@ -100,8 +103,8 @@ function main() {
   }
   const payload = buildDoPayload(cwd, rootDir, goal);
   if (!args['dry-run'] && payload.lane === 'frontend') {
-    const uiDirection = buildUiDirection(cwd, rootDir);
-    const uiSpec = buildUiSpec(cwd, rootDir);
+    const uiDirection = buildUiDirection(cwd, rootDir, { goal });
+    const uiSpec = buildUiSpec(cwd, rootDir, { goal });
     payload.uiDirection = uiDirection.file;
     payload.uiSpec = uiSpec.file;
   }
@@ -111,6 +114,7 @@ function main() {
       markdownFile: monorepo.markdownFile,
       jsonFile: monorepo.jsonFile,
       writeScopeCount: monorepo.writeScopes.length,
+      agentWaves: monorepo.agentPlan,
     };
   }
   writeRuntimeJson(cwd, 'do-latest.json', payload);
@@ -144,9 +148,37 @@ function main() {
   console.log(`- Verify needed: \`${payload.trust.verifyNeeded ? 'yes' : 'no'}\``);
   console.log(`- Secure needed: \`${payload.trust.secureNeeded ? 'yes' : 'no'}\``);
   console.log(`- Language mix: \`${formatLanguageMix(payload.languageMix)}\``);
+  console.log(`- Primary command: \`${payload.commandPlan.primaryCommand}\``);
+  console.log(`- Execution mode: \`${payload.commandPlan.executionMode}\``);
   console.log('\n## Suggested Commands\n');
   for (const command of payload.suggestedCommands) {
     console.log(`- \`${command.replace('<goal>', payload.goal)}\``);
+  }
+  if (payload.commandPlan.secondaryCommands.length > 0) {
+    console.log('\n## Command Plan\n');
+    for (const command of payload.commandPlan.secondaryCommands) {
+      console.log(`- \`${command}\``);
+    }
+  }
+  if (payload.commandPlan.specialtyFlows && Object.keys(payload.commandPlan.specialtyFlows).length > 0) {
+    console.log('\n## Specialized Flow\n');
+    for (const entries of Object.values(payload.commandPlan.specialtyFlows)) {
+      for (const entry of entries) {
+        console.log(`- ${entry}`);
+      }
+    }
+  }
+  if (payload.commandPlan.codexAppFlow.length > 0) {
+    console.log('\n## Codex App Notes\n');
+    for (const entry of payload.commandPlan.codexAppFlow) {
+      console.log(`- ${entry}`);
+    }
+  }
+  if (payload.commandPlan.parallelFlow.length > 0) {
+    console.log('\n## Parallel Execution\n');
+    for (const entry of payload.commandPlan.parallelFlow) {
+      console.log(`- ${entry}`);
+    }
   }
   if (args.explain) {
     console.log('\n## Route Why\n');

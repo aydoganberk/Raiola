@@ -16,6 +16,8 @@ const { analyzeIntent } = require('./intent_engine');
 const { selectCodexProfile, getCodexProfiles } = require('./codex_profile_engine');
 const { buildUiDirection } = require('./design_intelligence');
 const { buildMonorepoIntelligence } = require('./monorepo');
+const { loadLatestReviewTaskGraph } = require('./review_task_graph');
+const { buildCodexContextPack } = require('./context_pack');
 const {
   appendJsonl,
   deriveRepoRoles,
@@ -73,6 +75,7 @@ Actions:
   profile suggest  Recommend the best Codex profile for the current task
   bootstrap        Build a task-specific Codex bootstrap packet
   promptpack       Write a task-specific Codex operator prompt pack
+  contextpack      Write a task-shaped Codex context pack for app/CLI sessions
   resume-card      Generate a resume card for the current repo state
   plan-subagents   Suggest bounded subagent/worktree slices
 
@@ -81,7 +84,8 @@ Options:
   --local          Use <repo>/.codex
   --global         Use $CODEX_HOME/.codex or ~/.codex
   --role <name>    Role name for install-skill/remove-skill
-  --goal <text>    Goal text for profile/bootstrapping actions
+  --goal <text>    Goal text for profile/bootstrapping/contextpack actions
+  --taste <id>     Optional explicit frontend taste override for context packs
   --from repo-profile
                    Generate roles from repo signals
   --json           Print machine-readable output
@@ -639,70 +643,103 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile) {
     ? buildMonorepoIntelligence(cwd, rootDir, { writeFiles: true, maxWorkers: 4 })
     : null;
   const frontendDirection = (analysis.chosenCapability.domain === 'frontend' || analysis.repoSignals?.frontendActive)
-    ? buildUiDirection(cwd, rootDir)
+    ? buildUiDirection(cwd, rootDir, { goal })
     : null;
   const reviewOrchestration = loadLatestReviewOrchestration(cwd);
+  const reviewTaskGraph = loadLatestReviewTaskGraph(cwd);
+  const contextPack = buildCodexContextPack(cwd, rootDir, goal, analysis, profile, {
+    writeFiles: true,
+  });
   const suggestedCommands = [
     ...analysis.verificationPlan,
+    'cwf codex contextpack --goal "<goal>"',
+    analysis.chosenCapability.domain === 'review' ? 'cwf review-tasks --json' : '',
     analysis.chosenCapability.domain === 'review' ? 'cwf review-orchestrate --json' : '',
-    analysis.chosenCapability.domain === 'frontend' ? 'cwf ui-direction && cwf ui-review' : '',
+    analysis.chosenCapability.domain === 'frontend' ? 'cwf ui-direction --json && cwf ui-review' : '',
     monorepo ? 'cwf monorepo --json' : '',
   ].filter(Boolean);
 
-  const markdown = `# CODEX PROMPT PACK
+  const lines = [
+    '# CODEX PROMPT PACK',
+    '',
+    `- Goal: \`${goal}\``,
+    `- Capability: \`${analysis.chosenCapability.id}\``,
+    `- Profile: \`${profile.id}\``,
+    `- Reasoning effort: \`${profile.reasoningEffort}\``,
+    `- Context depth: \`${profile.contextDepth}\``,
+    `- Verify policy: \`${profile.verifyPolicy}\``,
+    `- Languages detected: \`${(analysis.languageMix?.matchedLanguages || []).join(', ') || 'neutral'}\``,
+    '',
+    '## Execution Posture',
+    '',
+    `- \`${profile.summary}\``,
+    `- \`${analysis.chosenCapability.reasons[0] || 'Use the routed capability as the primary lane.'}\``,
+    `- \`${profile.reasons[0] || 'Keep the Codex profile aligned to the task.'}\``,
+    '',
+    '## Route Why',
+    '',
+    ...[...analysis.chosenCapability.reasons, ...profile.reasons].slice(0, 8).map((item) => `- ${item}`),
+    '',
+    '## Suggested Commands',
+    '',
+    ...(suggestedCommands.length > 0 ? suggestedCommands.map((item) => `- \`${item}\``) : ['- `cwf next`']),
+    '',
+    '## Context Pack',
+    '',
+    `- File: \`${contextPack.file}\``,
+    `- Attachments: \`${contextPack.attachments.length}\``,
+    `- Compact preset paths: \`${contextPack.budgetPresets.compact.attachmentPaths.length}\``,
+    ...(contextPack.focusFiles.length > 0 ? contextPack.focusFiles.slice(0, 8).map((item) => `- Focus: \`${item}\``) : ['- `No extra focus files inferred.`']),
+    '',
+    '## Verification Contract',
+    '',
+    ...(analysis.verificationPlan.length > 0
+      ? analysis.verificationPlan.map((item) => `- \`${item}\``)
+      : ['- `Route-specific verify plan not required yet.`']),
+    '',
+  ];
 
-- Goal: \`${goal}\`
-- Capability: \`${analysis.chosenCapability.id}\`
-- Profile: \`${profile.id}\`
-- Reasoning effort: \`${profile.reasoningEffort}\`
-- Context depth: \`${profile.contextDepth}\`
-- Verify policy: \`${profile.verifyPolicy}\`
-- Languages detected: \`${(analysis.languageMix?.matchedLanguages || []).join(', ') || 'neutral'}\`
+  if (frontendDirection) {
+    lines.push('## Frontend Direction', '');
+    lines.push(`- UI direction: \`${frontendDirection.file}\``);
+    lines.push(`- Archetype: \`${frontendDirection.archetype.label}\``);
+    lines.push(`- Taste profile: \`${frontendDirection.taste.profile.label}\``);
+    lines.push(`- Taste signature: \`${frontendDirection.taste.tagline}\``);
+    lines.push(...frontendDirection.codexRecipes.slice(0, 6).map((item) => `- ${item}`));
+    lines.push('');
+  }
 
-## Execution Posture
+  if (monorepo) {
+    lines.push('## Monorepo Focus', '');
+    lines.push(`- Monorepo file: \`${monorepo.markdownFile}\``);
+    lines.push(`- Recommended write scopes: \`${monorepo.writeScopes.map((scope) => `${scope.worker}:${scope.paths.join(',')}`).join(' | ') || 'none'}\``);
+    lines.push(`- Hotspots: \`${(monorepo.hotspots || []).slice(0, 3).map((item) => item.packageName).join(', ') || 'none'}\``);
+    lines.push(...(monorepo.performanceRisks.length > 0 ? monorepo.performanceRisks.map((item) => `- ${item}`) : ['- `No monorepo-specific risk note.`']));
+    lines.push('');
+  }
 
-- \`${profile.summary}\`
-- \`${analysis.chosenCapability.reasons[0] || 'Use the routed capability as the primary lane.'}\`
-- \`${profile.reasons[0] || 'Keep the Codex profile aligned to the task.'}\`
+  if (reviewOrchestration) {
+    lines.push('## Review Orchestration', '');
+    lines.push('- Latest review orchestration: `.workflow/reports/review-orchestration.md`');
+    lines.push(`- Package groups: \`${reviewOrchestration.packageGroups?.length || 0}\``);
+    lines.push(`- Waves: \`${reviewOrchestration.waves?.length || 0}\``);
+    lines.push('');
+  }
 
-## Route Why
+  if (reviewTaskGraph) {
+    lines.push('## Review Task Graph', '');
+    lines.push(`- Latest review task graph: \`${reviewTaskGraph.markdownFile || '.workflow/reports/review-task-graph.md'}\``);
+    lines.push(`- Fix tasks: \`${reviewTaskGraph.summary?.fixTaskCount || 0}\``);
+    lines.push(`- Verify tasks: \`${reviewTaskGraph.summary?.verifyTaskCount || 0}\``);
+    lines.push(...(reviewTaskGraph.waves || []).slice(0, 2).flatMap((wave) => wave.tasks.slice(0, 3).map((task) => `- ${wave.label}: ${task.title}`)));
+    lines.push('');
+  }
 
-${[...analysis.chosenCapability.reasons, ...profile.reasons].slice(0, 8).map((item) => `- ${item}`).join('\n')}
-
-## Suggested Commands
-
-${suggestedCommands.length > 0 ? suggestedCommands.map((item) => `- \`${item}\``).join('\n') : '- `cwf next`'}
-
-## Verification Contract
-
-${analysis.verificationPlan.length > 0 ? analysis.verificationPlan.map((item) => `- \`${item}\``).join('\n') : '- `Route-specific verify plan not required yet.`'}
-
-${frontendDirection ? `## Frontend Direction
-
-- UI direction: \`${frontendDirection.file}\`
-- Archetype: \`${frontendDirection.archetype.label}\`
-- Taste signature: \`${frontendDirection.taste.tagline}\`
-
-${frontendDirection.codexRecipes.slice(0, 6).map((item) => `- ${item}`).join('\n')}
-
-` : ''}${monorepo ? `## Monorepo Focus
-
-- Monorepo file: \`${monorepo.markdownFile}\`
-- Recommended write scopes: \`${monorepo.writeScopes.map((scope) => `${scope.worker}:${scope.paths.join(',')}`).join(' | ') || 'none'}\`
-
-${monorepo.performanceRisks.map((item) => `- ${item}`).join('\n') || '- `No monorepo-specific risk note.`'}
-
-` : ''}${reviewOrchestration ? `## Review Orchestration
-
-- Latest review orchestration: \`.workflow/reports/review-orchestration.md\`
-- Package groups: \`${reviewOrchestration.packageGroups?.length || 0}\`
-- Waves: \`${reviewOrchestration.waves?.length || 0}\`
-` : ''}
-`;
+  const markdown = `${lines.join('\n').trimEnd()}\n`;
   const markdownPath = path.join(runtimeDir(cwd), 'promptpack.md');
   const jsonPath = path.join(runtimeDir(cwd), 'promptpack.json');
   ensureDir(path.dirname(markdownPath));
-  fs.writeFileSync(markdownPath, `${markdown.trimEnd()}\n`);
+  fs.writeFileSync(markdownPath, markdown);
   writeJsonFile(jsonPath, {
     generatedAt: nowIso(),
     goal,
@@ -712,15 +749,24 @@ ${monorepo.performanceRisks.map((item) => `- ${item}`).join('\n') || '- `No mono
     verificationPlan: analysis.verificationPlan,
     suggestedCommands,
     languageMix: analysis.languageMix,
+    contextPack: {
+      file: contextPack.file,
+      jsonFile: contextPack.jsonFile,
+      attachments: contextPack.attachments.length,
+      compactPreset: contextPack.budgetPresets.compact,
+      focusFiles: contextPack.focusFiles,
+    },
     frontendDirection: frontendDirection ? {
       file: frontendDirection.file,
       archetype: frontendDirection.archetype.label,
       taste: frontendDirection.taste.tagline,
+      tasteProfile: frontendDirection.taste.profile,
     } : null,
     monorepo: monorepo ? {
       markdownFile: monorepo.markdownFile,
       jsonFile: monorepo.jsonFile,
       writeScopes: monorepo.writeScopes,
+      hotspots: monorepo.hotspots,
       performanceRisks: monorepo.performanceRisks,
     } : null,
     reviewOrchestration: reviewOrchestration ? {
@@ -728,12 +774,20 @@ ${monorepo.performanceRisks.map((item) => `- ${item}`).join('\n') || '- `No mono
       packageGroups: reviewOrchestration.packageGroups?.length || 0,
       waves: reviewOrchestration.waves?.length || 0,
     } : null,
+    reviewTaskGraph: reviewTaskGraph ? {
+      markdownFile: reviewTaskGraph.markdownFile || '.workflow/reports/review-task-graph.md',
+      waveCount: reviewTaskGraph.waves?.length || 0,
+      fixTaskCount: reviewTaskGraph.summary?.fixTaskCount || 0,
+      verifyTaskCount: reviewTaskGraph.summary?.verifyTaskCount || 0,
+    } : null,
   });
   return {
     file: relativePath(cwd, markdownPath),
     jsonFile: relativePath(cwd, jsonPath),
+    contextPack: contextPack.file,
     frontendDirection: frontendDirection ? frontendDirection.file : null,
     monorepo: monorepo ? monorepo.markdownFile : null,
+    reviewTaskGraph: reviewTaskGraph ? (reviewTaskGraph.markdownFile || '.workflow/reports/review-task-graph.md') : null,
   };
 }
 
@@ -750,6 +804,29 @@ function doPromptPack(cwd, args) {
     capability: analysis.chosenCapability.id,
     profile: profile.id,
     ...pack,
+  };
+}
+
+function doContextPack(cwd, args) {
+  const { goal, rootDir, analysis } = buildIntentAnalysisForCodex(cwd, args);
+  const profile = selectCodexProfile({ analysis });
+  const pack = buildCodexContextPack(cwd, rootDir, goal, analysis, profile, {
+    taste: args.taste ? String(args.taste).trim() : '',
+    writeFiles: true,
+  });
+  return {
+    action: 'contextpack',
+    scope: scopeName(args),
+    rootDir,
+    virtualRoot: desiredCodexRoot(cwd, args),
+    goal,
+    capability: analysis.chosenCapability.id,
+    profile: profile.id,
+    file: pack.file,
+    jsonFile: pack.jsonFile,
+    attachmentCount: pack.attachments.length,
+    compactPresetCount: pack.budgetPresets.compact.attachmentPaths.length,
+    focusFiles: pack.focusFiles,
   };
 }
 
@@ -791,6 +868,7 @@ function doBootstrap(cwd, args) {
     evidenceOutputs: analysis.evidenceOutputs,
     languageMix: analysis.languageMix,
     promptPack,
+    contextPack: promptPack.contextPack || null,
     why: [
       ...analysis.chosenCapability.reasons,
       ...profile.reasons,
@@ -888,14 +966,32 @@ function doPlanSubagents(cwd, args) {
   const profile = selectCodexProfile({ analysis });
   const plan = [];
   const latestReviewOrchestration = loadLatestReviewOrchestration(cwd);
+  const latestReviewTaskGraph = loadLatestReviewTaskGraph(cwd);
   const monorepo = analysis.repoSignals.monorepo
     ? buildMonorepoIntelligence(cwd, rootDir, { writeFiles: true, maxWorkers: 4 })
     : null;
   const frontendDirection = analysis.chosenCapability.domain === 'frontend' || analysis.repoSignals.frontendActive
-    ? buildUiDirection(cwd, rootDir)
+    ? buildUiDirection(cwd, rootDir, { goal })
     : null;
 
-  if (analysis.chosenCapability.domain === 'review' && latestReviewOrchestration?.waves?.length) {
+  if (analysis.chosenCapability.domain === 'review' && latestReviewTaskGraph?.waves?.length) {
+    for (const wave of latestReviewTaskGraph.waves.slice(0, 4)) {
+      for (const task of wave.tasks.slice(0, 3)) {
+        if (plan.length >= 8) {
+          break;
+        }
+        plan.push({
+          owner: task.owner,
+          focus: `${task.title}: ${task.focus}`,
+          scope: task.writeScope?.join(', ') || task.scopePaths?.join(', ') || 'review shard',
+          mode: task.mode || (wave.label === 'fix' ? 'bounded_write' : 'parallel_readonly'),
+        });
+      }
+      if (plan.length >= 8) {
+        break;
+      }
+    }
+  } else if (analysis.chosenCapability.domain === 'review' && latestReviewOrchestration?.waves?.length) {
     for (const wave of latestReviewOrchestration.waves.slice(0, 2)) {
       for (const task of wave.tasks.slice(0, 4)) {
         plan.push({
@@ -916,6 +1012,14 @@ function doPlanSubagents(cwd, args) {
           mode: 'parallel_readonly',
         });
       }
+      for (const hotspot of monorepo.hotspots.slice(0, 2)) {
+        plan.push({
+          owner: `fix-${hotspot.packageId}`,
+          focus: `${hotspot.packageName} blocker-first follow-up`,
+          scope: hotspot.readFirst.join(', '),
+          mode: 'bounded_write',
+        });
+      }
     } else {
       plan.push({ owner: 'worker-1', focus: 'correctness/perf/security review', scope: 'read-only changed files', mode: 'parallel_readonly' });
       plan.push({ owner: 'worker-2', focus: 'test-gap and replay review', scope: 'tests + workflow reports', mode: 'parallel_readonly' });
@@ -923,7 +1027,7 @@ function doPlanSubagents(cwd, args) {
   } else if (analysis.chosenCapability.domain === 'frontend') {
     plan.push({
       owner: 'worker-1',
-      focus: frontendDirection ? `Apply UI direction (${frontendDirection.archetype.label}) while shaping shared primitives.` : 'UI spec + component inventory',
+      focus: frontendDirection ? `Apply UI direction (${frontendDirection.archetype.label}) with ${frontendDirection.taste.profile.label} taste while shaping shared primitives.` : 'UI spec + component inventory',
       scope: frontendDirection ? `${frontendDirection.file}, ${frontendDirection.profile.workflowRootRelative}/UI-SPEC.md` : 'docs/workflow/UI-*.md and component map',
       mode: 'bounded',
     });
@@ -937,6 +1041,14 @@ function doPlanSubagents(cwd, args) {
         mode: 'bounded',
       });
     }
+    for (const hotspot of monorepo.hotspots.slice(0, 2)) {
+      plan.push({
+        owner: `reader-${hotspot.packageId}`,
+        focus: `${hotspot.packageName} hotspot triage`,
+        scope: hotspot.readFirst.join(', '),
+        mode: 'parallel_readonly',
+      });
+    }
     plan.push({
       owner: 'verifier',
       focus: 'cross-package verification',
@@ -947,6 +1059,7 @@ function doPlanSubagents(cwd, args) {
     plan.push({ owner: 'worker-1', focus: 'supporting exploration or verification', scope: 'read-only supporting files', mode: 'parallel_readonly' });
   }
 
+  const promptPack = buildCodexPromptPack(cwd, rootDir, goal, analysis, profile);
   return {
     action: 'plan-subagents',
     scope: scopeName(args),
@@ -956,7 +1069,9 @@ function doPlanSubagents(cwd, args) {
     capability: analysis.chosenCapability.id,
     profile: profile.id,
     suggestedPlan: plan,
-    promptPack: buildCodexPromptPack(cwd, rootDir, goal, analysis, profile).file,
+    promptPack: promptPack.file,
+    contextPack: promptPack.contextPack || null,
+    reviewTaskGraph: promptPack.reviewTaskGraph || null,
   };
 }
 
@@ -977,6 +1092,7 @@ const ACTIONS = {
   profile: doProfileSuggest,
   bootstrap: doBootstrap,
   promptpack: doPromptPack,
+  contextpack: doContextPack,
   'resume-card': doResumeCard,
   'plan-subagents': doPlanSubagents,
 };

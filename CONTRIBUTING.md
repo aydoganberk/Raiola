@@ -11,12 +11,14 @@
 
 ```bash
 npm test
+npm run pack:smoke
 node bin/cwf.js help
 ```
 
 ## Before opening a PR
 
 - Run `npm test`.
+- Run `npm run pack:smoke`.
 - Smoke the product shell on a temp repo with `node scripts/workflow/setup.js --target <tmp> --skip-verify`.
 - If command output changed, update the related golden snapshot or command docs.
 - If canonical markdown or cache semantics changed, update `docs/architecture.md` or `docs/performance.md`.

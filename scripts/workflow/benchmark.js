@@ -119,7 +119,7 @@ function ensureWorkflowInstalled(targetRepo) {
   if (fs.existsSync(path.join(targetRepo, 'docs', 'workflow'))) {
     return;
   }
-  childProcess.execFileSync('node', [path.join(__dirname, 'setup.js'), '--target', targetRepo, '--skip-verify'], {
+  childProcess.execFileSync(process.execPath, [path.join(__dirname, 'setup.js'), '--target', targetRepo, '--skip-verify'], {
     cwd: targetRepo,
     encoding: 'utf8',
     stdio: 'pipe',

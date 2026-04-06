@@ -1,0 +1,13 @@
+# Package contents are primarily controlled via package.json#files.
+# This file exists to avoid npm's gitignore fallback and to keep dev-only
+# surfaces out of the published tarball even if the whitelist is widened later.
+.github/
+.workflow/
+tests/
+Roadmap.md
+PRODUCTIZATION_MASTER_PLAN.md
+WORKFLOW_REDESIGN_PLAN.md
+CUTTING_EDGE_UPGRADE.md
+DEMO.md
+CONTRIBUTING.md
+docs/workflow/

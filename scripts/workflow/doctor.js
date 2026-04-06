@@ -17,6 +17,7 @@ const {
 const { readProductManifest, readInstalledVersionMarker } = require('./product_manifest');
 const { applyRepairPlan, buildRepairPlan } = require('./repair');
 const { buildRiskSummary } = require('./risk_score');
+const { buildRuntimePrerequisiteChecks } = require('./runtime_prereqs');
 const { writeStateSurface } = require('./state_surface');
 
 function summarizeItems(items, limit = 3) {
@@ -44,6 +45,8 @@ Options:
   --repair          Print a dry-run repair plan for safe runtime fixes
   --apply           Apply the safe runtime fixes from the repair plan
   --json            Print machine-readable output
+
+The doctor surface checks install integrity, runtime file drift, and host prerequisites.
   `);
 }
 
@@ -134,6 +137,9 @@ function buildDoctorReport(cwd, rootDir) {
     ['none', 'branch', 'worktree'].includes(preferences.gitIsolation) ? 'pass' : 'fail',
     `Git isolation -> ${preferences.gitIsolation}`,
   );
+  for (const check of buildRuntimePrerequisiteChecks(cwd)) {
+    pushCheck(check.status, check.message, check.fix || null);
+  }
   if (!productManifest) {
     pushCheck(
       'warn',

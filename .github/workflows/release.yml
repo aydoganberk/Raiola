@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish to npm after smoke checks
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  pack-smoke:
+    name: Release Smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm test
+      - run: node scripts/smoke_pack_install.js --pack --json > smoke-pack-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-smoke-${{ matrix.os }}
+          path: smoke-pack-report.json
+
+  publish:
+    name: Publish npm package
+    runs-on: ubuntu-latest
+    needs: pack-smoke
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+      - name: Verify tag matches package version
+        if: github.event_name == 'push'
+        run: |
+          node -e "const version=require('./package.json').version; const tag=process.env.GITHUB_REF_NAME; if (tag !== `v${version}`) { throw new Error(`Tag ${tag} does not match package.json version v${version}`); }"
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

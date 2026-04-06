@@ -2,6 +2,12 @@
 
 ## Install into a repo
 
+Supported runtime baseline:
+
+- Node.js `>=20`
+- Full support on macOS and Linux
+- Smoke-tested install/help flows on Windows
+
 From a published package:
 
 ```bash
@@ -69,6 +75,8 @@ cwf doctor --strict
 cwf hud --compact
 cwf next
 ```
+
+`cwf doctor --strict` will also verify host prerequisites such as Git, ripgrep, and platform-specific browser opener helpers before you start depending on the runtime.
 
 ## Need the full shell?
 

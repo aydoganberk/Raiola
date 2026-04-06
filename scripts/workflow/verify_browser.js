@@ -296,6 +296,12 @@ function buildSummarySvg(payload) {
 }
 
 function tryQuickLookScreenshot(htmlPath, artifactDir) {
+  if (process.platform !== 'darwin') {
+    return {
+      ok: false,
+      error: 'Quick Look PNG rendering is only available on macOS; falling back to SVG summary',
+    };
+  }
   const result = childProcess.spawnSync('qlmanage', ['-t', '-s', '1200', '-o', artifactDir, htmlPath], {
     encoding: 'utf8',
     stdio: 'pipe',

@@ -27,9 +27,9 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 - `cwf milestone`
   Open a new full-workflow milestone.
 - `cwf doctor`
-  Verify install/runtime integrity. Use `--repair` for a dry-run self-heal plan.
+  Verify install/runtime integrity and host prerequisites. Use `--repair` for a dry-run self-heal plan.
 - `cwf health`
-  Verify workflow/runtime health. Use `--repair` for a dry-run self-heal plan.
+  Verify workflow/runtime health and prerequisite drift. Use `--repair` for a dry-run self-heal plan.
 - `cwf discuss`
   Generate a discuss brief from current workflow state, open questions, and active assumptions.
 - `cwf questions`
@@ -110,6 +110,8 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
   Run the deep review engine explicitly.
 - `cwf review-orchestrate`
   Build package/persona/wave-based review orchestration for large repos and monorepos.
+- `cwf review-tasks`
+  Convert review findings into a blocker-first four-wave task graph.
 - `cwf pr-review`
   Review a PR or diff-oriented surface with risk heatmap and blockers.
 - `cwf re-review`

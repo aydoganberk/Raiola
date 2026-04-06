@@ -270,7 +270,7 @@ function runCondensedPlanGate(rootDir, cwd) {
   const commandArgs = [path.join(__dirname, 'plan_check.js'), '--root', rootDir, '--sync', '--json', '--strict'];
 
   try {
-    const stdout = childProcess.execFileSync('node', commandArgs, {
+    const stdout = childProcess.execFileSync(process.execPath, commandArgs, {
       cwd,
       stdio: ['ignore', 'pipe', 'pipe'],
       encoding: 'utf8',

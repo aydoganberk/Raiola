@@ -230,6 +230,276 @@ function buildPerformanceRisks(graph, slices) {
   return risks;
 }
 
+function buildPerformanceLevers(graph, writeScopes, hotspots, verify) {
+  const levers = [];
+  if (graph.workspaceDiscovery?.sources?.length) {
+    levers.push(`Workspace discovery reads ${graph.workspaceDiscovery.sources.join(', ')} so Codex can scope work without repo-wide guessing.`);
+  }
+  if (writeScopes.length > 0) {
+    levers.push(`Default writes should stay package-local first (${writeScopes.slice(0, 3).map((scope) => scope.packageName).join(', ') || 'scoped shards'}) before escalating to repo-wide edits.`);
+  }
+  if (hotspots.length > 0) {
+    levers.push(`Hotspots expose the highest-value read-first surfaces: ${hotspots.slice(0, 3).map((item) => item.packageName).join(', ')}.`);
+  }
+  if ((graph.impactedPackages || []).length > (graph.changedPackages || []).length) {
+    levers.push('Impacted-package fan-out is wider than the directly changed set, so adjacency-aware verification is cheaper than full sweeps.');
+  }
+  if ((verify.perPackage || []).some((entry) => entry.commands.length > 0)) {
+    levers.push('Use per-package verify commands before root smoke checks to keep feedback fast on large monorepos.');
+  }
+  return levers;
+}
+
+function buildAgentPlan(writeScopes, hotspots, verify) {
+  const scoutTasks = hotspots.slice(0, 3).map((hotspot, index) => ({
+    id: `scout-${index + 1}`,
+    mode: 'readonly',
+    focus: hotspot.packageName,
+    readFirst: hotspot.readFirst.slice(0, 8),
+    outcome: 'Map regression risk, dependency fan-out, and missing verification evidence before writes start.',
+  }));
+
+  const fixTasks = writeScopes.slice(0, 4).map((scope, index) => ({
+    id: `fix-${index + 1}`,
+    mode: 'bounded_write',
+    focus: scope.packageName,
+    scopePaths: scope.paths,
+    verifyFirst: (verify.perPackage || [])
+      .find((entry) => entry.packageId === scope.packageId)?.commands?.slice(0, 4) || [],
+    outcome: 'Land package-local fixes without widening the write surface.',
+  }));
+
+  const verifyTasks = []
+  for (const entry of (verify.perPackage || []).slice(0, 4)) {
+    if (!entry.commands.length) {
+      continue;
+    }
+    verifyTasks.push({
+      id: `verify-${entry.packageId.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`,
+      mode: 'targeted_verify',
+      focus: entry.packageName,
+      commands: entry.commands.slice(0, 4),
+      outcome: 'Confirm package-local safety before root-level smoke runs.',
+    });
+  }
+  if (verify.rootSmoke?.length) {
+    verifyTasks.push({
+      id: 'verify-root-smoke',
+      mode: 'targeted_verify',
+      focus: 'root smoke',
+      commands: verify.rootSmoke.slice(0, 4),
+      outcome: 'Run only after package-local lanes settle.',
+    });
+  }
+
+  return {
+    scout: scoutTasks,
+    fix: fixTasks,
+    verify: verifyTasks,
+  };
+}
+
+function uniquePaths(items) {
+  return [...new Set((items || []).filter(Boolean))];
+}
+
+function scoreHotspot(graph, slice) {
+  let score = 0;
+  score += slice.changedFileCount * 3;
+  score += slice.dependents.length * 2;
+  score += slice.internalDependencies.length;
+  if ((graph.changedPackages || []).includes(slice.packageId)) {
+    score += 5;
+  }
+  if ((graph.impactedPackages || []).includes(slice.packageId)) {
+    score += 4;
+  }
+  if ((graph.impactedTests || []).some((filePath) => filePath.startsWith(`${slice.packagePath}/`) || filePath.includes(`/${slice.packageId}/`))) {
+    score += 2;
+  }
+  return score;
+}
+
+function buildHotspots(graph, slices, verify) {
+  const verifyByPackage = new Map((verify.perPackage || []).map((entry) => [entry.packageId, entry.commands || []]));
+  const candidates = (slices.length > 0 ? slices : buildPackageSlices(graph, pickTopPackages(graph, { limit: 4 })));
+  const hotspots = candidates
+    .map((slice) => {
+      const reasons = [];
+      if ((graph.changedPackages || []).includes(slice.packageId)) {
+        reasons.push('directly changed');
+      }
+      if ((graph.impactedPackages || []).includes(slice.packageId) && !(graph.changedPackages || []).includes(slice.packageId)) {
+        reasons.push('impacted by upstream changes');
+      }
+      if (slice.changedFileCount > 0) {
+        reasons.push(`${slice.changedFileCount} changed files`);
+      }
+      if (slice.dependents.length > 0) {
+        reasons.push(`${slice.dependents.length} downstream dependents`);
+      }
+      if (slice.internalDependencies.length > 0) {
+        reasons.push(`${slice.internalDependencies.length} internal dependencies`);
+      }
+      if (slice.tests.length > 0) {
+        reasons.push(`${Math.min(slice.tests.length, 6)} package test targets`);
+      }
+      return {
+        packageId: slice.packageId,
+        packageName: slice.packageName,
+        packagePath: slice.packagePath,
+        score: scoreHotspot(graph, slice),
+        reason: reasons.join('; ') || 'baseline package context',
+        readFirst: uniquePaths([
+          slice.packagePath,
+          ...slice.changedFiles.slice(0, 6),
+          ...slice.tests.slice(0, 4),
+        ]).slice(0, 12),
+        verifyCommands: (verifyByPackage.get(slice.packageId) || []).slice(0, 4),
+        changedFileCount: slice.changedFileCount,
+        dependentCount: slice.dependents.length,
+      };
+    })
+    .sort((left, right) => right.score - left.score || left.packageName.localeCompare(right.packageName));
+
+  if (graph.impactedTests?.length > 0) {
+    hotspots.push({
+      packageId: 'tests',
+      packageName: 'Impacted tests',
+      packagePath: '.',
+      score: Math.min(graph.impactedTests.length, 12) + 3,
+      reason: `${graph.impactedTests.length} impacted tests can widen verify cost unless they are sharded first.`,
+      readFirst: graph.impactedTests.slice(0, 10),
+      verifyCommands: verify.rootSmoke.slice(0, 3),
+      changedFileCount: 0,
+      dependentCount: 0,
+    });
+  }
+
+  if (hotspots.length === 0) {
+    hotspots.push({
+      packageId: '.',
+      packageName: 'Root package',
+      packagePath: '.',
+      score: Math.max((graph.changedFiles || []).length, 1),
+      reason: 'The repo behaves like a single package, so keep reads diff-scoped.',
+      readFirst: (graph.changedFiles || []).slice(0, 10),
+      verifyCommands: verify.rootSmoke.slice(0, 4),
+      changedFileCount: (graph.changedFiles || []).length,
+      dependentCount: 0,
+    });
+  }
+
+  return hotspots.slice(0, 6);
+}
+
+function buildContextSlices(graph, writeScopes, hotspots, reviewShards, verify) {
+  const slices = [];
+  for (const hotspot of hotspots.slice(0, 3)) {
+    slices.push({
+      id: `hotspot-${hotspot.packageId.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`,
+      label: `${hotspot.packageName} hotspot`,
+      reason: hotspot.reason,
+      readFirst: hotspot.readFirst,
+      verifyFirst: hotspot.verifyCommands.slice(0, 4),
+    });
+  }
+
+  if (writeScopes.length > 0) {
+    slices.push({
+      id: 'write-shards',
+      label: 'Write shards',
+      reason: 'Bound write-capable work to package-local scopes before asking multiple agents to patch.',
+      readFirst: uniquePaths(writeScopes.flatMap((scope) => scope.paths)).slice(0, 12),
+      verifyFirst: verify.perPackage.flatMap((entry) => entry.commands).slice(0, 6),
+    });
+  }
+
+  if (reviewShards.length > 0) {
+    slices.push({
+      id: 'review-shards',
+      label: 'Review shards',
+      reason: 'Keep review diff-scoped by package or test lane instead of re-reading the whole repo.',
+      readFirst: uniquePaths(reviewShards.flatMap((shard) => shard.readScope.slice(0, 4))).slice(0, 12),
+      verifyFirst: ['cwf review --heatmap', 'cwf review --blockers'],
+    });
+  }
+
+  slices.push({
+    id: 'verify-spine',
+    label: 'Verification spine',
+    reason: 'Use package-local verification before escalating to the whole monorepo.',
+    readFirst: uniquePaths(hotspots.slice(0, 2).flatMap((hotspot) => hotspot.readFirst.slice(0, 4))).slice(0, 8),
+    verifyFirst: uniquePaths([
+      ...verify.perPackage.flatMap((entry) => entry.commands).slice(0, 6),
+      ...verify.rootSmoke.slice(0, 4),
+    ]).slice(0, 8),
+  });
+
+  if (graph.repoShape === 'monorepo' && graph.packageCount >= 6) {
+    slices.push({
+      id: 'fanout-guard',
+      label: 'Fan-out guard',
+      reason: 'Impacted packages outnumber changed packages, so Codex should bias toward adjacency maps and targeted verify.',
+      readFirst: uniquePaths([
+        ...hotspots.slice(0, 2).flatMap((hotspot) => hotspot.readFirst.slice(0, 4)),
+        ...reviewShards.slice(0, 2).flatMap((shard) => shard.readScope.slice(0, 3)),
+      ]).slice(0, 12),
+      verifyFirst: verify.rootSmoke.slice(0, 3),
+    });
+  }
+
+  return slices;
+}
+
+function buildContextBudgetPlan(hotspots, reviewShards, writeScopes, verify) {
+  const compactRead = uniquePaths([
+    ...hotspots.slice(0, 1).flatMap((item) => item.readFirst.slice(0, 6)),
+    ...writeScopes.slice(0, 1).flatMap((item) => item.paths),
+  ]).slice(0, 8);
+  const balancedRead = uniquePaths([
+    ...hotspots.slice(0, 2).flatMap((item) => item.readFirst.slice(0, 6)),
+    ...reviewShards.slice(0, 2).flatMap((item) => item.readScope.slice(0, 4)),
+    ...writeScopes.slice(0, 2).flatMap((item) => item.paths),
+  ]).slice(0, 16);
+  const deepRead = uniquePaths([
+    ...hotspots.flatMap((item) => item.readFirst.slice(0, 6)),
+    ...reviewShards.flatMap((item) => item.readScope.slice(0, 4)),
+    ...writeScopes.flatMap((item) => item.paths),
+  ]).slice(0, 28);
+  return {
+    compact: {
+      label: 'Compact',
+      reason: 'Fastest useful context for Codex on a wide repo.',
+      readFirst: compactRead,
+      verifyFirst: uniquePaths([
+        ...hotspots.slice(0, 1).flatMap((item) => item.verifyCommands.slice(0, 3)),
+        ...verify.rootSmoke.slice(0, 2),
+      ]).slice(0, 4),
+    },
+    balanced: {
+      label: 'Balanced',
+      reason: 'Default operating preset for package-scoped execution and review.',
+      readFirst: balancedRead,
+      verifyFirst: uniquePaths([
+        ...hotspots.slice(0, 2).flatMap((item) => item.verifyCommands.slice(0, 3)),
+        ...verify.perPackage.flatMap((entry) => entry.commands).slice(0, 4),
+        ...verify.rootSmoke.slice(0, 2),
+      ]).slice(0, 6),
+    },
+    deep: {
+      label: 'Deep',
+      reason: 'Use only when package-local context is insufficient or the fan-out is unusually high.',
+      readFirst: deepRead,
+      verifyFirst: uniquePaths([
+        ...hotspots.flatMap((item) => item.verifyCommands.slice(0, 4)),
+        ...verify.perPackage.flatMap((entry) => entry.commands).slice(0, 6),
+        ...verify.rootSmoke.slice(0, 4),
+      ]).slice(0, 8),
+    },
+  };
+}
+
 function suggestWriteScopeGroups(cwd, graph, options = {}) {
   const maxWorkers = Number(options.maxWorkers || 4);
   const packageIds = pickTopPackages(graph, { limit: maxWorkers });
@@ -254,6 +524,16 @@ function renderMarkdown(cwd, rootDir, intelligence) {
     `- Impacted tests: \`${intelligence.impactedTests.length}\``,
     `- Package manager: \`${intelligence.verify.manager}\``,
     '',
+    '## Workspace Discovery',
+    '',
+    ...(intelligence.workspaceDiscovery?.sources?.length > 0
+      ? [
+        `- Sources: \`${intelligence.workspaceDiscovery.sources.join(', ')}\``,
+        `- Patterns: \`${(intelligence.workspaceDiscovery.patterns || []).join(', ') || 'none'}\``,
+        `- Directories: \`${(intelligence.workspaceDiscovery.directories || []).join(', ') || 'none'}\``,
+      ]
+      : ['- `No workspace metadata source was detected beyond the root package.`']),
+    '',
     '## Recommended Write Shards',
     '',
     ...(intelligence.writeScopes.length > 0
@@ -266,6 +546,24 @@ function renderMarkdown(cwd, rootDir, intelligence) {
       ? intelligence.reviewShards.map((shard) => `- \`${shard.id}\` → ${shard.focus} (scope: \`${shard.readScope.join(', ')}\`)`)
       : ['- `No review shard suggestion available.`']),
     '',
+    '## Hotspots',
+    '',
+    ...(intelligence.hotspots.length > 0
+      ? intelligence.hotspots.map((hotspot) => `- \`${hotspot.packageName}\` score=${hotspot.score} → ${hotspot.reason} (read first: \`${hotspot.readFirst.join(', ')}\`)`)
+      : ['- `No hotspots were inferred.`']),
+    '',
+    '## Context Slices',
+    '',
+    ...(intelligence.contextSlices.length > 0
+      ? intelligence.contextSlices.flatMap((slice) => ([
+        `### ${slice.label}`,
+        '',
+        `- ${slice.reason}`,
+        ...(slice.readFirst?.length ? [`- Read first: \`${slice.readFirst.join(', ')}\``] : []),
+        ...(slice.verifyFirst?.length ? [`- Verify first: \`${slice.verifyFirst.join(' | ')}\``] : []),
+        '',
+      ]))
+      : ['- `No context slices were inferred.`']),
     '## Targeted Verify',
     '',
     ...(intelligence.verify.perPackage.flatMap((entry) => (
@@ -286,6 +584,58 @@ function renderMarkdown(cwd, rootDir, intelligence) {
         '',
       ]
       : []),
+    '## Context Budgets',
+    '',
+    ...Object.entries(intelligence.contextBudgetPlan).flatMap(([name, budget]) => ([
+      `### ${name}`,
+      '',
+      `- ${budget.reason}`,
+      ...(budget.readFirst.length > 0 ? [`- Read first: \`${budget.readFirst.join(', ')}\``] : []),
+      ...(budget.verifyFirst.length > 0 ? [`- Verify first: \`${budget.verifyFirst.join(' | ')}\``] : []),
+      '',
+    ])),
+    '## Agent Plan',
+    '',
+    ...(intelligence.agentPlan.scout.length > 0
+      ? intelligence.agentPlan.scout.flatMap((task) => ([
+        `### ${task.id}`,
+        '',
+        `- Mode: \`${task.mode}\``,
+        `- Focus: \`${task.focus}\``,
+        ...(task.readFirst?.length ? [`- Read first: \`${task.readFirst.join(', ')}\``] : []),
+        `- Outcome: ${task.outcome}`,
+        '',
+      ]))
+      : ['- `No scout wave was inferred.`', '']),
+    ...(intelligence.agentPlan.fix.length > 0
+      ? intelligence.agentPlan.fix.flatMap((task) => ([
+        `### ${task.id}`,
+        '',
+        `- Mode: \`${task.mode}\``,
+        `- Focus: \`${task.focus}\``,
+        ...(task.scopePaths?.length ? [`- Scope: \`${task.scopePaths.join(', ')}\``] : []),
+        ...(task.verifyFirst?.length ? [`- Verify first: \`${task.verifyFirst.join(' | ')}\``] : []),
+        `- Outcome: ${task.outcome}`,
+        '',
+      ]))
+      : ['- `No bounded write wave was inferred.`', '']),
+    ...(intelligence.agentPlan.verify.length > 0
+      ? intelligence.agentPlan.verify.flatMap((task) => ([
+        `### ${task.id}`,
+        '',
+        `- Mode: \`${task.mode}\``,
+        `- Focus: \`${task.focus}\``,
+        ...(task.commands?.length ? task.commands.map((command) => `- Verify: \`${command}\``) : []),
+        `- Outcome: ${task.outcome}`,
+        '',
+      ]))
+      : ['- `No targeted verify wave was inferred.`', '']),
+    '## Performance Levers',
+    '',
+    ...(intelligence.performanceLevers.length > 0
+      ? intelligence.performanceLevers.map((item) => `- ${item}`)
+      : ['- `No extra performance lever was inferred.`']),
+    '',
     '## Performance Notes',
     '',
     ...(intelligence.performanceRisks.length > 0
@@ -306,7 +656,12 @@ function buildMonorepoIntelligence(cwd, rootDir, options = {}) {
   const slices = buildPackageSlices(graph, writeScopes.map((scope) => scope.packageId));
   const verify = buildVerifyPlan(cwd, graph, slices, manager);
   const reviewShards = buildReviewShards(graph, slices);
+  const hotspots = buildHotspots(graph, slices, verify);
+  const contextSlices = buildContextSlices(graph, writeScopes, hotspots, reviewShards, verify);
+  const contextBudgetPlan = buildContextBudgetPlan(hotspots, reviewShards, writeScopes, verify);
   const performanceRisks = buildPerformanceRisks(graph, slices);
+  const performanceLevers = buildPerformanceLevers(graph, writeScopes, hotspots, verify);
+  const agentPlan = buildAgentPlan(writeScopes, hotspots, verify);
   const intelligence = {
     generatedAt: new Date().toISOString(),
     repoShape: graph.repoShape,
@@ -314,10 +669,16 @@ function buildMonorepoIntelligence(cwd, rootDir, options = {}) {
     changedPackages: graph.changedPackages || [],
     impactedPackages: graph.impactedPackages || [],
     impactedTests: graph.impactedTests || [],
+    workspaceDiscovery: graph.workspaceDiscovery || { sources: [], patterns: [], directories: [] },
     writeScopes,
     reviewShards,
+    hotspots,
+    contextSlices,
+    contextBudgetPlan,
     verify,
     performanceRisks,
+    performanceLevers,
+    agentPlan,
     packageSlices: slices,
   };
 
@@ -370,6 +731,7 @@ function main(argv = process.argv.slice(2)) {
   console.log(`- Package count: \`${payload.packageCount}\``);
   console.log(`- Changed packages: \`${payload.changedPackages.length}\``);
   console.log(`- Impacted packages: \`${payload.impactedPackages.length}\``);
+  console.log(`- Hotspots: \`${payload.hotspots.length}\``);
   if (payload.markdownFile) {
     console.log(`- File: \`${payload.markdownFile}\``);
   }

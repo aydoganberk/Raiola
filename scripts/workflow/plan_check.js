@@ -40,7 +40,7 @@ Options:
 }
 
 function runHealthStrictCheck(rootDir, cwd = process.cwd()) {
-  childProcess.execFileSync('node', [path.join(__dirname, 'health.js'), '--root', rootDir, '--strict'], {
+  childProcess.execFileSync(process.execPath, [path.join(__dirname, 'health.js'), '--root', rootDir, '--strict'], {
     cwd,
     stdio: 'pipe',
     encoding: 'utf8',

@@ -84,7 +84,7 @@ function updateWorkstreamRegistry(registryPath, rootDir, packetHash, budgetStatu
 }
 
 function runHealthStrict(rootDir) {
-  childProcess.execFileSync('node', [path.join(__dirname, 'health.js'), '--root', rootDir, '--strict'], {
+  childProcess.execFileSync(process.execPath, [path.join(__dirname, 'health.js'), '--root', rootDir, '--strict'], {
     cwd: process.cwd(),
     stdio: 'pipe',
     encoding: 'utf8',

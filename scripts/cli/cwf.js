@@ -57,6 +57,7 @@ const CLI_COMMANDS = {
   review: { script: 'review.js', description: 'Generate a review-ready closeout package.' },
   'review-mode': { script: 'review_mode.js', description: 'Run the deep multi-pass review engine.' },
   'review-orchestrate': { script: 'review_orchestrate.js', description: 'Build package/persona/wave-based review orchestration.' },
+  'review-tasks': { script: 'review_task_graph.js', description: 'Turn review findings into a blocker-first task graph.' },
   'pr-review': { script: 'pr_review.js', description: 'Review a PR/diff surface with findings and blockers.' },
   're-review': { script: 're_review.js', description: 'Replay the latest review findings against current state.' },
   'ui-direction': { script: 'ui_direction.js', description: 'Generate the taste-aware UI direction pack.' },
@@ -93,7 +94,7 @@ const COMMAND_GROUPS = Object.freeze([
     title: 'Deep Review',
     description: 'Route risk, run review passes, collect evidence, and clear ship gates.',
     commands: [
-      'route', 'review', 'review-mode', 'review-orchestrate', 'pr-review', 're-review',
+      'route', 'review', 'review-mode', 'review-orchestrate', 'review-tasks', 'pr-review', 're-review',
       'verify-shell', 'verify-browser', 'verify-work', 'packet', 'evidence', 'validation-map',
       'ship-readiness',
     ],
@@ -160,10 +161,11 @@ const GOLDEN_FLOWS = Object.freeze([
     id: 'review',
     title: 'Deep Review',
     summary: 'Use when the main job is understanding risk, regressions, or readiness to ship.',
-    commands: ['route', 'review', 'ui-review', 'verify-work', 'ship-readiness', 'ship'],
+    commands: ['route', 'review', 'review-tasks', 'ui-review', 'verify-work', 'ship-readiness', 'ship'],
     sequence: [
       'cwf route --goal "review the current diff" --why',
       'cwf review --heatmap',
+      'cwf review-tasks --json',
       'cwf ui-review --url ./preview.html',
       'cwf verify-work',
       'cwf ship-readiness',
@@ -214,6 +216,7 @@ const LEGACY_EQUIVALENTS = [
   ['cwf approval', 'npm run workflow:approval -- plan'],
   ['cwf review', 'npm run workflow:review'],
   ['cwf review-mode', 'npm run workflow:review-mode'],
+  ['cwf review-tasks', 'npm run workflow:review-tasks'],
   ['cwf pr-review', 'npm run workflow:pr-review'],
   ['cwf re-review', 'npm run workflow:re-review'],
   ['cwf ui-spec', 'npm run workflow:ui-spec'],
@@ -398,7 +401,7 @@ function printHelp(topic) {
 
 function runScript(scriptName, forwardedArgs) {
   const scriptPath = path.join(__dirname, '..', 'workflow', scriptName);
-  const result = childProcess.spawnSync('node', [scriptPath, ...forwardedArgs], {
+  const result = childProcess.spawnSync(process.execPath, [scriptPath, ...forwardedArgs], {
     cwd: process.cwd(),
     stdio: 'inherit',
     encoding: 'utf8',

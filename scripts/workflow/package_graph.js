@@ -4,6 +4,17 @@ const { listGitChangesCached, safeExecCached } = require('./perf/runtime_cache')
 const { ensureDir, writeTextIfChanged } = require('./io/files');
 const { readWorkflowIgnore, shouldIgnoreFile } = require('./fs_index');
 
+const WALK_IGNORES = new Set([
+  '.git',
+  '.workflow',
+  'node_modules',
+  'dist',
+  'build',
+  'coverage',
+  '.next',
+  '.turbo',
+]);
+
 function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
 }
@@ -54,7 +65,7 @@ function listRepoFiles(cwd) {
   const files = [];
   function visit(currentDir) {
     for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
-      if (['.git', '.workflow', 'node_modules'].includes(entry.name)) {
+      if (WALK_IGNORES.has(entry.name)) {
         continue;
       }
       const fullPath = path.join(currentDir, entry.name);
@@ -82,30 +93,149 @@ function normalizeWorkspaceGlobs(pkg) {
   return [];
 }
 
-function workspaceRoots(cwd, rootPkg) {
-  const globs = normalizeWorkspaceGlobs(rootPkg);
-  if (!globs.length) {
+function readPnpmWorkspaceGlobs(cwd) {
+  const filePath = path.join(cwd, 'pnpm-workspace.yaml');
+  if (!fs.existsSync(filePath)) {
     return [];
   }
-
-  const roots = [];
-  for (const pattern of globs) {
-    const normalized = String(pattern).replace(/\/\*+$/, '');
-    const absolute = path.join(cwd, normalized);
-    if (!fs.existsSync(absolute)) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const lines = content.split(/\r?\n/);
+  const patterns = [];
+  let inPackages = false;
+  for (const rawLine of lines) {
+    const line = rawLine.replace(/\t/g, '    ');
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
       continue;
     }
-    for (const entry of fs.readdirSync(absolute, { withFileTypes: true })) {
-      if (!entry.isDirectory()) {
+    if (/^packages\s*:\s*$/.test(trimmed)) {
+      inPackages = true;
+      continue;
+    }
+    if (inPackages && /^[A-Za-z0-9_-]+\s*:/.test(trimmed) && !trimmed.startsWith('-')) {
+      break;
+    }
+    if (!inPackages) {
+      continue;
+    }
+    const match = trimmed.match(/^[-]\s*(.+)$/);
+    if (!match) {
+      continue;
+    }
+    patterns.push(match[1].trim().replace(/^['"]|['"]$/g, ''));
+  }
+  return patterns;
+}
+
+function readLernaWorkspaceGlobs(cwd) {
+  const lerna = readJson(path.join(cwd, 'lerna.json'), {});
+  if (Array.isArray(lerna?.packages)) {
+    return lerna.packages;
+  }
+  return [];
+}
+
+function workspacePatternToRegex(pattern) {
+  const normalized = String(pattern || '').replace(/^\.\//, '').replace(/\\/g, '/').trim();
+  let regexSource = '^';
+  for (let index = 0; index < normalized.length; index += 1) {
+    const char = normalized[index];
+    const next = normalized[index + 1];
+    if (char === '*' && next === '*') {
+      regexSource += '.*';
+      index += 1;
+      continue;
+    }
+    if (char === '*') {
+      regexSource += '[^/]+';
+      continue;
+    }
+    if ('\\^$+?.()|{}[]'.includes(char)) {
+      regexSource += `\\${char}`;
+      continue;
+    }
+    regexSource += char;
+  }
+  regexSource += '$';
+  return new RegExp(regexSource);
+}
+
+function collectCandidatePackageDirs(cwd, options = {}) {
+  const maxDepth = Number(options.maxDepth || 6);
+  const candidates = [];
+
+  function visit(currentDir, depth) {
+    if (depth > maxDepth) {
+      return;
+    }
+    const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+    const hasPackageJson = entries.some((entry) => entry.isFile() && entry.name === 'package.json');
+    if (hasPackageJson && currentDir !== cwd) {
+      candidates.push(currentDir);
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || WALK_IGNORES.has(entry.name)) {
         continue;
       }
-      const packageDir = path.join(absolute, entry.name);
-      if (fs.existsSync(path.join(packageDir, 'package.json'))) {
-        roots.push(packageDir);
-      }
+      visit(path.join(currentDir, entry.name), depth + 1);
     }
   }
-  return roots.sort();
+
+  visit(cwd, 0);
+  return candidates.sort((left, right) => left.localeCompare(right));
+}
+
+function detectWorkspaceSources(cwd, rootPkg) {
+  const sources = [];
+  const patterns = [];
+
+  const packageJsonPatterns = normalizeWorkspaceGlobs(rootPkg);
+  if (packageJsonPatterns.length > 0) {
+    sources.push('package.json');
+    patterns.push(...packageJsonPatterns);
+  }
+
+  const pnpmPatterns = readPnpmWorkspaceGlobs(cwd);
+  if (pnpmPatterns.length > 0) {
+    sources.push('pnpm-workspace.yaml');
+    patterns.push(...pnpmPatterns);
+  }
+
+  const lernaPatterns = readLernaWorkspaceGlobs(cwd);
+  if (lernaPatterns.length > 0) {
+    sources.push('lerna.json');
+    patterns.push(...lernaPatterns);
+  }
+
+  return {
+    patterns: [...new Set(patterns.map((item) => String(item).trim()).filter(Boolean))],
+    sources,
+  };
+}
+
+function workspaceRoots(cwd, rootPkg) {
+  const workspaceInfo = detectWorkspaceSources(cwd, rootPkg);
+  if (!workspaceInfo.patterns.length) {
+    return workspaceInfo;
+  }
+
+  const candidates = collectCandidatePackageDirs(cwd, { maxDepth: 6 });
+  const regexes = workspaceInfo.patterns.map((pattern) => ({
+    pattern,
+    regex: workspacePatternToRegex(pattern),
+  }));
+
+  const directories = candidates
+    .filter((dir) => {
+      const relativeDir = relativePath(cwd, dir);
+      return regexes.some(({ regex }) => regex.test(relativeDir));
+    })
+    .sort((left, right) => left.localeCompare(right));
+
+  return {
+    ...workspaceInfo,
+    directories,
+  };
 }
 
 function dependencyNames(pkg) {
@@ -166,7 +296,8 @@ function expandImpactedPackages(changedPackageIds, packages, packageNameMap) {
 
 function buildPackageGraph(cwd, options = {}) {
   const rootPkg = readJson(path.join(cwd, 'package.json'), {});
-  const workspaceDirs = workspaceRoots(cwd, rootPkg);
+  const workspaceInfo = workspaceRoots(cwd, rootPkg);
+  const workspaceDirs = workspaceInfo.directories || [];
   const packageDirs = [cwd, ...workspaceDirs];
   const packages = packageDirs.map((packageDir) => {
     const pkg = readJson(path.join(packageDir, 'package.json'), {}) || {};
@@ -259,6 +390,11 @@ function buildPackageGraph(cwd, options = {}) {
     changedPackages,
     impactedPackages,
     impactedTests,
+    workspaceDiscovery: {
+      patterns: workspaceInfo.patterns || [],
+      directories: workspaceDirs.map((dir) => relativePath(cwd, dir)),
+      sources: workspaceInfo.sources || [],
+    },
   };
 
   if (options.writeFiles !== false) {

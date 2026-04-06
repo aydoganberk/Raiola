@@ -300,7 +300,70 @@ const DETERMINISTIC_CAPABILITIES = Object.freeze([
   },
 ]);
 
-const NON_LATIN_PATTERN = /[\u0400-\u04ff\u0600-\u06ff\u0900-\u097f\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
+const EXTRA_LANGUAGE_MARKERS = Object.freeze({
+  pl: ['przeglad', 'przegląd', 'napraw', 'wdroz', 'wdróż', 'frontend', 'zweryfikuj', 'rownolegle', 'równolegle', 'monorepo'],
+  uk: ['ревʼю', 'ревью', 'виправ', 'реалізуй', 'реализуй', 'перевір', 'фронтенд', 'паралельно', 'монорепо'],
+  el: ['ελεγχος', 'έλεγχος', 'διορθωσε', 'διόρθωσε', 'υλοποιησε', 'υλοποίησε', 'frontend', 'επαληθευσε', 'επαλήθευσε', 'παραλληλα', 'παράλληλα'],
+  vi: ['kiem tra', 'kiểm tra', 'sua', 'sửa', 'thuc hien', 'thực hiện', 'giao dien', 'giao diện', 'xac minh', 'xác minh', 'song song'],
+  id: ['tinjau', 'periksa', 'perbaiki', 'implementasikan', 'rencanakan', 'frontend', 'verifikasi', 'rilis', 'paralel', 'monorepo'],
+  th: ['รีวิว', 'ตรวจสอบ', 'แก้ไข', 'พัฒนา', 'วางแผน', 'ฟรอนต์เอนด์', 'ยืนยัน', 'ปล่อย', 'ขนาน'],
+  he: ['סקירה', 'בדוק', 'תקן', 'ממש', 'תכנן', 'פרונטאנד', 'אמת', 'שחרר', 'במקביל', 'מונוריפו'],
+  fa: ['بررسی', 'بازبینی', 'رفع', 'پیاده', 'پیاده سازی', 'رابط', 'اعتبارسنجی', 'انتشار', 'موازی', 'مونوریپو'],
+  ro: ['revizuire', 'verifica', 'verifică', 'repara', 'repară', 'implementeaza', 'implementează', 'frontend', 'lansare', 'paralel'],
+  cs: ['revize', 'zkontroluj', 'oprav', 'implementuj', 'naplanuj', 'naplánuj', 'frontend', 'over', 'ověř', 'paralelne', 'paralelně'],
+  sv: ['granska', 'kodgranskning', 'fixa', 'implementera', 'planera', 'frontend', 'verifiera', 'lansera', 'parallellt', 'monorepo'],
+});
+
+const EXTRA_INTENT_BUCKETS = Object.freeze({
+  research: ['zbadaj', 'досліди', 'ερευνα', 'έρευνα', 'nghien cuu', 'nghiên cứu', 'selidiki', 'วิจัย', 'חקור', 'تحقیق', 'investigheaza', 'investighează', 'prozkoumej', 'undersok', 'undersök'],
+  plan: ['zaplanuj', 'сплануй', 'σχεδιασε', 'σχεδίασε', 'lap ke hoach', 'lập kế hoạch', 'rencana', 'วางแผน', 'תכנן', 'برنامه', 'planifica', 'naplanuj', 'planera'],
+  implement: ['napraw', 'виправ', 'διορθωσε', 'διόρθωσε', 'sua', 'sửa', 'perbaiki', 'แก้ไข', 'תקן', 'اصلاح', 'repara', 'oprav', 'fixa'],
+  review: ['przeglad kodu', 'przegląd kodu', 'код ревю', 'code review', 'ανασκοπηση κωδικα', 'ανασκόπηση κώδικα', 'review ma', 'review mã', 'tinjau kode', 'รีวิวโค้ด', 'סקירת קוד', 'بازبینی کد', 'revizuire cod', 'revize kodu', 'kodgranskning'],
+  frontend: ['interfejs', 'інтерфейс', 'διεπαφη', 'διεπαφή', 'giao dien', 'giao diện', 'antarmuka', 'ส่วนติดต่อ', 'ממשק', 'رابط کاربری', 'interfata', 'interfață', 'rozhrani', 'rozhraní', 'granssnitt', 'gränssnitt'],
+  verify: ['zweryfikuj', 'перевір', 'epalitheuse', 'επαλήθευσε', 'xac minh', 'xác minh', 'verifikasi', 'ยืนยัน', 'אמת', 'اعتبارسنجی', 'verifica', 'over', 'ověř', 'verifiera'],
+  ship: ['wdroz', 'wdróż', 'випусти', 'κυκλοφορησε', 'κυκλοφόρησε', 'phat hanh', 'phát hành', 'rilis', 'ปล่อย', 'שחרר', 'منتشر', 'lanseaza', 'lansează', 'nasad', 'lansera'],
+  incident: ['awaria', 'інцидент', 'συμβαν', 'συμβάν', 'su co', 'sự cố', 'insiden', 'เหตุขัดข้อง', 'תקלה', 'حادثه', 'incident critic', 'incident'],
+  parallel: ['rownolegle', 'równolegle', 'паралельно', 'παραλληλα', 'παράλληλα', 'song song', 'song song', 'paralel', 'ขนาน', 'במקביל', 'موازی', 'paralel', 'paralelne', 'paralelně', 'parallellt'],
+  monorepo: ['wiele pakietow', 'wiele pakietów', 'монорепо', 'μονορεπο', 'monorepo', 'หลายแพ็กเกจ', 'מונוריפו', 'مونوریپو', 'monorepo'],
+});
+
+const EXTRA_STEERING_BUCKETS = Object.freeze({
+  preferReview: ['przeglad', 'ревʼю', 'έλεγχος', 'tinjau', 'รีวิว', 'סקירה', 'بررسی', 'revizuire', 'revize', 'granska'],
+  preferBrowser: ['przegladarka', 'przeglądarka', 'браузер', 'φυλλομετρητης', 'φυλλομετρητής', 'trinh duyet', 'trình duyệt', 'browser', 'เบราว์เซอร์', 'דפדפן', 'مرورگر', 'browser', 'prohlizec', 'prohlížeč'],
+  researchFirst: ['najpierw zbadaj', 'спочатку досліди', 'πρωτα ερευνα', 'πρώτα έρευνα', 'nghien cuu truoc', 'nghiên cứu trước', 'riset dulu', 'วิจัยก่อน', 'קודם תחקור', 'اول تحقیق', 'cerceteaza mai intai', 'cercetează mai întâi', 'nejdriv prozkoumej', 'nejdřív prozkoumej', 'undersok forst', 'undersök först'],
+  patchFirst: ['najpierw popraw', 'спочатку патч', 'πρωτα διορθωσε', 'đắp patch trước', 'tambal dulu', 'แพตช์ก่อน', 'קודם תקן', 'اول پچ', 'întâi patch', 'nejdriv patch', 'patch först'],
+  strictVerify: ['scisla weryfikacja', 'ścisła weryfikacja', 'сувора перевірка', 'ayστηρη επαληθευση', 'αυστηρή επαλήθευση', 'xac minh nghiem ngat', 'xác minh nghiêm ngặt', 'verifikasi ketat', 'ตรวจสอบเข้มงวด', 'אימות קפדני', 'اعتبارسنجی سختگیرانه', 'verificare stricta', 'verificare strictă', 'prisne overeni', 'přísné ověření', 'strikt verifiering'],
+});
+
+const EXTRA_DETERMINISTIC_CAPABILITIES = Object.freeze([
+  {
+    id: 'review.deep_review',
+    phrases: ['przeglad kodu', 'ревʼю коду', 'ανασκόπηση κώδικα', 'review mã', 'tinjau kode', 'รีวิวโค้ด', 'סקירת קוד', 'بازبینی کد', 'revizuire cod', 'revize kodu', 'kodgranskning'],
+  },
+  {
+    id: 'frontend.ui_spec',
+    phrases: ['specyfikacja ui', 'специфікація ui', 'προδιαγραφη ui', 'προδιαγραφή ui', 'dac ta ui', 'đặc tả ui', 'spesifikasi ui', 'สเปก ui', 'מפרט ui', 'مشخصات ui', 'specificatie ui', 'specificație ui', 'specifikace ui', 'ui-spec'],
+  },
+  {
+    id: 'team.parallel',
+    phrases: ['rownolegle', 'паралельно', 'παράλληλα', 'song song', 'paralel', 'ขนาน', 'במקביל', 'موازی', 'paralelne', 'parallellt'],
+  },
+]);
+
+function mergedBuckets(base, extra) {
+  const merged = {};
+  for (const [key, value] of Object.entries(base || {})) {
+    merged[key] = [...(value || []), ...((extra || {})[key] || [])];
+  }
+  for (const [key, value] of Object.entries(extra || {})) {
+    if (!merged[key]) {
+      merged[key] = [...(value || [])];
+    }
+  }
+  return merged;
+}
+
+const NON_LATIN_PATTERN = /[\u0370-\u03ff\u0400-\u04ff\u0590-\u05ff\u0600-\u06ff\u0900-\u097f\u0e00-\u0e7f\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -372,7 +435,7 @@ function detectBucketMatches(text, buckets) {
 
 function detectIntentSignals(text) {
   const forms = normalizeMultilingualText(text);
-  const buckets = detectBucketMatches(forms, INTENT_BUCKETS);
+  const buckets = detectBucketMatches(forms, mergedBuckets(INTENT_BUCKETS, EXTRA_INTENT_BUCKETS));
   return {
     research: buckets.research.active,
     plan: buckets.plan.active,
@@ -390,7 +453,7 @@ function detectIntentSignals(text) {
 
 function detectSteeringSignals(text) {
   const forms = normalizeMultilingualText(text);
-  const buckets = detectBucketMatches(forms, STEERING_BUCKETS);
+  const buckets = detectBucketMatches(forms, mergedBuckets(STEERING_BUCKETS, EXTRA_STEERING_BUCKETS));
   return {
     preferReview: buckets.preferReview.active,
     preferBrowser: buckets.preferBrowser.active,
@@ -403,7 +466,7 @@ function detectSteeringSignals(text) {
 
 function detectLanguageSignals(text) {
   const forms = normalizeMultilingualText(text);
-  const counts = Object.fromEntries(Object.entries(LANGUAGE_MARKERS).map(([language, phrases]) => [
+  const counts = Object.fromEntries(Object.entries(mergedBuckets(LANGUAGE_MARKERS, EXTRA_LANGUAGE_MARKERS)).map(([language, phrases]) => [
     language,
     collectMatches(forms, phrases).length,
   ]));
@@ -423,7 +486,7 @@ function detectLanguageSignals(text) {
 
 function deterministicCapabilityMatches(text) {
   const forms = normalizeMultilingualText(text);
-  return DETERMINISTIC_CAPABILITIES
+  return [...DETERMINISTIC_CAPABILITIES, ...EXTRA_DETERMINISTIC_CAPABILITIES]
     .filter((entry) => collectMatches(forms, entry.phrases).length > 0)
     .map((entry) => entry.id);
 }

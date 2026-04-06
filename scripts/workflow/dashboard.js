@@ -745,10 +745,16 @@ function writeDashboard(cwd, payload) {
 }
 
 function maybeOpenDashboard(filePath) {
-  if (process.platform !== 'darwin') {
+  const openers = {
+    darwin: { command: 'open', args: [filePath] },
+    linux: { command: 'xdg-open', args: [filePath] },
+    win32: { command: 'cmd', args: ['/c', 'start', '', filePath] },
+  };
+  const opener = openers[process.platform];
+  if (!opener) {
     return false;
   }
-  const result = childProcess.spawnSync('open', [filePath], {
+  const result = childProcess.spawnSync(opener.command, opener.args, {
     stdio: 'ignore',
   });
   return result.status === 0;

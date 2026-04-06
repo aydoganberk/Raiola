@@ -1,6 +1,7 @@
 const { parseArgs, resolveWorkflowRoot } = require('./common');
 const { runReviewEngine } = require('./review_engine');
 const { buildReviewOrchestration } = require('./review_orchestration');
+const { buildReviewTaskGraph } = require('./review_task_graph');
 
 function printHelp() {
   console.log(`
@@ -20,6 +21,7 @@ Options:
   --blockers          Print the blockers path
   --patch-suggestions Print the patch suggestions path
   --orchestrate       Also generate package/persona/wave-based review orchestration
+  --tasks             Also generate a blocker-first review task graph
   --json              Print machine-readable output
   `);
 }
@@ -50,8 +52,15 @@ async function main(argv = process.argv.slice(2)) {
     diffFile: args['diff-file'] ? String(args['diff-file']).trim() : '',
     staged: Boolean(args.staged),
   });
-  if (args.orchestrate) {
-    payload.orchestration = buildReviewOrchestration(cwd, rootDir, payload);
+  let orchestration = null;
+  if (args.orchestrate || args.tasks) {
+    orchestration = buildReviewOrchestration(cwd, rootDir, payload);
+    if (args.orchestrate) {
+      payload.orchestration = orchestration;
+    }
+  }
+  if (args.tasks) {
+    payload.taskGraph = buildReviewTaskGraph(cwd, rootDir, payload, { orchestration });
   }
 
   if (args.json) {
@@ -67,6 +76,9 @@ async function main(argv = process.argv.slice(2)) {
   console.log(`- Blockers: \`${payload.blockers.length}\``);
   if (payload.orchestration) {
     console.log(`- Orchestration: \`${payload.orchestration.markdownFile}\``);
+  }
+  if (payload.taskGraph) {
+    console.log(`- Task graph: \`${payload.taskGraph.markdownFile}\``);
   }
   console.log(`- Report: \`${payload.artifacts.markdown}\``);
   if (args.heatmap) {
