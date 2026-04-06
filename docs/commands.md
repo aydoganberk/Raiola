@@ -26,26 +26,34 @@
   Verify install/runtime integrity. Use `--repair` for a dry-run self-heal plan.
 - `cwf health`
   Verify workflow/runtime health. Use `--repair` for a dry-run self-heal plan.
+- `cwf discuss`
+  Generate a discuss brief from current workflow state, open questions, and active assumptions.
 - `cwf questions`
   Capture unresolved questions in `docs/workflow/QUESTIONS.md`.
+- `cwf assumptions`
+  Track active assumptions in `docs/workflow/ASSUMPTIONS.md`, including impact and exit triggers.
 - `cwf claims`
   Track evidence-backed claims in `docs/workflow/CLAIMS.md`, then `check` or `trace` them.
 - `cwf secure`
   Run the secure-phase heuristic scan over changed or targeted files.
 - `cwf hud`
-  Show compact workflow state. `--watch` provides a live HUD.
+  Show compact workflow state. `--watch` provides a live HUD, and `--intent --cost --risk` exposes route, budget, and risk detail.
 - `cwf next`
-  Recommend the next safe operator action.
+  Recommend the next safe operator action. `--from-gap` biases toward the biggest current trust or review gap.
 - `cwf explore`
   Explore the repo using search, changed-files, workflow, frontend, or repo-structure lenses.
 - `cwf verify-shell`
   Run a bounded shell verification command and store normalized evidence.
 - `cwf verify-browser`
   Run smoke browser verification, optional `--adapter playwright`, and simple selector assertions.
+- `cwf verify-work`
+  Run the trust-layer verification pass, summarize gaps, and emit a fix plan when needed.
 - `cwf packet`
   Compile, explain, lock, diff, sync, and verify role-aware packets.
 - `cwf evidence`
   Build the repo-local evidence graph from claims, verifications, and touched files.
+- `cwf validation-map`
+  Roadmap-compatible wrapper for the validation contract surface.
 - `cwf checkpoint`
   Write a continuity checkpoint.
 - `cwf next-prompt`
@@ -54,8 +62,12 @@
   Start, inspect, close, or escalate quick mode.
 - `cwf team`
   Plan or operate Team Lite orchestration and the adapter runtime.
+- `cwf subagents`
+  Roadmap-compatible wrapper for `cwf codex plan-subagents`.
 - `cwf policy`
   Evaluate the approval matrix for file domains, operations, actors, and policy modes from `docs/workflow/POLICY.md`.
+- `cwf approval`
+  Roadmap-compatible alias for approval planning and grants.
 - `cwf approvals`
   Record explicit human approvals in `docs/workflow/POLICY.md` and refresh the derived runtime mirror.
 - `cwf route`
@@ -110,6 +122,8 @@
   Generate `docs/workflow/RESPONSIVE-MATRIX.md`.
 - `cwf design-debt`
   Generate `docs/workflow/DESIGN-DEBT.md`.
+- `cwf ship-readiness`
+  Score ship readiness from review, evidence, approvals, and verify-work results.
 - `cwf ship`
   Write `.workflow/reports/ship.md`.
 - `cwf pr-brief`
@@ -156,8 +170,10 @@
 - `cwf next-prompt` -> `.workflow/runtime/next-prompt.md`
 - `cwf verify-shell` -> `.workflow/verifications/shell/*`
 - `cwf verify-browser` -> `.workflow/verifications/browser/*`
+- `cwf verify-work` -> `.workflow/reports/verify-work.{md,json}`
 - `cwf packet` -> `.workflow/packets/*` and `.workflow/cache/packet-locks.json`
 - `cwf evidence` -> `.workflow/evidence-graph/latest.json`
+- `cwf ship-readiness` -> `.workflow/reports/ship-readiness.{md,json}`
 - `cwf codex` -> `.workflow/runtime/codex-control/*` with a virtual repo-local `.codex` root
 - `cwf team mailbox` -> `.workflow/orchestration/runtime/mailbox.jsonl`
 - `cwf team timeline` -> `.workflow/orchestration/runtime/timeline.jsonl`
@@ -171,6 +187,7 @@
 - `cwf responsive-matrix` -> `docs/workflow/RESPONSIVE-MATRIX.md`
 - `cwf design-debt` -> `docs/workflow/DESIGN-DEBT.md`
 - `cwf policy` / `cwf approvals` -> canonical `docs/workflow/POLICY.md` plus derived `.workflow/runtime/policy.json` and `.workflow/runtime/approvals.json`
+- `cwf discuss` -> `.workflow/runtime/discuss.{json,md}`
 
 ## Backward-compatible scripts
 
@@ -187,15 +204,19 @@
 - `npm run workflow:next`
 - `npm run workflow:doctor`
 - `npm run workflow:health`
+- `npm run workflow:discuss`
 - `npm run workflow:repair`
 - `npm run workflow:questions`
+- `npm run workflow:assumptions`
 - `npm run workflow:claims`
 - `npm run workflow:secure`
 - `npm run workflow:explore`
 - `npm run workflow:verify-shell`
 - `npm run workflow:verify-browser`
+- `npm run workflow:verify-work`
 - `npm run workflow:packet-os`
 - `npm run workflow:evidence`
+- `npm run workflow:validation-map`
 - `npm run workflow:next-prompt`
 - `npm run workflow:route`
 - `npm run workflow:stats`
@@ -205,7 +226,9 @@
 - `npm run workflow:quick`
 - `npm run workflow:team`
 - `npm run workflow:team-runtime`
+- `npm run workflow:subagents`
 - `npm run workflow:policy`
+- `npm run workflow:approval`
 - `npm run workflow:approvals`
 - `npm run workflow:hooks`
 - `npm run workflow:mcp`
@@ -229,6 +252,7 @@
 - `npm run workflow:component-map`
 - `npm run workflow:responsive-matrix`
 - `npm run workflow:design-debt`
+- `npm run workflow:ship-readiness`
 - `npm run workflow:ship`
 - `npm run workflow:update`
 - `npm run workflow:uninstall`
@@ -251,3 +275,4 @@
 - `cwf checkpoint` -> `npm run workflow:checkpoint -- --next "Resume here"`
 - `cwf ui-spec` -> `npm run workflow:ui-spec`
 - `cwf ui-review` -> `npm run workflow:ui-review -- --url ./preview.html`
+- `cwf ship-readiness` -> `npm run workflow:ship-readiness`

@@ -1,4 +1,5 @@
 const path = require('node:path');
+const { latestReviewData, latestVerifyWork } = require('./trust_os');
 const {
   assertWorkflowFiles,
   computeWindowStatus,
@@ -28,6 +29,7 @@ Usage:
 
 Options:
   --root <path>     Workflow root. Defaults to active workstream root
+  --from-gap        Bias the recommendation toward the biggest current trust gap
   --json            Print machine-readable JSON
   `);
 }
@@ -365,7 +367,37 @@ function deriveRecommendation(state) {
   return recommendation;
 }
 
-function buildNextPayload(cwd, rootDir) {
+function biggestGapRecommendation(cwd) {
+  const verifyWork = latestVerifyWork(cwd);
+  const review = latestReviewData(cwd);
+  if (review.blockers.length > 0) {
+    return {
+      title: 'Close the review blockers first',
+      command: 'cwf review --blockers',
+      checklist: review.blockers.slice(0, 4).map((finding) => `Fix ${finding.title} in ${finding.file}`),
+      note: `${review.blockers.length} blocker(s) remain before the next safe step.`,
+    };
+  }
+  if (verifyWork?.verdict === 'fail') {
+    return {
+      title: 'Recover the failing verification surface',
+      command: 'cwf verify-work',
+      checklist: verifyWork.fixPlan.slice(0, 4).map((item) => item.action),
+      note: 'verify-work is currently failing and should be stabilized before new scope is added.',
+    };
+  }
+  if (verifyWork?.verdict === 'warn') {
+    return {
+      title: 'Tighten trust gaps before expanding scope',
+      command: 'cwf verify-work',
+      checklist: verifyWork.fixPlan.slice(0, 4).map((item) => item.action),
+      note: 'verify-work still has follow-up gaps that are small enough to close now.',
+    };
+  }
+  return null;
+}
+
+function buildNextPayload(cwd, rootDir, options = {}) {
   const paths = workflowPaths(rootDir);
   assertWorkflowFiles(paths);
 
@@ -400,6 +432,7 @@ function buildNextPayload(cwd, rootDir) {
     windowStatus,
     frontendProfile,
   });
+  const gapRecommendation = options.fromGap ? biggestGapRecommendation(cwd) : null;
 
   const payload = {
     rootDir: path.relative(cwd, rootDir),
@@ -434,7 +467,7 @@ function buildNextPayload(cwd, rootDir) {
       signals: frontendProfile.signals.hits.map((item) => item.label),
       refreshStatus: frontendProfile.fingerprint.refreshStatus,
     },
-    recommendation,
+    recommendation: gapRecommendation || recommendation,
   };
 
   return payload;
@@ -449,7 +482,9 @@ function main() {
 
   const cwd = process.cwd();
   const rootDir = resolveWorkflowRoot(cwd, args.root);
-  const payload = buildNextPayload(cwd, rootDir);
+  const payload = buildNextPayload(cwd, rootDir, {
+    fromGap: Boolean(args['from-gap']),
+  });
   const { milestone, step, planGate, contextReadiness, preferences, recommendation } = payload;
 
   writeStateSurface(cwd, rootDir, {

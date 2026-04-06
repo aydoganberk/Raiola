@@ -186,6 +186,7 @@ function collectRuntimeState(cwd, rootDir, options = {}) {
       warnCount: doctorReport.warnCount,
       checks: doctorReport.checks.slice(0, 10),
       rootDir: doctorReport.rootDirRelative,
+      risk: doctorReport.risk,
     };
   }
 

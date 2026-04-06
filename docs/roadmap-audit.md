@@ -6,7 +6,7 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 
 - The historical `P0` through `P9` product surfaces remain intact.
 - The roadmap command families now exist as first-class repo-local product surfaces: Codex control, daily intent/capture, trust, packet lock, team runtime, evidence, policy, integrations, scale, and incident/operator-center layers.
-- Intent OS v2, Codex profile/bootstrap surfaces, Review OS, Frontend OS, and fixture-backed Scale OS are now implemented as repo-local command families rather than roadmap placeholders.
+- Intent OS v2, Codex profile/bootstrap surfaces, Review OS, Frontend OS, Phase 8 trust surfaces, and fixture-backed Scale OS are now implemented as repo-local command families rather than roadmap placeholders.
 - Truth-reset instrumentation now has a measurable audit surface via `node scripts/workflow/roadmap_audit.js --assert`, backed by intent/review/frontend corpora plus doctor/health risk scores.
 - The canonical contract remains markdown-first; runtime metadata, mirrors, caches, telemetry, and fallback control-plane files remain derived state.
 
@@ -31,7 +31,7 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 | `CE5` Context compiler and packet lock | complete | `scripts/workflow/packet.js`, `scripts/workflow/build_packet.js`, `.workflow/packets/*`, `.workflow/cache/packet-locks.json`, `.workflow/cache/packet-provenance.json` |
 | `CE6` Native subagent runtime and hybrid dispatch | complete | `scripts/workflow/team_runtime.js`, `scripts/workflow/team_adapters/subagent.js`, `scripts/workflow/team_adapters/hybrid.js`, adapter-backed packet workspaces and hybrid dispatch |
 | `CE7` Patch-first collect and Manager 2.0 surfaces | complete | mailbox/timeline in `.workflow/orchestration/runtime/*.jsonl`, patch bundles in `.workflow/orchestration/patches/*`, `patch-review/apply/rollback` commands |
-| `CE8` Evidence OS and browser verification | complete | `scripts/workflow/verify_browser.js`, `scripts/workflow/browser_adapters/playwright.js`, `scripts/workflow/evidence.js`, `.workflow/evidence-graph/latest.json` |
+| `CE8` Evidence / Trust / Policy OS | complete | `scripts/workflow/verify_browser.js`, `scripts/workflow/evidence.js`, `scripts/workflow/verify_work.js`, `scripts/workflow/ship_readiness.js`, `scripts/workflow/approvals.js`, `.workflow/evidence-graph/latest.json`, `.workflow/reports/verify-work.json`, `.workflow/reports/ship-readiness.json` |
 | `CE9` Policy engine and approval matrix | complete | `scripts/workflow/policy.js`, `scripts/workflow/approvals.js`, `docs/workflow/POLICY.md`, `.workflow/runtime/policy.json`, `.workflow/runtime/approvals.json` |
 | `CE10` Telemetry v2 and adaptive routing | complete | `scripts/workflow/model_route.js`, `scripts/workflow/stats.js`, `.workflow/cache/model-routing.json`, local perf/runtime/quality/spend views in `stats` |
 | `CE11` Hooks, MCP, notify | complete | `scripts/workflow/hooks.js`, `mcp.js`, `notify.js`, `.workflow/runtime/hooks/*`, `.workflow/runtime/mcp/*`, `.workflow/runtime/notifications.jsonl` |
@@ -54,6 +54,7 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 - `cwf codex` now suggests profiles, bootstraps task packets, generates resume cards, and suggests bounded subagent plans.
 - `cwf review` now emits findings, heatmap, blockers, replay, and patch suggestions in `.workflow/reports/`.
 - `cwf ui-spec`, `ui-plan`, `ui-review`, `component-map`, `responsive-matrix`, `design-debt`, and `preview` now generate canonical frontend review artifacts, including missing-state and token-drift signals.
+- `cwf verify-work`, `cwf approval plan`, and `cwf ship-readiness` now close the roadmap Phase 8 trust gap by generating actionable fix plans, pending approval requests, and a ship gate score.
 - `scripts/workflow/roadmap_audit.js` writes `.workflow/reports/roadmap-audit.json` so corpus quality stays reviewable in CI and local audits.
 
 ## Regression Evidence

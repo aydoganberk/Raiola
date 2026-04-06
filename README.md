@@ -34,7 +34,9 @@ It helps when you need:
 - `cwf milestone`
 - `cwf doctor`
 - `cwf health`
+- `cwf discuss`
 - `cwf questions`
+- `cwf assumptions`
 - `cwf claims`
 - `cwf secure`
 - `cwf hud`
@@ -42,13 +44,17 @@ It helps when you need:
 - `cwf explore`
 - `cwf verify-shell`
 - `cwf verify-browser`
+- `cwf verify-work`
 - `cwf packet`
 - `cwf evidence`
+- `cwf validation-map`
 - `cwf checkpoint`
 - `cwf next-prompt`
 - `cwf quick`
 - `cwf team`
+- `cwf subagents`
 - `cwf policy`
+- `cwf approval`
 - `cwf approvals`
 - `cwf route`
 - `cwf stats`
@@ -76,6 +82,7 @@ It helps when you need:
 - `cwf component-map`
 - `cwf responsive-matrix`
 - `cwf design-debt`
+- `cwf ship-readiness`
 - `cwf ship`
 - `cwf update`
 - `cwf uninstall`
@@ -116,6 +123,7 @@ cwf do "Land the first slice"
 cwf note "Capture the first risk" --promote backlog
 cwf manager
 cwf doctor --strict
+cwf discuss --goal "Clarify the next slice"
 cwf hud --compact
 cwf next
 ```
@@ -138,11 +146,15 @@ cwf hud --compact
 cwf explore --changed
 cwf packet compile --step plan
 cwf secure
+cwf assumptions add "Playwright may be absent locally" --impact medium --exit-trigger "Browser adapter is installed"
 cwf verify-shell --cmd "npm test"
 cwf claims check
 cwf evidence
+cwf verify-work
 cwf ui-spec
 cwf ui-review
+cwf approval plan
+cwf ship-readiness
 cwf next
 cwf checkpoint --next "Resume here"
 cwf next-prompt

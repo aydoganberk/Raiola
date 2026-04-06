@@ -1,4 +1,5 @@
 const path = require('node:path');
+const { readJsonIfExists } = require('./runtime_helpers');
 const {
   parseArgs,
   resolveWorkflowRoot,
@@ -16,6 +17,9 @@ Usage:
 Options:
   --root <path>     Workflow root. Defaults to active workstream root
   --compact         Print compact summary output
+  --intent          Include route/capability intent detail
+  --cost            Include packet/token budget detail
+  --risk            Include risk detail from doctor/health
   --watch           Refresh continuously
   --interval <sec>  Watch refresh interval. Defaults to 2 seconds
   --iterations <n>  Optional watch iteration cap for tests
@@ -27,22 +31,26 @@ function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
 }
 
-function collectHudState(cwd, rootDir) {
+function collectHudState(cwd, rootDir, options = {}) {
   const state = collectRuntimeState(cwd, rootDir, {
     updatedBy: 'hud',
+    includeDoctor: Boolean(options.includeDoctor),
   }).state;
+  const routeCache = readJsonIfExists(path.join(cwd, '.workflow', 'cache', 'model-routing.json'));
   const runtimeFile = writeRuntimeJson(cwd, 'hud.json', {
     ...state,
+    route: routeCache?.lastRecommendation || null,
     runtimeFileRelative: '.workflow/runtime/hud.json',
   });
 
   return {
     ...state,
+    route: routeCache?.lastRecommendation || null,
     runtimeFileRelative: relativePath(cwd, runtimeFile),
   };
 }
 
-function printCompact(state) {
+function printCompact(state, options = {}) {
   const packetSummary = state.packets
     .map((packet) => `${packet.name}:${packet.hash.slice(0, 12)}${packet.drift ? '*' : ''}/${packet.budgetStatus}`)
     .join(' ');
@@ -58,10 +66,19 @@ function printCompact(state) {
   console.log(`- counts=\`carryforward:${state.counts.carryforward} seeds:${state.counts.seeds} recall:${state.counts.activeRecall}\``);
   console.log(`- next=\`${state.next.title}\` command=\`${state.next.command}\``);
   console.log(`- team=\`${state.orchestration?.status || 'idle'}\` verify_shell=\`${state.verifications?.shell?.latest?.verdict || 'none'}\` verify_browser=\`${state.verifications?.browser?.latest?.verdict || 'none'}\``);
+  if (options.showIntent && state.route) {
+    console.log(`- intent=\`${state.route.recommendedCapability}\` preset=\`${state.route.recommendedPreset}\` confidence=\`${state.route.confidence}\``);
+  }
+  if (options.showCost) {
+    console.log(`- cost=\`tokens:${state.window.estimatedTokens} budget:${state.window.budgetStatus}\``);
+  }
+  if (options.showRisk) {
+    console.log(`- risk=\`health:${state.health.status}${state.doctor?.risk ? ` doctor:${state.doctor.risk.level}/${state.doctor.risk.score}` : ''}\``);
+  }
   console.log(`- state=\`${state.stateFileRelative}\``);
 }
 
-function printStandard(state) {
+function printStandard(state, options = {}) {
   console.log(`# WORKFLOW HUD\n`);
   console.log(`- Root: \`${state.workflowRootRelative}\``);
   console.log(`- Workstream: \`${state.activeWorkstream.name}\``);
@@ -84,6 +101,14 @@ function printStandard(state) {
   console.log(`- Automation recommendation: \`${state.window.automationRecommendation}\``);
   console.log(`- Handoff: \`${state.handoff.status}\``);
   console.log(`- State file: \`${state.stateFileRelative}\``);
+  if (options.showIntent && state.route) {
+    console.log(`- Intent capability: \`${state.route.recommendedCapability}\``);
+    console.log(`- Intent preset: \`${state.route.recommendedPreset}\``);
+    console.log(`- Intent confidence: \`${state.route.confidence}\``);
+  }
+  if (options.showRisk && state.doctor?.risk) {
+    console.log(`- Doctor risk: \`${state.doctor.risk.level}\` (\`${state.doctor.risk.score}/100\`)`);
+  }
 
   console.log(`\n## Packets\n`);
   for (const packet of state.packets) {
@@ -99,6 +124,16 @@ function printStandard(state) {
   console.log(`- Title: \`${state.next.title}\``);
   console.log(`- Command: \`${state.next.command}\``);
   console.log(`- Note: \`${state.next.note}\``);
+  if (options.showIntent && state.route) {
+    console.log(`- Routed capability: \`${state.route.recommendedCapability}\``);
+    console.log(`- Routed preset: \`${state.route.recommendedPreset}\``);
+  }
+
+  if (options.showCost) {
+    console.log(`\n## Cost\n`);
+    console.log(`- Estimated tokens: \`${state.window.estimatedTokens}\``);
+    console.log(`- Budget status: \`${state.window.budgetStatus}\``);
+  }
 
   console.log(`\n## Counts\n`);
   console.log(`- Carryforward: \`${state.counts.carryforward}\``);
@@ -131,20 +166,26 @@ async function runHud() {
 
   const cwd = process.cwd();
   const rootDir = resolveWorkflowRoot(cwd, args.root);
+  const renderOptions = {
+    includeDoctor: Boolean(args.risk),
+    showIntent: Boolean(args.intent),
+    showCost: Boolean(args.cost),
+    showRisk: Boolean(args.risk),
+  };
   const watch = Boolean(args.watch);
   const intervalMs = Math.max(1, Number(args.interval || 2)) * 1000;
   const iterationLimit = args.iterations ? Math.max(1, Number(args.iterations)) : null;
   let iterations = 0;
 
   while (true) {
-    const state = collectHudState(cwd, rootDir);
+    const state = collectHudState(cwd, rootDir, renderOptions);
 
     if (args.json) {
       console.log(JSON.stringify(state, null, 2));
     } else if (args.compact) {
-      printCompact(state);
+      printCompact(state, renderOptions);
     } else {
-      printStandard(state);
+      printStandard(state, renderOptions);
     }
 
     iterations += 1;

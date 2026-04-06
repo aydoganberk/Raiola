@@ -13,6 +13,7 @@ backlog
 
 Usage:
   node scripts/workflow/backlog.js add "Investigate audit drift"
+  node scripts/workflow/backlog.js park "Defer this until after review parity"
   node scripts/workflow/backlog.js review
 
 Options:
@@ -26,7 +27,7 @@ function backlogPath(cwd) {
 
 function addBacklogItem(cwd, text) {
   const filePath = backlogPath(cwd);
-  ensureMarkdownDocument(filePath, 'BACKLOG', '## Open Backlog\n');
+  ensureMarkdownDocument(filePath, 'BACKLOG', '## Open Backlog\n\n## Parked\n');
   appendMarkdownListItem(filePath, 'BACKLOG', 'Open Backlog', `- [ ] ${text}`);
   return {
     action: 'add',
@@ -35,16 +36,32 @@ function addBacklogItem(cwd, text) {
   };
 }
 
+function parkBacklogItem(cwd, text) {
+  const filePath = backlogPath(cwd);
+  ensureMarkdownDocument(filePath, 'BACKLOG', '## Open Backlog\n\n## Parked\n');
+  appendMarkdownListItem(filePath, 'BACKLOG', 'Parked', `- [ ] ${text}`);
+  return {
+    action: 'park',
+    file: relativePath(cwd, filePath),
+    text,
+  };
+}
+
 function reviewBacklog(cwd) {
   const filePath = backlogPath(cwd);
-  const items = readMarkdownList(filePath, 'Open Backlog', {
+  const openItems = readMarkdownList(filePath, 'Open Backlog', {
     title: 'BACKLOG',
-    extraBody: '## Open Backlog\n',
+    extraBody: '## Open Backlog\n\n## Parked\n',
+  });
+  const parkedItems = readMarkdownList(filePath, 'Parked', {
+    title: 'BACKLOG',
+    extraBody: '## Open Backlog\n\n## Parked\n',
   });
   return {
     action: 'review',
     file: relativePath(cwd, filePath),
-    items,
+    items: openItems,
+    parkedItems,
   };
 }
 
@@ -58,6 +75,8 @@ function main() {
   const cwd = process.cwd();
   const payload = action === 'add'
     ? addBacklogItem(cwd, String(args._.slice(1).join(' ') || args.text || '').trim())
+    : action === 'park'
+      ? parkBacklogItem(cwd, String(args._.slice(1).join(' ') || args.text || '').trim())
     : reviewBacklog(cwd);
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -68,6 +87,12 @@ function main() {
   console.log(`- File: \`${payload.file}\``);
   if (payload.items) {
     for (const item of payload.items) {
+      console.log(item);
+    }
+  }
+  if (payload.parkedItems?.length > 0) {
+    console.log('\n# PARKED\n');
+    for (const item of payload.parkedItems) {
       console.log(item);
     }
   }

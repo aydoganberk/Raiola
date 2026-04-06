@@ -16,7 +16,9 @@ const CLI_COMMANDS = {
   milestone: { script: 'new_milestone.js', description: 'Open a new full-workflow milestone.' },
   doctor: { script: 'doctor.js', description: 'Check install health and workflow contract integrity.' },
   health: { script: 'health.js', description: 'Check runtime health and validation integrity.' },
+  discuss: { script: 'discuss.js', description: 'Generate the current discuss brief from workflow state.' },
   questions: { script: 'questions.js', description: 'List or capture open workflow questions.' },
+  assumptions: { script: 'assumptions.js', description: 'Track active assumptions and their exit triggers.' },
   claims: { script: 'claims.js', description: 'Track claims, evidence, and traceability.' },
   secure: { script: 'secure_phase.js', description: 'Run the secure-phase heuristic guardrail scan.' },
   hud: { script: 'hud.js', description: 'Show the daily operator HUD.' },
@@ -24,13 +26,17 @@ const CLI_COMMANDS = {
   explore: { script: 'explore.js', description: 'Explore the repo with workflow-aware lenses.' },
   'verify-shell': { script: 'verify_shell.js', description: 'Run a bounded shell verification command.' },
   'verify-browser': { script: 'verify_browser.js', description: 'Run smoke browser verification and store evidence.' },
+  'verify-work': { script: 'verify_work.js', description: 'Run the trust-layer verify-work pass and emit a fix plan if needed.' },
   packet: { script: 'packet.js', description: 'Compile, explain, lock, diff, and verify workflow packets.' },
   evidence: { script: 'evidence.js', description: 'Build the local evidence graph.' },
+  'validation-map': { script: 'validation_map.js', description: 'Show the current validation contract mapping.' },
   checkpoint: { script: 'checkpoint.js', description: 'Write a continuity checkpoint.' },
   'next-prompt': { script: 'next_prompt.js', description: 'Generate a minimal resume prompt for the next session.' },
   quick: { script: 'quick.js', description: 'Run or inspect the lightweight quick-mode surface.' },
   team: { script: 'team.js', description: 'Plan or operate Team Lite orchestration.' },
+  subagents: { script: 'subagents.js', description: 'Suggest bounded subagent slices via the Codex planner.' },
   policy: { script: 'policy.js', description: 'Inspect or evaluate workflow policy decisions.' },
+  approval: { script: 'approvals.js', description: 'Roadmap-compatible alias for approvals and approval planning.' },
   approvals: { script: 'approvals.js', description: 'Record human approvals for risky workflow actions.' },
   route: { script: 'model_route.js', description: 'Recommend the right model preset for the current phase.' },
   stats: { script: 'stats.js', description: 'Show workflow telemetry, verification, and benchmark stats.' },
@@ -58,6 +64,7 @@ const CLI_COMMANDS = {
   'component-map': { script: 'component_map.js', description: 'Generate the component inventory and reuse map.' },
   'responsive-matrix': { script: 'responsive_matrix.js', description: 'Generate the responsive audit matrix.' },
   'design-debt': { script: 'design_debt.js', description: 'Generate the frontend design debt ledger.' },
+  'ship-readiness': { script: 'ship_readiness.js', description: 'Score ship readiness from review, evidence, approvals, and verify-work.' },
   ship: { script: 'ship.js', description: 'Generate a ship-ready package.' },
   'pr-brief': { script: 'pr_brief.js', description: 'Generate a PR brief draft.' },
   'release-notes': { script: 'release_notes.js', description: 'Generate release notes.' },
@@ -71,6 +78,8 @@ const LEGACY_EQUIVALENTS = [
   ['cwf milestone', 'npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."'],
   ['cwf doctor', 'npm run workflow:doctor -- --strict'],
   ['cwf health', 'npm run workflow:health -- --strict'],
+  ['cwf discuss', 'npm run workflow:discuss'],
+  ['cwf assumptions', 'npm run workflow:assumptions'],
   ['cwf hud', 'npm run workflow:hud -- --compact'],
   ['cwf next', 'npm run workflow:next'],
   ['cwf launch', 'npm run workflow:launch'],
@@ -81,10 +90,13 @@ const LEGACY_EQUIVALENTS = [
   ['cwf explore', 'npm run workflow:explore -- "query"'],
   ['cwf verify-shell', 'npm run workflow:verify-shell -- --cmd "npm test"'],
   ['cwf verify-browser', 'npm run workflow:verify-browser -- --url http://localhost:3000'],
+  ['cwf verify-work', 'npm run workflow:verify-work'],
   ['cwf next-prompt', 'npm run workflow:next-prompt'],
   ['cwf checkpoint', 'npm run workflow:checkpoint -- --next "Resume here"'],
   ['cwf quick', 'npm run workflow:quick'],
   ['cwf team', 'npm run workflow:team'],
+  ['cwf subagents', 'npm run workflow:subagents -- plan'],
+  ['cwf approval', 'npm run workflow:approval -- plan'],
   ['cwf review', 'npm run workflow:review'],
   ['cwf review-mode', 'npm run workflow:review-mode'],
   ['cwf pr-review', 'npm run workflow:pr-review'],
@@ -96,6 +108,7 @@ const LEGACY_EQUIVALENTS = [
   ['cwf component-map', 'npm run workflow:component-map'],
   ['cwf responsive-matrix', 'npm run workflow:responsive-matrix'],
   ['cwf design-debt', 'npm run workflow:design-debt'],
+  ['cwf ship-readiness', 'npm run workflow:ship-readiness'],
   ['cwf ship', 'npm run workflow:ship'],
   ['cwf pr-brief', 'npm run workflow:pr-brief'],
   ['cwf release-notes', 'npm run workflow:release-notes'],
@@ -121,7 +134,9 @@ Core commands:
   milestone        Open a new full-workflow milestone
   doctor           Verify install/runtime integrity
   health           Verify runtime health and validation integrity
+  discuss          Generate the current discuss brief
   questions        Track unresolved workflow questions
+  assumptions      Track explicit assumptions and exit triggers
   claims           Track claims and evidence
   secure           Run the secure-phase guardrail scan
   hud              Show the current workflow HUD
@@ -129,13 +144,17 @@ Core commands:
   explore          Explore the repo with workflow-aware lenses
   verify-shell     Run a bounded shell verification command
   verify-browser   Run smoke browser verification and store evidence
+  verify-work      Run the trust-layer verify-work pass
   packet           Compile, explain, lock, diff, and verify packets
   evidence         Build the evidence graph
+  validation-map   Show the current validation contract mapping
   checkpoint       Write a continuity checkpoint
   next-prompt      Generate the next session resume prompt
   quick            Run or inspect lightweight quick mode
   team             Plan or operate Team Lite orchestration
+  subagents        Suggest bounded subagent slices
   policy           Check workflow policy decisions
+  approval         Roadmap-compatible alias for approval planning
   approvals        Record approvals for risky changes
   route            Recommend the right model preset for the current phase
   stats            Show workflow telemetry and benchmark stats
@@ -163,6 +182,7 @@ Core commands:
   component-map    Generate the component inventory map
   responsive-matrix Generate the responsive audit matrix
   design-debt      Generate the design debt ledger
+  ship-readiness   Score ship readiness before closeout
   ship             Generate a ship-ready package
   pr-brief         Generate a pull-request brief draft
   release-notes    Generate a release-notes draft
@@ -179,6 +199,7 @@ Examples:
   cwf setup
   cwf milestone --id M1 --name "Initial setup" --goal "Land the first slice"
   cwf doctor --strict
+  cwf discuss --goal "Clarify the next slice"
   cwf claims add "Browser smoke passes" --evidence .workflow/verifications/browser/latest/meta.json
   cwf packet compile --step plan --role reviewer
   cwf health --repair
@@ -186,15 +207,19 @@ Examples:
   cwf explore --symbol buildPacketSnapshot
   cwf verify-shell --cmd "npm test"
   cwf verify-browser --adapter playwright --url ./preview.html --assert main
+  cwf verify-work
   cwf next-prompt --mode full
   cwf quick start --goal "Fix a narrow bug"
   cwf team run --adapter hybrid --activation-text "parallel yap" --write-scope src,tests
+  cwf subagents plan --goal "review the current diff"
+  cwf approval plan
   cwf team mailbox
   cwf policy check --files package.json --operation edit --actor worker
   cwf review --json
   cwf review --heatmap --blockers
   cwf ui-spec
   cwf ui-review --url ./preview.html
+  cwf ship-readiness
   cwf release-notes --json
 
 Legacy command equivalence:
