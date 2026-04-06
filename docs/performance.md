@@ -22,6 +22,8 @@ Current product targets for medium-size repos:
 - token estimate cache
 - cached `safeExec` results within a single invocation
 - repo fs index at `.workflow/fs-index.json`
+- repo-specific `.workflowignore` support to keep hot paths out of noisy directories
+- package graph cache at `.workflow/cache/package-graph.json`
 - write-on-change state surfaces for `.workflow/state.json` and `.workflow/fs-index.json`
 - shared in-process runtime collector for `launch`, `hud`, `manager`, and `next-prompt`
 - repo-local Codex control mirror under `.workflow/runtime/codex-control/`
@@ -40,6 +42,14 @@ Or:
 
 ```bash
 npm run workflow:benchmark -- --commands hud,doctor,map-codebase --runs 3 --assert-slo
+```
+
+Fixture-backed benchmarks are also supported:
+
+```bash
+cwf benchmark --fixture small --commands hud,next
+cwf benchmark --fixture medium --commands hud,map-codebase
+cwf benchmark --fixture large --commands hud
 ```
 
 The benchmark writes `.workflow/benchmarks/latest.json`.
@@ -68,5 +78,7 @@ Useful counters include:
 ## Index semantics
 
 `.workflow/fs-index.json` is not canonical. It stores repo file metadata so repeated map runs can tell whether the repo surface is current or changed without redoing all higher-level work.
+
+`.workflowignore` lets a repo denylist additional large or noisy paths without changing the product code.
 
 `.workflow/state.json`, `.workflow/runtime/*.json`, and `.workflow/runtime/*.md` are also non-canonical. They now use write-on-change semantics so watch/manager refreshes avoid unnecessary disk churn.

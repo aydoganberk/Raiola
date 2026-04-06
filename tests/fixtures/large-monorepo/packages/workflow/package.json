@@ -1,0 +1,7 @@
+{
+  "name": "@fixture-large/workflow",
+  "private": true,
+  "dependencies": {
+    "@fixture-large/config": "workspace:*"
+  }
+}

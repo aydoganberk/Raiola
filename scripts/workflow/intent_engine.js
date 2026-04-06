@@ -1,0 +1,414 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const { buildBaseState } = require('./state_surface');
+const {
+  normalizeWorkflowControlUtterance,
+  readIfExists,
+  workflowPaths,
+} = require('./common');
+const { buildFrontendProfile } = require('./map_frontend');
+const { listCapabilities, capabilityAliases } = require('./capability_registry');
+const { buildPackageGraph } = require('./package_graph');
+const { selectCodexProfile } = require('./codex_profile_engine');
+
+function steeringPath(cwd) {
+  return path.join(cwd, '.workflow', 'cache', 'intent-steering.json');
+}
+
+function routeHistoryPath(cwd) {
+  return path.join(cwd, '.workflow', 'cache', 'intent-route-history.json');
+}
+
+function readJson(filePath, fallback) {
+  const content = readIfExists(filePath);
+  if (!content) {
+    return fallback;
+  }
+  try {
+    return JSON.parse(content);
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJson(filePath, payload) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function detectSteering(text) {
+  return {
+    preferReview: /\b(review|code review|review mode|review modu)\b/i.test(text),
+    preferBrowser: /\b(browser|preview|screenshot|visual|playwright)\b/i.test(text),
+    researchFirst: /\b(research first|once ara|once arastir|investigate first|araştır sonra uygula)\b/i.test(text),
+    patchFirst: /\b(patch first|patch-first|dogrudan patch|direkt patch)\b/i.test(text),
+    strictVerify: /\b(strict verify|strict|kati verify|siki verify)\b/i.test(text),
+  };
+}
+
+function inferIntent(text) {
+  return {
+    research: /(why|investigate|compare|audit|analyse|analyze|incele|arastir|araştır)/i.test(text),
+    plan: /(plan|roadmap|packet|approach|milestone|strategy)/i.test(text),
+    implement: /(fix|implement|patch|build|land|tamamla|duzelt|ekle)/i.test(text),
+    review: /(review|pr review|code review|regression|risk heatmap|blocker)/i.test(text),
+    frontend: /(ui|frontend|screen|responsive|visual|a11y|accessibility|component|design)/i.test(text),
+    verify: /(verify|test|lint|typecheck|smoke|browser|preview)/i.test(text),
+    ship: /(ship|release|handoff|closeout)/i.test(text),
+    incident: /(incident|regression|outage|hotfix|urgent|prod)/i.test(text),
+    parallel: /(parallel|paralel|delegate|delegation|subagent|team)/i.test(text),
+    monorepo: /(workspace|monorepo|package graph|package|repo-wide)/i.test(text),
+  };
+}
+
+function inferRisk(text) {
+  const high = /(migration|delete|drop|reset --hard|rollback|auth|credential|security|production|ship|release)/i.test(text);
+  const medium = high || /(config|refactor|package\.json|workflow|review|frontend)/i.test(text);
+  return {
+    high,
+    medium,
+    level: high ? 'high' : medium ? 'medium' : 'low',
+  };
+}
+
+function inferLanguageMix(normalizedText) {
+  return {
+    turkishSignals: /\b(incele|arastir|arastirma|duzelt|tamamla|onizleme|gozden)\b/.test(normalizedText),
+    englishSignals: /\b(review|frontend|implement|verify|plan|release)\b/.test(normalizedText),
+  };
+}
+
+function loadSteeringMemory(cwd) {
+  return readJson(steeringPath(cwd), {
+    updatedAt: null,
+    preferences: {},
+    history: [],
+  });
+}
+
+function persistSteeringMemory(cwd, goal, steering) {
+  const previous = loadSteeringMemory(cwd);
+  const next = {
+    updatedAt: new Date().toISOString(),
+    preferences: {
+      ...previous.preferences,
+      ...Object.fromEntries(Object.entries(steering).filter(([, value]) => value)),
+    },
+    history: [
+      {
+        at: new Date().toISOString(),
+        goal,
+        steering,
+      },
+      ...(previous.history || []),
+    ].slice(0, 25),
+  };
+  writeJson(steeringPath(cwd), next);
+  return next;
+}
+
+function buildRepoSignals(cwd, rootDir) {
+  const workflowState = buildBaseState(cwd, rootDir).workflow;
+  const paths = workflowPaths(rootDir, cwd);
+  let frontend = null;
+  try {
+    frontend = buildFrontendProfile(cwd, rootDir, {
+      scope: 'workstream',
+      refresh: 'incremental',
+    });
+  } catch {
+    frontend = null;
+  }
+  const packageGraph = buildPackageGraph(cwd, { writeFiles: true });
+  const changedContext = readIfExists(paths.context) || '';
+  return {
+    workflowStep: workflowState.step,
+    workflowMilestone: workflowState.milestone,
+    workflowActive: workflowState.milestone !== 'NONE',
+    frontendActive: Boolean(frontend?.frontendMode?.active),
+    frontendFramework: frontend?.framework?.primary || 'unknown',
+    browserNeeded: Boolean(frontend?.signals?.previewNeed),
+    monorepo: packageGraph.repoShape === 'monorepo',
+    packageCount: packageGraph.packageCount,
+    repoShape: packageGraph.repoShape,
+    changedContextMentionsBrowser: /\b(browser|preview|screenshot|responsive)\b/i.test(changedContext),
+  };
+}
+
+function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeringPreferences) {
+  let score = 0;
+  const reasons = [];
+  const tokens = new Set(normalizedGoal.split(' ').filter(Boolean));
+  for (const alias of capabilityAliases(capability)) {
+    const aliasTokens = alias.split(' ').filter(Boolean);
+    if (aliasTokens.every((token) => tokens.has(token))) {
+      score += 5;
+      reasons.push(`Matched alias: ${alias}`);
+    } else if (aliasTokens.some((token) => tokens.has(token))) {
+      score += 2;
+      reasons.push(`Partial keyword hit: ${alias}`);
+    }
+  }
+
+  if (capability.domain === 'review' && intent.review) {
+    score += 8;
+    reasons.push('Review intent detected.');
+  }
+  if (capability.domain === 'frontend' && (intent.frontend || repoSignals.frontendActive)) {
+    score += 8;
+    reasons.push('Frontend intent or repo signal detected.');
+  }
+  if (capability.domain === 'execute' && intent.implement) {
+    score += 7;
+    reasons.push('Implementation intent detected.');
+  }
+  if (capability.domain === 'research' && intent.research) {
+    score += 7;
+    reasons.push('Research intent detected.');
+  }
+  if (capability.domain === 'plan' && intent.plan) {
+    score += 7;
+    reasons.push('Planning intent detected.');
+  }
+  if (capability.domain === 'verify' && intent.verify) {
+    score += 6;
+    reasons.push('Verification intent detected.');
+  }
+  if (capability.id === 'team.parallel' && intent.parallel) {
+    score += 10;
+    reasons.push('Explicit parallel/delegation request detected.');
+  }
+  if (capability.id === 'ship.release' && intent.ship) {
+    score += 8;
+    reasons.push('Ship/release language detected.');
+  }
+  if (capability.id === 'incident.triage' && intent.incident) {
+    score += 9;
+    reasons.push('Incident/regression language detected.');
+  }
+  if (capability.id === 'verify.browser' && (repoSignals.browserNeeded || steeringPreferences.preferBrowser)) {
+    score += 5;
+    reasons.push('Browser evidence is preferred or required.');
+  }
+  if (capability.id.startsWith('review.') && steeringPreferences.preferReview) {
+    score += 4;
+    reasons.push('Steering memory prefers review mode.');
+  }
+  if (capability.id === 'research.discuss' && steeringPreferences.researchFirst) {
+    score += 4;
+    reasons.push('Steering memory prefers research-first.');
+  }
+  if (capability.id === 'execute.quick_patch' && steeringPreferences.patchFirst) {
+    score += 4;
+    reasons.push('Steering memory prefers patch-first execution.');
+  }
+  if (repoSignals.monorepo && capability.supportsMonorepo) {
+    score += 1;
+  }
+  if (repoSignals.frontendActive && capability.supportsFrontend) {
+    score += 1;
+  }
+
+  return { score, reasons };
+}
+
+function verificationPlanFor(capability, repoSignals, steeringPreferences) {
+  const plan = [];
+  if (capability.domain === 'research') {
+    plan.push('cwf explore --repo');
+    plan.push('cwf packet compile --step plan');
+  }
+  if (capability.domain === 'plan') {
+    plan.push('cwf packet compile --step plan');
+    plan.push('cwf next');
+  }
+  if (capability.domain === 'execute') {
+    plan.push('cwf verify-shell --cmd "npm test"');
+    if (repoSignals.frontendActive || steeringPreferences.preferBrowser) {
+      plan.push('cwf ui-review');
+    }
+  }
+  if (capability.domain === 'review') {
+    plan.push('cwf review --heatmap');
+    plan.push('cwf review --blockers');
+  }
+  if (capability.domain === 'frontend') {
+    plan.push('cwf ui-spec');
+    plan.push('cwf responsive-matrix');
+    plan.push('cwf ui-review');
+    plan.push('cwf verify-browser --smoke');
+  }
+  if (capability.domain === 'verify' && capability.id === 'verify.browser') {
+    plan.push('cwf verify-browser --smoke');
+    plan.push('cwf preview');
+  }
+  if (capability.domain === 'verify' && capability.id === 'verify.shell') {
+    plan.push('cwf verify-shell --cmd "npm test"');
+  }
+  if (capability.id === 'team.parallel') {
+    plan.push('cwf team run --adapter hybrid');
+    plan.push('cwf team collect --patch-first');
+  }
+  if (capability.id === 'ship.release') {
+    plan.push('cwf review');
+    plan.push('cwf ship');
+  }
+  if (capability.id === 'incident.triage') {
+    plan.push('cwf incident open');
+    plan.push('cwf verify-shell --cmd "npm test"');
+  }
+  if (steeringPreferences.strictVerify && !plan.some((item) => item.includes('verify'))) {
+    plan.push('cwf verify-shell --cmd "npm test"');
+  }
+  return [...new Set(plan)];
+}
+
+function laneForCapability(capability) {
+  if (capability.id === 'team.parallel') {
+    return 'team';
+  }
+  if (capability.domain === 'frontend') {
+    return 'frontend';
+  }
+  if (capability.domain === 'review') {
+    return 'review';
+  }
+  if (capability.domain === 'execute' || capability.domain === 'verify') {
+    return 'quick';
+  }
+  return 'full';
+}
+
+function confidenceForCandidates(candidates) {
+  if (!candidates.length) {
+    return 0.25;
+  }
+  const top = candidates[0].score;
+  const second = candidates[1]?.score || 0;
+  const diff = Math.max(0, top - second);
+  return Math.max(0.35, Math.min(0.98, Number((0.55 + (diff * 0.06) + (top * 0.01)).toFixed(2))));
+}
+
+function ambiguityReasons(candidates, intent) {
+  const reasons = [];
+  if ((candidates[0]?.score || 0) - (candidates[1]?.score || 0) <= 2) {
+    reasons.push('Top capability and fallback are close in score.');
+  }
+  const activeDomains = Object.entries(intent).filter(([, value]) => value).map(([key]) => key);
+  if (activeDomains.length >= 3) {
+    reasons.push(`Multiple intent families are active: ${activeDomains.join(', ')}.`);
+  }
+  return reasons;
+}
+
+function recordRouteHistory(cwd, payload) {
+  const previous = readJson(routeHistoryPath(cwd), {
+    generatedAt: null,
+    history: [],
+  });
+  const next = {
+    generatedAt: new Date().toISOString(),
+    history: [
+      payload,
+      ...(previous.history || []),
+    ].slice(0, 50),
+  };
+  writeJson(routeHistoryPath(cwd), next);
+  return next;
+}
+
+function readRouteHistory(cwd) {
+  return readJson(routeHistoryPath(cwd), {
+    generatedAt: null,
+    history: [],
+  });
+}
+
+function evaluateRoutePayload(payload) {
+  const warnings = [];
+  if (payload.confidence < 0.65) {
+    warnings.push('Confidence is below the preferred threshold.');
+  }
+  if (payload.risk.level === 'high' && !payload.verificationPlan.some((item) => item.includes('review'))) {
+    warnings.push('High-risk work should include a review pass.');
+  }
+  if (payload.repoSignals.frontendActive && !payload.verificationPlan.some((item) => item.includes('ui-review'))) {
+    warnings.push('Frontend-active tasks should include UI review evidence.');
+  }
+  return {
+    verdict: warnings.length === 0 ? 'pass' : 'warn',
+    warnings,
+    rerouteSuggested: warnings.length > 0,
+  };
+}
+
+function analyzeIntent(cwd, rootDir, goal, options = {}) {
+  const normalizedGoal = normalizeWorkflowControlUtterance(goal);
+  const intent = inferIntent(goal);
+  const risk = inferRisk(goal);
+  const steering = detectSteering(goal);
+  const steeringMemory = persistSteeringMemory(cwd, goal, steering);
+  const repoSignals = buildRepoSignals(cwd, rootDir);
+  const capabilities = listCapabilities();
+  const scored = capabilities
+    .map((capability) => {
+      const result = scoreCapability(capability, normalizedGoal, intent, repoSignals, steeringMemory.preferences || {});
+      return {
+        ...capability,
+        score: result.score,
+        reasons: result.reasons,
+      };
+    })
+    .filter((capability) => capability.score > 0)
+    .sort((left, right) => right.score - left.score || left.id.localeCompare(right.id));
+  const candidates = scored.length > 0 ? scored : capabilities.slice(0, 3).map((capability) => ({ ...capability, score: 0, reasons: ['Fallback candidate.'] }));
+  const chosenCapability = candidates[0];
+  const fallbackCapability = candidates[1] || candidates[0];
+  const confidence = confidenceForCandidates(candidates);
+  const profile = selectCodexProfile({
+    analysis: {
+      chosenCapability,
+      intent,
+      risk,
+      confidence,
+      repoSignals,
+    },
+  });
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    goal,
+    normalizedGoal,
+    lane: laneForCapability(chosenCapability),
+    chosenCapability,
+    fallbackCapability,
+    candidates: candidates.slice(0, 6).map((item) => ({
+      id: item.id,
+      domain: item.domain,
+      risk: item.risk,
+      score: item.score,
+      reasons: item.reasons,
+    })),
+    confidence,
+    ambiguityReasons: ambiguityReasons(candidates, intent),
+    intent,
+    risk,
+    languageMix: inferLanguageMix(normalizedGoal),
+    repoSignals,
+    steering: steeringMemory.preferences || {},
+    verificationPlan: verificationPlanFor(chosenCapability, repoSignals, steeringMemory.preferences || {}),
+    evidenceOutputs: chosenCapability.evidenceOutputs,
+    profile,
+  };
+  payload.evaluation = evaluateRoutePayload(payload);
+  recordRouteHistory(cwd, payload);
+  return payload;
+}
+
+module.exports = {
+  analyzeIntent,
+  evaluateRoutePayload,
+  loadSteeringMemory,
+  readRouteHistory,
+  routeHistoryPath,
+  steeringPath,
+};

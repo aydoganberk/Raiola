@@ -1,0 +1,9 @@
+{
+  "name": "@fixture-large/admin",
+  "private": true,
+  "dependencies": {
+    "react": "19.0.0",
+    "@fixture-large/auth": "workspace:*",
+    "@fixture-large/ui": "workspace:*"
+  }
+}

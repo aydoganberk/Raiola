@@ -1,0 +1,11 @@
+{
+  "name": "large-monorepo-fixture",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

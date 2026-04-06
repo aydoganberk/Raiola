@@ -9,7 +9,7 @@
 - Workflow active: `no`
 - Frontend mode: `inactive`
 - Frontend reason: `workflow_inactive`
-- Selected adapters: `none`
+- Selected adapters: `react-best-practices`
 - Visual verdict required: `no`
 - Profile JSON: `.workflow/frontend-profile.json`
 - Profile markdown: `docs/workflow/FRONTEND_PROFILE.md`
@@ -20,7 +20,7 @@
 - Frameworks detected: `Custom`
 - Styling detected: `custom`
 - UI system: `custom`
-- TSX/JSX files: `0`
+- TSX/JSX files: `6`
 - CSS-like files: `0`
 - Forms stack: `none detected`
 - Data stack: `none detected`
@@ -36,6 +36,12 @@
 - `docs/workflow/MILESTONES.md`
 - `docs/workflow/VALIDATION.md`
 - `package.json`
+- `tests/fixtures/large-monorepo/apps/admin/src/dashboard.tsx`
+- `tests/fixtures/large-monorepo/apps/web/app/page.tsx`
+- `tests/fixtures/large-monorepo/packages/ui/src/Card.tsx`
+- `tests/fixtures/large-monorepo/packages/ui/src/Table.tsx`
+- `tests/fixtures/medium-monorepo/apps/web/app/page.tsx`
+- `tests/fixtures/medium-monorepo/packages/ui/src/Button.tsx`
 
 ## Styling
 
@@ -60,7 +66,7 @@
 | Adapter | Status | Reason | Triggered |
 | --- | --- | --- | --- |
 | shadcn | not_applicable | Select when components.json appears | no |
-| React best practices | not_applicable | Select when React/TSX editing becomes active | no |
+| React best practices | selected | React/TSX surface detected | yes |
 | web-design-guidelines | available | Select when frontend mode activates | yes |
 | Figma implement-design | not_applicable | Select when design implementation intent is present | no |
 | browser verify | not_applicable | Select when preview/browser validation is needed | no |

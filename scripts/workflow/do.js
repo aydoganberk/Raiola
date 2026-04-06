@@ -1,8 +1,8 @@
 const path = require('node:path');
 const { parseArgs, resolveWorkflowRoot } = require('./common');
-const { buildRoutePayload } = require('./model_route');
-const { buildBaseState } = require('./state_surface');
+const { analyzeIntent } = require('./intent_engine');
 const { writeRuntimeJson } = require('./runtime_helpers');
+const { buildUiSpec } = require('./ui_spec');
 
 function printHelp() {
   console.log(`
@@ -14,71 +14,54 @@ Usage:
 Options:
   --goal <text>       Goal text. Falls back to the free-form arguments
   --root <path>       Workflow root. Defaults to active workstream root
+  --explain           Print scoring, confidence, and rejected alternatives
+  --dry-run           Skip follow-up suggestions that would mutate workflow docs
   --json              Print machine-readable output
   `);
 }
 
-function classifyIntent(text) {
-  const normalized = String(text || '').toLowerCase();
-  const researchNeeded = /(why|investigate|compare|audit|review|analyse|analyze|araştır|incele)/i.test(normalized);
-  const verifyNeeded = /(fix|ship|release|ui|browser|frontend|verify|test|deploy|kapat|tamamla)/i.test(normalized);
-  const secureNeeded = /(secret|token|auth|credential|shell|config|migration|delete|rm |reset --hard|rollback)/i.test(normalized);
-  const teamCandidate = /(parallel|subagent|delegate|multi|sweep|fleet|across|many files|çok dosya)/i.test(normalized);
-  const lane = teamCandidate
-    ? 'team'
-    : researchNeeded
-      ? 'full'
-      : verifyNeeded
-        ? 'quick'
-        : 'full';
-  return {
-    lane,
-    researchNeeded,
-    verifyNeeded,
-    secureNeeded,
-  };
-}
-
-function packetRecommendation(baseState, intent) {
-  if (intent.lane === 'team') {
-    return 'recommended';
-  }
-  if (['plan', 'audit'].includes(baseState.workflow.step)) {
-    return 'recommended';
-  }
-  return intent.researchNeeded ? 'suggested' : 'optional';
-}
-
 function buildDoPayload(cwd, rootDir, goal) {
-  const route = buildRoutePayload(cwd, rootDir, {});
-  const state = buildBaseState(cwd, rootDir);
-  const intent = classifyIntent(goal);
+  const analysis = analyzeIntent(cwd, rootDir, goal);
+  const secureNeeded = analysis.risk.level !== 'low';
+  const verifyNeeded = analysis.intent.verify
+    || ['execute', 'frontend', 'review', 'verify', 'ship', 'incident'].includes(analysis.chosenCapability.domain);
+  const researchNeeded = analysis.intent.research || analysis.chosenCapability.domain === 'research';
+  const packet = analysis.chosenCapability.domain === 'plan' || ['full', 'team', 'review', 'frontend'].includes(analysis.lane)
+    ? 'recommended'
+    : researchNeeded
+      ? 'suggested'
+      : 'optional';
+  const suggestedCommands = analysis.verificationPlan.length > 0
+    ? [...analysis.verificationPlan]
+    : ['cwf next'];
+  if (packet !== 'optional' && !suggestedCommands.includes('cwf packet compile')) {
+    suggestedCommands.unshift('cwf packet compile');
+  }
   return {
     generatedAt: new Date().toISOString(),
     goal,
     rootDir: path.relative(cwd, rootDir).replace(/\\/g, '/'),
-    currentStep: state.workflow.step,
-    currentMilestone: state.workflow.milestone,
-    lane: intent.lane,
-    recommendedPreset: route.recommendedPreset,
-    routeRationale: route.rationale,
-    packet: packetRecommendation(state, intent),
+    currentStep: analysis.repoSignals.workflowStep,
+    currentMilestone: analysis.repoSignals.workflowMilestone,
+    lane: analysis.lane,
+    capability: analysis.chosenCapability.id,
+    fallbackCapability: analysis.fallbackCapability.id,
+    confidence: analysis.confidence,
+    recommendedPreset: analysis.profile.preset,
+    profile: analysis.profile,
+    routeRationale: analysis.chosenCapability.reasons,
+    ambiguityReasons: analysis.ambiguityReasons,
+    packet,
     trust: {
-      researchNeeded: intent.researchNeeded,
-      verifyNeeded: intent.verifyNeeded,
-      secureNeeded: intent.secureNeeded,
+      researchNeeded,
+      verifyNeeded,
+      secureNeeded,
     },
-    suggestedCommands: [
-      intent.lane === 'team'
-        ? 'cwf team run --adapter hybrid'
-        : intent.lane === 'quick'
-          ? 'cwf quick start --goal "<goal>"'
-          : 'cwf manager',
-      packetRecommendation(state, intent) !== 'optional' ? 'cwf packet compile' : null,
-      intent.secureNeeded ? 'cwf secure' : null,
-      intent.verifyNeeded ? 'cwf verify-shell --cmd "npm test"' : null,
-    ].filter(Boolean),
+    verificationPlan: analysis.verificationPlan,
+    suggestedCommands,
+    routeEvaluation: analysis.evaluation,
     previewFirst: true,
+    dryRunSafe: true,
   };
 }
 
@@ -95,6 +78,10 @@ function main() {
     throw new Error('Provide a goal via --goal or free-form text.');
   }
   const payload = buildDoPayload(cwd, rootDir, goal);
+  if (!args['dry-run'] && payload.lane === 'frontend') {
+    const uiSpec = buildUiSpec(cwd, rootDir);
+    payload.uiSpec = uiSpec.file;
+  }
   writeRuntimeJson(cwd, 'do-latest.json', payload);
 
   if (args.json) {
@@ -105,14 +92,33 @@ function main() {
   console.log('# DO\n');
   console.log(`- Goal: \`${payload.goal}\``);
   console.log(`- Lane: \`${payload.lane}\``);
+  console.log(`- Capability: \`${payload.capability}\``);
+  console.log(`- Fallback capability: \`${payload.fallbackCapability}\``);
+  console.log(`- Confidence: \`${payload.confidence}\``);
   console.log(`- Preset: \`${payload.recommendedPreset}\``);
+  console.log(`- Profile: \`${payload.profile.id}\``);
   console.log(`- Packet: \`${payload.packet}\``);
+  if (payload.uiSpec) {
+    console.log(`- UI spec: \`${payload.uiSpec}\``);
+  }
   console.log(`- Research needed: \`${payload.trust.researchNeeded ? 'yes' : 'no'}\``);
   console.log(`- Verify needed: \`${payload.trust.verifyNeeded ? 'yes' : 'no'}\``);
   console.log(`- Secure needed: \`${payload.trust.secureNeeded ? 'yes' : 'no'}\``);
   console.log('\n## Suggested Commands\n');
   for (const command of payload.suggestedCommands) {
     console.log(`- \`${command.replace('<goal>', payload.goal)}\``);
+  }
+  if (args.explain) {
+    console.log('\n## Route Why\n');
+    for (const reason of payload.routeRationale) {
+      console.log(`- \`${reason}\``);
+    }
+    if (payload.ambiguityReasons.length > 0) {
+      console.log('\n## Ambiguity\n');
+      for (const reason of payload.ambiguityReasons) {
+        console.log(`- \`${reason}\``);
+      }
+    }
   }
 }
 

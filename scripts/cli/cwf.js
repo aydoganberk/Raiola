@@ -48,6 +48,16 @@ const CLI_COMMANDS = {
   'patch-apply': { script: 'patch_apply.js', description: 'Apply a collected patch bundle.' },
   'patch-rollback': { script: 'patch_rollback.js', description: 'Rollback an applied patch bundle.' },
   review: { script: 'review.js', description: 'Generate a review-ready closeout package.' },
+  'review-mode': { script: 'review_mode.js', description: 'Run the deep multi-pass review engine.' },
+  'pr-review': { script: 'pr_review.js', description: 'Review a PR/diff surface with findings and blockers.' },
+  're-review': { script: 're_review.js', description: 'Replay the latest review findings against current state.' },
+  'ui-spec': { script: 'ui_spec.js', description: 'Generate the canonical UI specification.' },
+  'ui-plan': { script: 'ui_plan.js', description: 'Generate the UI execution plan.' },
+  'ui-review': { script: 'ui_review.js', description: 'Run the frontend review scorecard and evidence pass.' },
+  preview: { script: 'preview.js', description: 'Build the latest preview gallery from browser artifacts.' },
+  'component-map': { script: 'component_map.js', description: 'Generate the component inventory and reuse map.' },
+  'responsive-matrix': { script: 'responsive_matrix.js', description: 'Generate the responsive audit matrix.' },
+  'design-debt': { script: 'design_debt.js', description: 'Generate the frontend design debt ledger.' },
   ship: { script: 'ship.js', description: 'Generate a ship-ready package.' },
   'pr-brief': { script: 'pr_brief.js', description: 'Generate a PR brief draft.' },
   'release-notes': { script: 'release_notes.js', description: 'Generate release notes.' },
@@ -76,6 +86,16 @@ const LEGACY_EQUIVALENTS = [
   ['cwf quick', 'npm run workflow:quick'],
   ['cwf team', 'npm run workflow:team'],
   ['cwf review', 'npm run workflow:review'],
+  ['cwf review-mode', 'npm run workflow:review-mode'],
+  ['cwf pr-review', 'npm run workflow:pr-review'],
+  ['cwf re-review', 'npm run workflow:re-review'],
+  ['cwf ui-spec', 'npm run workflow:ui-spec'],
+  ['cwf ui-plan', 'npm run workflow:ui-plan'],
+  ['cwf ui-review', 'npm run workflow:ui-review'],
+  ['cwf preview', 'npm run workflow:preview'],
+  ['cwf component-map', 'npm run workflow:component-map'],
+  ['cwf responsive-matrix', 'npm run workflow:responsive-matrix'],
+  ['cwf design-debt', 'npm run workflow:design-debt'],
   ['cwf ship', 'npm run workflow:ship'],
   ['cwf pr-brief', 'npm run workflow:pr-brief'],
   ['cwf release-notes', 'npm run workflow:release-notes'],
@@ -133,6 +153,16 @@ Core commands:
   patch-apply      Apply a collected patch bundle
   patch-rollback   Rollback an applied patch bundle
   review           Generate a review-ready package
+  review-mode      Run the deep multi-pass review engine
+  pr-review        Review a PR/diff surface with findings and blockers
+  re-review        Replay the latest review findings against current state
+  ui-spec          Generate the canonical UI specification
+  ui-plan          Generate the UI execution plan
+  ui-review        Generate the frontend review scorecard
+  preview          Build the latest preview gallery
+  component-map    Generate the component inventory map
+  responsive-matrix Generate the responsive audit matrix
+  design-debt      Generate the design debt ledger
   ship             Generate a ship-ready package
   pr-brief         Generate a pull-request brief draft
   release-notes    Generate a release-notes draft
@@ -162,6 +192,9 @@ Examples:
   cwf team mailbox
   cwf policy check --files package.json --operation edit --actor worker
   cwf review --json
+  cwf review --heatmap --blockers
+  cwf ui-spec
+  cwf ui-review --url ./preview.html
   cwf release-notes --json
 
 Legacy command equivalence:

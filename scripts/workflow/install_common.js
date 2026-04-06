@@ -54,6 +54,7 @@ function sourceLayout() {
     compareScript: path.join(repoRoot, 'scripts', 'compare_golden_snapshots.ts'),
     skillFile: path.join(repoRoot, 'skill', 'SKILL.md'),
     packageJson: path.join(repoRoot, 'package.json'),
+    workflowIgnore: path.join(repoRoot, '.workflowignore'),
   };
 }
 
@@ -512,6 +513,7 @@ function installWorkflowSurface(targetRepo, options = {}) {
   const binTarget = path.join(targetRepo, 'bin', 'cwf.js');
   const compareTarget = path.join(targetRepo, 'scripts', 'compare_golden_snapshots.ts');
   const skillTarget = path.join(targetRepo, '.agents', 'skills', 'codex-workflow', 'SKILL.md');
+  const workflowIgnoreTarget = path.join(targetRepo, '.workflowignore');
 
   ensureDir(targetRepo);
 
@@ -529,6 +531,7 @@ function installWorkflowSurface(targetRepo, options = {}) {
     bin: null,
     compareScript: null,
     skill: null,
+    workflowIgnore: null,
     packageScripts: null,
     agentsTemplate: null,
     productManifest: null,
@@ -554,6 +557,7 @@ function installWorkflowSurface(targetRepo, options = {}) {
   report.bin = copyFileTracked(source.binFile, binTarget, { overwrite: true });
   report.compareScript = copyFileTracked(source.compareScript, compareTarget, { overwrite: true });
   report.skill = copyFileTracked(source.skillFile, skillTarget, { overwrite: true });
+  report.workflowIgnore = copyFileTracked(source.workflowIgnore, workflowIgnoreTarget, { overwrite: false });
   report.packageScripts = patchPackageJsonScripts(targetRepo, {
     overwriteConflicts: overwriteScriptConflicts,
   });

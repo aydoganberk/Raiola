@@ -1,0 +1,126 @@
+const path = require('node:path');
+const { parseArgs, readIfExists, resolveWorkflowRoot, tryExtractSection } = require('./common');
+const {
+  buildFrontendProfile,
+  buildResponsiveMatrix,
+  collectComponentInventory,
+  latestBrowserArtifacts,
+  relativePath,
+  writeDoc,
+} = require('./frontend_os');
+
+function printHelp() {
+  console.log(`
+ui_spec
+
+Usage:
+  node scripts/workflow/ui_spec.js
+
+Options:
+  --root <path>  Workflow root. Defaults to active workstream root
+  --json         Print machine-readable output
+  `);
+}
+
+function buildUiSpec(cwd, rootDir) {
+  const profile = buildFrontendProfile(cwd, rootDir, { scope: 'workstream', refresh: 'incremental' });
+  const inventory = collectComponentInventory(cwd);
+  const matrix = buildResponsiveMatrix(profile, inventory);
+  const browserArtifacts = latestBrowserArtifacts(cwd);
+  const contextDoc = readIfExists(path.join(rootDir, 'CONTEXT.md')) || '';
+  const userIntent = tryExtractSection(contextDoc, 'User Intent', '').trim() || 'No explicit UI intent note was recorded.';
+  const touchedFiles = tryExtractSection(contextDoc, 'Touched Files', '').trim();
+
+  const body = `
+- Workflow root: \`${relativePath(cwd, rootDir)}\`
+- Framework: \`${profile.framework.primary}\`
+- UI system: \`${profile.uiSystem.primary}\`
+- Frontend mode: \`${profile.frontendMode.status}\`
+
+## Information Architecture
+
+- \`Primary UI surface depends on ${profile.framework.primary} with ${profile.uiSystem.primary} as the main UI system.\`
+- \`Touched files context: ${touchedFiles || 'No touched files recorded yet.'}\`
+
+## User Flows
+
+- \`${userIntent}\`
+- \`Primary flow should cover empty/loading/error/success states before ship.\`
+
+## Component Inventory
+
+${inventory.length > 0 ? inventory.slice(0, 15).map((item) => `- \`${item.name}\` -> ${item.file}`).join('\n') : '- `No component inventory was detected.`'}
+
+## State Map
+
+- \`empty\` content should explain what the user can do next
+- \`loading\` should preserve layout stability
+- \`error\` should expose recovery language
+- \`success\` should confirm completion and next action
+
+## Responsive Behavior
+
+${matrix.map((item) => `- \`${item.viewport} ${item.width}\` -> ${item.expectation}`).join('\n')}
+
+## Copy Tone
+
+- \`Concise, directive, and product-consistent language.\`
+
+## Accessibility Checklist
+
+- \`Semantic landmarks remain intact.\`
+- \`Interactive controls expose labels and focus states.\`
+- \`Color/contrast issues are reviewed during UI review.\`
+
+## Design Token Usage
+
+- \`Styling layers: ${profile.styling.detected.join(', ')}\`
+- \`Prefer shared tokens/components before page-local styling.\`
+
+## Empty/Loading/Error/Success States
+
+- \`Required for every UI slice in this roadmap.\`
+
+## Evidence Plan
+
+${browserArtifacts.length > 0
+    ? browserArtifacts.slice(0, 4).map((entry) => `- \`${entry.path}\``).join('\n')
+    : '- `Capture at least one browser verification artifact before closeout.`'}
+`;
+
+  const filePath = writeDoc(path.join(rootDir, 'UI-SPEC.md'), 'UI SPEC', body);
+  return {
+    profile,
+    inventory,
+    matrix,
+    file: relativePath(cwd, filePath),
+  };
+}
+
+function main(argv = process.argv.slice(2)) {
+  const args = parseArgs(argv);
+  if (args.help || args._.includes('help')) {
+    printHelp();
+    return;
+  }
+  const cwd = process.cwd();
+  const rootDir = resolveWorkflowRoot(cwd, args.root);
+  const payload = buildUiSpec(cwd, rootDir);
+  if (args.json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+  console.log('# UI SPEC\n');
+  console.log(`- File: \`${payload.file}\``);
+  console.log(`- Framework: \`${payload.profile.framework.primary}\``);
+  console.log(`- Inventory size: \`${payload.inventory.length}\``);
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  buildUiSpec,
+  main,
+};

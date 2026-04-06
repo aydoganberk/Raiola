@@ -6,12 +6,13 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 
 - The historical `P0` through `P9` product surfaces remain intact.
 - The roadmap command families now exist as first-class repo-local product surfaces: Codex control, daily intent/capture, trust, packet lock, team runtime, evidence, policy, integrations, scale, and incident/operator-center layers.
+- Intent OS v2, Codex profile/bootstrap surfaces, Review OS, Frontend OS, and fixture-backed Scale OS are now implemented as repo-local command families rather than roadmap placeholders.
 - The canonical contract remains markdown-first; runtime metadata, mirrors, caches, telemetry, and fallback control-plane files remain derived state.
 
 ## Latest Local Audit
 
-- On `2026-04-06`, the latest local audit pass succeeded for `node --test tests/*.test.js`, `node bin/cwf.js doctor --strict`, and `node scripts/workflow/benchmark.js --runs 3 --assert-slo --json`.
-- The latest local test result is `67/67` pass.
+- On `2026-04-06`, the latest local audit pass succeeded for `node --test tests/*.test.js`, `node bin/cwf.js doctor --strict`, and fixture-backed benchmark passes.
+- The latest local test result now includes the new phase-16 suite for intent/review/frontend/fixture coverage.
 - The latest local doctor result is `0 fail / 0 warn`.
 - The latest benchmark stayed under SLO with warm medians of `hud 69ms`, `next 60ms`, `doctor 48ms`, `health 50ms`, `map-codebase 59ms`, and `map-frontend 56ms`.
 - The roadmap audit now reflects the repo-local fallback behavior for the virtual `.codex` root, the `playwright` browser adapter fallback when Playwright is unavailable, and the canonical `POLICY.md` governance surface.
@@ -34,6 +35,10 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 | `CE11` Hooks, MCP, notify | complete | `scripts/workflow/hooks.js`, `mcp.js`, `notify.js`, `.workflow/runtime/hooks/*`, `.workflow/runtime/mcp/*`, `.workflow/runtime/notifications.jsonl` |
 | `CE12` Scale OS | complete | `scripts/workflow/daemon.js`, `gc.js`, `explore.js` symbol/caller/impact modes, `.workflow/runtime/daemon.json` |
 | `CE13` Incident memory and operator center | complete | `scripts/workflow/incident.js`, `fleet.js`, `sessions.js`, `.workflow/incidents/*`, `cwf fleet`, `cwf sessions` |
+| `CE14` Intent OS v2 + Codex profile engine | complete | `scripts/workflow/capability_registry.js`, `intent_engine.js`, `codex_profile_engine.js`, upgraded `do.js`, `model_route.js`, `codex_control.js` |
+| `CE15` Review OS v1 | complete | `scripts/workflow/review_engine.js`, `review_findings.js`, upgraded `review.js`, `review_mode.js`, `pr_review.js`, `re_review.js` |
+| `CE16` Frontend OS v1 | complete | `scripts/workflow/frontend_os.js`, `ui_spec.js`, `ui_plan.js`, `ui_review.js`, `component_inventory.js`, `responsive_matrix.js`, `design_debt.js`, `preview.js` |
+| `CE17` Fixture-backed Scale OS | complete | `scripts/workflow/package_graph.js`, `.workflowignore`, `.workflow/cache/package-graph.json`, `benchmark.js --fixture`, medium/large monorepo fixtures |
 
 ## Implementation Notes
 
@@ -42,6 +47,10 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 - `cwf team run --adapter hybrid` now combines worktree and subagent packet workspaces, writes mailbox/timeline events, and emits patch bundles during collect.
 - `cwf policy` and `cwf approvals` now treat `docs/workflow/POLICY.md` as the canonical ledger and keep runtime JSON mirrors derived from that document.
 - `cwf stats` now exposes perf/runtime/quality/spend slices from local benchmark, verification, evidence, route, and orchestration state.
+- `cwf route` now records explainable capability choices, confidence, ambiguity, replay, and eval state.
+- `cwf codex` now suggests profiles, bootstraps task packets, generates resume cards, and suggests bounded subagent plans.
+- `cwf review` now emits findings, heatmap, blockers, replay, and patch suggestions in `.workflow/reports/`.
+- `cwf ui-spec`, `ui-plan`, `ui-review`, `component-map`, `responsive-matrix`, `design-debt`, and `preview` now generate canonical frontend review artifacts.
 
 ## Regression Evidence
 

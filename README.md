@@ -66,6 +66,16 @@ It helps when you need:
 - `cwf patch-apply`
 - `cwf patch-rollback`
 - `cwf review`
+- `cwf review-mode`
+- `cwf pr-review`
+- `cwf re-review`
+- `cwf ui-spec`
+- `cwf ui-plan`
+- `cwf ui-review`
+- `cwf preview`
+- `cwf component-map`
+- `cwf responsive-matrix`
+- `cwf design-debt`
 - `cwf ship`
 - `cwf update`
 - `cwf uninstall`
@@ -131,6 +141,8 @@ cwf secure
 cwf verify-shell --cmd "npm test"
 cwf claims check
 cwf evidence
+cwf ui-spec
+cwf ui-review
 cwf next
 cwf checkpoint --next "Resume here"
 cwf next-prompt
@@ -215,6 +227,8 @@ The runtime now includes:
 - markdown field/section cache
 - packet snapshot cache
 - repo fs index at `.workflow/fs-index.json`
+- repo-specific `.workflowignore` support for index hot paths
+- package graph cache at `.workflow/cache/package-graph.json`
 - write-on-change state/index writes
 - shared in-process collector for `launch`, `hud`, `manager`, and `next-prompt`
 - benchmark output at `.workflow/benchmarks/latest.json`
@@ -241,6 +255,13 @@ Or:
 
 ```bash
 npm run workflow:benchmark -- --commands hud,doctor,map-codebase --assert-slo
+```
+
+Fixture-backed benchmark runs are also supported:
+
+```bash
+cwf benchmark --fixture medium --commands hud,map-codebase
+cwf benchmark --fixture large --commands hud
 ```
 
 CI also runs the benchmark with SLO enforcement via [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).

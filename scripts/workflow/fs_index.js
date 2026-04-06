@@ -22,6 +22,42 @@ function indexPath(cwd) {
   return path.join(cwd, '.workflow', 'fs-index.json');
 }
 
+function workflowIgnorePath(cwd) {
+  return path.join(cwd, '.workflowignore');
+}
+
+function readWorkflowIgnore(cwd) {
+  const content = readTextIfExists(workflowIgnorePath(cwd)) || '';
+  return content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'));
+}
+
+function ignoreMatcher(pattern) {
+  const normalized = String(pattern || '').replace(/^\.?\//, '').replace(/\/+$/, '');
+  if (!normalized) {
+    return () => false;
+  }
+  if (!normalized.includes('*')) {
+    return (filePath) => filePath === normalized || filePath.startsWith(`${normalized}/`);
+  }
+  const regex = new RegExp(`^${normalized
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*')}$`);
+  return (filePath) => regex.test(filePath);
+}
+
+function shouldIgnoreFile(cwd, filePath, patterns = null) {
+  const relativeFile = String(filePath || '').replace(/^\.?\//, '');
+  const segments = relativeFile.split('/');
+  if (segments.some((segment) => IGNORED_DIRS.has(segment))) {
+    return true;
+  }
+  const rules = patterns || readWorkflowIgnore(cwd);
+  return rules.some((pattern) => ignoreMatcher(pattern)(relativeFile));
+}
+
 function walkFiles(cwd, currentDir, files = []) {
   for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
     if (IGNORED_DIRS.has(entry.name)) {
@@ -33,13 +69,17 @@ function walkFiles(cwd, currentDir, files = []) {
       continue;
     }
     if (entry.isFile()) {
-      files.push(relativePath(cwd, fullPath));
+      const filePath = relativePath(cwd, fullPath);
+      if (!shouldIgnoreFile(cwd, filePath)) {
+        files.push(filePath);
+      }
     }
   }
   return files;
 }
 
 function listRepoFilesRaw(cwd) {
+  const workflowIgnore = readWorkflowIgnore(cwd);
   const rg = safeExecCached('rg', [
     '--files',
     '--hidden',
@@ -54,7 +94,12 @@ function listRepoFilesRaw(cwd) {
   ], { cwd });
 
   if (rg.ok && rg.stdout) {
-    return rg.stdout.split('\n').map((line) => line.trim()).filter(Boolean).sort();
+    return rg.stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((filePath) => !shouldIgnoreFile(cwd, filePath, workflowIgnore))
+      .sort();
   }
 
   return walkFiles(cwd, cwd).sort();
@@ -156,4 +201,6 @@ function listIndexedRepoFiles(cwd, options = {}) {
 module.exports = {
   indexPath,
   listIndexedRepoFiles,
+  readWorkflowIgnore,
+  workflowIgnorePath,
 };

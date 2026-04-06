@@ -87,6 +87,16 @@
     "workflow:patch-review": "node scripts/workflow/patch_review.js",
     "workflow:patch-apply": "node scripts/workflow/patch_apply.js",
     "workflow:patch-rollback": "node scripts/workflow/patch_rollback.js",
+    "workflow:review-mode": "node scripts/workflow/review_mode.js",
+    "workflow:pr-review": "node scripts/workflow/pr_review.js",
+    "workflow:re-review": "node scripts/workflow/re_review.js",
+    "workflow:ui-spec": "node scripts/workflow/ui_spec.js",
+    "workflow:ui-plan": "node scripts/workflow/ui_plan.js",
+    "workflow:ui-review": "node scripts/workflow/ui_review.js",
+    "workflow:preview": "node scripts/workflow/preview.js",
+    "workflow:component-map": "node scripts/workflow/component_map.js",
+    "workflow:responsive-matrix": "node scripts/workflow/responsive_matrix.js",
+    "workflow:design-debt": "node scripts/workflow/design_debt.js",
     "workflow:compare-golden": "node scripts/compare_golden_snapshots.ts"
   }
 }

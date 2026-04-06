@@ -8,6 +8,8 @@ Full workflow canonical files live under `docs/workflow/` or the active named wo
 
 That canonical set now includes governance surfaces such as `docs/workflow/POLICY.md`; runtime mirrors remain derived state only.
 
+Frontend OS canonical files now include `docs/workflow/UI-SPEC.md`, `UI-PLAN.md`, `UI-REVIEW.md`, `RESPONSIVE-MATRIX.md`, `COMPONENT-INVENTORY.md`, and `DESIGN-DEBT.md`.
+
 Quick mode canonical files live under `.workflow/quick/*.md`.
 
 Team Lite orchestration canonical files live under `.workflow/orchestration/PLAN.md`, `STATUS.md`, `WAVES.md`, and `RESULTS.md`.
@@ -45,8 +47,12 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 - `team_runtime.js` adds adapter-backed dispatch/monitor/collect on top of the canonical orchestration contract.
 - `codex_control.js` adds the safe Codex control-plane layer with diff, journal, rollback, and repo-derived role generation.
 - `do.js`, `note.js`, `thread.js`, and `backlog.js` add the daily intent/capture surfaces.
+- `capability_registry.js`, `intent_engine.js`, and `codex_profile_engine.js` add the explainable capability graph, route confidence, steering memory, and task-aware Codex profile selection.
 - `questions.js`, `claims.js`, `secure_phase.js`, `packet.js`, and `evidence.js` add the trust, packet-lock, and provenance layer.
 - `policy.js`, `approvals.js`, `hooks.js`, `mcp.js`, `notify.js`, `daemon.js`, `gc.js`, `incident.js`, `fleet.js`, and `sessions.js` add the governance, integration, scale, and operator-center layer.
+- `review_engine.js` and `review_findings.js` add the multi-pass Review OS with findings, heatmap, blockers, replay, and patch suggestions.
+- `frontend_os.js`, `ui_spec.js`, `ui_plan.js`, `ui_review.js`, `component_inventory.js`, `responsive_matrix.js`, `design_debt.js`, and `preview.js` add the Frontend OS surface.
+- `package_graph.js` plus `.workflowignore`-aware `fs_index.js` add the first Scale OS package graph and denylist layer.
 - `policy.js` and `approvals.js` treat `docs/workflow/POLICY.md` as the source of truth and keep `.workflow/runtime/policy.json` plus `.workflow/runtime/approvals.json` in sync as derived mirrors.
 - `cwf doctor` audits both canonical workflow health and install-surface integrity, including package scripts, runtime files, skill installation, and the visible version marker.
 
@@ -64,4 +70,5 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 - `cwf manager` and `cwf hud --watch` provide live operator visibility.
 - `cwf explore`, `cwf verify-shell`, and `cwf verify-browser` provide purpose-built exploration and evidence capture.
 - `cwf route`, `cwf stats`, `cwf profile`, and `cwf workspaces` provide operator routing, telemetry, and workspace center surfaces.
+- `cwf route replay`, `cwf route eval`, `cwf codex bootstrap`, and `cwf codex resume-card` extend the operator surface from phase-only routing into task-aware bootstrap packets and resume cards.
 - `cwf team mailbox`, `cwf team timeline`, and `cwf patch-review` expose runtime collect/merge state directly in-product.

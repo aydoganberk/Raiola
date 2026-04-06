@@ -30,6 +30,7 @@ Usage:
 
 Options:
   --target <path>        Benchmark target. Defaults to current working directory
+  --fixture <name>       small|medium|large benchmark fixture
   --commands <a,b,c>     Commands to benchmark. Defaults to hud,next,doctor,health,map-codebase,map-frontend
   --runs <n>             Warm run count. Defaults to 3
   --assert-slo           Exit non-zero if any selected command misses its SLO threshold
@@ -119,6 +120,26 @@ function ensureWorkflowInstalled(targetRepo) {
   });
 }
 
+function fixtureDirectory(fixtureName) {
+  const normalized = String(fixtureName || '').trim().toLowerCase();
+  const mapping = {
+    small: path.join(__dirname, '..', '..', 'tests', 'fixtures', 'blank-repo'),
+    medium: path.join(__dirname, '..', '..', 'tests', 'fixtures', 'medium-monorepo'),
+    large: path.join(__dirname, '..', '..', 'tests', 'fixtures', 'large-monorepo'),
+  };
+  return mapping[normalized] || null;
+}
+
+function prepareFixtureRepo(fixtureName) {
+  const sourceDir = fixtureDirectory(fixtureName);
+  if (!sourceDir || !fs.existsSync(sourceDir)) {
+    throw new Error(`Unknown benchmark fixture: ${fixtureName}`);
+  }
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `cwf-benchmark-${fixtureName}-`));
+  fs.cpSync(sourceDir, tempDir, { recursive: true });
+  return tempDir;
+}
+
 function writeBenchmarkReport(targetRepo, payload) {
   const dir = path.join(targetRepo, '.workflow', 'benchmarks');
   fs.mkdirSync(dir, { recursive: true });
@@ -134,7 +155,9 @@ function main() {
     return;
   }
 
-  const targetRepo = path.resolve(process.cwd(), String(args.target || '.'));
+  const targetRepo = args.fixture
+    ? prepareFixtureRepo(args.fixture)
+    : path.resolve(process.cwd(), String(args.target || '.'));
   const runs = Math.max(1, Number(args.runs || 3));
   const assertSlo = Boolean(args['assert-slo']);
   const thresholds = parseThresholds(args.thresholds);
@@ -179,6 +202,7 @@ function main() {
   const payload = {
     generatedAt: new Date().toISOString(),
     targetRepo,
+    fixture: args.fixture ? String(args.fixture) : null,
     runs,
     results,
     slo: {

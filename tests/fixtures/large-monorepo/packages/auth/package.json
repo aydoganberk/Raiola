@@ -1,0 +1,7 @@
+{
+  "name": "@fixture-large/auth",
+  "private": true,
+  "dependencies": {
+    "@fixture-large/data": "workspace:*"
+  }
+}

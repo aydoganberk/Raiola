@@ -3,9 +3,17 @@ const os = require('node:os');
 const path = require('node:path');
 const {
   ensureDir,
+  getFieldValue,
+  listGitChanges,
   parseArgs,
   readIfExists,
+  resolveWorkflowRoot,
+  tryExtractSection,
+  workflowPaths,
 } = require('./common');
+const { buildBaseState } = require('./state_surface');
+const { analyzeIntent } = require('./intent_engine');
+const { selectCodexProfile, getCodexProfiles } = require('./codex_profile_engine');
 const {
   appendJsonl,
   deriveRepoRoles,
@@ -60,12 +68,17 @@ Actions:
   install-skill    Install the workflow skill for a role
   remove-skill     Remove an installed role skill
   scaffold-role    Generate repo-derived role files
+  profile suggest  Recommend the best Codex profile for the current task
+  bootstrap        Build a task-specific Codex bootstrap packet
+  resume-card      Generate a resume card for the current repo state
+  plan-subagents   Suggest bounded subagent/worktree slices
 
 Options:
   --repo           Use <repo>/.codex (default)
   --local          Use <repo>/.codex
   --global         Use $CODEX_HOME/.codex or ~/.codex
   --role <name>    Role name for install-skill/remove-skill
+  --goal <text>    Goal text for profile/bootstrapping actions
   --from repo-profile
                    Generate roles from repo signals
   --json           Print machine-readable output
@@ -590,6 +603,175 @@ function doStatus(cwd, args) {
   };
 }
 
+function buildIntentAnalysisForCodex(cwd, args) {
+  const tailArgs = args._.slice(1).filter((item, index) => !(index === 0 && item === 'suggest'));
+  const goal = String(args.goal || tailArgs.join(' ') || 'implement the next safe slice').trim();
+  const rootDir = resolveWorkflowRoot(cwd, args.root);
+  const analysis = analyzeIntent(cwd, rootDir, goal);
+  return {
+    goal,
+    rootDir,
+    analysis,
+  };
+}
+
+function doProfileSuggest(cwd, args) {
+  const { goal, rootDir, analysis } = buildIntentAnalysisForCodex(cwd, args);
+  const profile = selectCodexProfile({ analysis });
+  return {
+    action: 'profile-suggest',
+    scope: scopeName(args),
+    rootDir,
+    virtualRoot: desiredCodexRoot(cwd, args),
+    goal,
+    profile,
+    capability: analysis.chosenCapability.id,
+    confidence: analysis.confidence,
+    why: profile.reasons,
+    availableProfiles: getCodexProfiles().map((item) => item.id),
+  };
+}
+
+function doBootstrap(cwd, args) {
+  const { goal, rootDir, analysis } = buildIntentAnalysisForCodex(cwd, args);
+  const profile = selectCodexProfile({ analysis });
+  const payload = {
+    action: 'bootstrap',
+    scope: scopeName(args),
+    rootDir,
+    virtualRoot: desiredCodexRoot(cwd, args),
+    goal,
+    capability: analysis.chosenCapability.id,
+    fallbackCapability: analysis.fallbackCapability.id,
+    confidence: analysis.confidence,
+    profile,
+    riskLane: analysis.risk.level,
+    contextDepth: profile.contextDepth,
+    verificationPolicy: profile.verifyPolicy,
+    verificationPlan: analysis.verificationPlan,
+    evidenceOutputs: analysis.evidenceOutputs,
+    why: [
+      ...analysis.chosenCapability.reasons,
+      ...profile.reasons,
+    ],
+  };
+  writeJsonFile(path.join(runtimeDir(cwd), 'bootstrap.json'), {
+    generatedAt: nowIso(),
+    ...payload,
+  });
+  return payload;
+}
+
+function buildResumeCard(cwd, rootDir) {
+  const state = buildBaseState(cwd, rootDir);
+  const paths = workflowPaths(rootDir, cwd);
+  const status = readIfExists(paths.status) || '';
+  const context = readIfExists(paths.context) || '';
+  const validation = readIfExists(paths.validation) || '';
+  const questions = readIfExists(path.join(rootDir, 'QUESTIONS.md')) || '';
+  const openQuestions = tryExtractSection(questions, 'Open Questions', '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^- /.test(line))
+    .slice(0, 6);
+  const nextActions = tryExtractSection(status, 'Next', '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^- /.test(line))
+    .slice(0, 6);
+  const verification = tryExtractSection(validation, 'Validation Contract', '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+  const changedFiles = (() => {
+    try {
+      return listGitChanges(cwd).slice(0, 12);
+    } catch {
+      return [];
+    }
+  })();
+
+  const markdown = `# RESUME CARD
+
+- Milestone: \`${state.workflow.milestone}\`
+- Step: \`${state.workflow.step}\`
+- Goal: \`${getFieldValue(status, 'Current goal') || 'not recorded'}\`
+- Changed files: \`${changedFiles.length}\`
+
+## Last Touched Files
+
+${changedFiles.length > 0 ? changedFiles.map((item) => `- \`${item}\``).join('\n') : '- `No git changes detected`'}
+
+## Open Questions
+
+${openQuestions.length > 0 ? openQuestions.join('\n') : '- `No open questions recorded`'}
+
+## Next Best Actions
+
+${nextActions.length > 0 ? nextActions.join('\n') : '- `No next action recorded`'}
+
+## Verification Contract
+
+${verification.length > 0 ? verification.map((item) => `- \`${item}\``).join('\n') : '- `No validation contract recorded`'}
+
+## Context Note
+
+${tryExtractSection(context, 'User Intent', '').trim() || '`No user intent note recorded`'}
+`;
+
+  const filePath = path.join(runtimeDir(cwd), 'resume-card.md');
+  ensureDir(path.dirname(filePath));
+  fs.writeFileSync(filePath, `${markdown.trimEnd()}\n`);
+  return {
+    action: 'resume-card',
+    scope: 'repo',
+    rootDir,
+    virtualRoot: desiredCodexRoot(cwd, { repo: true }),
+    file: relativePath(cwd, filePath),
+    milestone: state.workflow.milestone,
+    step: state.workflow.step,
+    changedFiles,
+    openQuestions,
+    nextActions,
+  };
+}
+
+function doResumeCard(cwd, args) {
+  const rootDir = resolveWorkflowRoot(cwd, args.root);
+  return buildResumeCard(cwd, rootDir);
+}
+
+function doPlanSubagents(cwd, args) {
+  const { goal, rootDir, analysis } = buildIntentAnalysisForCodex(cwd, args);
+  const profile = selectCodexProfile({ analysis });
+  const plan = [];
+
+  if (analysis.chosenCapability.domain === 'review') {
+    plan.push({ owner: 'worker-1', focus: 'correctness/perf/security review', scope: 'read-only changed files', mode: 'parallel_readonly' });
+    plan.push({ owner: 'worker-2', focus: 'test-gap and replay review', scope: 'tests + workflow reports', mode: 'parallel_readonly' });
+  } else if (analysis.chosenCapability.domain === 'frontend') {
+    plan.push({ owner: 'worker-1', focus: 'UI spec + component inventory', scope: 'docs/workflow/UI-*.md and component map', mode: 'bounded' });
+    plan.push({ owner: 'worker-2', focus: 'browser evidence + responsive review', scope: 'preview/browser verification only', mode: 'parallel_readonly' });
+  } else if (analysis.repoSignals.monorepo) {
+    plan.push({ owner: 'worker-1', focus: 'primary package delta', scope: 'touched package only', mode: 'bounded' });
+    plan.push({ owner: 'worker-2', focus: 'cross-package verification', scope: 'tests and dependency impact only', mode: 'parallel_readonly' });
+  } else {
+    plan.push({ owner: 'worker-1', focus: 'supporting exploration or verification', scope: 'read-only supporting files', mode: 'parallel_readonly' });
+  }
+
+  return {
+    action: 'plan-subagents',
+    scope: scopeName(args),
+    rootDir,
+    virtualRoot: desiredCodexRoot(cwd, args),
+    goal,
+    capability: analysis.chosenCapability.id,
+    profile: profile.id,
+    suggestedPlan: plan,
+  };
+}
+
 const ACTIONS = {
   status: doStatus,
   setup: doSetup,
@@ -604,6 +786,10 @@ const ACTIONS = {
   'install-skill': doInstallSkill,
   'remove-skill': doRemoveSkill,
   'scaffold-role': doScaffoldRole,
+  profile: doProfileSuggest,
+  bootstrap: doBootstrap,
+  'resume-card': doResumeCard,
+  'plan-subagents': doPlanSubagents,
 };
 
 function main() {

@@ -7,7 +7,7 @@
 - Frontend mode: `inactive`
 - Frontend profile ref: `docs/workflow/FRONTEND_PROFILE.md`
 - Frontend profile json: `.workflow/frontend-profile.json`
-- Frontend adapter route: `none`
+- Frontend adapter route: `react-best-practices`
 - Visual verdict required: `no`
 - Contract owner: `audit`
 - Packet version: `5`
@@ -71,7 +71,7 @@
 - `Activation reason: workflow_inactive`
 - `Activation signals: none`
 - `Design-system aware execution: no`
-- `Adapter route: none`
+- `Adapter route: react-best-practices`
 - `Preview/browser verification need: no`
 - `Visual verdict required: no`
 

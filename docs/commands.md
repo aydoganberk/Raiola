@@ -5,9 +5,9 @@
 - `cwf launch`
   Strong-start launcher that recommends the lane, first command, and minimal resume prompt.
 - `cwf codex`
-  Safe Codex control plane. Supports `setup`, `doctor`, `diff-config`, `rollback`, `sync`, role scaffolding, and skill install/remove.
+  Safe Codex control plane. Supports `setup`, `doctor`, `diff-config`, `rollback`, `sync`, role scaffolding, skill install/remove, `profile suggest`, `bootstrap`, `resume-card`, and `plan-subagents`.
 - `cwf do`
-  Route a natural-language intent into `quick`, `full`, or `team` lanes with packet/security/verify hints.
+  Route a natural-language intent into `quick`, `full`, `review`, `frontend`, or `team` lanes with explainable capability and verify plans.
 - `cwf note`
   Capture a runtime inbox note and optionally promote it into backlog, thread, or seeds.
 - `cwf thread`
@@ -59,7 +59,7 @@
 - `cwf approvals`
   Record explicit human approvals in `docs/workflow/POLICY.md` and refresh the derived runtime mirror.
 - `cwf route`
-  Recommend a model preset for the current phase.
+  Recommend a model preset and capability for the current phase or explicit goal. Supports `--why`, `replay`, and `eval`.
 - `cwf stats`
   Show benchmark, verification, routing, and runtime telemetry.
 - `cwf profile`
@@ -89,7 +89,27 @@
 - `cwf patch-rollback`
   Reverse an applied patch bundle with `git apply -R --3way`.
 - `cwf review`
-  Write `.workflow/reports/review.md`.
+  Run the multi-pass review engine and write `.workflow/reports/review.md` plus structured findings.
+- `cwf review-mode`
+  Run the deep review engine explicitly.
+- `cwf pr-review`
+  Review a PR or diff-oriented surface with risk heatmap and blockers.
+- `cwf re-review`
+  Replay the current diff against the latest review history.
+- `cwf ui-spec`
+  Generate `docs/workflow/UI-SPEC.md`.
+- `cwf ui-plan`
+  Generate `docs/workflow/UI-PLAN.md`.
+- `cwf ui-review`
+  Generate `docs/workflow/UI-REVIEW.md` plus a frontend scorecard.
+- `cwf preview`
+  Write `.workflow/runtime/preview-gallery.md` from browser artifacts.
+- `cwf component-map`
+  Generate `docs/workflow/COMPONENT-INVENTORY.md`.
+- `cwf responsive-matrix`
+  Generate `docs/workflow/RESPONSIVE-MATRIX.md`.
+- `cwf design-debt`
+  Generate `docs/workflow/DESIGN-DEBT.md`.
 - `cwf ship`
   Write `.workflow/reports/ship.md`.
 - `cwf pr-brief`
@@ -143,6 +163,13 @@
 - `cwf team timeline` -> `.workflow/orchestration/runtime/timeline.jsonl`
 - `cwf patch-review` -> `.workflow/orchestration/patches/*`
 - `cwf route` -> `.workflow/cache/model-routing.json`
+- `cwf do` / `cwf route` -> `.workflow/cache/intent-route-history.json`
+- `cwf ui-spec` -> `docs/workflow/UI-SPEC.md`
+- `cwf ui-plan` -> `docs/workflow/UI-PLAN.md`
+- `cwf ui-review` -> `docs/workflow/UI-REVIEW.md`
+- `cwf component-map` -> `docs/workflow/COMPONENT-INVENTORY.md`
+- `cwf responsive-matrix` -> `docs/workflow/RESPONSIVE-MATRIX.md`
+- `cwf design-debt` -> `docs/workflow/DESIGN-DEBT.md`
 - `cwf policy` / `cwf approvals` -> canonical `docs/workflow/POLICY.md` plus derived `.workflow/runtime/policy.json` and `.workflow/runtime/approvals.json`
 
 ## Backward-compatible scripts
@@ -192,6 +219,16 @@
 - `npm run workflow:patch-apply`
 - `npm run workflow:patch-rollback`
 - `npm run workflow:review`
+- `npm run workflow:review-mode`
+- `npm run workflow:pr-review`
+- `npm run workflow:re-review`
+- `npm run workflow:ui-spec`
+- `npm run workflow:ui-plan`
+- `npm run workflow:ui-review`
+- `npm run workflow:preview`
+- `npm run workflow:component-map`
+- `npm run workflow:responsive-matrix`
+- `npm run workflow:design-debt`
 - `npm run workflow:ship`
 - `npm run workflow:update`
 - `npm run workflow:uninstall`
@@ -212,3 +249,5 @@
 - `cwf verify-browser` -> `npm run workflow:verify-browser -- --url http://localhost:3000`
 - `cwf packet` -> `npm run workflow:packet-os -- compile --step plan`
 - `cwf checkpoint` -> `npm run workflow:checkpoint -- --next "Resume here"`
+- `cwf ui-spec` -> `npm run workflow:ui-spec`
+- `cwf ui-review` -> `npm run workflow:ui-review -- --url ./preview.html`
