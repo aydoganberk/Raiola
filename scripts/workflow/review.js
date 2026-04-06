@@ -1,5 +1,6 @@
 const { parseArgs, resolveWorkflowRoot } = require('./common');
 const { runReviewEngine } = require('./review_engine');
+const { buildReviewOrchestration } = require('./review_orchestration');
 
 function printHelp() {
   console.log(`
@@ -18,6 +19,7 @@ Options:
   --heatmap           Print the risk heatmap path
   --blockers          Print the blockers path
   --patch-suggestions Print the patch suggestions path
+  --orchestrate       Also generate package/persona/wave-based review orchestration
   --json              Print machine-readable output
   `);
 }
@@ -48,6 +50,9 @@ async function main(argv = process.argv.slice(2)) {
     diffFile: args['diff-file'] ? String(args['diff-file']).trim() : '',
     staged: Boolean(args.staged),
   });
+  if (args.orchestrate) {
+    payload.orchestration = buildReviewOrchestration(cwd, rootDir, payload);
+  }
 
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -60,6 +65,9 @@ async function main(argv = process.argv.slice(2)) {
   console.log(`- Confidence: \`${payload.outcome.confidence}\``);
   console.log(`- Findings: \`${payload.findings.length}\``);
   console.log(`- Blockers: \`${payload.blockers.length}\``);
+  if (payload.orchestration) {
+    console.log(`- Orchestration: \`${payload.orchestration.markdownFile}\``);
+  }
   console.log(`- Report: \`${payload.artifacts.markdown}\``);
   if (args.heatmap) {
     console.log(`- Heatmap: \`${payload.artifacts.heatmap}\``);

@@ -37,9 +37,18 @@ function writeFile(targetRepo, relativePath, content) {
 test('cwf help and setup expose the product shell while uninstall keeps canonical docs safe', () => {
   const targetRepo = makeTempRepo();
   const helpOutput = run('node', [cwfBin, 'help'], repoRoot);
+  const reviewHelp = run('node', [cwfBin, 'help', 'review'], repoRoot);
+  const categoriesHelp = run('node', [cwfBin, 'help', 'categories'], repoRoot);
+  const fullHelp = run('node', [cwfBin, 'help', 'all'], repoRoot);
   const expectedHelp = fs.readFileSync(helpGolden, 'utf8');
 
   assert.equal(helpOutput.trim(), expectedHelp.trim());
+  assert.match(reviewHelp, /CWF DEEP REVIEW/);
+  assert.match(reviewHelp, /cwf review --heatmap/);
+  assert.match(categoriesHelp, /solo/);
+  assert.match(categoriesHelp, /runtime/);
+  assert.match(fullHelp, /FULL COMMAND REFERENCE/);
+  assert.match(fullHelp, /cwf milestone/);
 
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
 
@@ -55,7 +64,8 @@ test('cwf help and setup expose the product shell while uninstall keeps canonica
   assert.ok(fs.existsSync(path.join(targetRepo, 'bin', 'cwf.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'product-manifest.json')));
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'VERSION.md')));
-  assert.match(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'help'], targetRepo), /cwf milestone/);
+  assert.match(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'help'], targetRepo), /Golden flows/i);
+  assert.match(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'help', 'all'], targetRepo), /cwf milestone/);
 
   const uninstallPayload = JSON.parse(run('node', [cwfBin, 'uninstall', '--target', targetRepo, '--json'], repoRoot));
   assert.ok(fs.existsSync(path.join(targetRepo, 'docs', 'workflow', 'STATUS.md')));
@@ -327,4 +337,24 @@ test('workflow:benchmark can enforce SLO thresholds in machine-readable mode', (
   const failingPayload = JSON.parse(failing.stdout);
   assert.equal(failingPayload.slo.passed, false);
   assert.equal(failingPayload.slo.failures[0].command, 'hud');
+});
+
+test('workflow:benchmark covers documented launch, manager, and next-prompt targets', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+
+  const payload = JSON.parse(run(
+    'node',
+    [
+      path.join(targetRepo, 'scripts', 'workflow', 'benchmark.js'),
+      '--commands', 'launch,manager,next-prompt',
+      '--runs', '1',
+      '--json',
+    ],
+    targetRepo,
+  ));
+
+  assert.equal(payload.results.length, 3);
+  assert.deepEqual(payload.results.map((item) => item.command), ['launch', 'manager', 'next-prompt']);
+  assert.ok(payload.results.every((item) => typeof item.warmMedianMs === 'number'));
 });

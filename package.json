@@ -106,6 +106,9 @@
     "workflow:design-debt": "node scripts/workflow/design_debt.js",
     "workflow:ship-readiness": "node scripts/workflow/ship_readiness.js",
     "workflow:roadmap-audit": "node scripts/workflow/roadmap_audit.js --assert",
-    "workflow:compare-golden": "node scripts/compare_golden_snapshots.ts"
+    "workflow:compare-golden": "node scripts/compare_golden_snapshots.ts",
+    "workflow:ui-direction": "node scripts/workflow/ui_direction.js",
+    "workflow:review-orchestrate": "node scripts/workflow/review_orchestrate.js",
+    "workflow:monorepo": "node scripts/workflow/monorepo.js"
   }
 }

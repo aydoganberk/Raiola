@@ -17,6 +17,7 @@ const {
   write,
 } = require('./common');
 const { buildCodebaseMap } = require('./map_codebase');
+const { buildMonorepoIntelligence } = require('./monorepo');
 
 const ROLE_CATALOG = ['main', 'explorer', 'planner', 'checker', 'worker', 'verifier', 'debugger'];
 const COMPLETED_STATUSES = new Set(['completed', 'skipped']);
@@ -235,7 +236,24 @@ function buildDelegationPlan(cwd, rootDir, options = {}) {
   const teamLitePolicy = preferences.teamLiteDelegation;
   const teamLiteActive = explicitParallel;
   const intent = inferIntent(step, options.goal || activeGoal, options.intent);
-  const writeScopeGroups = parseWriteScope(options.writeScope, cwd);
+  let writeScopeGroups = parseWriteScope(options.writeScope, cwd);
+  let autoWriteScope = null;
+  if (intent === 'execute' && explicitParallel && writeScopeGroups.length === 0) {
+    const intelligence = buildMonorepoIntelligence(cwd, rootDir, { writeFiles: true, maxWorkers: 4 });
+    if (intelligence.repoShape === 'monorepo' && intelligence.writeScopes.length > 0) {
+      writeScopeGroups = intelligence.writeScopes.map((scope, index) => ({
+        worker: scope.worker || `worker-${index + 1}`,
+        paths: scope.paths.map((item) => normalizeStagePath(cwd, item)),
+        packageId: scope.packageId,
+        packageName: scope.packageName,
+      }));
+      autoWriteScope = {
+        source: 'monorepo-intelligence',
+        markdownFile: intelligence.markdownFile,
+        jsonFile: intelligence.jsonFile,
+      };
+    }
+  }
   const overlap = groupsOverlap(writeScopeGroups);
   const codebaseMap = buildCodebaseMap(cwd, rootDir, {
     refreshMode: 'incremental',
@@ -260,8 +278,11 @@ function buildDelegationPlan(cwd, rootDir, options = {}) {
   }
   if (intent === 'execute') {
     guardrails.push('Write-capable worker fan-out is allowed only when write scopes are explicit and disjoint.');
+    if (autoWriteScope) {
+      guardrails.push('Monorepo intelligence may auto-synthesize package-local write scopes when parallel execute is requested without --write-scope.');
+    }
     if (explicitParallel && writeScopeGroups.length === 0) {
-      blockers.push('Parallel execute routing needs --write-scope so every worker has an explicit write contract.');
+      blockers.push('Parallel execute routing needs --write-scope or package-local monorepo shards so every worker has an explicit write contract.');
     }
     if (explicitParallel && overlap.overlap) {
       blockers.push(`Worker scopes overlap between ${overlap.left} and ${overlap.right} (${overlap.paths.join(' vs ')})`);
@@ -482,6 +503,8 @@ function buildDelegationPlan(cwd, rootDir, options = {}) {
       groups: writeScopeGroups,
       disjoint: !overlap.overlap,
       overlap: overlap.overlap ? overlap : null,
+      autoSynthesized: Boolean(autoWriteScope),
+      autoSource: autoWriteScope,
     },
     waves,
     roleCatalog: ROLE_CATALOG.map((role) => roleCatalog[role]),
@@ -572,6 +595,7 @@ function renderTaskPacket(state, task) {
 
   return `${lines.join('\n').trimEnd()}\n`;
 }
+
 
 function computeRoute(state) {
   const tasks = state.tasks;

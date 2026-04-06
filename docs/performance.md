@@ -25,9 +25,13 @@ Current product targets for medium-size repos:
 - repo-specific `.workflowignore` support to keep hot paths out of noisy directories
 - package graph cache at `.workflow/cache/package-graph.json`
 - impacted test ownership and internal dependency edges in the package graph cache
+- monorepo intelligence cache at `.workflow/cache/monorepo-intelligence.json`
 - symbol graph cache at `.workflow/cache/symbol-graph.json`
 - write-on-change state surfaces for `.workflow/state.json` and `.workflow/fs-index.json`
 - shared in-process runtime collector for `launch`, `hud`, `manager`, and `next-prompt`
+- multilingual intent normalization and deterministic capability matching to avoid repeated fallback routing on non-English prompts
+- package-aware write-scope synthesis so broad parallel execute requests do not default to repo-wide edit scopes in monorepos
+- review orchestration artifacts that let large-review passes shard by package and persona instead of re-reading the whole repo every time
 - repo-local Codex control mirror under `.workflow/runtime/codex-control/`
 - packet lock and provenance cache under `.workflow/cache/packet-locks.json` and `.workflow/cache/packet-provenance.json`
 - mailbox/timeline logs under `.workflow/orchestration/runtime/*.jsonl`
@@ -40,10 +44,18 @@ Run:
 cwf benchmark
 ```
 
+The benchmark surface covers every documented hot-path target, including `launch`, `manager`, and `next-prompt`.
+
 Or:
 
 ```bash
 npm run workflow:benchmark -- --commands hud,doctor,map-codebase --runs 3 --assert-slo
+```
+
+Or focus on operator-facing runtime commands directly:
+
+```bash
+cwf benchmark --commands launch,manager,next-prompt --assert-slo
 ```
 
 Fixture-backed benchmarks are also supported:
@@ -64,7 +76,7 @@ cwf benchmark --assert-slo --thresholds hud=300,next=500,doctor=1000
 
 Release CI runs the benchmark with `--assert-slo` from [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
 
-Route and stats telemetry write `.workflow/cache/model-routing.json`, verify surfaces write evidence under `.workflow/verifications/`, and evidence graph refreshes write `.workflow/evidence-graph/latest.json`.
+Route and stats telemetry write `.workflow/cache/model-routing.json`, verify surfaces write evidence under `.workflow/verifications/`, monorepo planning writes `.workflow/cache/monorepo-intelligence.json`, review orchestration writes `.workflow/reports/review-orchestration.{md,json}`, and evidence graph refreshes write `.workflow/evidence-graph/latest.json`.
 
 ## Perf metrics
 
@@ -86,3 +98,15 @@ Useful counters include:
 `.workflowignore` lets a repo denylist additional large or noisy paths without changing the product code.
 
 `.workflow/state.json`, `.workflow/runtime/*.json`, and `.workflow/runtime/*.md` are also non-canonical. They now use write-on-change semantics so watch/manager refreshes avoid unnecessary disk churn.
+
+
+## Large monorepo guidance
+
+For very large repos, the fastest path is no longer “scan everything, then decide”:
+
+- run `cwf monorepo` once and reuse the generated package slices, review shards, and verify plan
+- let `cwf review-orchestrate` split deep review into parallel read-only package/persona waves
+- use `cwf codex promptpack` so Codex sessions inherit the latest route, verify contract, UI direction, and review/monorepo context without rebuilding them each time
+- prefer package-local write scopes over broad repo-root scopes during Team Lite or subagent execution
+
+This reduces redundant repo walks, narrows verification, and keeps large-repo orchestration fluid under parallel execution.

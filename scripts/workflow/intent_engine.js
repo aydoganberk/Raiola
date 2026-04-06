@@ -10,6 +10,12 @@ const { buildFrontendProfile } = require('./map_frontend');
 const { listCapabilities } = require('./capability_registry');
 const { buildPackageGraph } = require('./package_graph');
 const { selectCodexProfile } = require('./codex_profile_engine');
+const {
+  detectIntentSignals,
+  detectLanguageSignals,
+  detectSteeringSignals,
+  deterministicCapabilityMatches,
+} = require('./intent_lexicon');
 
 function steeringPath(cwd) {
   return path.join(cwd, '.workflow', 'cache', 'intent-steering.json');
@@ -37,27 +43,31 @@ function writeJson(filePath, payload) {
 }
 
 function detectSteering(text) {
+  const lexical = detectSteeringSignals(text);
   return {
-    preferReview: /\b(review|code review|review mode|review modu|gozden gecir|gözden geçir)\b/i.test(text),
-    preferBrowser: /\b(browser|preview|screenshot|visual|playwright|onizleme|önizleme)\b/i.test(text),
-    researchFirst: /\b(research first|once ara|once arastir|önce araştır|önce ara|investigate first|araştır sonra uygula)\b/i.test(text),
-    patchFirst: /\b(patch first|patch-first|dogrudan patch|doğrudan patch|direkt patch)\b/i.test(text),
-    strictVerify: /\b(strict verify|strict|kati verify|katı verify|siki verify|sıkı verify)\b/i.test(text),
+    preferReview: lexical.preferReview || /\b(review|code review|review mode|review modu|gozden gecir|gözden geçir)\b/i.test(text),
+    preferBrowser: lexical.preferBrowser || /\b(browser|preview|screenshot|visual|playwright|onizleme|önizleme)\b/i.test(text),
+    researchFirst: lexical.researchFirst || /\b(research first|once ara|once arastir|önce araştır|önce ara|investigate first|araştır sonra uygula)\b/i.test(text),
+    patchFirst: lexical.patchFirst || /\b(patch first|patch-first|dogrudan patch|doğrudan patch|direkt patch)\b/i.test(text),
+    strictVerify: lexical.strictVerify || /\b(strict verify|strict|kati verify|katı verify|siki verify|sıkı verify)\b/i.test(text),
+    matches: lexical.buckets,
   };
 }
 
 function inferIntent(text) {
+  const lexical = detectIntentSignals(text);
   return {
-    research: /(why|investigate|compare|audit|analyse|analyze|deep dive|incele|inceleme|arastir|araştır|neden)/i.test(text),
-    plan: /(plan|roadmap|packet|approach|milestone|strategy|spec|taslak|yol haritasi|yol haritası)/i.test(text),
-    implement: /(fix|implement|build|land|tamamla|duzelt|düzelt|ekle|uygula|kodla)/i.test(text),
-    review: /(review|pr review|code review|regression|risk heatmap|blocker|gozden gecir|gözden geçir)/i.test(text),
-    frontend: /(ui|frontend|screen|ekran|responsive|visual|a11y|accessibility|component|design|tasarim|tasarım)/i.test(text),
-    verify: /(verify|verification|test|tests|lint|typecheck|smoke|browser|preview|assert|screenshot|snapshot|dogrula|doğrula|dogrulama|doğrulama)/i.test(text),
-    ship: /(release|handoff|closeout|deploy|yayinla|yayınla|surum|sürüm)/i.test(text),
-    incident: /(incident|outage|hotfix|urgent|prod|production issue|olay|kritik hata|sev1|sev-1)/i.test(text),
-    parallel: /(parallel|paralel|delegate|delegation|subagent|team|dagit|dağıt)/i.test(text),
-    monorepo: /(workspace|monorepo|package graph|package|repo-wide|workspace-wide|cok paketli|çok paketli)/i.test(text),
+    research: lexical.research || /(why|investigate|compare|audit|analyse|analyze|deep dive|incele|inceleme|arastir|araştır|neden)/i.test(text),
+    plan: lexical.plan || /(plan|roadmap|packet|approach|milestone|strategy|spec|taslak|yol haritasi|yol haritası)/i.test(text),
+    implement: lexical.implement || /(fix|implement|build|land|tamamla|duzelt|düzelt|ekle|uygula|kodla)/i.test(text),
+    review: lexical.review || /(review|pr review|code review|regression|risk heatmap|blocker|gozden gecir|gözden geçir)/i.test(text),
+    frontend: lexical.frontend || /(ui|frontend|screen|ekran|responsive|visual|a11y|accessibility|component|design|tasarim|tasarım)/i.test(text),
+    verify: lexical.verify || /(verify|verification|test|tests|lint|typecheck|smoke|browser|preview|assert|screenshot|snapshot|dogrula|doğrula|dogrulama|doğrulama)/i.test(text),
+    ship: lexical.ship || /(release|handoff|closeout|deploy|yayinla|yayınla|surum|sürüm)/i.test(text),
+    incident: lexical.incident || /(incident|outage|hotfix|urgent|prod|production issue|olay|kritik hata|sev1|sev-1)/i.test(text),
+    parallel: lexical.parallel || /(parallel|paralel|delegate|delegation|subagent|team|dagit|dağıt)/i.test(text),
+    monorepo: lexical.monorepo || /(workspace|monorepo|package graph|package|repo-wide|workspace-wide|cok paketli|çok paketli)/i.test(text),
+    matches: lexical.buckets,
   };
 }
 
@@ -71,10 +81,14 @@ function inferRisk(text) {
   };
 }
 
-function inferLanguageMix(normalizedText) {
+function inferLanguageMix(text) {
+  const lexical = detectLanguageSignals(text);
   return {
-    turkishSignals: /\b(incele|arastir|arastirma|duzelt|tamamla|onizleme|gozden)\b/.test(normalizedText),
-    englishSignals: /\b(review|frontend|implement|verify|plan|release)\b/.test(normalizedText),
+    turkishSignals: lexical.turkishSignals,
+    englishSignals: lexical.englishSignals,
+    matchedLanguages: lexical.matchedLanguages,
+    multilingual: lexical.multilingual,
+    counts: lexical.counts,
   };
 }
 
@@ -154,7 +168,9 @@ function buildRepoSignals(cwd, rootDir) {
   };
 }
 
-function deterministicMatches(normalizedGoal) {
+function deterministicMatches(goalText) {
+  const lexicalMatches = deterministicCapabilityMatches(goalText);
+  const normalizedGoal = String(goalText || '');
   const rules = [
     ['review.re_review', /(?:^|\b)(re-review|rerun review|follow-up review|yeniden review|review tekrar)(?:\b|$)/i],
     ['review.deep_review', /(?:^|\b)(review mode|code review|pr review|risk heatmap|blocker review|gözden geçir)(?:\b|$)/i],
@@ -167,12 +183,15 @@ function deterministicMatches(normalizedGoal) {
     ['incident.triage', /(?:^|\b)(incident triage|urgent outage|prod regression|kritik incident)(?:\b|$)/i],
   ];
 
-  return rules
-    .filter(([, pattern]) => pattern.test(normalizedGoal))
-    .map(([capabilityId]) => capabilityId);
+  return [...new Set([
+    ...lexicalMatches,
+    ...rules
+      .filter(([, pattern]) => pattern.test(normalizedGoal))
+      .map(([capabilityId]) => capabilityId),
+  ])];
 }
 
-function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeringPreferences) {
+function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeringPreferences, originalGoal = normalizedGoal) {
   let score = 0;
   const reasons = [];
   const tokens = new Set(normalizedGoal.split(' ').filter(Boolean));
@@ -188,7 +207,7 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
   const keywords = (capability.keywords || [])
     .map((entry) => normalizeWorkflowControlUtterance(entry))
     .filter((entry) => entry && !aliases.includes(entry));
-  const deterministic = deterministicMatches(normalizedGoal);
+  const deterministic = deterministicMatches(originalGoal || normalizedGoal);
 
   if (deterministic.includes(capability.id)) {
     score += 18;
@@ -236,6 +255,10 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
       reasons.push('Review language appears secondary to an explicit ship request.');
     }
   }
+  if (capability.domain === 'review' && /\b(urun degerlendirmesi|degerlendirme|degerlendirmesi|inceleme|incelemesi)\b/i.test(normalizedGoal)) {
+    score += 6;
+    reasons.push('Evaluation or review language detected.');
+  }
   if (capability.domain === 'frontend' && (intent.frontend || repoSignals.frontendActive)) {
     score += 8;
     reasons.push('Frontend intent or repo signal detected.');
@@ -251,6 +274,10 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
       score += 4;
       reasons.push('Research-oriented opener detected.');
     }
+  }
+  if (capability.domain === 'research' && /\b(analiz|analizi)\b/i.test(normalizedGoal)) {
+    score += 5;
+    reasons.push('Analysis language detected.');
   }
   if (capability.domain === 'plan' && intent.plan) {
     score += 7;
@@ -296,7 +323,13 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
     score += 9;
     reasons.push('Incident/regression language detected.');
   }
-  if (capability.id === 'verify.browser' && (repoSignals.browserNeeded || steeringPreferences.preferBrowser)) {
+  if (
+    capability.id === 'verify.browser'
+    && (
+      repoSignals.browserNeeded
+      || (steeringPreferences.preferBrowser && (intent.verify || intent.frontend))
+    )
+  ) {
     score += 5;
     reasons.push('Browser evidence is preferred or required.');
   }
@@ -548,7 +581,7 @@ function analyzeIntent(cwd, rootDir, goal, options = {}) {
   const capabilities = listCapabilities();
   const scored = capabilities
     .map((capability) => {
-      const result = scoreCapability(capability, normalizedGoal, intent, repoSignals, steeringMemory.preferences || {});
+      const result = scoreCapability(capability, normalizedGoal, intent, repoSignals, steeringMemory.preferences || {}, goal);
       return {
         ...capability,
         score: result.score,
@@ -591,7 +624,7 @@ function analyzeIntent(cwd, rootDir, goal, options = {}) {
     ambiguityClass: ambiguityClass(candidates, intent, confidence),
     intent,
     risk,
-    languageMix: inferLanguageMix(normalizedGoal),
+    languageMix: inferLanguageMix(goal),
     rejectedAlternatives: buildRejectedAlternatives(candidates, chosenCapability),
     repoSignals,
     steering: steeringMemory.preferences || {},

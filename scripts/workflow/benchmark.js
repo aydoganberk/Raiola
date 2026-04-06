@@ -5,16 +5,22 @@ const childProcess = require('node:child_process');
 const { parseArgs } = require('./common');
 
 const COMMANDS = {
+  launch: ['node', ['scripts/workflow/launch.js', '--json']],
   hud: ['node', ['scripts/workflow/hud.js', '--compact']],
+  manager: ['node', ['scripts/workflow/manager.js', '--json']],
   next: ['node', ['scripts/workflow/next_step.js', '--json']],
+  'next-prompt': ['node', ['scripts/workflow/next_prompt.js', '--mode', 'minimal', '--json']],
   doctor: ['node', ['scripts/workflow/doctor.js', '--strict']],
   health: ['node', ['scripts/workflow/health.js', '--strict']],
   'map-codebase': ['node', ['scripts/workflow/map_codebase.js', '--compact']],
   'map-frontend': ['node', ['scripts/workflow/map_frontend.js', '--compact']],
 };
 const DEFAULT_SLO_MS = Object.freeze({
+  launch: 800,
   hud: 300,
+  manager: 400,
   next: 500,
+  'next-prompt': 150,
   doctor: 1000,
   health: 1000,
   'map-codebase': 2000,
@@ -31,7 +37,7 @@ Usage:
 Options:
   --target <path>        Benchmark target. Defaults to current working directory
   --fixture <name>       small|medium|large benchmark fixture
-  --commands <a,b,c>     Commands to benchmark. Defaults to hud,next,doctor,health,map-codebase,map-frontend
+  --commands <a,b,c>     Commands to benchmark. Defaults to launch,hud,manager,next,next-prompt,doctor,health,map-codebase,map-frontend
   --runs <n>             Warm run count. Defaults to 3
   --assert-slo           Exit non-zero if any selected command misses its SLO threshold
   --thresholds <spec>    Override SLOs, e.g. hud=300,next=500,doctor=1000
@@ -161,7 +167,7 @@ function main() {
   const runs = Math.max(1, Number(args.runs || 3));
   const assertSlo = Boolean(args['assert-slo']);
   const thresholds = parseThresholds(args.thresholds);
-  const selectedCommands = String(args.commands || 'hud,next,doctor,health,map-codebase,map-frontend')
+  const selectedCommands = String(args.commands || 'launch,hud,manager,next,next-prompt,doctor,health,map-codebase,map-frontend')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);

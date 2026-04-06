@@ -20,73 +20,27 @@ It helps when you need:
 
 ## Product surface
 
-### Operator shell
+### Three golden flows
 
-- `cwf launch`
-- `cwf codex`
-- `cwf do`
-- `cwf note`
-- `cwf thread`
-- `cwf backlog`
-- `cwf manager`
-- `cwf dashboard`
+- Solo daily loop: `cwf do`, `cwf next`, `cwf verify-shell`, `cwf checkpoint`, `cwf next-prompt`
+- Deep review: `cwf route`, `cwf review`, `cwf ui-review`, `cwf verify-work`, `cwf ship-readiness`
+- Team parallel: `cwf monorepo`, `cwf team run`, `cwf team collect`, `cwf patch-review`, `cwf sessions`
+
+Run `cwf help` to start from these flows. Use `cwf help all` for the full shell, or `cwf help <topic>` for focused categories like `frontend`, `trust`, `runtime`, or `codex`.
+
+### Core shell
+
 - `cwf setup`
-- `cwf init`
-- `cwf milestone`
 - `cwf doctor`
-- `cwf health`
-- `cwf discuss`
-- `cwf questions`
-- `cwf assumptions`
-- `cwf claims`
-- `cwf secure`
-- `cwf hud`
+- `cwf do`
 - `cwf next`
-- `cwf explore`
-- `cwf verify-shell`
-- `cwf verify-browser`
-- `cwf verify-work`
-- `cwf packet`
-- `cwf evidence`
-- `cwf validation-map`
-- `cwf checkpoint`
-- `cwf next-prompt`
-- `cwf quick`
-- `cwf team`
-- `cwf subagents`
-- `cwf policy`
-- `cwf approval`
-- `cwf approvals`
-- `cwf route`
-- `cwf stats`
-- `cwf profile`
-- `cwf workspaces`
-- `cwf hooks`
-- `cwf mcp`
-- `cwf notify`
-- `cwf daemon`
-- `cwf gc`
-- `cwf incident`
-- `cwf fleet`
-- `cwf sessions`
-- `cwf patch-review`
-- `cwf patch-apply`
-- `cwf patch-rollback`
 - `cwf review`
-- `cwf review-mode`
-- `cwf pr-review`
-- `cwf re-review`
-- `cwf ui-spec`
-- `cwf ui-plan`
-- `cwf ui-review`
-- `cwf preview`
-- `cwf component-map`
-- `cwf responsive-matrix`
-- `cwf design-debt`
-- `cwf ship-readiness`
-- `cwf ship`
-- `cwf update`
-- `cwf uninstall`
+- `cwf team`
+- `cwf dashboard`
+
+### Full reference
+
+The full command surface still exists; it now lives in [Commands](./docs/commands.md) and `cwf help all` instead of overwhelming the first-run README.
 
 ### Backward compatibility
 
@@ -119,6 +73,7 @@ node bin/cwf.js setup --target /path/to/target-repo
 Inside a repo where the package is already available:
 
 ```bash
+cwf help solo
 cwf codex setup --repo
 cwf do "Land the first slice"
 cwf note "Capture the first risk" --promote backlog
@@ -175,6 +130,23 @@ npm run workflow:checkpoint -- --next "Resume here"
 npm run workflow:review
 npm run workflow:ship
 ```
+
+## Advanced Codex surfaces
+
+The current build adds repo-native surfaces aimed at making Codex materially stronger on large and messy codebases:
+
+- `cwf do "请做代码审查并验证浏览器"` or `cwf do "revisa el frontend y mejora el diseño"`  
+  Multilingual routing now grounds intent, steering, and deterministic capability picks across major languages instead of assuming English-only prompts.
+- `cwf codex promptpack --goal "review the auth diff"`  
+  Writes a ready-to-paste Codex prompt pack with profile, verify contract, repo signals, optional UI direction, optional monorepo shards, and the latest review orchestration context.
+- `cwf ui-direction`  
+  Produces a taste-aware design brief (`docs/workflow/UI-DIRECTION.md`) so frontend work is not just “correct” but intentionally styled.
+- `cwf review-orchestrate`  
+  Converts review findings into package/persona/wave-based review work for large repos and monorepos.
+- `cwf monorepo`  
+  Builds package-aware write scopes, review shards, verify plans, and performance-risk notes for broad repos.
+
+These surfaces are designed to stay backward-compatible with the canonical markdown workflow instead of replacing it.
 
 ## Quick, Full, Team
 
@@ -266,6 +238,8 @@ Run the benchmark harness:
 cwf benchmark
 ```
 
+The benchmark surface covers every documented hot-path target, including `launch`, `manager`, and `next-prompt`.
+
 Run the roadmap truth-reset audit:
 
 ```bash
@@ -276,6 +250,12 @@ Or:
 
 ```bash
 npm run workflow:benchmark -- --commands hud,doctor,map-codebase --assert-slo
+```
+
+Or benchmark the operator surfaces directly:
+
+```bash
+cwf benchmark --commands launch,manager,next-prompt
 ```
 
 Fixture-backed benchmark runs are also supported:

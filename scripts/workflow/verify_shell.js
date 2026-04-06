@@ -34,6 +34,38 @@ function artifactDirFor(cwd, artifactId) {
   return path.join(cwd, '.workflow', 'verifications', 'shell', artifactId);
 }
 
+
+function resolveShellBinary() {
+  const unixCandidates = [
+    process.env.SHELL,
+    '/bin/zsh',
+    '/usr/bin/zsh',
+    '/bin/bash',
+    '/usr/bin/bash',
+    '/bin/sh',
+    '/usr/bin/sh',
+  ].filter(Boolean);
+
+  if (process.platform === 'win32') {
+    return process.env.COMSPEC || 'cmd.exe';
+  }
+
+  for (const candidate of unixCandidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return '/bin/sh';
+}
+
+function shellArgs(shell, command) {
+  if (process.platform === 'win32' && /cmd(?:\.exe)?$/i.test(shell)) {
+    return ['/d', '/s', '/c', command];
+  }
+  return ['-lc', command];
+}
+
 function runVerifyShell(cwd, options = {}) {
   const command = String(options.command || '').trim();
   if (!command) {
@@ -46,9 +78,10 @@ function runVerifyShell(cwd, options = {}) {
   const startedAt = new Date().toISOString();
   const startedHr = process.hrtime.bigint();
   let result;
+  const shell = resolveShellBinary();
 
   try {
-    result = childProcess.spawnSync('/bin/zsh', ['-lc', command], {
+    result = childProcess.spawnSync(shell, shellArgs(shell, command), {
       cwd: execCwd,
       encoding: 'utf8',
       stdio: 'pipe',
@@ -84,6 +117,7 @@ function runVerifyShell(cwd, options = {}) {
   const meta = {
     kind: 'shell',
     command,
+    shell,
     cwd: execCwd,
     scope: String(options.scope || '').trim(),
     timeoutSeconds,

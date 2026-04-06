@@ -16,7 +16,7 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 - The latest local test result now includes the new phase-16 suite for intent/review/frontend/fixture coverage.
 - The latest local doctor result is `0 fail / 0 warn`.
 - The latest benchmark stayed under SLO with warm medians of `hud 69ms`, `next 60ms`, `doctor 48ms`, `health 50ms`, `map-codebase 59ms`, and `map-frontend 56ms`.
-- The measured roadmap audit now enforces `216` intent utterances, `26` review diff scenarios, and `12` frontend audit scenarios with intent top-1 accuracy `100%`, top-3 coverage `100%`, review pass-rate `100%`, and frontend pass-rate `100%`.
+- The measured roadmap audit now enforces `220` intent utterances, `26` review diff scenarios, and `12` frontend audit scenarios with intent top-1 accuracy `100%`, top-3 coverage `100%`, review pass-rate `100%`, and frontend pass-rate `100%`.
 - The roadmap audit now reflects the repo-local fallback behavior for the virtual `.codex` root, the `playwright` browser adapter fallback when Playwright is unavailable, and the canonical `POLICY.md` governance surface.
 
 ## CE Matrix

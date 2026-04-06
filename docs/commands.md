@@ -1,11 +1,13 @@
 # Commands
 
+Use `cwf help` for the three golden flows, `cwf help <topic>` for focused categories, and `cwf help all` for the full shell.
+
 ## Primary verbs
 
 - `cwf launch`
   Strong-start launcher that recommends the lane, first command, and minimal resume prompt.
 - `cwf codex`
-  Safe Codex control plane. Supports `setup`, `doctor`, `diff-config`, `rollback`, `sync`, role scaffolding, skill install/remove, `profile suggest`, `bootstrap`, `resume-card`, and `plan-subagents`.
+  Safe Codex control plane. Supports `setup`, `doctor`, `diff-config`, `rollback`, `sync`, role scaffolding, skill install/remove, `profile suggest`, `bootstrap`, `resume-card`, `promptpack`, and `plan-subagents`.
 - `cwf do`
   Route a natural-language intent into `quick`, `full`, `review`, `frontend`, or `team` lanes with explainable capability and verify plans.
 - `cwf note`
@@ -106,10 +108,14 @@
   Run the multi-pass review engine and write `.workflow/reports/review.md` plus structured findings.
 - `cwf review-mode`
   Run the deep review engine explicitly.
+- `cwf review-orchestrate`
+  Build package/persona/wave-based review orchestration for large repos and monorepos.
 - `cwf pr-review`
   Review a PR or diff-oriented surface with risk heatmap and blockers.
 - `cwf re-review`
   Replay the current diff against the latest review history.
+- `cwf ui-direction`
+  Generate the taste-aware UI direction pack that Codex can implement against.
 - `cwf ui-spec`
   Generate `docs/workflow/UI-SPEC.md`.
 - `cwf ui-plan`
@@ -124,6 +130,8 @@
   Generate `docs/workflow/RESPONSIVE-MATRIX.md`.
 - `cwf design-debt`
   Generate `docs/workflow/DESIGN-DEBT.md`.
+- `cwf monorepo`
+  Generate package-aware monorepo execution, review shards, and verify guidance.
 - `cwf ship-readiness`
   Score ship readiness from review, evidence, approvals, and verify-work results.
 - `cwf ship`
@@ -176,6 +184,7 @@
 - `cwf packet` -> `.workflow/packets/*` and `.workflow/cache/packet-locks.json`
 - `cwf evidence` -> `.workflow/evidence-graph/latest.json`
 - `cwf ship-readiness` -> `.workflow/reports/ship-readiness.{md,json}`
+- `cwf review-orchestrate` -> `.workflow/reports/review-orchestration.{md,json}`
 - `cwf codex` -> `.workflow/runtime/codex-control/*` with a virtual repo-local `.codex` root
 - `cwf team mailbox` -> `.workflow/orchestration/runtime/mailbox.jsonl`
 - `cwf team timeline` -> `.workflow/orchestration/runtime/timeline.jsonl`
@@ -183,6 +192,8 @@
 - `cwf route` -> `.workflow/cache/model-routing.json`
 - `cwf do` / `cwf route` -> `.workflow/cache/intent-route-history.json`
 - `cwf dashboard` -> `.workflow/runtime/dashboard/{index.html,state.json}`
+- `cwf monorepo` -> `.workflow/cache/monorepo-intelligence.json` plus `docs/workflow/MONOREPO.md`
+- `cwf ui-direction` -> `.workflow/runtime/ui-direction.json` plus `docs/workflow/UI-DIRECTION.md`
 - `cwf ui-spec` -> `docs/workflow/UI-SPEC.md`
 - `cwf ui-plan` -> `docs/workflow/UI-PLAN.md`
 - `cwf ui-review` -> `docs/workflow/UI-REVIEW.md`
@@ -191,6 +202,7 @@
 - `cwf design-debt` -> `docs/workflow/DESIGN-DEBT.md`
 - `cwf policy` / `cwf approvals` -> canonical `docs/workflow/POLICY.md` plus derived `.workflow/runtime/policy.json` and `.workflow/runtime/approvals.json`
 - `cwf discuss` -> `.workflow/runtime/discuss.{json,md}`
+- `cwf codex promptpack` -> `.workflow/runtime/codex-control/promptpack.{md,json}`
 
 ## Backward-compatible scripts
 
@@ -247,8 +259,10 @@
 - `npm run workflow:patch-rollback`
 - `npm run workflow:review`
 - `npm run workflow:review-mode`
+- `npm run workflow:review-orchestrate`
 - `npm run workflow:pr-review`
 - `npm run workflow:re-review`
+- `npm run workflow:ui-direction`
 - `npm run workflow:ui-spec`
 - `npm run workflow:ui-plan`
 - `npm run workflow:ui-review`
@@ -256,10 +270,15 @@
 - `npm run workflow:component-map`
 - `npm run workflow:responsive-matrix`
 - `npm run workflow:design-debt`
+- `npm run workflow:monorepo`
 - `npm run workflow:ship-readiness`
 - `npm run workflow:ship`
+- `npm run workflow:pr-brief`
+- `npm run workflow:release-notes`
+- `npm run workflow:session-report`
 - `npm run workflow:update`
 - `npm run workflow:uninstall`
+- `npm run workflow:benchmark`
 
 ## Command mapping examples
 
@@ -277,6 +296,10 @@
 - `cwf verify-browser` -> `npm run workflow:verify-browser -- --url http://localhost:3000`
 - `cwf packet` -> `npm run workflow:packet-os -- compile --step plan`
 - `cwf checkpoint` -> `npm run workflow:checkpoint -- --next "Resume here"`
+- `cwf review-orchestrate` -> `npm run workflow:review-orchestrate`
+- `cwf ui-direction` -> `npm run workflow:ui-direction`
 - `cwf ui-spec` -> `npm run workflow:ui-spec`
 - `cwf ui-review` -> `npm run workflow:ui-review -- --url ./preview.html`
+- `cwf monorepo` -> `npm run workflow:monorepo`
+- `cwf codex promptpack` -> `npm run workflow:codex -- promptpack --goal "review the diff"`
 - `cwf ship-readiness` -> `npm run workflow:ship-readiness`

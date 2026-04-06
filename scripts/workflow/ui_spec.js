@@ -13,6 +13,7 @@ const {
   writeDoc,
 } = require('./frontend_os');
 const { writeRuntimeJson } = require('./runtime_helpers');
+const { buildUiDirection } = require('./design_intelligence');
 
 function printHelp() {
   console.log(`
@@ -29,6 +30,7 @@ Options:
 
 function buildUiSpec(cwd, rootDir) {
   const profile = buildFrontendProfile(cwd, rootDir, { scope: 'workstream', refresh: 'incremental' });
+  const direction = buildUiDirection(cwd, rootDir);
   const inventory = collectComponentInventory(cwd);
   const matrix = buildResponsiveMatrix(profile, inventory);
   const missingStateAudit = buildMissingStateAudit(cwd, inventory);
@@ -45,11 +47,22 @@ function buildUiSpec(cwd, rootDir) {
 - Framework: \`${profile.framework.primary}\`
 - UI system: \`${profile.uiSystem.primary}\`
 - Frontend mode: \`${profile.frontendMode.status}\`
+- UI direction: \`${direction.file}\`
+- Taste signature: \`${direction.taste.tagline}\`
 
 ## Information Architecture
 
+- \`Product archetype: ${direction.archetype.label}\`
 - \`Primary UI surface depends on ${profile.framework.primary} with ${profile.uiSystem.primary} as the main UI system.\`
 - \`Touched files context: ${touchedFiles || 'No touched files recorded yet.'}\`
+
+## Design Direction
+
+- \`${direction.archetype.summary}\`
+- \`Visual tone: ${direction.taste.visualTone}\`
+- \`Hierarchy: ${direction.taste.hierarchy}\`
+- \`Motion: ${direction.taste.motion}\`
+- \`Codex should respect the UI direction document before improvising new aesthetics.\`
 
 ## User Flows
 
@@ -111,6 +124,7 @@ ${browserArtifacts.length > 0
     tokenDriftAudit,
     accessibilityAudit,
     journeyAudit,
+    direction,
     file: relativePath(cwd, filePath),
   };
   writeRuntimeJson(cwd, 'frontend-spec.json', payload);

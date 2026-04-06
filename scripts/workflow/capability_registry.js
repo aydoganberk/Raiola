@@ -1,8 +1,8 @@
 const CAPABILITIES = Object.freeze([
   {
     id: 'research.discuss',
-    aliases: ['research', 'investigate', 'analyse', 'analyze', 'audit', 'incele', 'arastir'],
-    keywords: ['why', 'compare', 'audit', 'review', 'investigate', 'analyse', 'analyze', 'incele', 'arastir'],
+    aliases: ['research', 'investigate', 'analyse', 'analyze', 'audit', 'incele', 'arastir', 'analiz'],
+    keywords: ['why', 'compare', 'audit', 'review', 'investigate', 'analyse', 'analyze', 'incele', 'arastir', 'analiz'],
     domain: 'research',
     risk: 'low',
     sideEffects: ['run_shell'],
@@ -49,8 +49,8 @@ const CAPABILITIES = Object.freeze([
   },
   {
     id: 'review.deep_review',
-    aliases: ['review', 'audit', 'code review', 'pr review'],
-    keywords: ['review', 'audit', 'regression', 'bug', 'risk', 'pr', 'diff'],
+    aliases: ['review', 'audit', 'code review', 'pr review', 'inceleme', 'degerlendirme', 'urun degerlendirmesi'],
+    keywords: ['review', 'audit', 'regression', 'bug', 'risk', 'pr', 'diff', 'inceleme', 'degerlendirme', 'degerlendirmesi'],
     domain: 'review',
     risk: 'medium',
     sideEffects: ['run_shell', 'write_fs'],

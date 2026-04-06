@@ -116,6 +116,34 @@ function buildIntentRoutingCorpus() {
       ['the prod regression', 'the urgent outage', 'bu incident issue'],
       ['with the safest verify path', 'before more users are affected'],
     ),
+    {
+      id: 'review-deep-tr-1',
+      goal: 'kapsamli urun degerlendirmesi yap',
+      expectedCapability: 'review.deep_review',
+      family: 'review',
+      language: 'tr',
+    },
+    {
+      id: 'review-deep-tr-2',
+      goal: 'bu repo icin kapsamli urun degerlendirmesi yap ve riskleri yaz',
+      expectedCapability: 'review.deep_review',
+      family: 'review',
+      language: 'tr',
+    },
+    {
+      id: 'research-discuss-tr-1',
+      goal: 'kapsamli analiz yap ve en buyuk riski acikla',
+      expectedCapability: 'research.discuss',
+      family: 'research',
+      language: 'tr',
+    },
+    {
+      id: 'review-deep-tr-3',
+      goal: 'inceleme yap ve bulgulari yaz',
+      expectedCapability: 'review.deep_review',
+      family: 'review',
+      language: 'tr',
+    },
   ];
 }
 

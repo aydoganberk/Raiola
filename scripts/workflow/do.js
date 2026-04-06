@@ -3,6 +3,8 @@ const { parseArgs, resolveWorkflowRoot } = require('./common');
 const { analyzeIntent } = require('./intent_engine');
 const { writeRuntimeJson } = require('./runtime_helpers');
 const { buildUiSpec } = require('./ui_spec');
+const { buildUiDirection } = require('./design_intelligence');
+const { buildMonorepoIntelligence } = require('./monorepo');
 
 function printHelp() {
   console.log(`
@@ -64,12 +66,16 @@ function buildDoPayload(cwd, rootDir, goal) {
     verificationPlan: analysis.verificationPlan,
     suggestedCommands,
     routeEvaluation: analysis.evaluation,
+    repoSignals: analysis.repoSignals,
     previewFirst: true,
     dryRunSafe: true,
   };
 }
 
 function formatLanguageMix(languageMix) {
+  if (Array.isArray(languageMix.matchedLanguages) && languageMix.matchedLanguages.length > 0) {
+    return languageMix.matchedLanguages.join('+');
+  }
   const labels = [];
   if (languageMix.turkishSignals) {
     labels.push('tr');
@@ -94,8 +100,18 @@ function main() {
   }
   const payload = buildDoPayload(cwd, rootDir, goal);
   if (!args['dry-run'] && payload.lane === 'frontend') {
+    const uiDirection = buildUiDirection(cwd, rootDir);
     const uiSpec = buildUiSpec(cwd, rootDir);
+    payload.uiDirection = uiDirection.file;
     payload.uiSpec = uiSpec.file;
+  }
+  if (!args['dry-run'] && payload.repoSignals?.monorepo) {
+    const monorepo = buildMonorepoIntelligence(cwd, rootDir, { writeFiles: true });
+    payload.monorepo = {
+      markdownFile: monorepo.markdownFile,
+      jsonFile: monorepo.jsonFile,
+      writeScopeCount: monorepo.writeScopes.length,
+    };
   }
   writeRuntimeJson(cwd, 'do-latest.json', payload);
 
@@ -115,8 +131,14 @@ function main() {
   console.log(`- Preset: \`${payload.recommendedPreset}\``);
   console.log(`- Profile: \`${payload.profile.id}\``);
   console.log(`- Packet: \`${payload.packet}\``);
+  if (payload.uiDirection) {
+    console.log(`- UI direction: \`${payload.uiDirection}\``);
+  }
   if (payload.uiSpec) {
     console.log(`- UI spec: \`${payload.uiSpec}\``);
+  }
+  if (payload.monorepo) {
+    console.log(`- Monorepo intelligence: \`${payload.monorepo.markdownFile}\``);
   }
   console.log(`- Research needed: \`${payload.trust.researchNeeded ? 'yes' : 'no'}\``);
   console.log(`- Verify needed: \`${payload.trust.verifyNeeded ? 'yes' : 'no'}\``);

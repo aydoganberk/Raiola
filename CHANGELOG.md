@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 - 2026-04-06
+
+- Added multilingual intent grounding and deterministic capability matching for major non-English prompt surfaces.
+- Added `cwf ui-direction` plus `design_intelligence.js` to generate taste-aware frontend direction packs before implementation.
+- Added `cwf review-orchestrate` and review wave planning for package/persona-based deep review on large repos.
+- Added `cwf monorepo` to generate package-aware write scopes, review shards, verify plans, and performance risk notes.
+- Added Codex prompt packs under `cwf codex promptpack` so CLI and app sessions can inherit route, verify, UI, and monorepo/review context instantly.
+- Hardened `verify-shell` with shell fallback so CI and agent hosts no longer require `/bin/zsh`.
+- Refreshed product docs to cover the new commands and runtime artifacts.
+
 ## 0.2.0 - 2026-04-04
 
 - Added the `cwf` product shell with install, daily-ops, lifecycle, quick-mode, and benchmark commands.
