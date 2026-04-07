@@ -241,7 +241,11 @@ test('do payload includes a codex command plan for frontend lanes', () => {
   ));
 
   assert.ok(payload.commandPlan.primaryCommand.includes('cwf ui-plan') || payload.commandPlan.primaryCommand.includes('cwf do'));
+  assert.ok(payload.commandPlan.secondaryCommands.some((command) => command.includes('cwf ui-recipe')));
   assert.ok(payload.commandPlan.codexAppFlow.length >= 1);
+  assert.ok(payload.commandPlan.codexAppFlow.some((entry) => entry.includes('UI-RECIPE')));
+  assert.ok(payload.verificationPlan.includes('cwf ui-recipe'));
   assert.ok(payload.uiDirection);
   assert.ok(payload.uiSpec);
+  assert.ok(payload.uiRecipe);
 });

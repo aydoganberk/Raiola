@@ -118,6 +118,8 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
   Replay the current diff against the latest review history.
 - `cwf ui-direction`
   Generate the taste-aware UI direction pack that Codex can implement against.
+- `cwf ui-recipe`
+  Generate `docs/workflow/UI-RECIPE.md` with a semantic prototype, stack scaffold, and translation notes.
 - `cwf ui-spec`
   Generate `docs/workflow/UI-SPEC.md`.
 - `cwf ui-plan`
@@ -209,6 +211,7 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 - `cwf dashboard` -> `.workflow/runtime/dashboard/{index.html,state.json}`
 - `cwf monorepo` -> `.workflow/cache/monorepo-intelligence.json` plus `docs/workflow/MONOREPO.md`
 - `cwf ui-direction` -> `.workflow/runtime/ui-direction.json` plus `docs/workflow/UI-DIRECTION.md`
+- `cwf ui-recipe` -> `.workflow/runtime/ui-recipe.json` plus `docs/workflow/UI-RECIPE.md`
 - `cwf ui-spec` -> `docs/workflow/UI-SPEC.md`
 - `cwf ui-plan` -> `docs/workflow/UI-PLAN.md`
 - `cwf ui-review` -> `docs/workflow/UI-REVIEW.md`
@@ -278,6 +281,7 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 - `npm run workflow:pr-review`
 - `npm run workflow:re-review`
 - `npm run workflow:ui-direction`
+- `npm run workflow:ui-recipe`
 - `npm run workflow:ui-spec`
 - `npm run workflow:ui-plan`
 - `npm run workflow:ui-review`
@@ -313,6 +317,7 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 - `cwf checkpoint` -> `npm run workflow:checkpoint -- --next "Resume here"`
 - `cwf review-orchestrate` -> `npm run workflow:review-orchestrate`
 - `cwf ui-direction` -> `npm run workflow:ui-direction`
+- `cwf ui-recipe` -> `npm run workflow:ui-recipe`
 - `cwf ui-spec` -> `npm run workflow:ui-spec`
 - `cwf ui-review` -> `npm run workflow:ui-review -- --url ./preview.html`
 - `cwf monorepo` -> `npm run workflow:monorepo`

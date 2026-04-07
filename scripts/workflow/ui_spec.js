@@ -5,6 +5,7 @@ const {
   buildFrontendProfile,
   buildJourneyAudit,
   buildMissingStateAudit,
+  buildPrimitiveContractAudit,
   buildPrimitiveOpportunityAudit,
   buildResponsiveMatrix,
   buildSemanticAudit,
@@ -43,6 +44,7 @@ function buildUiSpec(cwd, rootDir, options = {}) {
   const browserArtifacts = latestBrowserArtifacts(cwd);
   const accessibilityAudit = buildAccessibilityAudit(profile, browserArtifacts);
   const journeyAudit = buildJourneyAudit(profile, browserArtifacts, inventory);
+  const primitiveContractAudit = buildPrimitiveContractAudit(cwd, profile, inventory);
   const primitiveOpportunities = buildPrimitiveOpportunityAudit(cwd, profile, inventory);
   const contextDoc = readIfExists(path.join(rootDir, 'CONTEXT.md')) || '';
   const userIntent = tryExtractSection(contextDoc, 'User Intent', '').trim() || 'No explicit UI intent note was recorded.';
@@ -172,6 +174,12 @@ ${browserArtifacts.length > 0
 ${primitiveOpportunities.opportunities.length > 0
     ? primitiveOpportunities.opportunities.map((item) => `- \`${item.title}\` -> ${item.recommendation} (${item.stackTranslation})`).join('\n')
     : '- `No repeated primitive opportunities were detected yet.`'}
+
+## Primitive Contracts
+
+${primitiveContractAudit.issueCount > 0
+    ? primitiveContractAudit.issues.map((item) => `- \`${item.primitive}\` ${item.file} -> ${item.detail}`).join('\n')
+    : '- `No primitive contract gaps were detected in the scanned UI files.`'}
 `;
 
   const filePath = writeDoc(path.join(rootDir, 'UI-SPEC.md'), 'UI SPEC', body);
@@ -184,6 +192,7 @@ ${primitiveOpportunities.opportunities.length > 0
     semanticAudit,
     accessibilityAudit,
     journeyAudit,
+    primitiveContractAudit,
     primitiveOpportunities,
     direction,
     file: relativePath(cwd, filePath),

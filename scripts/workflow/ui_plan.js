@@ -1,5 +1,6 @@
 const path = require('node:path');
 const { parseArgs, resolveWorkflowRoot } = require('./common');
+const { buildUiRecipeScaffold } = require('./ui_recipe');
 const { buildUiSpec } = require('./ui_spec');
 const { buildUiDirection } = require('./design_intelligence');
 const { relativePath, writeDoc } = require('./frontend_os');
@@ -33,9 +34,11 @@ function main(argv = process.argv.slice(2)) {
   };
   const spec = buildUiSpec(cwd, rootDir, uiOptions);
   const direction = buildUiDirection(cwd, rootDir, uiOptions);
+  const recipe = buildUiRecipeScaffold(cwd, rootDir, uiOptions);
   const body = `
 - UI spec: \`${spec.file}\`
 - UI direction: \`${direction.file}\`
+- UI recipe: \`${recipe.file}\`
 - Primary framework: \`${spec.profile.framework.primary}\`
 - Product archetype: \`${direction.archetype.label}\`
 - Taste profile: \`${direction.taste.profile.label}\`
@@ -47,6 +50,7 @@ function main(argv = process.argv.slice(2)) {
 - \`Lock shell hierarchy, core states, and responsive layout before decorative polish.\`
 - \`Prefer shared components from the inventory before adding new primitives.\`
 - \`Translate the UI direction into tokens, spacing, radius, and typography decisions early.\`
+- \`Use the selected recipe scaffold (${recipe.recipe.title}) as the first implementation slice before widening the surface.\`
 - \`Use the selected taste profile (${direction.taste.profile.label}) as the tie-breaker when multiple UI options seem valid.\`
 - \`Patch empty/loading/error/success states together when they share the same component boundary.\`
 - \`Validate responsive behavior on each breakpoint row.\`
@@ -64,6 +68,12 @@ ${direction.screenBlueprints.map((item) => `- \`${item.title}: ${item.recipe}\``
 
 ${direction.designSystemActions.map((item) => `- \`${item}\``).join('\n')}
 
+## Recipe Scaffold
+
+- \`${recipe.recipe.title}: ${recipe.recipe.structure}\`
+${recipe.translationNotes.map((item) => `- \`${item}\``).join('\n')}
+${recipe.verificationPlan.map((item) => `- \`Verify: ${item}\``).join('\n')}
+
 ## Codex Prompts
 
 ${direction.implementationPrompts.map((item) => `- \`${item}\``).join('\n')}
@@ -77,6 +87,7 @@ ${direction.codexRecipes.map((item) => `- \`${item}\``).join('\n')}
     file: relativePath(cwd, filePath),
     uiSpec: spec.file,
     uiDirection: direction.file,
+    uiRecipe: recipe.file,
     archetype: direction.archetype.label,
     tasteProfile: direction.taste.profile.id,
     signatureMoments: direction.signatureMoments.length,

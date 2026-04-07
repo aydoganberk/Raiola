@@ -7,6 +7,7 @@ const {
   buildFrontendProfile,
   buildJourneyAudit,
   buildMissingStateAudit,
+  buildPrimitiveContractAudit,
   buildPrimitiveOpportunityAudit,
   buildResponsiveMatrix,
   buildScorecard,
@@ -39,6 +40,7 @@ async function buildUiReview(cwd, rootDir, args = {}) {
   const semanticAudit = buildSemanticAudit(cwd, inventory);
   const accessibilityAudit = buildAccessibilityAudit(profile, browserArtifacts);
   const journeyAudit = buildJourneyAudit(profile, browserArtifacts, inventory);
+  const primitiveContractAudit = buildPrimitiveContractAudit(cwd, profile, inventory);
   const primitiveOpportunities = buildPrimitiveOpportunityAudit(cwd, profile, inventory);
   const debt = buildDesignDebt(profile, inventory, browserArtifacts, {
     missingStateAudit,
@@ -46,6 +48,7 @@ async function buildUiReview(cwd, rootDir, args = {}) {
     semanticAudit,
     accessibilityAudit,
     journeyAudit,
+    primitiveContractAudit,
     primitiveOpportunities: primitiveOpportunities.opportunities,
   });
   const scorecard = buildScorecard(profile, inventory, debt, browserArtifacts, {
@@ -115,6 +118,12 @@ ${primitiveOpportunities.opportunities.length > 0
     ? primitiveOpportunities.opportunities.map((item) => `- [${item.priority}] \`${item.title}\` ${item.recommendation} (${item.stackTranslation})`).join('\n')
     : '- `No repeated primitive opportunities were detected yet.`'}
 
+## Primitive Contracts
+
+${primitiveContractAudit.issueCount > 0
+    ? primitiveContractAudit.issues.slice(0, 8).map((issue) => `- [${issue.severity}] \`${issue.primitive}\` ${issue.file} -> ${issue.detail}`).join('\n')
+    : '- `No primitive contract gaps were detected in the scanned UI files.`'}
+
 ## Browser Evidence
 
 ${browserArtifacts.length > 0
@@ -133,6 +142,7 @@ ${browserArtifacts.length > 0
     semanticAudit,
     accessibilityAudit,
     journeyAudit,
+    primitiveContractAudit,
     primitiveOpportunities,
   };
   writeRuntimeJson(cwd, 'frontend-review.json', payload);

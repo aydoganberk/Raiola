@@ -121,6 +121,7 @@
     "workflow:tempo": "node scripts/workflow/tempo.js",
     "workflow:thread": "node scripts/workflow/thread.js",
     "workflow:ui-direction": "node scripts/workflow/ui_direction.js",
+    "workflow:ui-recipe": "node scripts/workflow/ui_recipe.js",
     "workflow:ui-plan": "node scripts/workflow/ui_plan.js",
     "workflow:ui-review": "node scripts/workflow/ui_review.js",
     "workflow:ui-spec": "node scripts/workflow/ui_spec.js",

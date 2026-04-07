@@ -61,6 +61,7 @@ const CLI_COMMANDS = {
   'pr-review': { script: 'pr_review.js', description: 'Review a PR/diff surface with findings and blockers.' },
   're-review': { script: 're_review.js', description: 'Replay the latest review findings against current state.' },
   'ui-direction': { script: 'ui_direction.js', description: 'Generate the taste-aware UI direction pack.' },
+  'ui-recipe': { script: 'ui_recipe.js', description: 'Generate a framework-aware UI recipe scaffold.' },
   'ui-spec': { script: 'ui_spec.js', description: 'Generate the canonical UI specification.' },
   'ui-plan': { script: 'ui_plan.js', description: 'Generate the UI execution plan.' },
   'ui-review': { script: 'ui_review.js', description: 'Run the frontend review scorecard and evidence pass.' },
@@ -112,7 +113,7 @@ const COMMAND_GROUPS = Object.freeze([
     title: 'Frontend',
     description: 'Direction, spec, review, preview, and design debt surfaces for UI work.',
     commands: [
-      'ui-direction', 'ui-spec', 'ui-plan', 'ui-review', 'preview', 'component-map', 'responsive-matrix', 'design-debt',
+      'ui-direction', 'ui-recipe', 'ui-spec', 'ui-plan', 'ui-review', 'preview', 'component-map', 'responsive-matrix', 'design-debt',
     ],
   },
   {
@@ -220,6 +221,7 @@ const LEGACY_EQUIVALENTS = [
   ['cwf pr-review', 'npm run workflow:pr-review'],
   ['cwf re-review', 'npm run workflow:re-review'],
   ['cwf ui-spec', 'npm run workflow:ui-spec'],
+  ['cwf ui-recipe', 'npm run workflow:ui-recipe'],
   ['cwf ui-plan', 'npm run workflow:ui-plan'],
   ['cwf ui-review', 'npm run workflow:ui-review'],
   ['cwf preview', 'npm run workflow:preview'],

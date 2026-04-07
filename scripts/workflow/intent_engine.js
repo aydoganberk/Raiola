@@ -438,6 +438,7 @@ function verificationPlanFor(capability, repoSignals, steeringPreferences) {
     plan.push('cwf review --blockers');
   }
   if (capability.domain === 'frontend') {
+    plan.push('cwf ui-recipe');
     plan.push('cwf ui-spec');
     plan.push('cwf responsive-matrix');
     plan.push('cwf ui-review');

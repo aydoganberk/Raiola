@@ -11,6 +11,7 @@ const {
 const { buildCodebaseMap } = require('./map_codebase');
 const { buildComponentInventoryDoc } = require('./component_inventory');
 const { buildUiDirection } = require('./design_intelligence');
+const { buildUiRecipeScaffold } = require('./ui_recipe');
 const { buildUiSpec } = require('./ui_spec');
 const { buildMonorepoIntelligence } = require('./monorepo');
 const { loadLatestReviewTaskGraph } = require('./review_task_graph');
@@ -154,6 +155,10 @@ function collectFrontendAttachments(cwd, rootDir, analysis, options = {}) {
     goal: options.goal,
     taste: options.taste,
   });
+  const recipe = buildUiRecipeScaffold(cwd, rootDir, {
+    goal: options.goal,
+    taste: options.taste,
+  });
   const inventory = buildComponentInventoryDoc(cwd, rootDir);
   const attachments = [];
   pushAttachment(attachments, cwd, path.join(rootDir, 'UI-DIRECTION.md'), {
@@ -170,6 +175,13 @@ function collectFrontendAttachments(cwd, rootDir, analysis, options = {}) {
     lane: 'frontend',
     priority: 'recommended',
   });
+  pushAttachment(attachments, cwd, path.join(rootDir, 'UI-RECIPE.md'), {
+    id: 'ui-recipe',
+    title: 'UI recipe scaffold',
+    reason: 'Framework-aware scaffold with semantic prototype and stack translation notes.',
+    lane: 'frontend',
+    priority: 'recommended',
+  });
   pushAttachment(attachments, cwd, path.join(rootDir, 'COMPONENT-INVENTORY.md'), {
     id: 'component-inventory',
     title: 'Component inventory',
@@ -180,9 +192,18 @@ function collectFrontendAttachments(cwd, rootDir, analysis, options = {}) {
   return {
     direction,
     spec,
+    recipe,
     inventory,
     attachments,
   };
+}
+
+function frontendRequested(analysis, frontend) {
+  return Boolean(
+    frontend
+      || analysis?.chosenCapability?.domain === 'frontend'
+      || analysis?.repoSignals?.frontendActive,
+  );
 }
 
 function collectReviewAttachments(cwd, analysis) {
@@ -517,11 +538,14 @@ function buildCodexContextPack(cwd, rootDir, goal, analysis, profile, options = 
     deep: buildBudgetPreset(4200, [...readOrder, ...attachments.filter((item) => item.priority === 'defer')]),
   };
   const avoidPatterns = buildAvoidPatterns();
+  const wantsFrontend = frontendRequested(analysis, frontend);
   const suggestedCommands = [
     'cwf codex promptpack --goal "<goal>"',
     analysis?.chosenCapability?.domain === 'review' ? 'cwf review-tasks --json' : '',
     analysis?.repoSignals?.monorepo ? 'cwf monorepo --json' : '',
-    analysis?.chosenCapability?.domain === 'frontend' ? 'cwf ui-direction --json' : '',
+    wantsFrontend ? 'cwf ui-direction --json' : '',
+    wantsFrontend ? 'cwf ui-spec --json' : '',
+    wantsFrontend ? 'cwf ui-recipe --json' : '',
   ].filter(Boolean);
 
   const payload = {
@@ -546,6 +570,7 @@ function buildCodexContextPack(cwd, rootDir, goal, analysis, profile, options = 
     frontend: frontend?.direction ? {
       file: frontend.direction.file,
       specFile: frontend.spec?.file || null,
+      recipeFile: frontend.recipe?.file || null,
       componentInventoryFile: frontend.inventory?.file || null,
       taste: frontend.direction.taste.tagline,
       tasteProfile: frontend.direction.taste.profile || null,
@@ -555,6 +580,7 @@ function buildCodexContextPack(cwd, rootDir, goal, analysis, profile, options = 
       nativeFirst: frontend.direction.nativeFirstRecommendations || [],
       recipePack: frontend.direction.recipePack || [],
       prototypeMode: frontend.direction.prototypeMode || null,
+      selectedRecipe: frontend.recipe?.recipe || null,
       signatureMoments: frontend.direction.signatureMoments || [],
       screenBlueprints: frontend.direction.screenBlueprints || [],
     } : null,

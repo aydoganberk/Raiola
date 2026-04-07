@@ -42,15 +42,16 @@ function frontendFlow(goal) {
     secondaryCommands: [
       `cwf ui-direction --goal ${qGoal} --json`,
       `cwf ui-spec --goal ${qGoal} --json`,
+      `cwf ui-recipe --goal ${qGoal} --json`,
       'cwf ui-review',
     ],
     cliFlow: [
       'Generate UI direction first so the shell, tokens, and taste profile are explicit.',
-      'Convert the direction into a UI plan/spec before patching screens.',
+      'Convert the direction into a UI plan/spec and recipe scaffold before patching screens.',
       'Capture visual verification at the end of each UI slice.',
     ],
     codexAppFlow: [
-      'Pin UI-DIRECTION, UI-SPEC, and the latest browser artifacts in the Codex app.',
+      'Pin UI-DIRECTION, UI-SPEC, UI-RECIPE, and the latest browser artifacts in the Codex app.',
       'Keep one task thread per screen family to avoid mixing unrelated visual decisions.',
       'Use design-system actions as the tie-breaker when several implementations look acceptable.',
     ],
@@ -62,6 +63,7 @@ function frontendFlow(goal) {
       frontend: [
         'Land signature moments intentionally instead of sprinkling decoration everywhere.',
         'Patch empty/loading/error/success states in the same component boundary when possible.',
+        'Prototype the chosen recipe scaffold before widening the surface into page-local variations.',
       ],
     },
   };

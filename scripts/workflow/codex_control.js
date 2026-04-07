@@ -706,6 +706,8 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile) {
     lines.push(`- Archetype: \`${frontendDirection.archetype.label}\``);
     lines.push(`- Taste profile: \`${frontendDirection.taste.profile.label}\``);
     lines.push(`- Taste signature: \`${frontendDirection.taste.tagline}\``);
+    lines.push(`- Recipe scaffold: \`${contextPack.frontend?.recipeFile || 'n/a'}\``);
+    lines.push(`- Selected recipe: \`${contextPack.frontend?.selectedRecipe?.title || 'n/a'}\``);
     lines.push(`- Prototype mode: \`${frontendDirection.prototypeMode.mode}\` (${frontendDirection.prototypeMode.recommended ? 'recommended' : 'optional'})`);
     lines.push(...frontendDirection.semanticGuardrails.slice(0, 5).map((item) => `- Guardrail: ${item}`));
     lines.push(...frontendDirection.nativeFirstRecommendations.slice(0, 4).map((item) => `- Native first: ${item.title} -> ${item.native}`));
@@ -766,6 +768,8 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile) {
       archetype: frontendDirection.archetype.label,
       taste: frontendDirection.taste.tagline,
       tasteProfile: frontendDirection.taste.profile,
+      recipeFile: contextPack.frontend?.recipeFile || null,
+      selectedRecipe: contextPack.frontend?.selectedRecipe || null,
       semanticGuardrails: frontendDirection.semanticGuardrails,
       nativeFirst: frontendDirection.nativeFirstRecommendations,
       recipePack: frontendDirection.recipePack,

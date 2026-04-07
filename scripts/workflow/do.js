@@ -2,6 +2,7 @@ const path = require('node:path');
 const { parseArgs, resolveWorkflowRoot } = require('./common');
 const { analyzeIntent } = require('./intent_engine');
 const { writeRuntimeJson } = require('./runtime_helpers');
+const { buildUiRecipeScaffold } = require('./ui_recipe');
 const { buildUiSpec } = require('./ui_spec');
 const { buildUiDirection } = require('./design_intelligence');
 const { buildMonorepoIntelligence } = require('./monorepo');
@@ -106,8 +107,10 @@ function main() {
   if (!args['dry-run'] && payload.lane === 'frontend') {
     const uiDirection = buildUiDirection(cwd, rootDir, { goal });
     const uiSpec = buildUiSpec(cwd, rootDir, { goal });
+    const uiRecipe = buildUiRecipeScaffold(cwd, rootDir, { goal });
     payload.uiDirection = uiDirection.file;
     payload.uiSpec = uiSpec.file;
+    payload.uiRecipe = uiRecipe.file;
   }
   if (!args['dry-run'] && payload.repoSignals?.monorepo) {
     const monorepo = buildMonorepoIntelligence(cwd, rootDir, { writeFiles: true });
@@ -141,6 +144,9 @@ function main() {
   }
   if (payload.uiSpec) {
     console.log(`- UI spec: \`${payload.uiSpec}\``);
+  }
+  if (payload.uiRecipe) {
+    console.log(`- UI recipe: \`${payload.uiRecipe}\``);
   }
   if (payload.monorepo) {
     console.log(`- Monorepo intelligence: \`${payload.monorepo.markdownFile}\``);

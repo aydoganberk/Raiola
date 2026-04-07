@@ -300,6 +300,93 @@ function buildPrimitiveOpportunityAudit(cwd, profile, inventory = collectCompone
   };
 }
 
+function buildPrimitiveContractAudit(cwd, profile, inventory = collectComponentInventory(cwd)) {
+  const files = collectAuditFiles(cwd, inventory);
+  const issues = [];
+
+  const pushIssue = (primitive, file, detail, severity = 'medium') => {
+    if (issues.length >= 20 || issues.some((item) => item.primitive === primitive && item.file === file)) {
+      return;
+    }
+    issues.push({
+      primitive,
+      file,
+      detail,
+      severity,
+    });
+  };
+
+  for (const file of files) {
+    const content = readText(cwd, file);
+    if (!content) {
+      continue;
+    }
+    const haystack = `${file}\n${content}`;
+
+    if (/\b(modal|dialog|drawer|sheet|confirm)\b/i.test(haystack)
+      && !/<dialog\b/i.test(content)
+      && !/role=["']dialog["']/i.test(content)
+      && !/\b(Dialog|Drawer|Sheet)\b/.test(content)) {
+      pushIssue('dialog', file, 'Overlay-like UI was detected without an obvious dialog/drawer primitive contract.', 'medium');
+    }
+
+    if (/\b(dropdown|menu|popover|actions menu|context menu)\b/i.test(haystack)
+      && !/<menu\b/i.test(content)
+      && !/\bpopover\b/i.test(content)
+      && !/role=["']menuitem["']/i.test(content)
+      && !/\b(DropdownMenu|Popover|MenuItem)\b/.test(content)) {
+      pushIssue('menu', file, 'Contextual actions appear without an obvious menu/popover primitive contract.', 'medium');
+    }
+
+    if (/\b(table|datatable|data table|grid)\b/i.test(haystack)
+      && !/<table\b/i.test(content)
+      && !/\b(DataGrid|Table)\b/.test(content)) {
+      pushIssue('table', file, 'Relational data UI was detected without a table/data-grid primitive, which may weaken scan and a11y semantics.', 'medium');
+    }
+
+    if (/\b(accordion|collapse|collapsible|expand|disclosure)\b/i.test(haystack)
+      && !/<details\b/i.test(content)
+      && !/\b(Accordion|Collapsible)\b/.test(content)) {
+      pushIssue('disclosure', file, 'Expandable UI appears without an obvious disclosure primitive contract.', 'low');
+    }
+
+    if (/\b(toast|snackbar|alert|status message|success message|error message)\b/i.test(haystack)
+      && !/aria-live=|role=["']status["']/i.test(content)
+      && !/<output\b/i.test(content)
+      && !/\b(Alert|Toast)\b/.test(content)) {
+      pushIssue('feedback', file, 'Status feedback appears without an obvious output/aria-live/status primitive.', 'low');
+    }
+
+    if (/\b(progress|meter|upload progress|completion)\b/i.test(haystack)
+      && !/<progress\b/i.test(content)
+      && !/<meter\b/i.test(content)
+      && !/\b(Progress|Meter)\b/.test(content)) {
+      pushIssue('progress', file, 'Progress-like UI appears without a progress/meter primitive contract.', 'low');
+    }
+  }
+
+  const counts = issues.reduce((accumulator, issue) => {
+    accumulator[issue.primitive] = (accumulator[issue.primitive] || 0) + 1;
+    return accumulator;
+  }, {});
+  const verdict = issues.some((issue) => issue.severity === 'medium' || issue.severity === 'high')
+    ? 'warn'
+    : issues.length > 0
+      ? 'note'
+      : 'pass';
+
+  return {
+    filesScanned: files.length,
+    verdict,
+    issueCount: issues.length,
+    counts,
+    issues,
+    guidance: verdict === 'pass'
+      ? 'Primitive contracts look explicit in the scanned UI files.'
+      : 'Review repeated UI patterns and align them to explicit dialog/menu/table/disclosure/feedback primitives before they spread.',
+  };
+}
+
 function buildMissingStateAudit(cwd, inventory = collectComponentInventory(cwd)) {
   const files = collectAuditFiles(cwd, inventory);
   const definitions = {
@@ -488,6 +575,7 @@ function buildDesignDebt(profile, inventory, browserArtifacts, audits = {}) {
   const accessibilityAudit = audits.accessibilityAudit || { verdict: 'inconclusive', issueCount: 0 };
   const journeyAudit = audits.journeyAudit || { coverage: 'inconclusive', missing: [] };
   const semanticAudit = audits.semanticAudit || { verdict: 'pass', issueCount: 0 };
+  const primitiveContractAudit = audits.primitiveContractAudit || { verdict: 'pass', issueCount: 0 };
   const primitiveOpportunities = audits.primitiveOpportunities || [];
   if (!profile.stack.presence.storybook) {
     debt.push({
@@ -570,6 +658,13 @@ function buildDesignDebt(profile, inventory, browserArtifacts, audits = {}) {
       detail: `${primitiveOpportunities.length} shared primitive opportunity/opportunities were detected; repeated UI patterns may still be page-local.`,
     });
   }
+  if (primitiveContractAudit.issueCount > 0) {
+    debt.push({
+      area: 'primitive contracts',
+      severity: primitiveContractAudit.issues.some((issue) => issue.severity === 'medium' || issue.severity === 'high') ? 'medium' : 'low',
+      detail: `${primitiveContractAudit.issueCount} primitive contract gap(s) were detected across repeated UI patterns.`,
+    });
+  }
   return debt;
 }
 
@@ -610,6 +705,7 @@ module.exports = {
   buildAccessibilityAudit,
   buildJourneyAudit,
   buildMissingStateAudit,
+  buildPrimitiveContractAudit,
   buildPrimitiveOpportunityAudit,
   buildResponsiveMatrix,
   buildScorecard,

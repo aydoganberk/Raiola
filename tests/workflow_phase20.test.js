@@ -129,6 +129,36 @@ test('ui-direction accepts explicit taste profiles and exports richer design sig
   assert.ok(fs.existsSync(path.join(targetRepo, spec.file)));
 });
 
+test('ui-recipe scaffolds a framework-aware semantic-first slice', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  seedFrontendRepo(targetRepo);
+
+  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const recipe = JSON.parse(run(
+    'node',
+    [
+      targetBin,
+      'ui-recipe',
+      '--goal', 'build a premium review dashboard shell',
+      '--recipe', 'filter-table-inspector',
+      '--json',
+    ],
+    targetRepo,
+  ));
+
+  assert.equal(recipe.recipe.id, 'filter-table-inspector');
+  assert.equal(recipe.semanticPrototype.language, 'html');
+  assert.equal(recipe.stackScaffold.language, 'tsx');
+  assert.ok(recipe.targetFiles.includes('app/page.tsx'));
+  assert.ok(recipe.targetFiles.length >= 2);
+  assert.ok(recipe.nativeFirst.length >= 2);
+  assert.ok(recipe.translationNotes.length >= 3);
+  assert.ok(recipe.verificationPlan.length >= 2);
+  assert.ok(fs.existsSync(path.join(targetRepo, recipe.file)));
+  assert.ok(fs.existsSync(path.join(targetRepo, recipe.runtimeFile)));
+});
+
 test('component-map reports primitive opportunities for repeated frontend patterns', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
@@ -236,6 +266,10 @@ test('codex contextpack wraps workflow, repo, frontend, and review context into 
   assert.ok(pack.frontend.nativeFirst.length >= 3);
   assert.ok(pack.frontend.recipePack.length >= 2);
   assert.ok(pack.frontend.prototypeMode);
+  assert.ok(pack.frontend.recipeFile);
+  assert.ok(pack.frontend.selectedRecipe);
+  assert.ok(pack.attachments.some((item) => item.id === 'ui-recipe'));
+  assert.ok(pack.suggestedCommands.includes('cwf ui-recipe --json'));
   assert.ok(pack.review);
   assert.equal(pack.review.waveCount, 4);
 });

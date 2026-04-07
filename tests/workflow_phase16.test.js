@@ -73,6 +73,9 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
   fs.writeFileSync(path.join(targetRepo, 'components.json'), '{ "style": "default" }\n');
   fs.writeFileSync(path.join(targetRepo, 'app', 'layout.tsx'), 'export default function Layout({ children }) { return <html><body>{children}</body></html>; }\n');
   fs.writeFileSync(path.join(targetRepo, 'components', 'Button.tsx'), 'export function Button({ children }) { return <button type="button">{children}</button>; }\n');
+  fs.writeFileSync(path.join(targetRepo, 'components', 'Modal.tsx'), 'export function Modal() { return <div className="modal-shell"><button type="button">Close</button></div>; }\n');
+  fs.writeFileSync(path.join(targetRepo, 'components', 'ActionMenu.tsx'), 'export function ActionMenu() { return <div className="actions-menu"><button type="button">Open actions</button></div>; }\n');
+  fs.writeFileSync(path.join(targetRepo, 'components', 'ResultsGrid.tsx'), 'export function ResultsGrid() { return <div className="results-grid"><div>Row</div></div>; }\n');
   fs.writeFileSync(path.join(targetRepo, 'app', 'page.tsx'), 'export default function Page() { return <main><h1>Before</h1></main>; }\n');
 
   run('git', ['init'], targetRepo);
@@ -102,6 +105,7 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
   const uiSpec = JSON.parse(run('node', [targetBin, 'ui-spec', '--json'], targetRepo));
+  const uiRecipe = JSON.parse(run('node', [targetBin, 'ui-recipe', '--goal', 'build an analytics review dashboard', '--json'], targetRepo));
   const uiPlan = JSON.parse(run('node', [targetBin, 'ui-plan', '--json'], targetRepo));
   const componentMap = JSON.parse(run('node', [targetBin, 'component-map', '--json'], targetRepo));
   const responsiveMatrix = JSON.parse(run('node', [targetBin, 'responsive-matrix', '--json'], targetRepo));
@@ -112,14 +116,22 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
   const dashboard = JSON.parse(run('node', [targetBin, 'dashboard', '--json'], targetRepo));
 
   assert.ok(fs.existsSync(path.join(targetRepo, uiSpec.file)));
+  assert.ok(fs.existsSync(path.join(targetRepo, uiRecipe.file)));
   assert.ok(fs.existsSync(path.join(targetRepo, uiPlan.file)));
   assert.ok(fs.existsSync(path.join(targetRepo, componentMap.file)));
   assert.ok(fs.existsSync(path.join(targetRepo, responsiveMatrix.file)));
   assert.ok(fs.existsSync(path.join(targetRepo, designDebt.file)));
   assert.ok(fs.existsSync(path.join(targetRepo, uiReview.file)));
+  assert.ok(uiRecipe.recipe.id);
+  assert.ok(uiRecipe.targetFiles.length >= 2);
+  assert.ok(uiRecipe.translationNotes.length >= 3);
+  assert.ok(uiRecipe.verificationPlan.length >= 2);
+  assert.ok(uiSpec.primitiveContractAudit);
+  assert.ok(uiPlan.uiRecipe);
   assert.ok(uiReview.browserArtifacts.length >= 1);
   assert.ok(['pass', 'warn', 'fail', 'inconclusive'].includes(uiReview.accessibilityAudit.verdict));
   assert.ok(['pass', 'warn', 'incomplete', 'inconclusive'].includes(uiReview.journeyAudit.coverage));
+  assert.ok(uiReview.primitiveContractAudit.issueCount >= 1);
   assert.ok(review.findings.length >= 1);
   assert.ok(review.packageHeatmap.length >= 1);
   assert.ok(review.personas.length >= 1);
