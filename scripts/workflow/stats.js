@@ -7,6 +7,7 @@ const {
   workflowPaths,
 } = require('./common');
 const { summarizeVerifications, summarizeOrchestration } = require('./runtime_collector');
+const { getLogSnapshot } = require('./team_runtime_log_index');
 
 function printHelp() {
   console.log(`
@@ -45,12 +46,8 @@ function buildStatsPayload(cwd, rootDir, options = {}) {
   const verifications = summarizeVerifications(cwd);
   const orchestration = summarizeOrchestration(cwd);
   const evidenceGraph = readJsonIfExists(path.join(cwd, '.workflow', 'evidence-graph', 'latest.json'));
-  const mailboxEntries = fs.existsSync(path.join(cwd, '.workflow', 'orchestration', 'runtime', 'mailbox.jsonl'))
-    ? fs.readFileSync(path.join(cwd, '.workflow', 'orchestration', 'runtime', 'mailbox.jsonl'), 'utf8').split('\n').filter(Boolean).length
-    : 0;
-  const timelineEntries = fs.existsSync(path.join(cwd, '.workflow', 'orchestration', 'runtime', 'timeline.jsonl'))
-    ? fs.readFileSync(path.join(cwd, '.workflow', 'orchestration', 'runtime', 'timeline.jsonl'), 'utf8').split('\n').filter(Boolean).length
-    : 0;
+  const mailboxEntries = getLogSnapshot(cwd, 'mailbox').count;
+  const timelineEntries = getLogSnapshot(cwd, 'timeline').count;
   const payload = {
     generatedAt: new Date().toISOString(),
     rootDir: path.relative(cwd, rootDir).replace(/\\/g, '/'),
@@ -80,6 +77,11 @@ function buildStatsPayload(cwd, rootDir, options = {}) {
       adapter: orchestration.adapter?.name || 'none',
       mailboxEntries,
       timelineEntries,
+      supervisor: orchestration.supervisor || null,
+      mergeQueue: orchestration.mergeQueue || null,
+      conflicts: orchestration.conflicts || null,
+      prFeedback: orchestration.prFeedback || null,
+      reviewLoop: orchestration.reviewLoop || null,
     },
     quality: {
       shellPasses: verifications.shell.verdictCounts.pass || 0,
@@ -87,6 +89,8 @@ function buildStatsPayload(cwd, rootDir, options = {}) {
       browserPasses: verifications.browser.verdictCounts.pass || 0,
       browserFails: verifications.browser.verdictCounts.fail || 0,
       evidenceCoverage: evidenceGraph ? evidenceGraph.coverage : null,
+      mergeAverageScore: orchestration.quality?.averageScore || 0,
+      mergeVerdicts: orchestration.quality?.verdictCounts || {},
     },
   };
 
@@ -160,6 +164,11 @@ function main() {
   }
   console.log(`- Evidence coverage: \`${payload.quality.evidenceCoverage ? `${payload.quality.evidenceCoverage.supportedClaims}/${payload.quality.evidenceCoverage.claimCount}` : 'none'}\``);
   console.log(`- Mailbox entries: \`${payload.orchestration.mailboxEntries}\``);
+  if (payload.orchestration.mergeQueue || payload.orchestration.conflicts || payload.orchestration.prFeedback) {
+    console.log(`- Merge queue next: \`${payload.orchestration.mergeQueue?.nextTaskId || 'none'}\``);
+    console.log(`- Conflict blockers: \`${payload.orchestration.conflicts?.blockerCount || 0}\``);
+    console.log(`- Open PR feedback: \`${payload.orchestration.prFeedback?.openCount || 0}\``);
+  }
   if (payload.spend) {
     console.log(`- Weighted units: \`${payload.spend.weightedUnits}\``);
   }

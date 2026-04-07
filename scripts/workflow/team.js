@@ -13,6 +13,12 @@ const ACTIONS = {
   dispatch: { script: 'team_runtime.js', args: ['dispatch'] },
   monitor: { script: 'team_runtime.js', args: ['monitor'] },
   collect: { script: 'team_runtime.js', args: ['collect'] },
+  supervise: { script: 'team_runtime.js', args: ['supervise'] },
+  watch: { script: 'team_runtime.js', args: ['supervise', '--watch'] },
+  conflicts: { script: 'team_runtime.js', args: ['conflicts'] },
+  'merge-queue': { script: 'team_runtime.js', args: ['merge-queue'] },
+  quality: { script: 'team_runtime.js', args: ['quality'] },
+  'pr-feedback': { script: 'team_runtime.js', args: ['pr-feedback'] },
   mailbox: { script: 'team_runtime.js', args: ['mailbox'] },
   timeline: { script: 'team_runtime.js', args: ['timeline'] },
   steer: { script: 'team_runtime.js', args: ['steer'] },
@@ -29,6 +35,12 @@ Usage:
   node scripts/workflow/team.js dispatch
   node scripts/workflow/team.js monitor
   node scripts/workflow/team.js collect
+  node scripts/workflow/team.js supervise --cycles 3 --interval 5
+  node scripts/workflow/team.js watch --interval 5
+  node scripts/workflow/team.js conflicts
+  node scripts/workflow/team.js merge-queue --apply-next
+  node scripts/workflow/team.js quality
+  node scripts/workflow/team.js pr-feedback import --file review-comments.json
   node scripts/workflow/team.js mailbox
   node scripts/workflow/team.js timeline
   node scripts/workflow/team.js steer --note "Re-scope worker 2 to docs only"

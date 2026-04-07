@@ -44,7 +44,7 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 - newer modules in `scripts/workflow/io`, `markdown`, `packet`, and `perf` take over hot-path responsibilities incrementally.
 - `runtime_collector.js` is the shared in-process collector for `launch`, `hud`, `manager`, and the resume prompt surface.
 - `repair.js` separates safe runtime fixes from manual canonical follow-up.
-- `team_runtime.js` adds adapter-backed dispatch/monitor/collect on top of the canonical orchestration contract.
+- `team_runtime.js` adds adapter-backed dispatch/monitor/collect plus a bounded concurrent supervisor, merge-aware execution queue, PR feedback ingest, and review-loop artifacts on top of the canonical orchestration contract.
 - `codex_control.js` adds the safe Codex control-plane layer with diff, journal, rollback, and repo-derived role generation.
 - `do.js`, `note.js`, `thread.js`, and `backlog.js` add the daily intent/capture surfaces.
 - `capability_registry.js`, `intent_engine.js`, `intent_lexicon.js`, and `codex_profile_engine.js` add the explainable capability graph, multilingual intent grounding, steering memory, deterministic command matches, and task-aware Codex profile selection.
@@ -77,7 +77,7 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 - `cwf route --why` and `cwf do --explain` now expose rejected alternatives, ambiguity class, and language-mix grounding for the chosen lane.
 - `cwf packet explain` now emits a compiler summary that condenses route, scope, risks, questions, claims, impacted packages/tests, and evidence slots into a task-aware context packet.
 - `cwf route replay`, `cwf route eval`, `cwf codex bootstrap`, `cwf codex promptpack`, and `cwf codex resume-card` extend the operator surface from phase-only routing into task-aware bootstrap packets, prompt packs, and resume cards.
-- `cwf team mailbox`, `cwf team timeline`, and `cwf patch-review` expose runtime collect/merge state directly in-product.
+- `cwf team mailbox`, `cwf team timeline`, `cwf team supervise`, `cwf team merge-queue`, and `cwf patch-review` expose runtime collect/merge/review state directly in-product.
 - `cwf monorepo` materializes package-aware write scopes, verify plans, and performance risk notes under both docs and runtime cache surfaces.
 - `cwf review-orchestrate` materializes package/persona/wave review plans that can feed Team Lite, subagents, or Codex plan-subagents.
 - `cwf verify-browser` and `cwf ui-review` now carry browser-level accessibility and journey audits alongside visual evidence.

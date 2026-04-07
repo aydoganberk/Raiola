@@ -2,6 +2,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const {
+  productName,
+  productVersion,
+} = require('./product_version');
+const {
   PACKET_VERSION,
   buildPacketSnapshot,
   computeWindowStatus,
@@ -59,8 +63,11 @@ function sourceLayout() {
 }
 
 function sourcePackageVersion() {
-  const sourcePackage = readJson(sourceLayout().packageJson);
-  return String(sourcePackage.version || '0.0.0');
+  return productVersion();
+}
+
+function sourcePackageName() {
+  return productName();
 }
 
 function versionMarkerPath(targetRepo) {
@@ -112,7 +119,7 @@ function writeVersionMarker(targetRepo, options = {}) {
 - Previous version: \`${previousVersion}\`
 - Install mode: \`${mode}\`
 - Last refreshed at: \`${refreshedAt}\`
-- Source package: \`codex-workflow-kit@${installedVersion}\`
+- Source package: \`${sourcePackageName()}@${installedVersion}\`
 
 ## Update Guidance
 
@@ -155,6 +162,8 @@ function writeProductManifest(targetRepo, options = {}) {
   ].sort();
   const manifest = {
     installedVersion,
+    sourcePackageName: sourcePackageName(),
+    sourcePackageVersion: sourcePackageVersion(),
     generatedAt: new Date().toISOString(),
     versionMarkerPath: '.workflow/VERSION.md',
     skillPath: '.agents/skills/codex-workflow/SKILL.md',
@@ -638,6 +647,7 @@ module.exports = {
   readInstalledVersionMarker,
   relativePath,
   sourceLayout,
+  sourcePackageName,
   sourcePackageVersion,
   sourceRepoRoot,
   versionMarkerPath,

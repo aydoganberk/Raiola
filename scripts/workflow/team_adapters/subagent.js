@@ -1,6 +1,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { ensureDir, slugify } = require('../common');
+const {
+  buildFailureResult,
+  inspectCodexWorker,
+  launchCodexWorker,
+  supportsCodexExec,
+} = require('./codex_exec_driver');
 
 function workspacePathFor(cwd, taskId) {
   return path.join(cwd, '.workflow', 'orchestration', 'subagents', `${slugify(taskId) || taskId}`);
@@ -32,6 +38,16 @@ function writeWorkspaceTaskFiles(state, task, workspacePath) {
 
 function parseResultFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
+  if (!/- Status: `/.test(content)) {
+    const summary = content.split('\n').map((line) => line.trim()).find(Boolean) || 'No summary recorded';
+    return {
+      status: 'completed',
+      summary: summary.slice(0, 160),
+      evidence: [],
+      details: content.trim(),
+      next: '',
+    };
+  }
   return {
     status: content.match(/- Status: `([^`]*)`/)?.[1] || 'completed',
     summary: content.match(/- Summary: `([^`]*)`/)?.[1] || 'No summary recorded',
@@ -66,13 +82,20 @@ function dispatch(state, runtimeState) {
     }
     const workspacePath = workspacePathFor(state.repoRoot, task.id);
     writeWorkspaceTaskFiles(state, task, workspacePath);
-    nextState.workspaces[task.id] = {
+    const workspace = {
       path: workspacePath,
       mode: 'subagent',
       reused: false,
       exists: true,
       dispatchedAt: new Date().toISOString(),
     };
+    if (supportsCodexExec(nextState)) {
+      workspace.execCwd = state.repoRoot;
+      workspace.live = launchCodexWorker(state, task, workspace, nextState, {
+        readOnly: true,
+      });
+    }
+    nextState.workspaces[task.id] = workspace;
     nextState.dispatchedTasks.push(task.id);
   }
   return nextState;
@@ -82,10 +105,12 @@ function poll(state, runtimeState) {
   const workspaces = {};
   for (const [taskId, workspace] of Object.entries(runtimeState.workspaces || {})) {
     const exists = fs.existsSync(workspace.path);
+    const live = inspectCodexWorker(workspace);
     workspaces[taskId] = {
       ...workspace,
       exists,
       hasResult: exists && fs.existsSync(path.join(workspace.path, '.workflow-task-result.md')),
+      live,
     };
   }
   return {
@@ -99,7 +124,14 @@ function collect(state, runtimeState) {
   const collectedResults = { ...(runtimeState.collectedResults || {}) };
   for (const [taskId, workspace] of Object.entries(runtimeState.workspaces || {})) {
     const resultFile = path.join(workspace.path, '.workflow-task-result.md');
+    const live = inspectCodexWorker(workspace);
     if (!fs.existsSync(resultFile)) {
+      if (live && !live.running) {
+        collectedResults[taskId] = buildFailureResult(workspace, taskId);
+        if (!collectedTasks.includes(taskId)) {
+          collectedTasks.push(taskId);
+        }
+      }
       continue;
     }
     collectedResults[taskId] = parseResultFile(resultFile);

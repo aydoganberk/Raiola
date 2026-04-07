@@ -3,6 +3,12 @@ const os = require('node:os');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const { ensureDir, slugify } = require('../common');
+const {
+  buildFailureResult,
+  inspectCodexWorker,
+  launchCodexWorker,
+  supportsCodexExec,
+} = require('./codex_exec_driver');
 
 function run(command, args, cwd) {
   return childProcess.spawnSync(command, args, {
@@ -100,6 +106,16 @@ function writeWorkspaceTaskFiles(state, task, workspacePath) {
 
 function parseResultFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
+  if (!/- Status: `/.test(content)) {
+    const summary = content.split('\n').map((line) => line.trim()).find(Boolean) || 'No summary recorded';
+    return {
+      status: 'completed',
+      summary: summary.slice(0, 160),
+      evidence: [],
+      details: content.trim(),
+      next: '',
+    };
+  }
   const status = content.match(/- Status: `([^`]*)`/)?.[1] || 'completed';
   const summary = content.match(/- Summary: `([^`]*)`/)?.[1] || 'No summary recorded';
   const evidence = content.match(/- Evidence: `([^`]*)`/)?.[1]
@@ -143,12 +159,19 @@ function dispatch(state, runtimeState) {
       ? ensureGitWorkspace(state.repoRoot, workspacePath)
       : ensureSnapshotWorkspace(state.repoRoot, task, workspacePath);
     writeWorkspaceTaskFiles(state, task, workspacePath);
-    nextState.workspaces[task.id] = {
+    const workspace = {
       path: workspacePath,
       mode: provisioning.mode,
       reused: provisioning.reused,
       dispatchedAt: new Date().toISOString(),
     };
+    if (supportsCodexExec(nextState)) {
+      workspace.execCwd = workspacePath;
+      workspace.live = launchCodexWorker(state, task, workspace, nextState, {
+        readOnly: false,
+      });
+    }
+    nextState.workspaces[task.id] = workspace;
     nextState.dispatchedTasks.push(task.id);
   }
 
@@ -163,11 +186,13 @@ function poll(state, runtimeState) {
     const dirty = workspace.mode === 'git-worktree'
       ? run('git', ['status', '--short'], workspace.path).stdout.trim()
       : '';
+    const live = inspectCodexWorker(workspace);
     workspaces[taskId] = {
       ...workspace,
       exists,
       hasResult: exists && fs.existsSync(resultFile),
       dirty,
+      live,
     };
   }
 
@@ -184,7 +209,14 @@ function collect(state, runtimeState) {
 
   for (const [taskId, workspace] of Object.entries(runtimeState.workspaces || {})) {
     const resultFile = path.join(workspace.path, '.workflow-task-result.md');
+    const live = inspectCodexWorker(workspace);
     if (!fs.existsSync(resultFile)) {
+      if (live && !live.running) {
+        collectedResults[taskId] = buildFailureResult(workspace, taskId);
+        if (!collectedTasks.includes(taskId)) {
+          collectedTasks.push(taskId);
+        }
+      }
       continue;
     }
     collectedResults[taskId] = parseResultFile(resultFile);

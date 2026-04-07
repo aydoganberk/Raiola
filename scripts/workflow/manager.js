@@ -36,6 +36,14 @@ function buildManagerPayload(cwd, rootDir) {
     window: collected.patch.window,
     next: collected.patch.next,
     orchestration: collected.orchestration,
+    teamRuntimeSignals: {
+      supervisor: collected.orchestration.supervisor || null,
+      mergeQueue: collected.orchestration.mergeQueue || null,
+      conflicts: collected.orchestration.conflicts || null,
+      quality: collected.orchestration.quality || null,
+      prFeedback: collected.orchestration.prFeedback || null,
+      reviewLoop: collected.orchestration.reviewLoop || null,
+    },
     verifications: collected.verifications,
     repair: collected.patch.repair,
     counts: collected.state.counts,
@@ -97,6 +105,21 @@ function main() {
   if (payload.orchestration.route) {
     console.log(`- Route: \`${payload.orchestration.route.action}\``);
     console.log(`- Recommendation: \`${payload.orchestration.route.recommendation}\``);
+  }
+  if (payload.teamRuntimeSignals.supervisor) {
+    console.log(`- Supervisor: \`${payload.teamRuntimeSignals.supervisor.status}\` cycles=\`${payload.teamRuntimeSignals.supervisor.cycleCount || 0}\``);
+  }
+  if (payload.teamRuntimeSignals.mergeQueue) {
+    console.log(`- Merge queue: next=\`${payload.teamRuntimeSignals.mergeQueue.nextTaskId || 'none'}\` size=\`${payload.teamRuntimeSignals.mergeQueue.queueLength || 0}\``);
+  }
+  if (payload.teamRuntimeSignals.conflicts) {
+    console.log(`- Conflicts: blockers=\`${payload.teamRuntimeSignals.conflicts.blockerCount || 0}\` warn=\`${payload.teamRuntimeSignals.conflicts.warnCount || 0}\``);
+  }
+  if (payload.teamRuntimeSignals.prFeedback) {
+    console.log(`- PR feedback: open=\`${payload.teamRuntimeSignals.prFeedback.openCount || 0}\` resolved=\`${payload.teamRuntimeSignals.prFeedback.resolvedCount || 0}\``);
+  }
+  if (payload.teamRuntimeSignals.reviewLoop) {
+    console.log(`- Review loop: \`${payload.teamRuntimeSignals.reviewLoop.verdict || 'noop'}\` findings=\`${payload.teamRuntimeSignals.reviewLoop.findingsCount || 0}\``);
   }
 }
 

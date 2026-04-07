@@ -66,6 +66,24 @@ function printCompact(state, options = {}) {
   console.log(`- counts=\`carryforward:${state.counts.carryforward} seeds:${state.counts.seeds} recall:${state.counts.activeRecall}\``);
   console.log(`- next=\`${state.next.title}\` command=\`${state.next.command}\``);
   console.log(`- team=\`${state.orchestration?.status || 'idle'}\` verify_shell=\`${state.verifications?.shell?.latest?.verdict || 'none'}\` verify_browser=\`${state.verifications?.browser?.latest?.verdict || 'none'}\``);
+  const extraTeamSignals = Boolean(
+    state.orchestration?.supervisor
+    || state.orchestration?.mergeQueue
+    || state.orchestration?.conflicts
+    || state.orchestration?.prFeedback
+    || state.orchestration?.reviewLoop
+  ) && (
+    state.orchestration?.status !== 'idle'
+    || (state.orchestration?.supervisor?.cycleCount || 0) > 0
+    || (state.orchestration?.mergeQueue?.queueLength || 0) > 0
+    || (state.orchestration?.conflicts?.blockerCount || 0) > 0
+    || (state.orchestration?.conflicts?.warnCount || 0) > 0
+    || (state.orchestration?.prFeedback?.openCount || 0) > 0
+    || (state.orchestration?.reviewLoop?.findingsCount || 0) > 0
+  );
+  if (extraTeamSignals) {
+    console.log(`- team_runtime=\`supervisor:${state.orchestration?.supervisor?.status || 'idle'} merge_next:${state.orchestration?.mergeQueue?.nextTaskId || 'none'} blockers:${state.orchestration?.conflicts?.blockerCount || 0} feedback:${state.orchestration?.prFeedback?.openCount || 0} review:${state.orchestration?.reviewLoop?.verdict || 'noop'}\``);
+  }
   if (options.showIntent && state.route) {
     console.log(`- intent=\`${state.route.recommendedCapability}\` preset=\`${state.route.recommendedPreset}\` confidence=\`${state.route.confidence}\``);
   }
@@ -144,6 +162,25 @@ function printStandard(state, options = {}) {
   console.log(`- Resume anchor: \`${state.handoff.resumeAnchor}\``);
   console.log(`- Expected first command: \`${state.handoff.expectedFirstCommand}\``);
   console.log(`- Next action: ${state.handoff.nextAction}`);
+
+  if (state.orchestration?.supervisor || state.orchestration?.mergeQueue || state.orchestration?.conflicts || state.orchestration?.prFeedback || state.orchestration?.reviewLoop) {
+    console.log(`\n## Team Runtime Signals\n`);
+    if (state.orchestration?.supervisor) {
+      console.log(`- Supervisor: \`${state.orchestration.supervisor.status}\` cycles=\`${state.orchestration.supervisor.cycleCount || 0}\``);
+    }
+    if (state.orchestration?.mergeQueue) {
+      console.log(`- Merge queue: next=\`${state.orchestration.mergeQueue.nextTaskId || 'none'}\` size=\`${state.orchestration.mergeQueue.queueLength || 0}\``);
+    }
+    if (state.orchestration?.conflicts) {
+      console.log(`- Conflicts: blockers=\`${state.orchestration.conflicts.blockerCount || 0}\` warn=\`${state.orchestration.conflicts.warnCount || 0}\``);
+    }
+    if (state.orchestration?.prFeedback) {
+      console.log(`- PR feedback: open=\`${state.orchestration.prFeedback.openCount || 0}\` resolved=\`${state.orchestration.prFeedback.resolvedCount || 0}\``);
+    }
+    if (state.orchestration?.reviewLoop) {
+      console.log(`- Review loop: \`${state.orchestration.reviewLoop.verdict || 'noop'}\` findings=\`${state.orchestration.reviewLoop.findingsCount || 0}\``);
+    }
+  }
 
   if (state.repair?.hints?.length > 0) {
     console.log(`\n## Repair Hints\n`);

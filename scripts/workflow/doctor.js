@@ -1,6 +1,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {
+  detectRepoProductMeta,
+  embeddedProductMeta,
+  productVersion,
+} = require('./product_version');
+const {
   assertWorkflowFiles,
   buildPacketSnapshot,
   currentBranch,
@@ -82,6 +87,11 @@ function buildDoctorReport(cwd, rootDir) {
   const skillPath = path.join(cwd, '.agents', 'skills', 'codex-workflow', 'SKILL.md');
   const versionMarker = readInstalledVersionMarker(cwd);
   const installedProductVersion = productManifest?.installedVersion || null;
+  const expectedProductVersion = productVersion();
+  const embeddedMeta = embeddedProductMeta();
+  const repoProductMeta = detectRepoProductMeta();
+  const sourceRepoVersion = repoProductMeta?.version || null;
+  const versionDriftStatus = sourceRepoVersion ? 'fail' : 'warn';
   const packets = [
     buildPacketSnapshot(paths, { doc: 'context', step: 'discuss' }),
     buildPacketSnapshot(paths, { doc: 'execplan', step: 'plan' }),
@@ -207,18 +217,48 @@ function buildDoctorReport(cwd, rootDir) {
 
   if (!versionMarker.exists) {
     pushCheck(
-      'warn',
+      versionDriftStatus,
       'Product version marker -> .workflow/VERSION.md is missing, so update drift cannot be proven',
       'cwf update',
     );
   } else if (installedProductVersion && versionMarker.installedVersion !== installedProductVersion) {
     pushCheck(
-      'warn',
+      versionDriftStatus,
       `Product version marker -> marker=${versionMarker.installedVersion || 'unknown'}, manifest=${installedProductVersion}`,
+      'cwf update',
+    );
+  } else if (versionMarker.installedVersion && versionMarker.installedVersion !== expectedProductVersion) {
+    pushCheck(
+      versionDriftStatus,
+      `Product version marker -> marker=${versionMarker.installedVersion}, expected=${expectedProductVersion}`,
       'cwf update',
     );
   } else {
     pushCheck('pass', `Product version marker -> ${versionMarker.installedVersion || installedProductVersion || 'present'}`);
+  }
+
+  if (productManifest && installedProductVersion && installedProductVersion !== expectedProductVersion) {
+    pushCheck(
+      versionDriftStatus,
+      `Product manifest version -> manifest=${installedProductVersion}, expected=${expectedProductVersion}`,
+      'cwf update',
+    );
+  }
+
+  if (productManifest?.sourcePackageVersion && productManifest.sourcePackageVersion !== expectedProductVersion) {
+    pushCheck(
+      versionDriftStatus,
+      `Product manifest source package -> manifest=${productManifest.sourcePackageVersion}, expected=${expectedProductVersion}`,
+      'cwf update',
+    );
+  }
+
+  if (repoProductMeta && repoProductMeta.version !== embeddedMeta.version) {
+    pushCheck(
+      'fail',
+      `Embedded workflow product version -> embedded=${embeddedMeta.version}, repo package=${repoProductMeta.version}`,
+      'Update scripts/workflow/product_version.js to match package.json before shipping',
+    );
   }
 
   if (preferences.gitIsolation === 'branch' && milestone !== 'NONE') {

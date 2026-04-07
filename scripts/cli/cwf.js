@@ -44,7 +44,7 @@ const CLI_COMMANDS = {
   profile: { script: 'profile.js', description: 'Show the operator profile and workflow defaults.' },
   workspaces: { script: 'workspaces_center.js', description: 'Show the workspace/workstream registry.' },
   hooks: { script: 'hooks.js', description: 'Manage disabled-by-default workflow hooks.' },
-  mcp: { script: 'mcp.js', description: 'Inspect the repo-local MCP manifest surface.' },
+  mcp: { script: 'mcp.js', description: 'Install, inspect, and doctor the repo-local MCP servers.' },
   notify: { script: 'notify.js', description: 'Emit a workflow notification smoke event.' },
   daemon: { script: 'daemon.js', description: 'Inspect or restart the optional workflow daemon state.' },
   gc: { script: 'gc.js', description: 'Prune old workflow runtime artifacts.' },

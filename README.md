@@ -24,7 +24,7 @@ It helps when you need:
 
 - Solo daily loop: `cwf do`, `cwf next`, `cwf verify-shell`, `cwf checkpoint`, `cwf next-prompt`
 - Deep review: `cwf route`, `cwf review`, `cwf ui-review`, `cwf verify-work`, `cwf ship-readiness`
-- Team parallel: `cwf monorepo`, `cwf team run`, `cwf team collect`, `cwf patch-review`, `cwf sessions`
+- Team parallel: `cwf monorepo`, `cwf team run`, `cwf team supervise`, `cwf team merge-queue`, `cwf patch-review`, `cwf sessions`
 
 Run `cwf help` to start from these flows. Use `cwf help all` for the full shell, or `cwf help <topic>` for focused categories like `frontend`, `trust`, `runtime`, or `codex`.
 

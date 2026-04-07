@@ -166,6 +166,13 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 - `cwf team dispatch`
 - `cwf team monitor`
 - `cwf team collect`
+- `cwf team supervise --cycles 3 --interval 5`
+- `cwf team watch --interval 5`
+- `cwf team conflicts`
+- `cwf team merge-queue --apply-next|--apply-all`
+- `cwf team quality`
+- `cwf team pr-feedback import --file review-comments.json`
+- `cwf team pr-feedback resolve --id comment-1`
 - `cwf team mailbox`
 - `cwf team timeline`
 - `cwf team steer --note "..."`
@@ -190,6 +197,12 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 - `cwf codex` -> `.workflow/runtime/codex-control/*` with a virtual repo-local `.codex` root
 - `cwf team mailbox` -> `.workflow/orchestration/runtime/mailbox.jsonl`
 - `cwf team timeline` -> `.workflow/orchestration/runtime/timeline.jsonl`
+- `cwf team supervise` / `cwf team watch` -> `.workflow/orchestration/runtime/supervisor.json`
+- `cwf team conflicts` -> `.workflow/orchestration/runtime/conflicts.json`
+- `cwf team merge-queue` -> `.workflow/orchestration/runtime/merge-queue.json`
+- `cwf team quality` -> `.workflow/orchestration/runtime/quality.json`
+- `cwf team pr-feedback` -> `.workflow/orchestration/runtime/pr-feedback.json` plus `.workflow/orchestration/runtime/pr-feedback-followups.md`
+- `cwf team collect` -> `.workflow/orchestration/runtime/review-loop.{json,md}` plus `.workflow/orchestration/runtime/combined.patch`
 - `cwf patch-review` -> `.workflow/orchestration/patches/*`
 - `cwf route` -> `.workflow/cache/model-routing.json`
 - `cwf do` / `cwf route` -> `.workflow/cache/intent-route-history.json`

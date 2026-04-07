@@ -1,6 +1,6 @@
 # FRONTEND_PROFILE
 
-- Last updated: `2026-04-06`
+- Last updated: `2026-04-07`
 - Generator version: `phase5-frontend-v1`
 - Workflow root: `docs/workflow`
 - Scope: `workstream`

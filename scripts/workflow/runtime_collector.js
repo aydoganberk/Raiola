@@ -4,6 +4,7 @@ const { buildDoctorReport } = require('./doctor');
 const { buildHealthReport } = require('./health');
 const { buildNextPayload } = require('./next_step');
 const { deepMerge, writeStateSurface, buildBaseState } = require('./state_surface');
+const { getLogSnapshot } = require('./team_runtime_log_index');
 const { listLatestEntries, readJsonIfExists } = require('./runtime_helpers');
 
 function relativePath(fromDir, targetPath) {
@@ -54,9 +55,24 @@ function summarizeVerifications(cwd) {
 
 function summarizeOrchestration(cwd) {
   const orchestrationStatePath = path.join(cwd, '.workflow', 'orchestration', 'state.json');
-  const adapterStatePath = path.join(cwd, '.workflow', 'orchestration', 'runtime', 'state.json');
+  const runtimeRoot = path.join(cwd, '.workflow', 'orchestration', 'runtime');
+  const adapterStatePath = path.join(runtimeRoot, 'state.json');
+  const supervisorStatePath = path.join(runtimeRoot, 'supervisor.json');
+  const mergeQueueStatePath = path.join(runtimeRoot, 'merge-queue.json');
+  const conflictsStatePath = path.join(runtimeRoot, 'conflicts.json');
+  const qualityStatePath = path.join(runtimeRoot, 'quality.json');
+  const prFeedbackStatePath = path.join(runtimeRoot, 'pr-feedback.json');
+  const reviewLoopStatePath = path.join(runtimeRoot, 'review-loop.json');
+  const mailboxPath = path.join(runtimeRoot, 'mailbox.jsonl');
   const orchestrationState = readJsonIfExists(orchestrationStatePath);
   const adapterState = readJsonIfExists(adapterStatePath);
+  const supervisorState = readJsonIfExists(supervisorStatePath);
+  const mergeQueueState = readJsonIfExists(mergeQueueStatePath);
+  const conflictsState = readJsonIfExists(conflictsStatePath);
+  const qualityState = readJsonIfExists(qualityStatePath);
+  const prFeedbackState = readJsonIfExists(prFeedbackStatePath);
+  const reviewLoopState = readJsonIfExists(reviewLoopStatePath);
+  const mailboxEntries = getLogSnapshot(cwd, 'mailbox').count;
 
   if (!orchestrationState) {
     return {
@@ -73,12 +89,42 @@ function summarizeOrchestration(cwd) {
         skipped: 0,
       },
       adapter: null,
+      supervisor: supervisorState ? {
+        status: supervisorState.status || 'idle',
+        cycleCount: supervisorState.cycleCount || 0,
+        watch: Boolean(supervisorState.watch),
+        background: Boolean(supervisorState.background),
+      } : null,
+      mergeQueue: mergeQueueState ? {
+        nextTaskId: mergeQueueState.nextTaskId || null,
+        counts: mergeQueueState.counts || {},
+        queueLength: Array.isArray(mergeQueueState.queue) ? mergeQueueState.queue.length : 0,
+      } : null,
+      conflicts: conflictsState ? {
+        blockerCount: conflictsState.blockerCount || 0,
+        warnCount: conflictsState.warnCount || 0,
+      } : null,
+      quality: qualityState ? {
+        averageScore: qualityState.averageScore || 0,
+        verdictCounts: qualityState.verdictCounts || {},
+      } : null,
+      prFeedback: prFeedbackState ? {
+        openCount: prFeedbackState.openCount || 0,
+        resolvedCount: prFeedbackState.resolvedCount || 0,
+        source: prFeedbackState.source || null,
+      } : null,
+      reviewLoop: reviewLoopState ? {
+        verdict: reviewLoopState.verdict || 'noop',
+        findingsCount: reviewLoopState.findingsCount || 0,
+        blockerCount: reviewLoopState.blockerCount || 0,
+      } : null,
+      mailboxEntries,
     };
   }
 
   return {
     active: true,
-    status: orchestrationState.runtime?.status || 'active',
+    status: orchestrationState.runtime?.status || adapterState?.status || 'active',
     activeWave: orchestrationState.activeWave || null,
     route: orchestrationState.runtime?.route || null,
     counts: orchestrationState.runtime?.counts || {
@@ -97,6 +143,43 @@ function summarizeOrchestration(cwd) {
       collectedTasks: adapterState.collectedTasks || [],
       runtimeFile: relativePath(cwd, adapterStatePath),
     } : null,
+    supervisor: supervisorState ? {
+      status: supervisorState.status || 'idle',
+      cycleCount: supervisorState.cycleCount || 0,
+      watch: Boolean(supervisorState.watch),
+      background: Boolean(supervisorState.background),
+      lastCycleAt: supervisorState.lastCycleAt || null,
+      runtimeFile: relativePath(cwd, supervisorStatePath),
+    } : null,
+    mergeQueue: mergeQueueState ? {
+      nextTaskId: mergeQueueState.nextTaskId || null,
+      counts: mergeQueueState.counts || {},
+      queueLength: Array.isArray(mergeQueueState.queue) ? mergeQueueState.queue.length : 0,
+      runtimeFile: relativePath(cwd, mergeQueueStatePath),
+    } : null,
+    conflicts: conflictsState ? {
+      blockerCount: conflictsState.blockerCount || 0,
+      warnCount: conflictsState.warnCount || 0,
+      runtimeFile: relativePath(cwd, conflictsStatePath),
+    } : null,
+    quality: qualityState ? {
+      averageScore: qualityState.averageScore || 0,
+      verdictCounts: qualityState.verdictCounts || {},
+      runtimeFile: relativePath(cwd, qualityStatePath),
+    } : null,
+    prFeedback: prFeedbackState ? {
+      openCount: prFeedbackState.openCount || 0,
+      resolvedCount: prFeedbackState.resolvedCount || 0,
+      source: prFeedbackState.source || null,
+      runtimeFile: relativePath(cwd, prFeedbackStatePath),
+    } : null,
+    reviewLoop: reviewLoopState ? {
+      verdict: reviewLoopState.verdict || 'noop',
+      findingsCount: reviewLoopState.findingsCount || 0,
+      blockerCount: reviewLoopState.blockerCount || 0,
+      runtimeFile: relativePath(cwd, reviewLoopStatePath),
+    } : null,
+    mailboxEntries,
     stateFile: relativePath(cwd, orchestrationStatePath),
   };
 }
