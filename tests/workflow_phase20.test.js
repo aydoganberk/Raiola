@@ -96,7 +96,7 @@ function gitInit(targetRepo) {
 
 test('ui-direction accepts explicit taste profiles and exports richer design signals', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
@@ -138,7 +138,7 @@ test('ui-direction accepts explicit taste profiles and exports richer design sig
 
 test('design-dna and state-atlas generate downstream site-building contracts', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   writeFile(
     targetRepo,
@@ -171,7 +171,7 @@ test('design-dna and state-atlas generate downstream site-building contracts', (
 
 test('page-blueprint, design-md, component-strategy, design-benchmark, and frontend-brief generate external-site artifact packs', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   writeFile(
     targetRepo,
@@ -232,7 +232,7 @@ test('page-blueprint, design-md, component-strategy, design-benchmark, and front
 
 test('ui-recipe scaffolds a framework-aware semantic-first slice', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
@@ -262,7 +262,7 @@ test('ui-recipe scaffolds a framework-aware semantic-first slice', () => {
 
 test('component-map reports primitive opportunities for repeated frontend patterns', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   writeFile(targetRepo, 'components/Modal.tsx', 'export function Modal() { return <div className="modal-shell"><button>Close</button></div>; }\n');
   writeFile(targetRepo, 'components/DataGrid.tsx', 'export function DataGrid() { return <div className="grid"><div>Row</div></div>; }\n');
@@ -276,7 +276,7 @@ test('component-map reports primitive opportunities for repeated frontend patter
 
 test('review-tasks builds a blocker-first four-wave task graph for large review loops', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   gitInit(targetRepo);
 
@@ -319,7 +319,7 @@ test('review-tasks builds a blocker-first four-wave task graph for large review 
 
 test('codex contextpack wraps workflow, repo, frontend, and review context into budgeted attachments', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   gitInit(targetRepo);
 
@@ -396,7 +396,7 @@ test('codex contextpack wraps workflow, repo, frontend, and review context into 
 
 test('codex contextpack still infers focus files when no review graph or frontend lane is active', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
   const wrapper = JSON.parse(run(
@@ -412,7 +412,7 @@ test('codex contextpack still infers focus files when no review graph or fronten
 
 test('monorepo intelligence exposes hotspots and context budgets for broad package graphs', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedMonorepo(targetRepo);
   gitInit(targetRepo);
 

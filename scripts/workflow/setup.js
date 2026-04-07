@@ -17,9 +17,11 @@ Usage:
 Options:
   --target <path>        Target repository. Defaults to current working directory
   --dry-run              Show which mode would run without writing files
+  --script-profile <id>  Package script profile. Defaults to pilot on fresh setup and full on migrate
   --write-agents-template
                          Write docs/workflow/AGENTS_PATCH_TEMPLATE.md
   --overwrite-scripts    Replace conflicting package.json workflow scripts
+  --skip-gitignore       Do not patch .gitignore with workflow runtime entries
   --skip-verify          Skip doctor/health/next/hud verification
   --json                 Print machine-readable output
   `);
@@ -41,12 +43,15 @@ function main() {
   const dryRun = Boolean(args['dry-run']);
 
   if (dryRun) {
+    const scriptProfile = String(args['script-profile'] || (mode === 'init' ? 'pilot' : 'full'));
     const payload = {
       targetRepo,
       mode,
       docsExists: mode === 'migrate',
+      scriptProfile,
       verify: !args['skip-verify'],
       overwriteScripts: Boolean(args['overwrite-scripts']),
+      manageGitignore: !args['skip-gitignore'],
       writeAgentsTemplate: Boolean(args['write-agents-template']),
     };
     if (args.json) {
@@ -57,14 +62,18 @@ function main() {
     console.log(`- Target: \`${targetRepo}\``);
     console.log(`- Mode: \`${mode}\``);
     console.log(`- Docs already exist: \`${mode === 'migrate' ? 'yes' : 'no'}\``);
+    console.log(`- Script profile: \`${payload.scriptProfile}\``);
+    console.log(`- Gitignore patching: \`${payload.manageGitignore ? 'enabled' : 'skipped'}\``);
     console.log(`- Verification: \`${payload.verify ? 'enabled' : 'skipped'}\``);
     return;
   }
 
   const report = installWorkflowSurface(targetRepo, {
     mode,
+    scriptProfile: args['script-profile'] || (mode === 'init' ? 'pilot' : 'full'),
     overwriteScriptConflicts: Boolean(args['overwrite-scripts']),
     writeAgentsTemplate: Boolean(args['write-agents-template']),
+    manageGitignore: !args['skip-gitignore'],
     verify: !args['skip-verify'],
   });
 

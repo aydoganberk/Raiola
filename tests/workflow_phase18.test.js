@@ -25,7 +25,7 @@ function run(command, args, cwd) {
 
 test('phase 8 trust surfaces generate fix plans, approval plans, ship gates, and richer evidence graphs', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
 
   run('git', ['init'], targetRepo);
@@ -90,7 +90,7 @@ test('phase 8 trust surfaces generate fix plans, approval plans, ship gates, and
 
 test('roadmap-compatible wrappers and aliases are scriptable', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
 
   run(

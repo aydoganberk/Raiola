@@ -6,6 +6,10 @@ const {
   productVersion,
 } = require('./product_version');
 const {
+  missingGitignoreEntries,
+  WORKFLOW_GITIGNORE_ENTRIES,
+} = require('./install_common');
+const {
   assertWorkflowFiles,
   buildPacketSnapshot,
   currentBranch,
@@ -205,6 +209,10 @@ function buildDoctorReport(cwd, rootDir) {
   }
 
   if (productManifest) {
+    pushCheck(
+      'pass',
+      `Install surface -> profile=${productManifest.scriptProfile || 'full'}, runtime=${productManifest.runtimeSurfaceProfile || 'full'}, files=${productManifest.runtimeFiles?.length || 0}`,
+    );
     const missingRuntimeFiles = expectedRuntimeFiles.filter((relativeScriptPath) => !fs.existsSync(path.join(cwd, relativeScriptPath)));
     pushCheck(
       missingRuntimeFiles.length === 0 ? 'pass' : 'fail',
@@ -214,6 +222,16 @@ function buildDoctorReport(cwd, rootDir) {
       missingRuntimeFiles.length === 0 ? null : 'cwf update',
     );
   }
+
+  const recommendedGitignoreEntries = productManifest?.recommendedGitignoreEntries || WORKFLOW_GITIGNORE_ENTRIES;
+  const missingIgnoreEntries = missingGitignoreEntries(cwd, recommendedGitignoreEntries);
+  pushCheck(
+    missingIgnoreEntries.length === 0 ? 'pass' : 'warn',
+    missingIgnoreEntries.length === 0
+      ? `Gitignore hygiene -> runtime artifacts are ignored (${recommendedGitignoreEntries.join(', ')})`
+      : `Gitignore hygiene -> missing ${summarizeItems(missingIgnoreEntries)}`,
+    missingIgnoreEntries.length === 0 ? null : 'cwf update',
+  );
 
   pushCheck(
     fs.existsSync(skillPath) ? 'pass' : 'warn',

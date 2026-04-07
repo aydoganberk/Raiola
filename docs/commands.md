@@ -245,6 +245,8 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 
 ## Backward-compatible scripts
 
+Fresh `cwf setup` installs the focused `pilot` profile by default so package.json and the repo-local shell stay smaller on day one. Use `cwf update --script-profile core` for the full shell with curated npm aliases, or `cwf update --script-profile full` when you want the full legacy `workflow:*` alias surface restored.
+
 - `npm run workflow:launch`
 - `npm run workflow:codex`
 - `npm run workflow:do`

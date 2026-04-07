@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
+const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
+const { readProductManifest } = require('../workflow/product_manifest');
 
 const CLI_COMMANDS = {
   launch: { script: 'launch.js', description: 'Strong-start launcher for the current Codex session.' },
@@ -86,6 +88,37 @@ const CLI_COMMANDS = {
   uninstall: { script: 'uninstall.js', description: 'Safely remove installed runtime surfaces.' },
   benchmark: { script: 'benchmark.js', description: 'Measure hot-path command timings and cache metrics.' },
 };
+
+const CLI_COMMAND_PROFILES = Object.freeze({
+  pilot: [
+    'launch',
+    'codex',
+    'do',
+    'note',
+    'thread',
+    'backlog',
+    'manager',
+    'dashboard',
+    'setup',
+    'init',
+    'milestone',
+    'doctor',
+    'health',
+    'hud',
+    'next',
+    'verify-shell',
+    'verify-work',
+    'checkpoint',
+    'next-prompt',
+    'quick',
+    'team',
+    'review',
+    'monorepo',
+    'ship-readiness',
+    'update',
+    'uninstall',
+  ],
+});
 
 const COMMAND_GROUPS = Object.freeze([
   {
@@ -278,6 +311,59 @@ function formatCommandRows(commands) {
     .join('\n');
 }
 
+function workflowScriptPath(scriptName) {
+  return path.join(__dirname, '..', 'workflow', scriptName);
+}
+
+function commandSetForSurface(surface) {
+  const knownCommands = Object.keys(CLI_COMMANDS);
+  const expectedCommands = CLI_COMMAND_PROFILES[surface.scriptProfile] || knownCommands;
+  return expectedCommands.filter((command) => fs.existsSync(workflowScriptPath(CLI_COMMANDS[command].script)));
+}
+
+function buildSurfaceContext(cwd = process.cwd()) {
+  const manifest = readProductManifest(cwd);
+  const scriptProfile = String(manifest?.scriptProfile || 'full').trim().toLowerCase();
+  const availableCommands = new Set(commandSetForSurface({ scriptProfile }));
+  return {
+    manifest,
+    scriptProfile,
+    availableCommands,
+    isFiltered: scriptProfile === 'pilot',
+  };
+}
+
+function filterCommands(commands, surface) {
+  return commands.filter((command) => surface.availableCommands.has(command));
+}
+
+function isFlowAvailable(flow, surface) {
+  return flow.commands.every((command) => surface.availableCommands.has(command));
+}
+
+function visibleGroupsForSurface(surface) {
+  return COMMAND_GROUPS
+    .map((group) => ({ ...group, commands: filterCommands(group.commands, surface) }))
+    .filter((group) => group.commands.length > 0);
+}
+
+function visibleAdvancedGroupsForSurface(surface) {
+  return visibleGroupsForSurface(surface).filter((group) => ['frontend', 'trust', 'runtime', 'codex'].includes(group.id));
+}
+
+function upgradeHintForSurface(surface) {
+  if (surface.scriptProfile === 'pilot') {
+    return 'Run `cwf update --script-profile core` for the full shell with curated npm aliases, or `cwf update --script-profile full` for every legacy alias.';
+  }
+  return 'Run `cwf doctor --strict` or `cwf update` to repair the local shell.';
+}
+
+function printUnavailableSurface(topic, surface) {
+  console.error(`The \`${topic}\` surface is not installed in this repo's current shell.`);
+  console.error(upgradeHintForSurface(surface));
+  process.exitCode = 1;
+}
+
 function groupById(groupId) {
   return COMMAND_GROUPS.find((group) => group.id === groupId) || null;
 }
@@ -322,9 +408,58 @@ Examples:
 `);
 }
 
-function printCategoriesHelp() {
+function printFilteredDefaultHelp(surface) {
+  const visibleCoreCommands = filterCommands(CORE_COMMANDS, surface);
+  const visibleFlows = GOLDEN_FLOWS.filter((flow) => isFlowAvailable(flow, surface));
+  const visibleAdvancedGroups = visibleAdvancedGroupsForSurface(surface);
+
+  console.log(`# CWF
+
+Usage:
+  cwf <command> [options]
+  cwf help <topic>
+
+Focused install:
+  This repo is using the \`pilot\` shell profile. Upgrade later with \`cwf update --script-profile core\` or \`cwf update --script-profile full\`.
+
+Start here:`);
+  if (visibleFlows.length > 0) {
+    for (const flow of visibleFlows) {
+      console.log(`  cwf help ${flow.id.padEnd(9)} ${flow.summary}`);
+    }
+  } else {
+    console.log('  cwf help categories  Browse the currently installed command groups');
+  }
+
+  console.log(`
+Core commands:
+${formatCommandRows(visibleCoreCommands)}
+
+More help:
+  cwf help categories   Browse command groups`);
+  for (const group of visibleAdvancedGroups) {
+    console.log(`  cwf help ${group.id.padEnd(12)} ${group.description}`);
+  }
+  console.log(`
+Examples:
+  cwf help solo
+  cwf do "land the next safe slice"
+  cwf next
+`);
+}
+
+function printCategoriesHelp(surface) {
+  if (!surface.isFiltered) {
+    console.log('# CWF CATEGORIES\n');
+    for (const group of COMMAND_GROUPS) {
+      console.log(`- \`${group.id}\` -> ${group.title}: ${group.description}`);
+    }
+    console.log('\nUse `cwf help <category>` for the commands inside a category, or `cwf help all` for the full shell.');
+    return;
+  }
+
   console.log('# CWF CATEGORIES\n');
-  for (const group of COMMAND_GROUPS) {
+  for (const group of visibleGroupsForSurface(surface)) {
     console.log(`- \`${group.id}\` -> ${group.title}: ${group.description}`);
   }
   console.log('\nUse `cwf help <category>` for the commands inside a category, or `cwf help all` for the full shell.');
@@ -356,57 +491,90 @@ function printGroupHelp(group) {
   console.log(formatCommandRows(group.commands));
 }
 
-function printAdvancedHelp() {
+function printAdvancedHelp(surface) {
+  if (!surface.isFiltered) {
+    console.log('# CWF ADVANCED\n');
+    console.log('- `frontend` -> UI direction, review, responsive, and design debt surfaces');
+    console.log('- `trust` -> discuss, assumptions, claims, approvals, and policy');
+    console.log('- `runtime` -> dashboard, stats, hooks, daemon, gc, incident, and fleet');
+    console.log('- `codex` -> control plane, prompt packs, lifecycle closeout, and benchmark');
+    console.log('\nOpen any of them with `cwf help <topic>` or use `cwf help all` for the full command reference.');
+    return;
+  }
+
   console.log('# CWF ADVANCED\n');
-  console.log('- `frontend` -> UI direction, review, responsive, and design debt surfaces');
-  console.log('- `trust` -> discuss, assumptions, claims, approvals, and policy');
-  console.log('- `runtime` -> dashboard, stats, hooks, daemon, gc, incident, and fleet');
-  console.log('- `codex` -> control plane, prompt packs, lifecycle closeout, and benchmark');
+  for (const group of visibleAdvancedGroupsForSurface(surface)) {
+    console.log(`- \`${group.id}\` -> ${group.description}`);
+  }
   console.log('\nOpen any of them with `cwf help <topic>` or use `cwf help all` for the full command reference.');
 }
 
-function printAllHelp() {
+function printAllHelp(surface) {
+  if (!surface.isFiltered) {
+    console.log('# CWF FULL COMMAND REFERENCE\n');
+    console.log('Use `cwf help solo`, `cwf help review`, or `cwf help team` for the three golden flows.\n');
+    for (const group of COMMAND_GROUPS) {
+      console.log(`## ${group.title}\n`);
+      console.log(`${group.description}\n`);
+      console.log(`${formatCommandRows(group.commands)}\n`);
+    }
+    console.log('## Legacy command equivalence\n');
+    for (const [current, legacy] of LEGACY_EQUIVALENTS) {
+      console.log(`- \`${current}\` -> \`${legacy}\``);
+    }
+    return;
+  }
+
   console.log('# CWF FULL COMMAND REFERENCE\n');
-  console.log('Use `cwf help solo`, `cwf help review`, or `cwf help team` for the three golden flows.\n');
-  for (const group of COMMAND_GROUPS) {
+  console.log('Use `cwf help solo` for the installed starter flow. Upgrade to `core` or `full` to unlock the broader shell.\n');
+  for (const group of visibleGroupsForSurface(surface)) {
     console.log(`## ${group.title}\n`);
     console.log(`${group.description}\n`);
     console.log(`${formatCommandRows(group.commands)}\n`);
   }
-  console.log('## Legacy command equivalence\n');
-  for (const [current, legacy] of LEGACY_EQUIVALENTS) {
+  console.log('## Installed legacy command equivalence\n');
+  for (const [current, legacy] of LEGACY_EQUIVALENTS.filter(([current]) => surface.availableCommands.has(current.replace(/^cwf\s+/, '')))) {
     console.log(`- \`${current}\` -> \`${legacy}\``);
   }
 }
 
-function printHelp(topic) {
+function printHelp(topic, surface) {
   const normalized = String(topic || '').trim().toLowerCase();
   if (!normalized) {
+    if (surface.isFiltered) {
+      printFilteredDefaultHelp(surface);
+      return;
+    }
     printDefaultHelp();
     return;
   }
   if (normalized === 'all') {
-    printAllHelp();
+    printAllHelp(surface);
     return;
   }
   if (normalized === 'categories') {
-    printCategoriesHelp();
+    printCategoriesHelp(surface);
     return;
   }
   if (normalized === 'advanced') {
-    printAdvancedHelp();
+    printAdvancedHelp(surface);
     return;
   }
 
   const flow = flowById(normalized);
-  if (flow) {
+  if (flow && isFlowAvailable(flow, surface)) {
     printFlowHelp(flow);
     return;
   }
 
-  const group = groupById(normalized);
+  const group = visibleGroupsForSurface(surface).find((entry) => entry.id === normalized) || null;
   if (group) {
     printGroupHelp(group);
+    return;
+  }
+
+  if (flow || groupById(normalized)) {
+    printUnavailableSurface(normalized, surface);
     return;
   }
 
@@ -415,8 +583,18 @@ function printHelp(topic) {
   process.exitCode = 1;
 }
 
-function runScript(scriptName, forwardedArgs) {
-  const scriptPath = path.join(__dirname, '..', 'workflow', scriptName);
+function runScript(command, scriptName, forwardedArgs, surface) {
+  if (surface.isFiltered && !surface.availableCommands.has(command)) {
+    printUnavailableSurface(command, surface);
+    return;
+  }
+
+  const scriptPath = workflowScriptPath(scriptName);
+  if (!fs.existsSync(scriptPath)) {
+    printUnavailableSurface(command, surface);
+    return;
+  }
+
   const result = childProcess.spawnSync(process.execPath, [scriptPath, ...forwardedArgs], {
     cwd: process.cwd(),
     stdio: 'inherit',
@@ -434,10 +612,11 @@ function runScript(scriptName, forwardedArgs) {
 }
 
 function main(argv = process.argv.slice(2)) {
+  const surface = buildSurfaceContext(process.cwd());
   const [command = 'help', ...rest] = argv;
 
   if (command === 'help' || command === '--help' || command === '-h') {
-    printHelp(rest[0]);
+    printHelp(rest[0], surface);
     return;
   }
 
@@ -450,11 +629,11 @@ function main(argv = process.argv.slice(2)) {
   }
 
   if (rest.includes('--help') || rest.includes('help')) {
-    runScript(entry.script, ['--help']);
+    runScript(command, entry.script, ['--help'], surface);
     return;
   }
 
-  runScript(entry.script, rest);
+  runScript(command, entry.script, rest, surface);
 }
 
 if (require.main === module) {

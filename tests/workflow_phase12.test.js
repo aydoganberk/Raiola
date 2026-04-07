@@ -53,19 +53,48 @@ test('cwf help and setup expose the product shell while uninstall keeps canonica
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
 
   const packageJson = JSON.parse(readFile(targetRepo, 'package.json'));
+  const manifest = JSON.parse(readFile(targetRepo, '.workflow/product-manifest.json'));
+  const gitignore = readFile(targetRepo, '.gitignore');
+  assert.equal(manifest.scriptProfile, 'pilot');
+  assert.equal(manifest.runtimeSurfaceProfile, 'pilot');
   assert.equal(packageJson.scripts['workflow:quick'], 'node scripts/workflow/quick.js');
   assert.equal(packageJson.scripts['workflow:review'], 'node scripts/workflow/review.js');
   assert.equal(packageJson.scripts['workflow:setup'], 'node scripts/workflow/setup.js');
   assert.equal(packageJson.scripts['workflow:update'], 'node scripts/workflow/update.js');
   assert.equal(packageJson.scripts['workflow:uninstall'], 'node scripts/workflow/uninstall.js');
+  assert.equal(packageJson.scripts['workflow:notify'], undefined);
+  assert.equal(packageJson.scripts['workflow:assumptions'], undefined);
+  assert.equal(packageJson.scripts.cwf, 'node bin/cwf.js');
+  assert.match(gitignore, /\.workflow\//);
+  assert.match(gitignore, /\.agents\//);
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'quick.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'setup.js')));
+  assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'notify.js')));
+  assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'ui_direction.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'cli', 'cwf.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'bin', 'cwf.js')));
-  assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'product-manifest.json')));
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'VERSION.md')));
-  assert.match(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'help'], targetRepo), /Golden flows/i);
-  assert.match(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'help', 'all'], targetRepo), /cwf milestone/);
+  const pilotHelp = run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'help'], targetRepo);
+  assert.match(pilotHelp, /Focused install/i);
+  assert.match(pilotHelp, /pilot/);
+  assert.doesNotMatch(pilotHelp, /cwf help review/);
+  const filteredHelp = run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'help', 'all'], targetRepo);
+  assert.match(filteredHelp, /cwf milestone/);
+  assert.doesNotMatch(filteredHelp, /notify/);
+  assert.doesNotMatch(filteredHelp, /Frontend/);
+
+  const unavailable = childProcess.spawnSync(
+    'node',
+    [path.join(targetRepo, 'bin', 'cwf.js'), 'notify'],
+    {
+      cwd: targetRepo,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
+  assert.equal(unavailable.status, 1);
+  assert.match(unavailable.stderr, /not installed in this repo's current shell/i);
+  assert.match(unavailable.stderr, /cwf update --script-profile core/);
 
   const uninstallPayload = JSON.parse(run('node', [cwfBin, 'uninstall', '--target', targetRepo, '--json'], repoRoot));
   assert.ok(fs.existsSync(path.join(targetRepo, 'docs', 'workflow', 'STATUS.md')));
@@ -82,6 +111,31 @@ test('cwf help and setup expose the product shell while uninstall keeps canonica
   assert.equal(packageJsonAfter.scripts['workflow:setup'], undefined);
 
   run('node', [cwfBin, 'uninstall', '--target', targetRepo], repoRoot);
+});
+
+test('workflow:update can contract a full install down to the pilot surface', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [initScript, '--target', targetRepo, '--script-profile', 'full', '--skip-verify'], repoRoot);
+
+  const fullManifest = JSON.parse(readFile(targetRepo, '.workflow/product-manifest.json'));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'notify.js')));
+  assert.equal(fullManifest.scriptProfile, 'full');
+  assert.equal(typeof fullManifest.installerSourceRoot, 'string');
+
+  run(
+    'node',
+    [path.join(targetRepo, 'bin', 'cwf.js'), 'update', '--script-profile', 'pilot', '--skip-verify'],
+    targetRepo,
+  );
+
+  const pilotManifest = JSON.parse(readFile(targetRepo, '.workflow/product-manifest.json'));
+  const packageJson = JSON.parse(readFile(targetRepo, 'package.json'));
+  assert.equal(pilotManifest.scriptProfile, 'pilot');
+  assert.equal(pilotManifest.runtimeSurfaceProfile, 'pilot');
+  assert.ok(pilotManifest.runtimeFiles.length < fullManifest.runtimeFiles.length);
+  assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'notify.js')));
+  assert.equal(packageJson.scripts['workflow:notify'], undefined);
+  assert.equal(packageJson.scripts['workflow:quick'], 'node scripts/workflow/quick.js');
 });
 
 test('cwf milestone opens a full-workflow milestone without npm script indirection', () => {
@@ -109,6 +163,7 @@ test('workflow:doctor audits install-surface drift and suggests fix commands', (
   const packageJson = JSON.parse(readFile(targetRepo, 'package.json'));
   delete packageJson.scripts['workflow:quick'];
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+  fs.writeFileSync(path.join(targetRepo, '.gitignore'), '# test-only gitignore\n');
   fs.rmSync(path.join(targetRepo, '.agents', 'skills', 'codex-workflow', 'SKILL.md'));
   fs.rmSync(path.join(targetRepo, '.workflow', 'VERSION.md'));
 
@@ -125,6 +180,7 @@ test('workflow:doctor audits install-surface drift and suggests fix commands', (
   assert.equal(result.status, 1);
   assert.match(result.stdout, /Package scripts -> missing=workflow:quick/);
   assert.match(result.stdout, /fix: `cwf update --overwrite-scripts`/);
+  assert.match(result.stdout, /Gitignore hygiene -> missing \.workflow\/, \.agents\//);
   assert.match(result.stdout, /Skill surface -> \.agents\/skills\/codex-workflow\/SKILL\.md is missing/);
   assert.match(result.stdout, /Product version marker -> \.workflow\/VERSION\.md is missing/);
   assert.match(result.stdout, /fix: `cwf update`/);
@@ -246,7 +302,7 @@ test('workflow:team wrapper writes canonical orchestration files and supports pa
 
 test('review, ship, pr brief, release notes, and session report emit report files', () => {
   const targetRepo = makeTempRepo();
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   run(
     'node',
     [
@@ -280,7 +336,7 @@ test('review, ship, pr brief, release notes, and session report emit report file
 
 test('workflow:benchmark reports timings and cache counters', () => {
   const targetRepo = makeTempRepo();
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const payload = JSON.parse(run(
     'node',
@@ -296,7 +352,7 @@ test('workflow:benchmark reports timings and cache counters', () => {
 
 test('workflow:benchmark can enforce SLO thresholds in machine-readable mode', () => {
   const targetRepo = makeTempRepo();
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const passing = childProcess.spawnSync(
     'node',
@@ -341,7 +397,7 @@ test('workflow:benchmark can enforce SLO thresholds in machine-readable mode', (
 
 test('workflow:benchmark covers documented launch, manager, and next-prompt targets', () => {
   const targetRepo = makeTempRepo();
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const payload = JSON.parse(run(
     'node',
@@ -361,7 +417,7 @@ test('workflow:benchmark covers documented launch, manager, and next-prompt targ
 
 test('workflow:benchmark covers codex-specific contextpack and promptpack hot paths', () => {
   const targetRepo = makeTempRepo();
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const payload = JSON.parse(run(
     'node',

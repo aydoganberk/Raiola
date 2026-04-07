@@ -14,6 +14,8 @@ From a published package:
 npx codex-workflow-kit setup
 ```
 
+Fresh setup defaults to the focused `pilot` workflow profile. This keeps package.json and the repo-local `cwf` shell leaner on first install. Use `--script-profile core` for the full shell with curated npm aliases, or `--script-profile full` for every legacy `workflow:*` alias on day one.
+
 From this repository:
 
 ```bash
@@ -78,9 +80,12 @@ cwf next
 
 `cwf doctor --strict` will also verify host prerequisites such as Git, ripgrep, and platform-specific browser opener helpers before you start depending on the runtime. `cwf health --strict` stays reserved for blocking workflow/runtime issues.
 
+By default the install flow also patches `.gitignore` with workflow runtime entries so `.workflow/` and `.agents/` stay out of normal diff review.
+
 ## Need the full shell?
 
 ```bash
+cwf update --script-profile core
 cwf help categories
 cwf help frontend
 cwf help trust

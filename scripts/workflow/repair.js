@@ -8,8 +8,11 @@ const {
 } = require('./common');
 const {
   loadTargetRuntimeScripts,
+  missingGitignoreEntries,
+  patchGitignore,
   patchPackageJsonScripts,
   sourceLayout,
+  WORKFLOW_GITIGNORE_ENTRIES,
   writeProductManifest,
   writeVersionMarker,
 } = require('./install_common');
@@ -136,7 +139,8 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
     });
   }
 
-  const expectedScripts = productManifest?.runtimeScripts || loadTargetRuntimeScripts();
+  const scriptProfile = productManifest?.scriptProfile || 'full';
+  const expectedScripts = productManifest?.runtimeScripts || loadTargetRuntimeScripts(scriptProfile);
   const packageScripts = readPackageScripts(cwd);
   if (!packageScripts.valid) {
     manualIssues.push({
@@ -163,6 +167,17 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
     runtimeIssues.push({
       type: 'missing_runtime_files',
       files: missingRuntimeFiles,
+    });
+  }
+
+  const missingIgnoreEntries = missingGitignoreEntries(
+    cwd,
+    productManifest?.recommendedGitignoreEntries || WORKFLOW_GITIGNORE_ENTRIES,
+  );
+  if (missingIgnoreEntries.length > 0) {
+    runtimeIssues.push({
+      type: 'gitignore_hygiene',
+      entries: missingIgnoreEntries,
     });
   }
 
@@ -244,6 +259,17 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
             ensureDir(path.dirname(targetPath));
             fs.copyFileSync(sourcePath, targetPath);
           }
+        },
+      });
+    }
+    if (issue.type === 'gitignore_hygiene') {
+      actions.push({
+        safe: true,
+        label: `Patch .gitignore workflow entries (${issue.entries.length})`,
+        apply() {
+          patchGitignore(cwd, {
+            entries: productManifest?.recommendedGitignoreEntries || WORKFLOW_GITIGNORE_ENTRIES,
+          });
         },
       });
     }

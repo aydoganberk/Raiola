@@ -17,9 +17,11 @@ Usage:
 Options:
   --target <path>        Target repository. Defaults to current working directory
   --refresh-docs         Refresh docs/workflow files from the latest starter templates
+  --script-profile <id>  Package script profile. Defaults to existing manifest or full
   --write-agents-template
                          Write docs/workflow/AGENTS_PATCH_TEMPLATE.md
   --overwrite-scripts    Replace conflicting package.json workflow scripts
+  --skip-gitignore       Do not patch .gitignore with workflow runtime entries
   --skip-verify          Skip doctor/health/next/hud verification
   `);
 }
@@ -37,8 +39,10 @@ function main() {
   const report = installWorkflowSurface(targetRepo, {
     mode,
     refreshDocs: Boolean(args['refresh-docs']),
+    scriptProfile: args['script-profile'] || null,
     overwriteScriptConflicts: Boolean(args['overwrite-scripts']),
     writeAgentsTemplate: Boolean(args['write-agents-template']),
+    manageGitignore: !args['skip-gitignore'],
     verify: !args['skip-verify'],
   });
 

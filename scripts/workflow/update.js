@@ -4,6 +4,7 @@ const { parseArgs } = require('./common');
 const {
   formatInstallSummary,
   installWorkflowSurface,
+  readProductManifest,
   readInstalledVersionMarker,
   sourcePackageVersion,
 } = require('./install_common');
@@ -18,7 +19,9 @@ Usage:
 Options:
   --target <path>        Target repository. Defaults to current working directory
   --refresh-docs         Refresh docs/workflow files from the latest templates
+  --script-profile <id>  Package script profile. Defaults to the installed manifest profile
   --overwrite-scripts    Replace conflicting package.json workflow scripts
+  --skip-gitignore       Do not patch .gitignore with workflow runtime entries
   --skip-verify          Skip doctor/health/next/hud verification
   --dry-run              Show which update path would run
   --json                 Print machine-readable output
@@ -41,14 +44,17 @@ function main() {
   const dryRun = Boolean(args['dry-run']);
   const installedVersion = readInstalledVersionMarker(targetRepo).installedVersion;
   const targetVersion = sourcePackageVersion();
+  const installedManifest = readProductManifest(targetRepo);
   const payload = {
     targetRepo,
     mode,
     installedVersion,
     targetVersion,
+    scriptProfile: String(args['script-profile'] || installedManifest?.scriptProfile || 'full'),
     refreshDocs: Boolean(args['refresh-docs']),
     verify: !args['skip-verify'],
     overwriteScripts: Boolean(args['overwrite-scripts']),
+    manageGitignore: !args['skip-gitignore'],
   };
 
   if (dryRun) {
@@ -61,7 +67,9 @@ function main() {
     console.log(`- Mode: \`${mode}\``);
     console.log(`- Installed version: \`${installedVersion || 'unknown'}\``);
     console.log(`- Target version: \`${targetVersion}\``);
+    console.log(`- Script profile: \`${payload.scriptProfile}\``);
     console.log(`- Refresh docs: \`${payload.refreshDocs ? 'yes' : 'no'}\``);
+    console.log(`- Gitignore patching: \`${payload.manageGitignore ? 'yes' : 'no'}\``);
     console.log(`- Verify after update: \`${payload.verify ? 'yes' : 'no'}\``);
     return;
   }
@@ -69,7 +77,9 @@ function main() {
   const report = installWorkflowSurface(targetRepo, {
     mode,
     refreshDocs: payload.refreshDocs,
+    scriptProfile: payload.scriptProfile,
     overwriteScriptConflicts: payload.overwriteScripts,
+    manageGitignore: payload.manageGitignore,
     verify: payload.verify,
   });
 

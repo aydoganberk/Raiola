@@ -102,7 +102,7 @@ function gitInit(targetRepo) {
 
 test('ui-direction exports experience thesis, signature moments, and codex prompts', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
@@ -130,7 +130,7 @@ test('ui-direction exports experience thesis, signature moments, and codex promp
 
 test('ui-direction accepts the semantic-minimal taste profile for native-first guidance', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
@@ -148,7 +148,7 @@ test('ui-direction accepts the semantic-minimal taste profile for native-first g
 
 test('review-mode produces a distinct execution spine, context pack, and artifacts', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   gitInit(targetRepo);
 
@@ -179,7 +179,7 @@ test('review-mode produces a distinct execution spine, context pack, and artifac
 
 test('monorepo intelligence discovers pnpm workspaces and builds agent waves', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedPnpmMonorepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
@@ -233,7 +233,7 @@ test('persona packs and typo-tolerant matching recover English and Turkish opera
 
 test('do payload includes a codex command plan for frontend lanes', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');

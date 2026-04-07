@@ -29,7 +29,7 @@ function readJson(targetRepo, relativePath) {
 
 test('intent engine, route replay/eval, and codex bootstrap surfaces are scriptable', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
   const goal = 'review the frontend diff and capture browser evidence';
@@ -58,7 +58,7 @@ test('intent engine, route replay/eval, and codex bootstrap surfaces are scripta
 
 test('review engine and frontend OS artifacts generate canonical outputs', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));

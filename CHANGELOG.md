@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Added a lighter `core` workflow script profile and made `cwf setup` default to it on fresh installs to reduce package.json churn during pilot adoption.
+- Added a focused `pilot` install profile, made `cwf setup` default to it, and taught `cwf help` plus command routing to stay profile-aware inside repo-local installs.
+- Added runtime-surface pruning during profile downgrades so `cwf update --script-profile pilot` removes stale entrypoints and legacy npm aliases instead of only adding new files.
+- Added installer source-root metadata so repo-local `cwf update` can keep working after setup instead of depending on the source repo being the active working tree.
+- Added automatic `.gitignore` hygiene for `.workflow/` and `.agents/`, plus doctor/repair coverage for missing runtime ignore entries.
+- Reduced maintenance pressure by extracting common argument, table, and preference helpers out of `scripts/workflow/common.js`.
+- Split oversized Codex control, team runtime, and UI-direction modules into dedicated catalog/packet/state/model helpers to lower entrypoint complexity.
+- Added runtime guardrails that prune stale task references from persisted team state before they can skew summaries or merge operations.
+- Split remaining shared workflow helpers into dedicated path, memory, reference, and validation modules to shrink `common.js`.
+- Split design intelligence into profile and builder layers, and reduced the team runtime CLI to a thinner entrypoint over core/supervisor modules.
+
 ## 0.3.1 - 2026-04-07
 
 - Fixed command-reference drift so the documented `cwf` surface matches the shipped CLI, including `cwf review-tasks`.

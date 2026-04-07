@@ -142,7 +142,7 @@ test('patch apply keeps task ids inside the patch directory', () => {
 
 test('doctor fails on source-repo product version drift between package, marker, and manifest', () => {
   const targetRepo = makeTempRepo('codex-workflow-kit-phase23-drift-');
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
@@ -190,7 +190,7 @@ test('doctor fails on source-repo product version drift between package, marker,
 
 test('repo-local MCP install, status, and doctor expose real server descriptors and smoke results', async () => {
   const targetRepo = makeTempRepo('codex-workflow-kit-phase23-mcp-');
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
   const installed = JSON.parse(run('node', [targetBin, 'mcp', 'install', '--json'], targetRepo));

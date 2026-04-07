@@ -36,7 +36,7 @@ function writeFile(targetRepo, relativePath, content) {
 
 test('launch, manager, next-prompt, explore, route, profile, and workspaces expose runtime companion surfaces', () => {
   const targetRepo = makeTempRepo();
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const launch = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'launch', '--json'], targetRepo));
   const hud = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'hud', '--json'], targetRepo));
@@ -64,7 +64,7 @@ test('launch, manager, next-prompt, explore, route, profile, and workspaces expo
 
 test('explore and daemon use persistent symbol and scale caches', () => {
   const targetRepo = makeTempRepo();
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   fs.mkdirSync(path.join(targetRepo, 'src'), { recursive: true });
   fs.mkdirSync(path.join(targetRepo, 'tests'), { recursive: true });
@@ -90,7 +90,7 @@ test('explore and daemon use persistent symbol and scale caches', () => {
 
 test('verify-shell and verify-browser store normalized evidence artifacts', async () => {
   const targetRepo = makeTempRepo();
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const shellPayload = JSON.parse(run(
     'node',
@@ -125,12 +125,13 @@ test('verify-shell and verify-browser store normalized evidence artifacts', asyn
 
 test('doctor and health repair flows detect and apply safe runtime fixes', () => {
   const targetRepo = makeTempRepo();
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(readFile(targetRepo, 'package.json'));
   delete packageJson.scripts['workflow:launch'];
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+  fs.writeFileSync(path.join(targetRepo, '.gitignore'), '# intentionally incomplete\n');
   fs.rmSync(path.join(targetRepo, '.workflow', 'VERSION.md'));
   fs.writeFileSync(path.join(targetRepo, '.workflow', 'fs-index.json'), '{broken');
 
@@ -148,6 +149,8 @@ test('doctor and health repair flows detect and apply safe runtime fixes', () =>
 
   assert.ok(doctorRepair.repair.safeActionCount >= 2);
   assert.equal(JSON.parse(readFile(targetRepo, 'package.json')).scripts['workflow:launch'], 'node scripts/workflow/launch.js');
+  assert.match(readFile(targetRepo, '.gitignore'), /\.workflow\//);
+  assert.match(readFile(targetRepo, '.gitignore'), /\.agents\//);
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'VERSION.md')));
   assert.ok(healthRepair.repair.safeActionCount >= 1);
   assert.doesNotThrow(() => JSON.parse(readFile(targetRepo, '.workflow/fs-index.json')));
@@ -155,7 +158,7 @@ test('doctor and health repair flows detect and apply safe runtime fixes', () =>
 
 test('doctor repair reports invalid package.json instead of crashing', () => {
   const targetRepo = makeTempRepo();
-  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   fs.writeFileSync(path.join(targetRepo, 'package.json'), '{broken');
 
   const rootDir = path.join(targetRepo, 'docs', 'workflow');
@@ -256,4 +259,85 @@ test('team runtime can run, dispatch, monitor, and collect through the worktree 
     targetRepo,
   ));
   assert.ok(collected.collectedTasks.includes(taskId));
+});
+
+test('team runtime prunes stale task references from persisted runtime state', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [initScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('git', ['init'], targetRepo);
+  run('git', ['config', 'user.email', 'test@example.com'], targetRepo);
+  run('git', ['config', 'user.name', 'Test User'], targetRepo);
+
+  run(
+    'node',
+    [
+      path.join(targetRepo, 'scripts', 'workflow', 'new_milestone.js'),
+      '--id', 'M21',
+      '--name', 'Runtime guardrails',
+      '--goal', 'Exercise stale runtime pruning',
+    ],
+    targetRepo,
+  );
+
+  let statusDoc = readFile(targetRepo, 'docs/workflow/STATUS.md');
+  statusDoc = statusDoc.replace('- Current milestone step: `discuss`', '- Current milestone step: `execute`');
+  writeFile(targetRepo, 'docs/workflow/STATUS.md', statusDoc);
+
+  run('git', ['add', '.'], targetRepo);
+  run('git', ['commit', '-m', 'ready for runtime guardrails'], targetRepo);
+
+  run(
+    'node',
+    [
+      path.join(targetRepo, 'scripts', 'workflow', 'team_runtime.js'),
+      'run',
+      '--adapter', 'worktree',
+      '--activation-text', 'parallel yap',
+      '--write-scope', 'docs/workflow/STATUS.md;docs/workflow/CONTEXT.md',
+      '--json',
+    ],
+    targetRepo,
+  );
+
+  const runtimeStatePath = path.join(targetRepo, '.workflow', 'orchestration', 'runtime', 'state.json');
+  const runtimeState = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
+  runtimeState.dispatchedTasks = [...(runtimeState.dispatchedTasks || []), 'ghost-task'];
+  runtimeState.collectedTasks = [...(runtimeState.collectedTasks || []), 'ghost-task'];
+  runtimeState.workspaces = {
+    ...(runtimeState.workspaces || {}),
+    'ghost-task': {
+      path: path.join(targetRepo, 'ghost-workspace'),
+      mode: 'owner',
+      exists: false,
+      hasResult: false,
+    },
+  };
+  runtimeState.patchBundles = {
+    ...(runtimeState.patchBundles || {}),
+    'ghost-task': {
+      patchFile: '.workflow/orchestration/patches/ghost.patch',
+      changedFiles: [],
+      placeholder: true,
+    },
+  };
+  runtimeState.collectedResults = {
+    ...(runtimeState.collectedResults || {}),
+    'ghost-task': {
+      status: 'completed',
+      summary: 'stale state',
+    },
+  };
+  fs.writeFileSync(runtimeStatePath, `${JSON.stringify(runtimeState, null, 2)}\n`);
+
+  const monitored = JSON.parse(run(
+    'node',
+    [path.join(targetRepo, 'scripts', 'workflow', 'team_runtime.js'), 'monitor', '--json'],
+    targetRepo,
+  ));
+
+  assert.ok((monitored.guardrails?.lastPrunedCount || 0) >= 5);
+  assert.ok(monitored.guardrails.affectedCollections.includes('workspaces'));
+  assert.equal(monitored.workspaces['ghost-task'], undefined);
+  assert.ok(!monitored.dispatchedTasks.includes('ghost-task'));
+  assert.ok(!monitored.collectedTasks.includes('ghost-task'));
 });

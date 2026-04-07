@@ -96,7 +96,7 @@ function gitInit(targetRepo) {
 
 test('multilingual natural-language routing handles Chinese, Spanish, and Turkish commands', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   fs.mkdirSync(path.join(targetRepo, '.workflow', 'cache'), { recursive: true });
@@ -137,7 +137,7 @@ test('multilingual natural-language routing handles Chinese, Spanish, and Turkis
 
 test('english and turkish conversational routing covers broader Codex operator phrasing', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
@@ -167,7 +167,7 @@ test('english and turkish conversational routing covers broader Codex operator p
 
 test('persona packs and typo-tolerant routing stay effective for English and Turkish goals', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
@@ -204,7 +204,7 @@ test('persona packs and typo-tolerant routing stay effective for English and Tur
 
 test('ui direction and ui plan generate taste-aware frontend guidance for Codex', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
@@ -228,7 +228,7 @@ test('ui direction and ui plan generate taste-aware frontend guidance for Codex'
 
 test('codex promptpack carries external-site frontend artifacts for implementation sessions', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
@@ -256,7 +256,7 @@ test('codex promptpack carries external-site frontend artifacts for implementati
 
 test('review orchestration builds package and persona waves on top of review mode', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   gitInit(targetRepo);
 
@@ -292,7 +292,7 @@ test('review orchestration builds package and persona waves on top of review mod
 
 test('monorepo intelligence and delegation plan auto-synthesize package-local write scopes', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedMonorepo(targetRepo);
   gitInit(targetRepo);
 

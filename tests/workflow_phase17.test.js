@@ -47,7 +47,7 @@ test('roadmap audit corpus clears the roadmap quality thresholds', () => {
 
 test('doctor and health expose risk scores that react to workflow drift', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
 
   run(
@@ -83,7 +83,7 @@ test('doctor and health expose risk scores that react to workflow drift', () => 
 
 test('ui review exposes missing-state and token-drift audits', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
@@ -137,7 +137,7 @@ test('ui review exposes missing-state and token-drift audits', () => {
 
 test('review engine detects API drift and data migration risks in diff mode', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   run(
     'node',
     [
@@ -163,7 +163,7 @@ test('review engine detects API drift and data migration risks in diff mode', ()
 
 test('review engine semantic pass catches auth regressions and frontend accessibility drift', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   run(
     'node',
     [

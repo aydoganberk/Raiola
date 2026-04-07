@@ -29,7 +29,7 @@ function readFile(targetRepo, relativePath) {
 
 test('roadmap daily-intent and trust surfaces work end-to-end', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const codex = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'codex', 'setup', '--repo', '--json'], targetRepo));
   const intent = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'do', 'investigate audit drift', '--json'], targetRepo));
@@ -76,7 +76,7 @@ test('roadmap daily-intent and trust surfaces work end-to-end', () => {
 
 test('codex control-plane lifecycle stays rollback-safe and scriptable', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
   const setup = JSON.parse(run('node', [targetBin, 'codex', 'setup', '--repo', '--json'], targetRepo));
@@ -114,7 +114,7 @@ test('codex control-plane lifecycle stays rollback-safe and scriptable', () => {
 
 test('roadmap governance and operator-center surfaces stay scriptable', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const policy = JSON.parse(run(
     'node',

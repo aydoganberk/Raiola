@@ -30,6 +30,7 @@ These surfaces are cache, index, telemetry, verification, or operator helpers on
 - `.workflow/cache/*`
 - `.workflow/fs-index.json`
 - `.workflow/verifications/*`
+- `.workflow/product-manifest.json` also records install metadata such as script profile, runtime surface profile, installer source root, runtime file inventory, and recommended gitignore entries for doctor/repair parity checks.
 
 Deleting them may reduce performance or resume convenience, but it must not break workflow semantics.
 

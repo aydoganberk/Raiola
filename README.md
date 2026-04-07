@@ -40,11 +40,11 @@ Run `cwf help` to start from these flows. Use `cwf help all` for the full shell,
 
 ### Full reference
 
-The full command surface still exists; it now lives in [Commands](./docs/commands.md) and `cwf help all` instead of overwhelming the first-run README.
+The full command surface still exists; it now lives in [Commands](./docs/commands.md) and `cwf help all`. Fresh `pilot` installs intentionally start with a narrower shell so first-run repos only see the highest-signal commands.
 
 ### Backward compatibility
 
-All existing `npm run workflow:*` commands stay available, including setup/update/uninstall surfaces. The new CLI wraps the current runtime; it does not replace the canonical markdown contract.
+`core` and `full` installs keep the broader legacy `workflow:*` compatibility surface. The default `pilot` install trims first-run aliases and command entrypoints, but `cwf update --script-profile core` or `cwf update --script-profile full` expands the repo in place without changing the canonical markdown contract.
 
 ### Skill aliases
 
@@ -62,6 +62,13 @@ If the package is available through `npx`:
 
 ```bash
 npx codex-workflow-kit setup
+```
+
+Fresh `setup` installs now default to a focused `pilot` profile so package.json and the repo-local shell stay lean on day one. Move up to `core` for the full shell with curated npm aliases, or jump straight to `full` if you want every backward-compatible npm alias immediately:
+
+```bash
+npx codex-workflow-kit setup --script-profile core
+npx codex-workflow-kit setup --script-profile full
 ```
 
 If you are working from this repository:
@@ -91,6 +98,8 @@ Repo-local fallback if the global `cwf` binary is not installed yet:
 node bin/cwf.js help
 node bin/cwf.js doctor --strict
 ```
+
+`setup`, `init`, `migrate`, and `update` also patch `.gitignore` by default so non-canonical runtime state like `.workflow/` and `.agents/` does not flood your git status. Pass `--skip-gitignore` only if your repo intentionally tracks those paths.
 
 ## Runtime support
 

@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const {
+  embeddedProductMeta,
   productName,
   productVersion,
 } = require('./product_version');
@@ -39,16 +40,7 @@ function sourceRepoRoot() {
   return path.resolve(__dirname, '..', '..');
 }
 
-function relativePath(fromDir, targetPath) {
-  return path.relative(fromDir, targetPath).replace(/\\/g, '/');
-}
-
-function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-}
-
-function sourceLayout() {
-  const repoRoot = sourceRepoRoot();
+function layoutFromRoot(repoRoot) {
   return {
     repoRoot,
     templatesDir: path.join(repoRoot, 'templates', 'workflow'),
@@ -62,12 +54,204 @@ function sourceLayout() {
   };
 }
 
+function relativePath(fromDir, targetPath) {
+  return path.relative(fromDir, targetPath).replace(/\\/g, '/');
+}
+
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function sourceLayout() {
+  return layoutFromRoot(sourceRepoRoot());
+}
+
+function isProductPackageRoot(repoRoot) {
+  const packageJsonPath = path.join(repoRoot, 'package.json');
+  if (!fs.existsSync(packageJsonPath)) {
+    return false;
+  }
+  try {
+    const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    return pkg?.name === embeddedProductMeta().name;
+  } catch {
+    return false;
+  }
+}
+
+function resolveInstalledPackageRoot(targetRepo) {
+  if (!targetRepo) {
+    return null;
+  }
+
+  try {
+    const packageJsonPath = require.resolve(`${embeddedProductMeta().name}/package.json`, {
+      paths: [targetRepo, process.cwd()],
+    });
+    return path.dirname(packageJsonPath);
+  } catch {
+    return null;
+  }
+}
+
+function resolveProductSourceRoot(targetRepo = null) {
+  const currentRoot = sourceRepoRoot();
+  if (isProductPackageRoot(currentRoot)) {
+    return currentRoot;
+  }
+
+  const manifest = targetRepo ? readProductManifest(targetRepo) : null;
+  const candidates = [
+    process.env.CODEX_WORKFLOW_KIT_SOURCE_ROOT || null,
+    manifest?.installerSourceRoot || null,
+    resolveInstalledPackageRoot(targetRepo),
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+    const absoluteCandidate = path.resolve(candidate);
+    if (isProductPackageRoot(absoluteCandidate)) {
+      return absoluteCandidate;
+    }
+  }
+
+  return currentRoot;
+}
+
+function productSourceLayout(targetRepo = null) {
+  return layoutFromRoot(resolveProductSourceRoot(targetRepo));
+}
+
 function sourcePackageVersion() {
   return productVersion();
 }
 
 function sourcePackageName() {
   return productName();
+}
+
+const WORKFLOW_GITIGNORE_ENTRIES = Object.freeze([
+  '.workflow/',
+  '.agents/',
+]);
+
+const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
+  pilot: [
+    'workflow:backlog',
+    'workflow:checkpoint',
+    'workflow:codex',
+    'workflow:contextpack',
+    'workflow:dashboard',
+    'workflow:do',
+    'workflow:doctor',
+    'workflow:health',
+    'workflow:hud',
+    'workflow:init',
+    'workflow:launch',
+    'workflow:manager',
+    'workflow:migrate',
+    'workflow:monorepo',
+    'workflow:new-milestone',
+    'workflow:next',
+    'workflow:next-prompt',
+    'workflow:note',
+    'workflow:quick',
+    'workflow:review',
+    'workflow:setup',
+    'workflow:ship-readiness',
+    'workflow:team',
+    'workflow:thread',
+    'workflow:uninstall',
+    'workflow:update',
+    'workflow:verify-shell',
+    'workflow:verify-work',
+  ],
+  core: [
+    'workflow:approval',
+    'workflow:approvals',
+    'workflow:assumptions',
+    'workflow:automation',
+    'workflow:backlog',
+    'workflow:benchmark',
+    'workflow:checkpoint',
+    'workflow:claims',
+    'workflow:codex',
+    'workflow:complete-milestone',
+    'workflow:contextpack',
+    'workflow:control',
+    'workflow:dashboard',
+    'workflow:delegation-plan',
+    'workflow:discuss',
+    'workflow:do',
+    'workflow:doctor',
+    'workflow:ensure-isolation',
+    'workflow:evidence',
+    'workflow:explore',
+    'workflow:health',
+    'workflow:hud',
+    'workflow:init',
+    'workflow:launch',
+    'workflow:manager',
+    'workflow:map-codebase',
+    'workflow:map-frontend',
+    'workflow:migrate',
+    'workflow:monorepo',
+    'workflow:new-milestone',
+    'workflow:next',
+    'workflow:next-prompt',
+    'workflow:note',
+    'workflow:packet',
+    'workflow:plan-check',
+    'workflow:profile',
+    'workflow:quick',
+    'workflow:review',
+    'workflow:review-mode',
+    'workflow:review-orchestrate',
+    'workflow:review-tasks',
+    'workflow:route',
+    'workflow:secure',
+    'workflow:setup',
+    'workflow:ship',
+    'workflow:ship-readiness',
+    'workflow:stats',
+    'workflow:step-fulfillment',
+    'workflow:team',
+    'workflow:thread',
+    'workflow:ui-direction',
+    'workflow:ui-plan',
+    'workflow:ui-review',
+    'workflow:ui-spec',
+    'workflow:uninstall',
+    'workflow:update',
+    'workflow:verify-browser',
+    'workflow:verify-shell',
+    'workflow:verify-work',
+    'workflow:window',
+    'workflow:workspaces',
+    'workflow:workstreams',
+  ],
+  full: null,
+});
+
+function normalizeScriptProfile(value, fallback = 'full') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(WORKFLOW_SCRIPT_PROFILES, normalized) ? normalized : fallback;
+}
+
+function runtimeScriptSetForProfile(profile) {
+  const normalized = normalizeScriptProfile(profile, 'full');
+  return normalized === 'full' ? null : new Set(WORKFLOW_SCRIPT_PROFILES[normalized] || []);
+}
+
+function extractNodeScriptPath(scriptValue) {
+  const match = String(scriptValue || '').trim().match(/^node\s+([^\s]+)/);
+  return match ? match[1].replace(/\\/g, '/') : null;
+}
+
+function runtimeSurfaceProfileForScriptProfile(profile = 'full') {
+  return normalizeScriptProfile(profile, 'full') === 'pilot' ? 'pilot' : 'full';
 }
 
 function versionMarkerPath(targetRepo) {
@@ -152,14 +336,13 @@ function readProductManifest(targetRepo) {
 
 function writeProductManifest(targetRepo, options = {}) {
   const installedVersion = options.installedVersion || sourcePackageVersion();
+  const scriptProfile = normalizeScriptProfile(options.scriptProfile, 'full');
+  const productSource = options.sourceLayout || productSourceLayout(targetRepo);
   const manifestPath = productManifestPath(targetRepo);
-  const source = sourceLayout();
-  const runtimeFiles = [
-    ...walkFiles(source.scriptsDir).map((filePath) => relativePath(source.repoRoot, filePath)),
-    ...walkFiles(source.cliDir).map((filePath) => relativePath(source.repoRoot, filePath)),
-    relativePath(source.repoRoot, source.binFile),
-    relativePath(source.repoRoot, source.compareScript),
-  ].sort();
+  const runtimeFiles = runtimeFilesForScriptProfile(scriptProfile, {
+    targetRepo,
+    sourceLayout: productSource,
+  });
   const manifest = {
     installedVersion,
     sourcePackageName: sourcePackageName(),
@@ -167,8 +350,16 @@ function writeProductManifest(targetRepo, options = {}) {
     generatedAt: new Date().toISOString(),
     versionMarkerPath: '.workflow/VERSION.md',
     skillPath: '.agents/skills/codex-workflow/SKILL.md',
-    runtimeScripts: loadTargetRuntimeScripts(),
+    installerSourceRoot: productSource.repoRoot !== targetRepo ? productSource.repoRoot : null,
+    scriptProfile,
+    runtimeScripts: loadTargetRuntimeScripts(scriptProfile, {
+      targetRepo,
+      sourceLayout: productSource,
+    }),
+    runtimeSurfaceProfile: runtimeSurfaceProfileForScriptProfile(scriptProfile),
+    runtimeFileCount: runtimeFiles.length,
     runtimeFiles,
+    recommendedGitignoreEntries: [...WORKFLOW_GITIGNORE_ENTRIES],
   };
 
   ensureDir(path.dirname(manifestPath));
@@ -237,20 +428,143 @@ function copyDirectoryTracked(sourceDir, targetDir, options = {}) {
   return bucket;
 }
 
-function loadTargetRuntimeScripts() {
-  const sourcePackage = readJson(sourceLayout().packageJson);
-  return Object.fromEntries(
-    Object.entries(sourcePackage.scripts || {}).filter(([name]) => name.startsWith('workflow:')),
-  );
+function loadTargetRuntimeScripts(profile = 'full', options = {}) {
+  const source = options.sourceLayout || productSourceLayout(options.targetRepo || null);
+  const sourcePackage = readJson(source.packageJson);
+  const normalizedProfile = normalizeScriptProfile(profile, 'full');
+  const allScripts = Object.entries(sourcePackage.scripts || {}).filter(([name]) => name.startsWith('workflow:'));
+  if (normalizedProfile === 'full') {
+    return Object.fromEntries(allScripts);
+  }
+
+  const allowed = runtimeScriptSetForProfile(normalizedProfile);
+  return Object.fromEntries(allScripts.filter(([name]) => allowed.has(name)));
+}
+
+function resolveWorkflowDependency(sourceDir, baseFile, dependencyPath) {
+  let resolved = path.resolve(path.dirname(baseFile), dependencyPath);
+  if (!resolved.endsWith('.js')) {
+    resolved += '.js';
+  }
+  if (!resolved.startsWith(sourceDir) || !fs.existsSync(resolved)) {
+    return null;
+  }
+  return relativePath(sourceDir, resolved);
+}
+
+function collectWorkflowLocalDependencies(sourceDir, sourceFile) {
+  const content = fs.readFileSync(sourceFile, 'utf8');
+  const dependencies = new Set();
+  const requirePattern = /require\(['"](\.\.?\/[^'"]+)['"]\)/g;
+  const pathJoinPattern = /path\.join\(__dirname,\s*['"]([^'"]+\.js)['"]\s*\)/g;
+  const scriptFieldPattern = /script:\s*['"]([^'"]+\.js)['"]/g;
+
+  for (const pattern of [requirePattern, pathJoinPattern, scriptFieldPattern]) {
+    let match = pattern.exec(content);
+    while (match) {
+      const relativeDependency = resolveWorkflowDependency(sourceDir, sourceFile, match[1]);
+      if (relativeDependency) {
+        dependencies.add(relativeDependency);
+      }
+      match = pattern.exec(content);
+    }
+  }
+
+  return [...dependencies];
+}
+
+function buildWorkflowDependencyGraph(source = productSourceLayout()) {
+  const { scriptsDir } = source;
+  const sourceFiles = walkFiles(scriptsDir, (filePath) => filePath.endsWith('.js'));
+  const graph = new Map();
+
+  for (const sourceFile of sourceFiles) {
+    graph.set(
+      relativePath(scriptsDir, sourceFile),
+      collectWorkflowLocalDependencies(scriptsDir, sourceFile),
+    );
+  }
+
+  return graph;
+}
+
+function focusedWorkflowRootsForProfile(profile = 'pilot', options = {}) {
+  const normalizedProfile = normalizeScriptProfile(profile, 'pilot');
+  const roots = new Set(['build_packet.js']);
+
+  for (const scriptValue of Object.values(loadTargetRuntimeScripts(normalizedProfile, options))) {
+    const relativeScriptPath = extractNodeScriptPath(scriptValue);
+    if (!relativeScriptPath || !relativeScriptPath.startsWith('scripts/workflow/')) {
+      continue;
+    }
+    roots.add(relativeScriptPath.slice('scripts/workflow/'.length));
+  }
+
+  return roots;
+}
+
+function focusedWorkflowRuntimeFiles(profile = 'pilot', options = {}) {
+  const productSource = options.sourceLayout || productSourceLayout(options.targetRepo || null);
+  const graph = buildWorkflowDependencyGraph(productSource);
+  const visited = new Set();
+
+  function visit(relativeFile) {
+    if (!graph.has(relativeFile) || visited.has(relativeFile)) {
+      return;
+    }
+    visited.add(relativeFile);
+    for (const dependency of graph.get(relativeFile) || []) {
+      visit(dependency);
+    }
+  }
+
+  for (const root of focusedWorkflowRootsForProfile(profile, {
+    ...options,
+    sourceLayout: productSource,
+  })) {
+    visit(root);
+  }
+
+  return [...visited]
+    .sort()
+    .map((relativeFile) => `scripts/workflow/${relativeFile}`);
+}
+
+function runtimeFilesForScriptProfile(profile = 'full', options = {}) {
+  const normalizedProfile = normalizeScriptProfile(profile, 'full');
+  const source = options.sourceLayout || productSourceLayout(options.targetRepo || null);
+  const workflowFiles = normalizedProfile === 'pilot'
+    ? focusedWorkflowRuntimeFiles(normalizedProfile, {
+      ...options,
+      sourceLayout: source,
+    })
+    : walkFiles(source.scriptsDir).map((filePath) => relativePath(source.repoRoot, filePath));
+  const runtimeFiles = [
+    ...workflowFiles,
+    ...walkFiles(source.cliDir).map((filePath) => relativePath(source.repoRoot, filePath)),
+    relativePath(source.repoRoot, source.binFile),
+  ];
+
+  if (normalizedProfile === 'full') {
+    runtimeFiles.push(relativePath(source.repoRoot, source.compareScript));
+  }
+
+  return [...new Set(runtimeFiles)].sort();
 }
 
 function patchPackageJsonScripts(targetRepo, options = {}) {
   const {
     overwriteConflicts = false,
     runtimeScriptsOverride = null,
+    scriptProfile = 'full',
   } = options;
   const packageJsonPath = path.join(targetRepo, 'package.json');
-  const runtimeScripts = runtimeScriptsOverride || loadTargetRuntimeScripts();
+  const normalizedProfile = normalizeScriptProfile(scriptProfile, 'full');
+  const productSource = options.sourceLayout || productSourceLayout(targetRepo);
+  const runtimeScripts = runtimeScriptsOverride || loadTargetRuntimeScripts(normalizedProfile, {
+    targetRepo,
+    sourceLayout: productSource,
+  });
   let createdPackageJson = false;
 
   if (!fs.existsSync(packageJsonPath)) {
@@ -270,9 +584,12 @@ function patchPackageJsonScripts(targetRepo, options = {}) {
     packageJsonPath,
     missingPackageJson: false,
     createdPackageJson,
+    scriptProfile: normalizedProfile,
     added: [],
     updated: [],
     unchanged: [],
+    removed: [],
+    retainedExtra: [],
     conflicts: [],
   };
 
@@ -301,9 +618,69 @@ function patchPackageJsonScripts(targetRepo, options = {}) {
     });
   }
 
+  if (normalizedProfile !== 'full') {
+    for (const [name, expected] of Object.entries(loadTargetRuntimeScripts('full', {
+      targetRepo,
+      sourceLayout: productSource,
+    }))) {
+      if (Object.prototype.hasOwnProperty.call(runtimeScripts, name) || !(name in currentScripts)) {
+        continue;
+      }
+      if (currentScripts[name] === expected) {
+        delete currentScripts[name];
+        report.removed.push(name);
+        continue;
+      }
+      report.retainedExtra.push(name);
+    }
+  }
+
   packageJson.scripts = currentScripts;
+  if (!packageJson.scripts.cwf) {
+    packageJson.scripts.cwf = 'node bin/cwf.js';
+    report.added.push('cwf');
+  }
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
   return report;
+}
+
+function cleanupEmptyParentDirs(startPath, stopPath) {
+  let current = path.dirname(startPath);
+  const absoluteStop = path.resolve(stopPath);
+  while (current.startsWith(absoluteStop) && current !== absoluteStop) {
+    if (!fs.existsSync(current)) {
+      current = path.dirname(current);
+      continue;
+    }
+    if (fs.readdirSync(current).length > 0) {
+      return;
+    }
+    fs.rmdirSync(current);
+    current = path.dirname(current);
+  }
+}
+
+function pruneManagedRuntimeFiles(targetRepo, desiredRuntimeFiles, previousManifest = null) {
+  const desired = new Set(desiredRuntimeFiles);
+  const previouslyManaged = [...new Set((previousManifest?.runtimeFiles || []).filter(Boolean))];
+  const removed = [];
+
+  for (const relativeManagedPath of previouslyManaged) {
+    if (desired.has(relativeManagedPath)) {
+      continue;
+    }
+    const absoluteManagedPath = path.join(targetRepo, relativeManagedPath);
+    if (!fs.existsSync(absoluteManagedPath)) {
+      continue;
+    }
+    fs.rmSync(absoluteManagedPath, { recursive: true, force: true });
+    cleanupEmptyParentDirs(absoluteManagedPath, targetRepo);
+    removed.push(absoluteManagedPath);
+  }
+
+  return {
+    removed,
+  };
 }
 
 function writeAgentsPatchTemplate(targetRepo) {
@@ -324,6 +701,73 @@ Add or adapt a short workflow section like this inside your repo's \`AGENTS.md\`
   ensureDir(path.dirname(templatePath));
   fs.writeFileSync(templatePath, content);
   return templatePath;
+}
+
+function gitignoreLineCandidates(entry) {
+  const normalized = String(entry || '').trim();
+  if (!normalized) {
+    return [];
+  }
+
+  const withoutTrailingSlash = normalized.replace(/\/+$/g, '');
+  return [
+    normalized,
+    withoutTrailingSlash,
+    `/${normalized}`,
+    `/${withoutTrailingSlash}`,
+  ].filter(Boolean);
+}
+
+function hasGitignoreEntry(content, entry) {
+  const existing = new Set(
+    String(content || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean),
+  );
+  return gitignoreLineCandidates(entry).some((candidate) => existing.has(candidate));
+}
+
+function missingGitignoreEntries(targetRepo, entries = WORKFLOW_GITIGNORE_ENTRIES) {
+  const gitignorePath = path.join(targetRepo, '.gitignore');
+  const content = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf8') : '';
+  return entries.filter((entry) => !hasGitignoreEntry(content, entry));
+}
+
+function patchGitignore(targetRepo, options = {}) {
+  const entries = (options.entries || WORKFLOW_GITIGNORE_ENTRIES).filter(Boolean);
+  const gitignorePath = path.join(targetRepo, '.gitignore');
+  const exists = fs.existsSync(gitignorePath);
+  const current = exists ? fs.readFileSync(gitignorePath, 'utf8') : '';
+  const missingEntries = entries.filter((entry) => !hasGitignoreEntry(current, entry));
+
+  if (missingEntries.length === 0) {
+    return {
+      path: gitignorePath,
+      status: exists ? 'unchanged' : 'skipped',
+      addedEntries: [],
+      missingEntries: [],
+    };
+  }
+
+  const lines = [];
+  if (current.trim()) {
+    lines.push(current.replace(/\s+$/g, ''));
+  }
+  if (!current.includes('# codex-workflow-kit runtime artifacts')) {
+    lines.push('# codex-workflow-kit runtime artifacts');
+  }
+  for (const entry of missingEntries) {
+    lines.push(entry);
+  }
+  fs.writeFileSync(gitignorePath, `${lines.join('\n')}\n`);
+
+  return {
+    path: gitignorePath,
+    status: exists ? 'updated' : 'created',
+    addedEntries: missingEntries,
+    missingEntries: [],
+  };
 }
 
 function seedWorkflowRootGaps(rootDir, templatesDir) {
@@ -513,9 +957,16 @@ function installWorkflowSurface(targetRepo, options = {}) {
     refreshDocs = false,
     overwriteScriptConflicts = false,
     writeAgentsTemplate = false,
+    scriptProfile = null,
+    manageGitignore = true,
     verify = true,
   } = options;
-  const source = sourceLayout();
+  const source = productSourceLayout(targetRepo);
+  const existingManifest = readProductManifest(targetRepo);
+  const selectedScriptProfile = normalizeScriptProfile(
+    scriptProfile || existingManifest?.scriptProfile,
+    'full',
+  );
   const docsTarget = path.join(targetRepo, 'docs', 'workflow');
   const scriptsTarget = path.join(targetRepo, 'scripts', 'workflow');
   const cliTarget = path.join(targetRepo, 'scripts', 'cli');
@@ -523,6 +974,16 @@ function installWorkflowSurface(targetRepo, options = {}) {
   const compareTarget = path.join(targetRepo, 'scripts', 'compare_golden_snapshots.ts');
   const skillTarget = path.join(targetRepo, '.agents', 'skills', 'codex-workflow', 'SKILL.md');
   const workflowIgnoreTarget = path.join(targetRepo, '.workflowignore');
+  const selectedRuntimeFiles = runtimeFilesForScriptProfile(selectedScriptProfile, {
+    targetRepo,
+    sourceLayout: source,
+  });
+  const selectedWorkflowFiles = new Set(
+    selectedRuntimeFiles
+      .filter((relativeManagedPath) => relativeManagedPath.startsWith('scripts/workflow/'))
+      .map((relativeManagedPath) => relativeManagedPath.slice('scripts/workflow/'.length)),
+  );
+  const includeCompareScript = selectedRuntimeFiles.includes(relativePath(source.repoRoot, source.compareScript));
 
   ensureDir(targetRepo);
 
@@ -541,10 +1002,14 @@ function installWorkflowSurface(targetRepo, options = {}) {
     compareScript: null,
     skill: null,
     workflowIgnore: null,
+    gitignore: null,
     packageScripts: null,
     agentsTemplate: null,
     productManifest: null,
     versionMarker: null,
+    runtimeSurfaceProfile: runtimeSurfaceProfileForScriptProfile(selectedScriptProfile),
+    runtimeFileCount: selectedRuntimeFiles.length,
+    prunedRuntimeFiles: [],
     sync: null,
     hudState: null,
   };
@@ -557,6 +1022,7 @@ function installWorkflowSurface(targetRepo, options = {}) {
   copyDirectoryTracked(source.scriptsDir, scriptsTarget, {
     overwrite: true,
     bucket: report.scripts,
+    filter: (filePath) => selectedWorkflowFiles.has(relativePath(source.scriptsDir, filePath)),
   });
   copyDirectoryTracked(source.cliDir, cliTarget, {
     overwrite: true,
@@ -564,18 +1030,29 @@ function installWorkflowSurface(targetRepo, options = {}) {
   });
 
   report.bin = copyFileTracked(source.binFile, binTarget, { overwrite: true });
-  report.compareScript = copyFileTracked(source.compareScript, compareTarget, { overwrite: true });
+  report.compareScript = includeCompareScript
+    ? copyFileTracked(source.compareScript, compareTarget, { overwrite: true })
+    : 'skipped';
   report.skill = copyFileTracked(source.skillFile, skillTarget, { overwrite: true });
   report.workflowIgnore = copyFileTracked(source.workflowIgnore, workflowIgnoreTarget, { overwrite: false });
+  if (manageGitignore) {
+    report.gitignore = patchGitignore(targetRepo);
+  }
   report.packageScripts = patchPackageJsonScripts(targetRepo, {
     overwriteConflicts: overwriteScriptConflicts,
+    scriptProfile: selectedScriptProfile,
+    sourceLayout: source,
   });
 
   if (writeAgentsTemplate) {
     report.agentsTemplate = writeAgentsPatchTemplate(targetRepo);
   }
 
-  report.productManifest = writeProductManifest(targetRepo);
+  report.prunedRuntimeFiles = pruneManagedRuntimeFiles(targetRepo, selectedRuntimeFiles, existingManifest).removed;
+  report.productManifest = writeProductManifest(targetRepo, {
+    scriptProfile: selectedScriptProfile,
+    sourceLayout: source,
+  });
   report.versionMarker = writeVersionMarker(targetRepo, { mode });
   report.sync = syncDefaultWorkflowSurface(targetRepo, { setAsActive: mode === 'init' });
   if (verify) {
@@ -606,10 +1083,27 @@ function formatInstallSummary(report) {
     if (report.packageScripts.createdPackageJson) {
       lines.push('- Package JSON: `created minimal package.json for workflow scripts`');
     }
+    lines.push(`- Package script profile: \`${report.packageScripts.scriptProfile}\``);
+    lines.push(`- Runtime surface profile: \`${report.runtimeSurfaceProfile}\``);
+    lines.push(`- Runtime files tracked: \`${report.runtimeFileCount}\``);
     lines.push(`- Package scripts added: \`${report.packageScripts.added.length}\``);
     lines.push(`- Package scripts updated: \`${report.packageScripts.updated.length}\``);
+    if (report.packageScripts.removed.length > 0) {
+      lines.push(`- Package scripts removed: \`${report.packageScripts.removed.length}\``);
+    }
     if (report.packageScripts.conflicts.length > 0) {
       lines.push(`- Package script conflicts: \`${report.packageScripts.conflicts.length}\``);
+    }
+  }
+
+  if (report.prunedRuntimeFiles.length > 0) {
+    lines.push(`- Runtime files pruned: \`${report.prunedRuntimeFiles.length}\``);
+  }
+
+  if (report.gitignore) {
+    lines.push(`- Gitignore: \`${report.gitignore.status}\``);
+    if (report.gitignore.addedEntries.length > 0) {
+      lines.push(`- Gitignore entries added: \`${report.gitignore.addedEntries.join(', ')}\``);
     }
   }
 
@@ -639,18 +1133,23 @@ function formatInstallSummary(report) {
 
 module.exports = {
   formatInstallSummary,
+  missingGitignoreEntries,
   installWorkflowSurface,
   loadTargetRuntimeScripts,
+  normalizeScriptProfile,
+  patchGitignore,
   patchPackageJsonScripts,
   productManifestPath,
   readProductManifest,
   readInstalledVersionMarker,
   relativePath,
+  runtimeFilesForScriptProfile,
   sourceLayout,
   sourcePackageName,
   sourcePackageVersion,
   sourceRepoRoot,
   versionMarkerPath,
+  WORKFLOW_GITIGNORE_ENTRIES,
   writeProductManifest,
   writeVersionMarker,
 };

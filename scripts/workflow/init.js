@@ -16,9 +16,11 @@ Usage:
 Options:
   --target <path>        Target repository. Defaults to current working directory
   --force-docs           Overwrite an existing docs/workflow surface
+  --script-profile <id>  Package script profile. Defaults to full for direct init
   --write-agents-template
                          Write docs/workflow/AGENTS_PATCH_TEMPLATE.md
   --overwrite-scripts    Replace conflicting package.json workflow scripts
+  --skip-gitignore       Do not patch .gitignore with workflow runtime entries
   --skip-verify          Skip doctor/health/next/hud verification
   `);
 }
@@ -34,8 +36,10 @@ function main() {
   const report = installWorkflowSurface(targetRepo, {
     mode: 'init',
     forceDocs: Boolean(args['force-docs']),
+    scriptProfile: args['script-profile'] || 'full',
     overwriteScriptConflicts: Boolean(args['overwrite-scripts']),
     writeAgentsTemplate: Boolean(args['write-agents-template']),
+    manageGitignore: !args['skip-gitignore'],
     verify: !args['skip-verify'],
   });
 
