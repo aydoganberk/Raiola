@@ -177,11 +177,15 @@ test('multilingual lexicon recognizes expanded language markers and deterministi
 test('language detection de-noises shared technical loanwords for Codex routing', () => {
   const englishReview = detectLanguageSignals('review codex repo performance and suggest improvements');
   const spanishFrontend = detectLanguageSignals('crea una especificación UI frontend con diseño premium y revisión responsive');
+  const englishConversational = detectLanguageSignals('go over the patch and call out blockers');
+  const turkishConversational = detectLanguageSignals('previewu smoke et ve ekran goruntusu al');
 
   assert.deepEqual(englishReview.matchedLanguages, ['en']);
   assert.equal(englishReview.multilingual, false);
   assert.deepEqual(spanishFrontend.matchedLanguages, ['es']);
   assert.equal(spanishFrontend.englishSignals, false);
+  assert.deepEqual(englishConversational.matchedLanguages, ['en']);
+  assert.deepEqual(turkishConversational.matchedLanguages, ['tr']);
 });
 
 test('do payload includes a codex command plan for frontend lanes', () => {

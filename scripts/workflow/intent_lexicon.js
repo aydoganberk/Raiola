@@ -4,12 +4,18 @@ const { normalizeWorkflowControlUtterance } = require('./common');
 const LANGUAGE_MARKERS = Object.freeze({
   en: [
     'review', 'code review', 'plan', 'implement', 'fix', 'frontend', 'verify', 'release', 'parallel', 'monorepo',
+    'look into', 'take a look', 'go over', 'put together', 'map out', 'double-check', 'smoke test', 'get this out',
   ],
   tr: [
     'incele', 'inceleme', 'arastir', 'araştır', 'gozden gecir', 'gözden geçir', 'duzelt', 'düzelt',
     'uygula', 'dogrula', 'doğrula', 'yayinla', 'yayınla', 'paralel', 'cok paketli', 'çok paketli',
     'analiz', 'degerlendirme', 'değerlendirme', 'degerlendirmesi', 'değerlendirmesi', 'incelemesi',
     'urun degerlendirmesi', 'ürün değerlendirmesi',
+    'bir bak', 'goz at', 'göz at', 'elden gecir', 'elden geçir', 'hazirla', 'hazırla',
+    'yol haritasini cikar', 'yol haritasını çıkar', 'kontrol et', 'test et',
+    'yayina al', 'yayına al', 'parcalara bol', 'parçalara böl', 'paketlere dagit', 'paketlere dağıt',
+    'acikla', 'açıkla', 'kok neden', 'kök neden', 'previewu smoke et', 'previewü smoke et',
+    'ekran goruntusu al', 'ekran görüntüsü al',
   ],
   es: [
     'revisa', 'revision', 'revisión', 'corrige', 'implementa', 'planifica', 'interfaz', 'frontend', 'verifica',
@@ -55,8 +61,9 @@ const LANGUAGE_MARKERS = Object.freeze({
 
 const INTENT_BUCKETS = Object.freeze({
   research: [
-    'investigate', 'compare', 'audit', 'analyse', 'analyze', 'deep dive', 'why',
+    'investigate', 'compare', 'audit', 'analyse', 'analyze', 'deep dive', 'why', 'look into', 'figure out', 'help me understand',
     'incele', 'inceleme', 'arastir', 'araştır', 'neden', 'analiz', 'analizi',
+    'bir bak', 'goz at', 'göz at', 'nedenini bul', 'detayli bak', 'detaylı bak',
     'investiga', 'analiza', 'compara', 'audita',
     'pesquise', 'analise', 'compare', 'audite',
     'analyse', 'auditer', 'pourquoi',
@@ -69,8 +76,9 @@ const INTENT_BUCKETS = Object.freeze({
     '조사', '분석',
   ],
   plan: [
-    'plan', 'roadmap', 'packet', 'approach', 'milestone', 'strategy', 'spec',
+    'plan', 'roadmap', 'packet', 'approach', 'milestone', 'strategy', 'spec', 'put together', 'map out', 'lay out', 'execution packet', 'milestone packet',
     'taslak', 'yol haritasi', 'yol haritası', 'planla',
+    'hazirla', 'hazırla', 'paketi hazirla', 'paketi hazırla', 'yol haritasini cikar', 'yol haritasını çıkar', 'planini cikar', 'planını çıkar',
     'planifica', 'planificar', 'estrategia', 'hoja de ruta',
     'planeje', 'estrategia',
     'planifier', 'strategie', 'stratégie',
@@ -84,8 +92,9 @@ const INTENT_BUCKETS = Object.freeze({
     '계획',
   ],
   implement: [
-    'fix', 'implement', 'build', 'land', 'complete', 'patch',
+    'fix', 'implement', 'build', 'land', 'complete', 'patch', 'wire up', 'clean up', 'tighten', 'make the change',
     'tamamla', 'duzelt', 'düzelt', 'ekle', 'uygula', 'kodla',
+    'duzeltmeyi uygula', 'düzeltmeyi uygula', 'toparla', 'iyilestir', 'iyileştir',
     'corrige', 'corregir', 'implementa', 'construye', 'arregla',
     'corrija', 'corrigir', 'implemente', 'construa',
     'corrige', 'implementer', 'construis',
@@ -99,10 +108,11 @@ const INTENT_BUCKETS = Object.freeze({
     '수정', '구현', '빌드',
   ],
   review: [
-    'review', 'pr review', 'code review', 'regression', 'risk heatmap', 'blocker', 'inspect',
+    'review', 'pr review', 'code review', 'regression', 'risk heatmap', 'blocker', 'inspect', 'go over', 'look over', 'write down the risks', 'call out blockers',
     'gozden gecir', 'gözden geçir', 'review modu', 'review mode', 'inceleme', 'incelemesi',
     'degerlendirme', 'değerlendirme', 'degerlendirmesi', 'değerlendirmesi',
     'urun degerlendirmesi', 'ürün değerlendirmesi',
+    'elden gecir', 'elden geçir', 'riskleri yaz', 'bulgulari yaz', 'bulguları yaz',
     'revisa', 'revision de codigo', 'revisión de código', 'revision', 'revisión',
     'revisao', 'revisão', 'revisar',
     'revue', 'revue de code',
@@ -116,8 +126,9 @@ const INTENT_BUCKETS = Object.freeze({
     '리뷰', '코드 리뷰',
   ],
   frontend: [
-    'ui', 'ux', 'frontend', 'screen', 'responsive', 'visual', 'a11y', 'accessibility', 'component', 'design',
+    'ui', 'ux', 'frontend', 'screen', 'responsive', 'visual', 'a11y', 'accessibility', 'component', 'design', 'make it responsive', 'polish the ui', 'improve the ux',
     'ekran', 'tasarim', 'tasarım', 'bilesen', 'bileşen',
+    'arayuz', 'arayüz', 'gorsel', 'görsel', 'responsive yap', 'tasarimi iyilestir', 'tasarımı iyileştir',
     'interfaz', 'frontend', 'diseno', 'diseño', 'componente', 'responsive',
     'interface', 'frontend', 'design', 'componente',
     'interface', 'frontend', 'composant',
@@ -132,7 +143,9 @@ const INTENT_BUCKETS = Object.freeze({
   ],
   verify: [
     'verify', 'verification', 'test', 'tests', 'lint', 'typecheck', 'smoke', 'browser', 'preview',
+    'double-check', 'run tests', 'make sure', 'smoke test', 'capture screenshots',
     'assert', 'screenshot', 'snapshot', 'dogrula', 'doğrula', 'dogrulama', 'doğrulama', 'onizleme', 'önizleme',
+    'kontrol et', 'test et', 'emin ol', 'smoke et', 'ekran goruntusu al', 'ekran görüntüsü al',
     'verifica', 'prueba', 'pruebas', 'captura',
     'verifique', 'teste', 'captura',
     'verifier', 'vérifier', 'test', 'capture',
@@ -146,8 +159,9 @@ const INTENT_BUCKETS = Object.freeze({
     '검증', '테스트', '미리보기',
   ],
   ship: [
-    'release', 'handoff', 'closeout', 'deploy',
+    'release', 'handoff', 'closeout', 'deploy', 'get this out', 'send it', 'wrap it up',
     'yayinla', 'yayınla', 'surum', 'sürüm',
+    'yayina al', 'yayına al', 'teslim et',
     'publica', 'lanzar', 'entrega',
     'publique', 'release', 'lance',
     'livrer', 'deployer', 'déployer',
@@ -161,8 +175,9 @@ const INTENT_BUCKETS = Object.freeze({
     '배포', '릴리즈',
   ],
   incident: [
-    'incident', 'outage', 'hotfix', 'urgent', 'prod', 'production issue', 'sev1', 'sev-1',
+    'incident', 'outage', 'hotfix', 'urgent', 'prod', 'production issue', 'sev1', 'sev-1', 'production fire', 'urgent prod issue',
     'olay', 'kritik hata', 'acil',
+    'acil prod sorunu', 'kritik prod problemi',
     'incidente', 'urgente', 'produccion', 'producción',
     'incidente', 'urgente', 'producao', 'produção',
     'incident', 'urgence', 'production',
@@ -176,8 +191,9 @@ const INTENT_BUCKETS = Object.freeze({
     '인시던트', '긴급', '프로덕션',
   ],
   parallel: [
-    'parallel', 'parallelize', 'delegate', 'delegation', 'subagent', 'subagents', 'team mode', 'team lite',
+    'parallel', 'parallelize', 'delegate', 'delegation', 'subagent', 'subagents', 'team mode', 'team lite', 'split this up', 'fan out', 'divide the work',
     'paralel', 'dagit', 'dağıt', 'subagent kullan',
+    'parcalara bol', 'parçalara böl', 'paketlere dagit', 'paketlere dağıt', 'ayni anda yurut', 'aynı anda yürüt',
     'paralelo', 'delegar', 'subagente',
     'paralelo', 'delegue', 'subagente',
     'parallele', 'parallèle', 'deleguer', 'sous-agent',
@@ -209,20 +225,20 @@ const INTENT_BUCKETS = Object.freeze({
 
 const STEERING_BUCKETS = Object.freeze({
   preferReview: [
-    'review', 'code review', 'review mode', 'review modu', 'gozden gecir', 'gözden geçir',
+    'review', 'code review', 'review mode', 'review modu', 'gozden gecir', 'gözden geçir', 'go over', 'look over', 'elden gecir', 'elden geçir',
     'revisa', 'revision', 'revisión', 'ревью', 'مراجعة', '审查', 'レビュー', '리뷰',
   ],
   preferBrowser: [
-    'browser', 'preview', 'screenshot', 'visual', 'playwright', 'onizleme', 'önizleme',
+    'browser', 'preview', 'screenshot', 'visual', 'playwright', 'onizleme', 'önizleme', 'smoke test the preview', 'previewu smoke et', 'previewü smoke et',
     'navegador', 'captura', 'vercel', 'tarayici', 'tarayıcı', '浏览器', 'プレビュー', '미리보기',
   ],
   researchFirst: [
-    'research first', 'investigate first', 'once ara', 'once arastir', 'önce araştır', 'önce ara',
+    'research first', 'investigate first', 'look into it first', 'once ara', 'once arastir', 'önce araştır', 'önce ara', 'once bir bak', 'önce bir bak',
     'primero investiga', 'pesquise primeiro', 'recherche d abord', "recherche d'abord", 'сначала исследуй',
     'ابحث اولا', 'पहले जांच', '先调研', '先に調査', '먼저 조사',
   ],
   patchFirst: [
-    'patch first', 'patch-first', 'dogrudan patch', 'doğrudan patch', 'direkt patch',
+    'patch first', 'patch-first', 'just patch it', 'dogrudan patch', 'doğrudan patch', 'direkt patch', 'direkt duzelt', 'direkt düzelt',
     'aplica el parche primero', 'corrige primero', 'faça o patch primeiro', 'corrige d abord',
     "corrige d'abord", 'сначала патч', 'صحح اولا', 'पहले पैच', '先打补丁', '先にパッチ', '먼저 패치',
   ],
@@ -236,6 +252,19 @@ const STEERING_BUCKETS = Object.freeze({
 
 const DETERMINISTIC_CAPABILITIES = Object.freeze([
   {
+    id: 'plan.execution_packet',
+    phrases: [
+      'execution packet', 'milestone packet', 'put together the next execution packet', 'map out the next milestone',
+      'bir sonraki milestone paketi', 'paketi hazirla', 'paketi hazırla', 'yol haritasini cikar', 'yol haritasını çıkar',
+    ],
+  },
+  {
+    id: 'execute.quick_patch',
+    phrases: [
+      'wire up the fix', 'focused patch', 'clean up the regression', 'duzeltmeyi uygula', 'düzeltmeyi uygula',
+    ],
+  },
+  {
     id: 'review.re_review',
     phrases: [
       're-review', 'rerun review', 'follow-up review', 'yeniden review', 'review tekrar',
@@ -246,6 +275,8 @@ const DETERMINISTIC_CAPABILITIES = Object.freeze([
     id: 'review.deep_review',
     phrases: [
       'review mode', 'code review', 'pr review', 'risk heatmap', 'blocker review', 'gözden geçir',
+      'go over the diff', 'take a look at the diff', 'write down the risks', 'call out blockers',
+      'elden geçir', 'riskleri yaz', 'bulguları yaz',
       'revisión de código', 'revue de code', 'код ревью', '代码审查', 'コードレビュー', '코드 리뷰',
     ],
   },
@@ -267,6 +298,7 @@ const DETERMINISTIC_CAPABILITIES = Object.freeze([
     id: 'verify.browser',
     phrases: [
       'verify browser', 'browser verify', 'preview build', 'smoke the preview', 'tarayici dogrula', 'tarayıcı doğrula',
+      'smoke test the preview', 'capture screenshots', 'previewu smoke et', 'previewü smoke et', 'ekran goruntusu al', 'ekran görüntüsü al',
       'verifica navegador', 'verifier le navigateur', 'проверь браузер', '浏览器验证', 'ブラウザ検証', '브라우저 검증',
     ],
   },
@@ -274,6 +306,7 @@ const DETERMINISTIC_CAPABILITIES = Object.freeze([
     id: 'verify.shell',
     phrases: [
       'verify shell', 'test suite', 'lint and typecheck', 'shell verification', 'kabuk dogrulama',
+      'double-check the test suite', 'run the tests', 'kontrol et ve test et',
       'verifica shell', 'vérification shell', 'shell-проверка', '命令行验证', 'シェル検証', '셸 검증',
     ],
   },
@@ -281,6 +314,7 @@ const DETERMINISTIC_CAPABILITIES = Object.freeze([
     id: 'ship.release',
     phrases: [
       'ship this', 'release this', 'closeout package', 'yayinla bunu', 'yayınla bunu',
+      'get this out', 'send it', 'yayina al', 'yayına al',
       'publica esto', 'publique ceci', 'выпусти это', '发布这个', 'これをリリース', '이것을 배포',
     ],
   },
@@ -288,6 +322,7 @@ const DETERMINISTIC_CAPABILITIES = Object.freeze([
     id: 'team.parallel',
     phrases: [
       'parallelize', 'delegate this', 'subagent plan', 'paralel yurut', 'paralel yürüt',
+      'split this up', 'fan out', 'parcalara bol', 'parçalara böl', 'paketlere dagit', 'paketlere dağıt',
       'hazlo en paralelo', 'delegue isso', 'delegue ceci', 'сделай параллельно', '并行处理', '並列で進めて', '병렬로 진행',
     ],
   },
@@ -310,7 +345,7 @@ const EXTRA_LANGUAGE_MARKERS = Object.freeze({
   he: ['סקירה', 'בדוק', 'תקן', 'ממש', 'תכנן', 'פרונטאנד', 'אמת', 'שחרר', 'במקביל', 'מונוריפו'],
   fa: ['بررسی', 'بازبینی', 'رفع', 'پیاده', 'پیاده سازی', 'رابط', 'اعتبارسنجی', 'انتشار', 'موازی', 'مونوریپو'],
   ro: ['revizuire', 'verifica', 'verifică', 'repara', 'repară', 'implementeaza', 'implementează', 'frontend', 'lansare', 'paralel'],
-  cs: ['revize', 'zkontroluj', 'oprav', 'implementuj', 'naplanuj', 'naplánuj', 'frontend', 'over', 'ověř', 'paralelne', 'paralelně'],
+  cs: ['revize', 'zkontroluj', 'oprav', 'implementuj', 'naplanuj', 'naplánuj', 'frontend', 'paralelne', 'paralelně'],
   sv: ['granska', 'kodgranskning', 'fixa', 'implementera', 'planera', 'frontend', 'verifiera', 'lansera', 'parallellt', 'monorepo'],
 });
 

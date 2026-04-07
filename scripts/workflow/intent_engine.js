@@ -45,10 +45,10 @@ function writeJson(filePath, payload) {
 function detectSteering(text) {
   const lexical = detectSteeringSignals(text);
   return {
-    preferReview: lexical.preferReview || /\b(review|code review|review mode|review modu|gozden gecir|gözden geçir)\b/i.test(text),
-    preferBrowser: lexical.preferBrowser || /\b(browser|preview|screenshot|visual|playwright|onizleme|önizleme)\b/i.test(text),
-    researchFirst: lexical.researchFirst || /\b(research first|once ara|once arastir|önce araştır|önce ara|investigate first|araştır sonra uygula)\b/i.test(text),
-    patchFirst: lexical.patchFirst || /\b(patch first|patch-first|dogrudan patch|doğrudan patch|direkt patch)\b/i.test(text),
+    preferReview: lexical.preferReview || /\b(review|code review|review mode|review modu|gozden gecir|gözden geçir|go over|look over|elden gecir|elden geçir)\b/i.test(text),
+    preferBrowser: lexical.preferBrowser || /\b(browser|preview|screenshot|visual|playwright|onizleme|önizleme|smoke test)\b/i.test(text),
+    researchFirst: lexical.researchFirst || /\b(research first|once ara|once arastir|önce araştır|önce ara|investigate first|araştır sonra uygula|look into it first|once bir bak|önce bir bak)\b/i.test(text),
+    patchFirst: lexical.patchFirst || /\b(patch first|patch-first|dogrudan patch|doğrudan patch|direkt patch|just patch it|direkt duzelt|direkt düzelt)\b/i.test(text),
     strictVerify: lexical.strictVerify || /\b(strict verify|strict|kati verify|katı verify|siki verify|sıkı verify)\b/i.test(text),
     matches: lexical.buckets,
   };
@@ -57,15 +57,15 @@ function detectSteering(text) {
 function inferIntent(text) {
   const lexical = detectIntentSignals(text);
   return {
-    research: lexical.research || /(why|investigate|compare|audit|analyse|analyze|deep dive|incele|inceleme|arastir|araştır|neden)/i.test(text),
-    plan: lexical.plan || /(plan|roadmap|packet|approach|milestone|strategy|spec|taslak|yol haritasi|yol haritası)/i.test(text),
-    implement: lexical.implement || /(fix|implement|build|land|tamamla|duzelt|düzelt|ekle|uygula|kodla)/i.test(text),
-    review: lexical.review || /(review|pr review|code review|regression|risk heatmap|blocker|gozden gecir|gözden geçir)/i.test(text),
-    frontend: lexical.frontend || /(ui|frontend|screen|ekran|responsive|visual|a11y|accessibility|component|design|tasarim|tasarım)/i.test(text),
-    verify: lexical.verify || /(verify|verification|test|tests|lint|typecheck|smoke|browser|preview|assert|screenshot|snapshot|dogrula|doğrula|dogrulama|doğrulama)/i.test(text),
-    ship: lexical.ship || /(release|handoff|closeout|deploy|yayinla|yayınla|surum|sürüm)/i.test(text),
-    incident: lexical.incident || /(incident|outage|hotfix|urgent|prod|production issue|olay|kritik hata|sev1|sev-1)/i.test(text),
-    parallel: lexical.parallel || /(parallel|paralel|delegate|delegation|subagent|team|dagit|dağıt)/i.test(text),
+    research: lexical.research || /(why|investigate|compare|audit|analyse|analyze|deep dive|look into|figure out|incele|inceleme|arastir|araştır|neden|bir bak|goz at|göz at)/i.test(text),
+    plan: lexical.plan || /(plan|roadmap|packet|approach|milestone|strategy|spec|put together|map out|execution packet|milestone packet|taslak|yol haritasi|yol haritası|hazirla|hazırla)/i.test(text),
+    implement: lexical.implement || /(fix|implement|build|land|wire up|clean up|tamamla|duzelt|düzelt|ekle|uygula|kodla|toparla|iyilestir|iyileştir)/i.test(text),
+    review: lexical.review || /(review|pr review|code review|regression|risk heatmap|blocker|go over|look over|gozden gecir|gözden geçir|elden gecir|elden geçir)/i.test(text),
+    frontend: lexical.frontend || /(ui|frontend|screen|ekran|responsive|visual|a11y|accessibility|component|design|tasarim|tasarım|arayuz|arayüz|gorsel|görsel)/i.test(text),
+    verify: lexical.verify || /(verify|verification|test|tests|lint|typecheck|smoke|smoke test|browser|preview|assert|screenshot|snapshot|double-check|dogrula|doğrula|dogrulama|doğrulama|kontrol et|test et)/i.test(text),
+    ship: lexical.ship || /(release|handoff|closeout|deploy|get this out|send it|yayinla|yayınla|yayina al|yayına al|surum|sürüm|teslim et)/i.test(text),
+    incident: lexical.incident || /(incident|outage|hotfix|urgent|prod|production issue|production fire|urgent prod issue|olay|kritik hata|acil prod sorunu|kritik prod problemi|sev1|sev-1)/i.test(text),
+    parallel: lexical.parallel || /(parallel|paralel|delegate|delegation|subagent|team|split this up|fan out|dagit|dağıt|parcalara bol|parçalara böl)/i.test(text),
     monorepo: lexical.monorepo || /(workspace|monorepo|package graph|package|repo-wide|workspace-wide|cok paketli|çok paketli)/i.test(text),
     matches: lexical.buckets,
   };
@@ -172,14 +172,16 @@ function deterministicMatches(goalText) {
   const lexicalMatches = deterministicCapabilityMatches(goalText);
   const normalizedGoal = String(goalText || '');
   const rules = [
+    ['plan.execution_packet', /(?:^|\b)(execution packet|milestone packet|put together the next execution packet|map out the next milestone|bir sonraki milestone paketi|paketi hazirla|paketi hazırla|yol haritasini cikar|yol haritasını çıkar)(?:\b|$)/i],
+    ['execute.quick_patch', /(?:^|\b)(wire up the fix|focused patch|clean up the regression|duzeltmeyi uygula|düzeltmeyi uygula)(?:\b|$)/i],
     ['review.re_review', /(?:^|\b)(re-review|rerun review|follow-up review|yeniden review|review tekrar)(?:\b|$)/i],
-    ['review.deep_review', /(?:^|\b)(review mode|code review|pr review|risk heatmap|blocker review|gözden geçir)(?:\b|$)/i],
+    ['review.deep_review', /(?:^|\b)(review mode|code review|pr review|risk heatmap|blocker review|gözden geçir|go over the diff|take a look at the diff|elden geçir|riskleri yaz|bulgulari yaz|bulguları yaz)(?:\b|$)/i],
     ['frontend.ui_review', /(?:^|\b)(ui review|visual audit|responsive audit|a11y audit|tasarim denetimi)(?:\b|$)/i],
     ['frontend.ui_spec', /(?:^|\b)(ui spec|design contract|ui plan|tasarim kontrati)(?:\b|$)/i],
-    ['verify.browser', /(?:^|\b)(verify browser|browser verify|preview build|smoke the preview|tarayici doğrula)(?:\b|$)/i],
-    ['verify.shell', /(?:^|\b)(verify shell|test suite|lint and typecheck|shell verification)(?:\b|$)/i],
-    ['ship.release', /(?:^|\b)(ship this|release this|closeout package|yayinla bunu)(?:\b|$)/i],
-    ['team.parallel', /(?:^|\b)(parallelize|delegate this|subagent plan|paralel yurut)(?:\b|$)/i],
+    ['verify.browser', /(?:^|\b)(verify browser|browser verify|preview build|smoke the preview|smoke test the preview|capture screenshots|tarayici doğrula|previewu smoke et|previewü smoke et|ekran goruntusu al|ekran görüntüsü al)(?:\b|$)/i],
+    ['verify.shell', /(?:^|\b)(verify shell|test suite|lint and typecheck|shell verification|double-check the test suite|run the tests|kontrol et ve test et)(?:\b|$)/i],
+    ['ship.release', /(?:^|\b)(ship this|release this|closeout package|get this out|send it|yayinla bunu|yayina al|yayına al)(?:\b|$)/i],
+    ['team.parallel', /(?:^|\b)(parallelize|delegate this|subagent plan|split this up|fan out|paralel yurut|parçalara böl|parcalara bol|paketlere dagit|paketlere dağıt)(?:\b|$)/i],
     ['incident.triage', /(?:^|\b)(incident triage|urgent outage|prod regression|kritik incident)(?:\b|$)/i],
   ];
 
@@ -259,6 +261,18 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
     score += 6;
     reasons.push('Evaluation or review language detected.');
   }
+  if (capability.id === 'research.discuss' && /\b(look into|figure out|help me understand|bir bak|goz at|göz at|nedenini bul)\b/i.test(normalizedGoal)) {
+    score += 7;
+    reasons.push('Exploration-first language detected.');
+  }
+  if (capability.id === 'plan.execution_packet' && /\b(execution packet|milestone packet|put together|map out|lay out|hazirla|hazırla|paketi hazirla|paketi hazırla|yol haritasini cikar|yol haritasını çıkar|planini cikar|planını çıkar)\b/i.test(normalizedGoal)) {
+    score += 8;
+    reasons.push('Plan-packet language detected.');
+  }
+  if (capability.id === 'review.deep_review' && /\b(go over|look over|write down the risks|call out blockers|elden gecir|elden geçir|riskleri yaz|bulgulari yaz|bulguları yaz)\b/i.test(normalizedGoal)) {
+    score += 7;
+    reasons.push('Review-and-findings language detected.');
+  }
   if (capability.domain === 'frontend' && (intent.frontend || repoSignals.frontendActive)) {
     score += 8;
     reasons.push('Frontend intent or repo signal detected.');
@@ -307,6 +321,14 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
     score += 12;
     reasons.push('Shell verification opener detected.');
   }
+  if (capability.id === 'verify.shell' && /\b(double-check|run tests|make sure|kontrol et|test et|emin ol)\b/i.test(normalizedGoal) && /\b(test suite|tests?|lint|typecheck|verify)\b/i.test(normalizedGoal)) {
+    score += 8;
+    reasons.push('Conversational shell verification language detected.');
+  }
+  if (capability.id === 'verify.browser' && /\b(smoke test|capture screenshots?|previewu smoke et|previewü smoke et|ekran goruntusu al|ekran görüntüsü al)\b/i.test(normalizedGoal)) {
+    score += 9;
+    reasons.push('Browser smoke or screenshot language detected.');
+  }
   if (capability.id === 'ship.release' && /^(ship|release|deploy|handoff|closeout|yayinla|yayınla|surum|sürüm)\b/i.test(normalizedGoal)) {
     score += 14;
     reasons.push('Ship-oriented opener detected.');
@@ -315,6 +337,10 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
       reasons.push('Ship request explicitly names review as a prerequisite, not the primary lane.');
     }
   }
+  if (capability.id === 'ship.release' && /\b(get this out|send it|wrap it up|yayina al|yayına al|teslim et)\b/i.test(normalizedGoal)) {
+    score += 12;
+    reasons.push('Conversational ship language detected.');
+  }
   if (capability.id === 'ship.release' && intent.ship && !intent.review && !intent.verify) {
     score += 8;
     reasons.push('Ship/release language detected.');
@@ -322,6 +348,10 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
   if (capability.id === 'incident.triage' && intent.incident) {
     score += 9;
     reasons.push('Incident/regression language detected.');
+  }
+  if (capability.id === 'team.parallel' && /\b(split this up|fan out|divide the work|parcalara bol|parçalara böl|paketlere dagit|paketlere dağıt|ayni anda yurut|aynı anda yürüt)\b/i.test(normalizedGoal)) {
+    score += 10;
+    reasons.push('Fan-out language detected.');
   }
   if (
     capability.id === 'verify.browser'

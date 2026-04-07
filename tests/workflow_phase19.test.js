@@ -135,6 +135,36 @@ test('multilingual natural-language routing handles Chinese, Spanish, and Turkis
   assert.ok(turkishResearch.languageMix.matchedLanguages.includes('tr'));
 });
 
+test('english and turkish conversational routing covers broader Codex operator phrasing', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  seedFrontendRepo(targetRepo);
+
+  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const englishResearch = JSON.parse(run('node', [targetBin, 'do', 'look into why the verification plan feels weak before patching', '--json'], targetRepo));
+  const englishPlan = JSON.parse(run('node', [targetBin, 'do', 'put together the next execution packet with risks and checks', '--json'], targetRepo));
+  const englishReview = JSON.parse(run('node', [targetBin, 'do', 'go over the diff and call out blockers', '--json'], targetRepo));
+  const englishShip = JSON.parse(run('node', [targetBin, 'do', 'get this out with handoff notes after final review', '--json'], targetRepo));
+  const turkishResearch = JSON.parse(run('node', [targetBin, 'do', 'neden verify plani zayif bir bak ve kok nedeni acikla', '--json'], targetRepo));
+  const turkishPlan = JSON.parse(run('node', [targetBin, 'do', 'bir sonraki milestone paketini hazirla ve verify planini ekle', '--json'], targetRepo));
+  const turkishReview = JSON.parse(run('node', [targetBin, 'do', 'elden gecir ve riskleri yaz', '--json'], targetRepo));
+  const turkishParallel = JSON.parse(run('node', [targetBin, 'do', 'bunu parcalara bol ve paketlere dagit', '--json'], targetRepo));
+  const turkishShip = JSON.parse(run('node', [targetBin, 'do', 'bunu yayina al ve handoff notlarini ekle', '--json'], targetRepo));
+
+  assert.equal(englishResearch.capability, 'research.discuss');
+  assert.equal(englishPlan.capability, 'plan.execution_packet');
+  assert.equal(englishReview.capability, 'review.deep_review');
+  assert.equal(englishShip.capability, 'ship.release');
+  assert.ok(englishReview.languageMix.matchedLanguages.includes('en'));
+
+  assert.equal(turkishResearch.capability, 'research.discuss');
+  assert.equal(turkishPlan.capability, 'plan.execution_packet');
+  assert.equal(turkishReview.capability, 'review.deep_review');
+  assert.equal(turkishParallel.capability, 'team.parallel');
+  assert.equal(turkishShip.capability, 'ship.release');
+  assert.ok(turkishReview.languageMix.matchedLanguages.includes('tr'));
+});
+
 test('ui direction and ui plan generate taste-aware frontend guidance for Codex', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);

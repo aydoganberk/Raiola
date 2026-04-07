@@ -1,8 +1,8 @@
 const CAPABILITIES = Object.freeze([
   {
     id: 'research.discuss',
-    aliases: ['research', 'investigate', 'analyse', 'analyze', 'audit', 'incele', 'arastir', 'analiz'],
-    keywords: ['why', 'compare', 'audit', 'review', 'investigate', 'analyse', 'analyze', 'incele', 'arastir', 'analiz'],
+    aliases: ['research', 'investigate', 'analyse', 'analyze', 'audit', 'look into', 'figure out', 'incele', 'arastir', 'analiz', 'goz at', 'bir bak'],
+    keywords: ['why', 'compare', 'audit', 'review', 'investigate', 'analyse', 'analyze', 'look into', 'figure out', 'help me understand', 'incele', 'arastir', 'analiz', 'goz at', 'bir bak', 'nedenini bul'],
     domain: 'research',
     risk: 'low',
     sideEffects: ['run_shell'],
@@ -17,8 +17,8 @@ const CAPABILITIES = Object.freeze([
   },
   {
     id: 'plan.execution_packet',
-    aliases: ['plan', 'packet', 'roadmap', 'approach'],
-    keywords: ['plan', 'packet', 'roadmap', 'approach', 'next step', 'milestone'],
+    aliases: ['plan', 'packet', 'roadmap', 'approach', 'put together', 'map out', 'hazirla', 'yol haritasi cikar'],
+    keywords: ['plan', 'packet', 'roadmap', 'approach', 'next step', 'milestone', 'execution packet', 'milestone packet', 'put together', 'map out', 'lay out', 'hazirla', 'paketi hazirla', 'yol haritasi cikar', 'planini cikar'],
     domain: 'plan',
     risk: 'low',
     sideEffects: ['write_fs'],
@@ -33,8 +33,8 @@ const CAPABILITIES = Object.freeze([
   },
   {
     id: 'execute.quick_patch',
-    aliases: ['implement', 'fix', 'patch', 'build', 'tamamla'],
-    keywords: ['fix', 'implement', 'patch', 'build', 'land', 'complete', 'tamamla', 'duzelt'],
+    aliases: ['implement', 'fix', 'patch', 'build', 'tamamla', 'wire up', 'clean up', 'duzeltmeyi uygula'],
+    keywords: ['fix', 'implement', 'patch', 'build', 'land', 'complete', 'wire up', 'clean up', 'tighten', 'make the change', 'tamamla', 'duzelt', 'duzeltmeyi uygula', 'toparla', 'iyilestir'],
     domain: 'execute',
     risk: 'medium',
     sideEffects: ['write_fs', 'run_shell'],
@@ -49,8 +49,8 @@ const CAPABILITIES = Object.freeze([
   },
   {
     id: 'review.deep_review',
-    aliases: ['review', 'audit', 'code review', 'pr review', 'inceleme', 'degerlendirme', 'urun degerlendirmesi'],
-    keywords: ['review', 'audit', 'regression', 'bug', 'risk', 'pr', 'diff', 'inceleme', 'degerlendirme', 'degerlendirmesi'],
+    aliases: ['review', 'audit', 'code review', 'pr review', 'go over', 'look over', 'inceleme', 'degerlendirme', 'urun degerlendirmesi', 'elden gecir', 'gozden gecir'],
+    keywords: ['review', 'audit', 'regression', 'bug', 'risk', 'pr', 'diff', 'go over', 'look over', 'write down the risks', 'call out blockers', 'inceleme', 'degerlendirme', 'degerlendirmesi', 'elden gecir', 'gozden gecir', 'riskleri yaz', 'bulgulari yaz'],
     domain: 'review',
     risk: 'medium',
     sideEffects: ['run_shell', 'write_fs'],
@@ -82,7 +82,7 @@ const CAPABILITIES = Object.freeze([
   {
     id: 'frontend.ui_spec',
     aliases: ['ui spec', 'design contract', 'ui plan'],
-    keywords: ['ui', 'frontend', 'screen', 'design', 'responsive', 'component', 'ux'],
+    keywords: ['ui', 'frontend', 'screen', 'design', 'responsive', 'component', 'ux', 'make it responsive', 'polish the ui', 'responsive yap', 'tasarimi iyilestir', 'arayuz'],
     domain: 'frontend',
     risk: 'medium',
     sideEffects: ['write_fs'],
@@ -113,8 +113,8 @@ const CAPABILITIES = Object.freeze([
   },
   {
     id: 'verify.shell',
-    aliases: ['verify shell', 'test', 'check'],
-    keywords: ['test', 'verify', 'check', 'lint', 'typecheck'],
+    aliases: ['verify shell', 'test', 'check', 'double-check', 'run tests', 'kontrol et'],
+    keywords: ['test', 'verify', 'check', 'lint', 'typecheck', 'double-check', 'run tests', 'make sure', 'kontrol et', 'test et', 'emin ol'],
     domain: 'verify',
     risk: 'low',
     sideEffects: ['run_shell'],
@@ -129,8 +129,8 @@ const CAPABILITIES = Object.freeze([
   },
   {
     id: 'verify.browser',
-    aliases: ['verify browser', 'preview', 'smoke', 'screenshot'],
-    keywords: ['browser', 'preview', 'smoke', 'visual', 'screenshot', 'localhost', 'vercel.app'],
+    aliases: ['verify browser', 'preview', 'smoke', 'screenshot', 'smoke test', 'previewu smoke et'],
+    keywords: ['browser', 'preview', 'smoke', 'visual', 'screenshot', 'smoke test', 'capture screenshots', 'localhost', 'vercel.app', 'previewu smoke et', 'ekran goruntusu al'],
     domain: 'verify',
     risk: 'low',
     sideEffects: ['browser', 'write_fs'],
@@ -145,8 +145,8 @@ const CAPABILITIES = Object.freeze([
   },
   {
     id: 'team.parallel',
-    aliases: ['team', 'parallel', 'subagent', 'delegate'],
-    keywords: ['parallel', 'delegate', 'subagent', 'team', 'sweep', 'across many files'],
+    aliases: ['team', 'parallel', 'subagent', 'delegate', 'split this up', 'parcalara bol'],
+    keywords: ['parallel', 'delegate', 'subagent', 'team', 'sweep', 'across many files', 'split this up', 'fan out', 'divide the work', 'parcalara bol', 'paketlere dagit', 'ayni anda yurut'],
     domain: 'ops',
     risk: 'high',
     sideEffects: ['write_fs', 'run_shell', 'git_mutation'],
@@ -161,8 +161,8 @@ const CAPABILITIES = Object.freeze([
   },
   {
     id: 'ship.release',
-    aliases: ['ship', 'release', 'closeout'],
-    keywords: ['ship', 'release', 'closeout', 'handoff'],
+    aliases: ['ship', 'release', 'closeout', 'get this out', 'yayina al'],
+    keywords: ['ship', 'release', 'closeout', 'handoff', 'get this out', 'send it', 'wrap it up', 'yayina al', 'teslim et'],
     domain: 'ship',
     risk: 'high',
     sideEffects: ['write_fs', 'run_shell', 'git_mutation'],

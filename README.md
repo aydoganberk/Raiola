@@ -144,6 +144,8 @@ The current build adds repo-native surfaces aimed at making Codex materially str
 
 - `cwf do "请做代码审查并验证浏览器"` or `cwf do "revisa el frontend y mejora el diseño"`  
   Multilingual routing now grounds intent, steering, and deterministic capability picks across major languages instead of assuming English-only prompts.
+- `cwf do "look into why the verification plan feels weak before patching"` or `cwf do "neden verify plani zayif bir bak ve kok nedeni acikla"`  
+  English and Turkish conversational routing now handles more natural operator phrasing such as `look into`, `put together`, `go over`, `double-check`, `get this out`, `bir bak`, `hazirla`, `elden gecir`, `previewu smoke et`, `parcalara bol`, and `yayina al`.
 - `cwf codex promptpack --goal "review the auth diff"`  
   Writes a ready-to-paste Codex prompt pack with profile, verify contract, repo signals, the generated context pack, optional UI direction, monorepo hotspots, and the latest review orchestration/task-graph context.
 - `cwf codex contextpack --goal "review the auth diff"`  
@@ -158,6 +160,19 @@ The current build adds repo-native surfaces aimed at making Codex materially str
   Builds package-aware write scopes, review shards, hotspots, context slices, context budgets, targeted verify plans, and performance-risk notes for broad repos.
 
 These surfaces are designed to stay backward-compatible with the canonical markdown workflow instead of replacing it.
+
+## Natural-Language Routing
+
+`cwf do` is no longer tuned just for terse command-like prompts. The current routing layer is optimized to understand both English and Turkish operator language in a more natural form.
+
+- Research: `look into why routing confidence is low`, `bir bak neden verify plani zayif`
+- Plan: `put together the next execution packet`, `bir sonraki milestone paketini hazirla`
+- Review: `go over the diff and call out blockers`, `elden gecir ve riskleri yaz`
+- Verify: `double-check the test suite`, `previewu smoke et ve ekran goruntusu al`
+- Team: `split this up across packages`, `bunu parcalara bol ve paketlere dagit`
+- Ship: `get this out with handoff notes`, `bunu yayina al ve handoff notlarini ekle`
+
+This support is enforced through the routing corpus and roadmap audit rather than living only in docs.
 
 ## Quick, Full, Team
 
