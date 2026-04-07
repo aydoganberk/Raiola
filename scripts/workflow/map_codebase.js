@@ -11,7 +11,7 @@ const {
   resolveWorkflowRoot,
   safeExec,
   workflowPaths,
-  write,
+  writeIfChanged,
 } = require('./common');
 const { listIndexedRepoFiles } = require('./fs_index');
 
@@ -867,8 +867,8 @@ function buildCodebaseMap(cwd, rootDir, options = {}) {
     ensureDir(path.dirname(mapFile));
     const surfacesDir = path.join(cwd, '.workflow', 'codebase');
     ensureDir(surfacesDir);
-    write(mapFile, `${JSON.stringify(map, null, 2)}\n`);
-    write(markdownFile, renderMarkdown(map));
+    writeIfChanged(mapFile, `${JSON.stringify(map, null, 2)}\n`);
+    writeIfChanged(markdownFile, renderMarkdown(map));
     const surfaceFiles = {
       stack: path.join(surfacesDir, 'STACK.md'),
       integrations: path.join(surfacesDir, 'INTEGRATIONS.md'),
@@ -877,12 +877,12 @@ function buildCodebaseMap(cwd, rootDir, options = {}) {
       testing: path.join(surfacesDir, 'TESTING.md'),
       concerns: path.join(surfacesDir, 'CONCERNS.md'),
     };
-    write(surfaceFiles.stack, renderStackDocument(map));
-    write(surfaceFiles.integrations, renderIntegrationsDocument(map));
-    write(surfaceFiles.architecture, renderArchitectureDocument(map));
-    write(surfaceFiles.structure, renderStructureDocument(map));
-    write(surfaceFiles.testing, renderTestingDocument(map));
-    write(surfaceFiles.concerns, renderConcernsDocument(map));
+    writeIfChanged(surfaceFiles.stack, renderStackDocument(map));
+    writeIfChanged(surfaceFiles.integrations, renderIntegrationsDocument(map));
+    writeIfChanged(surfaceFiles.architecture, renderArchitectureDocument(map));
+    writeIfChanged(surfaceFiles.structure, renderStructureDocument(map));
+    writeIfChanged(surfaceFiles.testing, renderTestingDocument(map));
+    writeIfChanged(surfaceFiles.concerns, renderConcernsDocument(map));
     map.files = {
       json: mapFile,
       markdown: markdownFile,

@@ -1,7 +1,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { ensureDir, parseArgs, readIfExists, resolveWorkflowRoot } = require('./common');
+const { ensureDir, parseArgs, readIfExists, resolveWorkflowRoot, writeIfChanged } = require('./common');
 const { buildPackageGraph } = require('./package_graph');
 const { relativePath } = require('./roadmap_os');
 
@@ -18,14 +18,12 @@ function readJson(filePath, fallback = {}) {
 }
 
 function writeJson(filePath, payload) {
-  ensureDir(path.dirname(filePath));
-  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+  writeIfChanged(filePath, `${JSON.stringify(payload, null, 2)}\n`);
   return filePath;
 }
 
 function writeMarkdown(filePath, content) {
-  ensureDir(path.dirname(filePath));
-  fs.writeFileSync(filePath, `${String(content).trimEnd()}\n`);
+  writeIfChanged(filePath, `${String(content).trimEnd()}\n`);
   return filePath;
 }
 

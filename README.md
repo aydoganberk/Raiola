@@ -242,6 +242,8 @@ Current product targets for medium-size repos:
 - `launch <800ms cold / <300ms warm`
 - `manager <400ms warm`
 - `next-prompt <150ms warm`
+- `codex contextpack <1.5s warm`
+- `codex promptpack <1.8s warm`
 
 Run the benchmark harness:
 
@@ -249,7 +251,7 @@ Run the benchmark harness:
 cwf benchmark
 ```
 
-The benchmark surface covers every documented hot-path target, including `launch`, `manager`, and `next-prompt`.
+The benchmark surface covers every documented hot-path target, including `launch`, `manager`, `next-prompt`, `codex contextpack`, and `codex promptpack`.
 
 Run the roadmap truth-reset audit:
 

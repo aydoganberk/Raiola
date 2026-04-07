@@ -214,6 +214,22 @@ test('codex contextpack wraps workflow, repo, frontend, and review context into 
   assert.equal(pack.review.waveCount, 4);
 });
 
+test('codex contextpack still infers focus files when no review graph or frontend lane is active', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+
+  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const wrapper = JSON.parse(run(
+    'node',
+    [targetBin, 'codex', 'contextpack', '--goal', 'review the current diff', '--json'],
+    targetRepo,
+  ));
+  const pack = JSON.parse(fs.readFileSync(path.join(targetRepo, wrapper.jsonFile), 'utf8'));
+
+  assert.ok(pack.focusFiles.length >= 1);
+  assert.ok(pack.focusFiles.every((item) => !item.startsWith('.workflow/')));
+});
+
 test('monorepo intelligence exposes hotspots and context budgets for broad package graphs', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);

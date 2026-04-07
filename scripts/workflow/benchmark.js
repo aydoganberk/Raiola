@@ -14,6 +14,8 @@ const COMMANDS = {
   health: ['node', ['scripts/workflow/health.js', '--strict']],
   'map-codebase': ['node', ['scripts/workflow/map_codebase.js', '--compact']],
   'map-frontend': ['node', ['scripts/workflow/map_frontend.js', '--compact']],
+  'codex-contextpack': ['node', ['scripts/workflow/codex_control.js', 'contextpack', '--goal', 'review the current diff', '--json']],
+  'codex-promptpack': ['node', ['scripts/workflow/codex_control.js', 'promptpack', '--goal', 'review the current diff', '--json']],
 };
 const DEFAULT_SLO_MS = Object.freeze({
   launch: 800,
@@ -25,6 +27,8 @@ const DEFAULT_SLO_MS = Object.freeze({
   health: 1000,
   'map-codebase': 2000,
   'map-frontend': 2000,
+  'codex-contextpack': 1500,
+  'codex-promptpack': 1800,
 });
 
 function printHelp() {
@@ -37,7 +41,7 @@ Usage:
 Options:
   --target <path>        Benchmark target. Defaults to current working directory
   --fixture <name>       small|medium|large benchmark fixture
-  --commands <a,b,c>     Commands to benchmark. Defaults to launch,hud,manager,next,next-prompt,doctor,health,map-codebase,map-frontend
+  --commands <a,b,c>     Commands to benchmark. Defaults to launch,hud,manager,next,next-prompt,doctor,health,map-codebase,map-frontend,codex-contextpack,codex-promptpack
   --runs <n>             Warm run count. Defaults to 3
   --assert-slo           Exit non-zero if any selected command misses its SLO threshold
   --thresholds <spec>    Override SLOs, e.g. hud=300,next=500,doctor=1000
@@ -167,7 +171,7 @@ function main() {
   const runs = Math.max(1, Number(args.runs || 3));
   const assertSlo = Boolean(args['assert-slo']);
   const thresholds = parseThresholds(args.thresholds);
-  const selectedCommands = String(args.commands || 'launch,hud,manager,next,next-prompt,doctor,health,map-codebase,map-frontend')
+  const selectedCommands = String(args.commands || 'launch,hud,manager,next,next-prompt,doctor,health,map-codebase,map-frontend,codex-contextpack,codex-promptpack')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);

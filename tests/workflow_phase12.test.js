@@ -358,3 +358,23 @@ test('workflow:benchmark covers documented launch, manager, and next-prompt targ
   assert.deepEqual(payload.results.map((item) => item.command), ['launch', 'manager', 'next-prompt']);
   assert.ok(payload.results.every((item) => typeof item.warmMedianMs === 'number'));
 });
+
+test('workflow:benchmark covers codex-specific contextpack and promptpack hot paths', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+
+  const payload = JSON.parse(run(
+    'node',
+    [
+      path.join(targetRepo, 'scripts', 'workflow', 'benchmark.js'),
+      '--commands', 'codex-contextpack,codex-promptpack',
+      '--runs', '1',
+      '--json',
+    ],
+    targetRepo,
+  ));
+
+  assert.equal(payload.results.length, 2);
+  assert.deepEqual(payload.results.map((item) => item.command), ['codex-contextpack', 'codex-promptpack']);
+  assert.ok(payload.results.every((item) => typeof item.warmMedianMs === 'number'));
+});

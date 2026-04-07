@@ -174,6 +174,16 @@ test('multilingual lexicon recognizes expanded language markers and deterministi
   assert.ok(hebrewCaps.includes('team.parallel') || hebrewCaps.includes('review.deep_review'));
 });
 
+test('language detection de-noises shared technical loanwords for Codex routing', () => {
+  const englishReview = detectLanguageSignals('review codex repo performance and suggest improvements');
+  const spanishFrontend = detectLanguageSignals('crea una especificación UI frontend con diseño premium y revisión responsive');
+
+  assert.deepEqual(englishReview.matchedLanguages, ['en']);
+  assert.equal(englishReview.multilingual, false);
+  assert.deepEqual(spanishFrontend.matchedLanguages, ['es']);
+  assert.equal(spanishFrontend.englishSignals, false);
+});
+
 test('do payload includes a codex command plan for frontend lanes', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);

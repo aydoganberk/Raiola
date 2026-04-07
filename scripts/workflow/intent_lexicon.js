@@ -314,6 +314,8 @@ const EXTRA_LANGUAGE_MARKERS = Object.freeze({
   sv: ['granska', 'kodgranskning', 'fixa', 'implementera', 'planera', 'frontend', 'verifiera', 'lansera', 'parallellt', 'monorepo'],
 });
 
+const LANGUAGE_BUCKETS = Object.freeze(mergedBuckets(LANGUAGE_MARKERS, EXTRA_LANGUAGE_MARKERS));
+
 const EXTRA_INTENT_BUCKETS = Object.freeze({
   research: ['zbadaj', 'досліди', 'ερευνα', 'έρευνα', 'nghien cuu', 'nghiên cứu', 'selidiki', 'วิจัย', 'חקור', 'تحقیق', 'investigheaza', 'investighează', 'prozkoumej', 'undersok', 'undersök'],
   plan: ['zaplanuj', 'сплануй', 'σχεδιασε', 'σχεδίασε', 'lap ke hoach', 'lập kế hoạch', 'rencana', 'วางแผน', 'תכנן', 'برنامه', 'planifica', 'naplanuj', 'planera'],
@@ -421,6 +423,70 @@ function collectMatches(text, phrases) {
   return [...new Set(matches)];
 }
 
+function languageMarkerKey(phrase) {
+  const rawPhrase = String(phrase || '').trim().toLowerCase();
+  if (!rawPhrase) {
+    return '';
+  }
+  if (NON_LATIN_PATTERN.test(rawPhrase)) {
+    return `raw:${rawPhrase}`;
+  }
+  const normalizedPhrase = normalizeWorkflowControlUtterance(rawPhrase);
+  return normalizedPhrase ? `norm:${normalizedPhrase}` : `raw:${rawPhrase}`;
+}
+
+const LANGUAGE_MARKER_FREQUENCIES = (() => {
+  const frequencies = new Map();
+  for (const phrases of Object.values(LANGUAGE_BUCKETS)) {
+    const uniqueKeys = new Set((phrases || []).map((phrase) => languageMarkerKey(phrase)).filter(Boolean));
+    for (const key of uniqueKeys) {
+      frequencies.set(key, (frequencies.get(key) || 0) + 1);
+    }
+  }
+  return frequencies;
+})();
+
+function scoreLanguageMatches(matches) {
+  return matches.reduce((total, phrase) => {
+    const key = languageMarkerKey(phrase);
+    const overlap = LANGUAGE_MARKER_FREQUENCIES.get(key) || 1;
+    return total + (1 / overlap);
+  }, 0);
+}
+
+function compareLanguageEntries(left, right) {
+  return right.score - left.score
+    || right.count - left.count
+    || left.language.localeCompare(right.language);
+}
+
+function resolveMatchedLanguages(scores, counts) {
+  const ranked = Object.entries(scores)
+    .filter(([, score]) => score > 0)
+    .map(([language, score]) => ({
+      language,
+      score,
+      count: counts[language] || 0,
+    }))
+    .sort(compareLanguageEntries);
+
+  if (ranked.length === 0) {
+    return [];
+  }
+
+  const maxScore = ranked[0].score;
+  const strongMatches = ranked.filter((entry) => entry.score >= 1 && entry.score >= maxScore * 0.55);
+  if (strongMatches.length > 0) {
+    return strongMatches.map((entry) => entry.language);
+  }
+
+  if ((scores.en || 0) > 0) {
+    return ['en'];
+  }
+
+  return [ranked[0].language];
+}
+
 function detectBucketMatches(text, buckets) {
   const forms = typeof text === 'string' ? normalizeMultilingualText(text) : text;
   return Object.fromEntries(Object.entries(buckets).map(([key, phrases]) => {
@@ -466,20 +532,27 @@ function detectSteeringSignals(text) {
 
 function detectLanguageSignals(text) {
   const forms = normalizeMultilingualText(text);
-  const counts = Object.fromEntries(Object.entries(mergedBuckets(LANGUAGE_MARKERS, EXTRA_LANGUAGE_MARKERS)).map(([language, phrases]) => [
+  const matches = Object.fromEntries(Object.entries(LANGUAGE_BUCKETS).map(([language, phrases]) => [
     language,
-    collectMatches(forms, phrases).length,
+    collectMatches(forms, phrases),
   ]));
-  const matchedLanguages = Object.entries(counts)
-    .filter(([, count]) => count > 0)
-    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-    .map(([language]) => language);
+  const counts = Object.fromEntries(Object.entries(matches).map(([language, languageMatches]) => [
+    language,
+    languageMatches.length,
+  ]));
+  const scores = Object.fromEntries(Object.entries(matches).map(([language, languageMatches]) => [
+    language,
+    Number(scoreLanguageMatches(languageMatches).toFixed(3)),
+  ]));
+  const matchedLanguages = resolveMatchedLanguages(scores, counts);
 
   return {
     matchedLanguages,
     counts,
-    turkishSignals: (counts.tr || 0) > 0,
-    englishSignals: (counts.en || 0) > 0,
+    scores,
+    matches,
+    turkishSignals: matchedLanguages.includes('tr'),
+    englishSignals: matchedLanguages.includes('en'),
     multilingual: matchedLanguages.length > 1,
   };
 }

@@ -9,6 +9,7 @@ const {
   readIfExists,
   resolveWorkflowRoot,
   tryExtractSection,
+  writeIfChanged,
   workflowPaths,
 } = require('./common');
 const { buildBaseState } = require('./state_surface');
@@ -739,7 +740,7 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile) {
   const markdownPath = path.join(runtimeDir(cwd), 'promptpack.md');
   const jsonPath = path.join(runtimeDir(cwd), 'promptpack.json');
   ensureDir(path.dirname(markdownPath));
-  fs.writeFileSync(markdownPath, markdown);
+  writeIfChanged(markdownPath, markdown);
   writeJsonFile(jsonPath, {
     generatedAt: nowIso(),
     goal,
@@ -941,7 +942,7 @@ ${tryExtractSection(context, 'User Intent', '').trim() || '`No user intent note 
 
   const filePath = path.join(runtimeDir(cwd), 'resume-card.md');
   ensureDir(path.dirname(filePath));
-  fs.writeFileSync(filePath, `${markdown.trimEnd()}\n`);
+  writeIfChanged(filePath, `${markdown.trimEnd()}\n`);
   return {
     action: 'resume-card',
     scope: 'repo',

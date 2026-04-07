@@ -1,9 +1,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {
+  listGitChanges,
   parseArgs,
   readIfExists,
   resolveWorkflowRoot,
+  writeIfChanged,
   workflowPaths,
 } = require('./common');
 const { buildCodebaseMap } = require('./map_codebase');
@@ -237,6 +239,33 @@ function attachmentIds(items) {
   return items.map((item) => item.path);
 }
 
+function isUsefulFocusPath(filePath) {
+  return Boolean(filePath)
+    && !String(filePath).endsWith('/')
+    && !/^(?:\.git|node_modules|dist|build|coverage|\.next)\//.test(String(filePath))
+    && !/^\.(?:workflow)(?:\/|$)/.test(String(filePath));
+}
+
+function focusPathPriority(filePath) {
+  const value = String(filePath || '');
+  if (value === 'package.json' || value === 'README.md' || value === 'AGENTS.md') {
+    return 0;
+  }
+  if (/^(?:scripts|src|app|pages|components|lib|packages)\//.test(value)) {
+    return 0;
+  }
+  if (/^docs\/workflow\//.test(value)) {
+    return 1;
+  }
+  if (/^docs\//.test(value)) {
+    return 2;
+  }
+  if (/^tests\//.test(value)) {
+    return 3;
+  }
+  return 2;
+}
+
 function buildBudgetPreset(targetTokens, attachments) {
   const selected = [];
   let total = 0;
@@ -313,7 +342,7 @@ function buildContextSlices(cwd, analysis, inputs) {
   return slices;
 }
 
-function buildFocusFiles(inputs) {
+function buildFocusFiles(cwd, inputs) {
   const focus = [];
   const monorepo = inputs.monorepo?.monorepo;
   for (const scope of monorepo?.writeScopes || []) {
@@ -332,7 +361,30 @@ function buildFocusFiles(inputs) {
     focus.push(...inputs.frontend.direction.uiFilePreview.slice(0, 8));
     focus.push(...inputs.frontend.direction.inventoryPreview.slice(0, 6));
   }
-  return [...new Set(focus.filter(Boolean))].slice(0, 24);
+  const repoMap = inputs.repo?.codebaseMap;
+  focus.push(...(repoMap?.repo?.changedFiles || []).slice(0, 10));
+  focus.push(...(repoMap?.lanes?.stack?.inputs || []).slice(0, 8));
+  focus.push(...(repoMap?.lanes?.architecture?.data?.sampleAppFiles || []).slice(0, 8));
+  focus.push(...(repoMap?.lanes?.architecture?.data?.workstreamRefs || []).slice(0, 8));
+  focus.push(...(inputs.workflow?.attachments || []).map((item) => item.path).slice(0, 6));
+
+  if (focus.length === 0) {
+    try {
+      focus.push(...listGitChanges(cwd).slice(0, 8));
+    } catch {
+      // Best-effort fallback only.
+    }
+  }
+
+  return [...new Set(focus.filter(isUsefulFocusPath))]
+    .map((filePath, index) => ({
+      filePath,
+      index,
+      priority: focusPathPriority(filePath),
+    }))
+    .sort((left, right) => left.priority - right.priority || left.index - right.index)
+    .map((entry) => entry.filePath)
+    .slice(0, 24);
 }
 
 function buildAvoidPatterns() {
@@ -426,7 +478,13 @@ function buildCodexContextPack(cwd, rootDir, goal, analysis, profile, options = 
     frontend,
     review,
   });
-  const focusFiles = buildFocusFiles({ monorepo, frontend, review });
+  const focusFiles = buildFocusFiles(cwd, {
+    workflow,
+    repo,
+    monorepo,
+    frontend,
+    review,
+  });
   const budgetPresets = {
     compact: buildBudgetPreset(1400, readOrder.filter((item) => ['core', 'recommended'].includes(item.priority))),
     balanced: buildBudgetPreset(2800, readOrder),
@@ -480,7 +538,7 @@ function buildCodexContextPack(cwd, rootDir, goal, analysis, profile, options = 
     ensureDir(dir);
     const markdownPath = path.join(dir, 'contextpack.md');
     const jsonPath = path.join(dir, 'contextpack.json');
-    fs.writeFileSync(markdownPath, renderMarkdown(payload));
+    writeIfChanged(markdownPath, renderMarkdown(payload));
     writeJsonFile(jsonPath, payload);
     payload.file = relativePath(cwd, markdownPath);
     payload.jsonFile = relativePath(cwd, jsonPath);
