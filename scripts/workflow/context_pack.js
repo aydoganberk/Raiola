@@ -9,7 +9,9 @@ const {
   workflowPaths,
 } = require('./common');
 const { buildCodebaseMap } = require('./map_codebase');
+const { buildComponentInventoryDoc } = require('./component_inventory');
 const { buildUiDirection } = require('./design_intelligence');
+const { buildUiSpec } = require('./ui_spec');
 const { buildMonorepoIntelligence } = require('./monorepo');
 const { loadLatestReviewTaskGraph } = require('./review_task_graph');
 const { relativePath, writeJsonFile } = require('./roadmap_os');
@@ -148,6 +150,11 @@ function collectFrontendAttachments(cwd, rootDir, analysis, options = {}) {
     goal: options.goal,
     taste: options.taste,
   });
+  const spec = buildUiSpec(cwd, rootDir, {
+    goal: options.goal,
+    taste: options.taste,
+  });
+  const inventory = buildComponentInventoryDoc(cwd, rootDir);
   const attachments = [];
   pushAttachment(attachments, cwd, path.join(rootDir, 'UI-DIRECTION.md'), {
     id: 'ui-direction',
@@ -163,8 +170,17 @@ function collectFrontendAttachments(cwd, rootDir, analysis, options = {}) {
     lane: 'frontend',
     priority: 'recommended',
   });
+  pushAttachment(attachments, cwd, path.join(rootDir, 'COMPONENT-INVENTORY.md'), {
+    id: 'component-inventory',
+    title: 'Component inventory',
+    reason: 'Shared component surface plus primitive normalization opportunities.',
+    lane: 'frontend',
+    priority: 'optional',
+  });
   return {
     direction,
+    spec,
+    inventory,
     attachments,
   };
 }
@@ -439,6 +455,16 @@ function renderMarkdown(payload) {
     '',
     ...(payload.focusFiles.length > 0 ? payload.focusFiles.map((item) => `- \`${item}\``) : ['- `No extra focus files inferred.`']),
     '',
+    ...(payload.frontend ? [
+      '## Frontend Guidance',
+      '',
+      `- Taste signature: \`${payload.frontend.taste}\``,
+      `- Prototype mode: \`${payload.frontend.prototypeMode?.mode || 'n/a'}\` (${payload.frontend.prototypeMode?.recommended ? 'recommended' : 'optional'})`,
+      ...(payload.frontend.semanticGuardrails || []).map((item) => `- Guardrail: ${item}`),
+      ...(payload.frontend.nativeFirst || []).slice(0, 4).map((item) => `- Native first: \`${item.title}\` -> \`${item.native}\``),
+      ...(payload.frontend.recipePack || []).slice(0, 4).map((item) => `- Recipe: \`${item.title}\` -> ${item.structure}`),
+      '',
+    ] : []),
     '## Avoid By Default',
     '',
     ...payload.avoidPatterns.map((item) => `- \`${item}\``),
@@ -519,10 +545,16 @@ function buildCodexContextPack(cwd, rootDir, goal, analysis, profile, options = 
     } : null,
     frontend: frontend?.direction ? {
       file: frontend.direction.file,
+      specFile: frontend.spec?.file || null,
+      componentInventoryFile: frontend.inventory?.file || null,
       taste: frontend.direction.taste.tagline,
       tasteProfile: frontend.direction.taste.profile || null,
       tokens: frontend.direction.designTokens || null,
       experienceThesis: frontend.direction.experienceThesis || null,
+      semanticGuardrails: frontend.direction.semanticGuardrails || [],
+      nativeFirst: frontend.direction.nativeFirstRecommendations || [],
+      recipePack: frontend.direction.recipePack || [],
+      prototypeMode: frontend.direction.prototypeMode || null,
       signatureMoments: frontend.direction.signatureMoments || [],
       screenBlueprints: frontend.direction.screenBlueprints || [],
     } : null,

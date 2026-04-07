@@ -2,6 +2,7 @@ const path = require('node:path');
 const { parseArgs, resolveWorkflowRoot } = require('./common');
 const {
   buildFrontendProfile,
+  buildPrimitiveOpportunityAudit,
   collectComponentInventory,
   relativePath,
   writeDoc,
@@ -10,6 +11,7 @@ const {
 function buildComponentInventoryDoc(cwd, rootDir) {
   const profile = buildFrontendProfile(cwd, rootDir, { scope: 'workstream', refresh: 'incremental' });
   const inventory = collectComponentInventory(cwd);
+  const primitiveOpportunities = buildPrimitiveOpportunityAudit(cwd, profile, inventory);
   const body = `
 - Framework: \`${profile.framework.primary}\`
 - UI system: \`${profile.uiSystem.primary}\`
@@ -19,11 +21,18 @@ function buildComponentInventoryDoc(cwd, rootDir) {
 ${inventory.length > 0
     ? inventory.map((item) => `- \`${item.name}\` -> ${item.file} (${item.shared ? 'shared' : 'local'})`).join('\n')
     : '- `No component files were detected.`'}
+
+## Primitive Opportunities
+
+${primitiveOpportunities.opportunities.length > 0
+    ? primitiveOpportunities.opportunities.map((item) => `- \`${item.title}\` -> ${item.recommendation} (${item.stackTranslation})`).join('\n')
+    : '- `No repeated primitive opportunities were detected yet.`'}
 `;
   const filePath = writeDoc(path.join(rootDir, 'COMPONENT-INVENTORY.md'), 'COMPONENT INVENTORY', body);
   return {
     file: relativePath(cwd, filePath),
     inventory,
+    primitiveOpportunities,
   };
 }
 

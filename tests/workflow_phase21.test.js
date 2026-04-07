@@ -4,7 +4,12 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const childProcess = require('node:child_process');
-const { detectLanguageSignals, deterministicCapabilityMatches } = require('../scripts/workflow/intent_lexicon');
+const {
+  collectMatchDetails,
+  detectLanguageSignals,
+  detectPersonaSignals,
+  deterministicCapabilityMatches,
+} = require('../scripts/workflow/intent_lexicon');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
@@ -115,6 +120,27 @@ test('ui-direction exports experience thesis, signature moments, and codex promp
   assert.ok(direction.copyVoice.tone.includes('copy'));
   assert.ok(direction.designSystemActions.length >= 2);
   assert.ok(direction.implementationPrompts.length >= 2);
+  assert.ok(direction.semanticGuardrails.length >= 2);
+  assert.ok(direction.nativeFirstRecommendations.length >= 4);
+  assert.ok(direction.recipePack.length >= 3);
+  assert.ok(direction.prototypeMode.mode);
+});
+
+test('ui-direction accepts the semantic-minimal taste profile for native-first guidance', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  seedFrontendRepo(targetRepo);
+
+  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const direction = JSON.parse(run(
+    'node',
+    [targetBin, 'ui-direction', '--goal', 'build a semantic lightweight settings surface', '--taste', 'semantic-minimal', '--json'],
+    targetRepo,
+  ));
+
+  assert.equal(direction.taste.profile.id, 'semantic-minimal');
+  assert.ok(direction.semanticGuardrails.some((item) => item.includes('semantic')));
+  assert.ok(direction.nativeFirstRecommendations.some((item) => item.native.includes('dialog') || item.native.includes('table')));
 });
 
 test('review-mode produces a distinct execution spine, context pack, and artifacts', () => {
@@ -186,6 +212,20 @@ test('language detection de-noises shared technical loanwords for Codex routing'
   assert.equal(spanishFrontend.englishSignals, false);
   assert.deepEqual(englishConversational.matchedLanguages, ['en']);
   assert.deepEqual(turkishConversational.matchedLanguages, ['tr']);
+});
+
+test('persona packs and typo-tolerant matching recover English and Turkish operator phrasing', () => {
+  const englishPersona = detectPersonaSignals('act like a head developer and go ovre the diff with blocker focus');
+  const turkishPersona = detectPersonaSignals('teknik lider gibi milestone paketini hazrla');
+  const typoMatches = collectMatchDetails('go ovre the diff and call out blokers', ['go over the diff', 'call out blockers']);
+  const turkishTypoMatches = collectMatchDetails('milestone paketini hazrla ve verify planini ekle', ['hazirla', 'verify planini']);
+
+  assert.ok(englishPersona.matchedPersonaIds.includes('lead_engineer'));
+  assert.ok(turkishPersona.matchedPersonaIds.includes('lead_engineer'));
+  assert.ok(englishPersona.steeringPreferences.preferReview);
+  assert.ok(typoMatches.every((item) => ['exact', 'fuzzy'].includes(item.mode)));
+  assert.ok(typoMatches.some((item) => item.mode === 'fuzzy'));
+  assert.ok(turkishTypoMatches.some((item) => item.mode === 'fuzzy'));
 });
 
 test('do payload includes a codex command plan for frontend lanes', () => {

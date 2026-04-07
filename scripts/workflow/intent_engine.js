@@ -11,8 +11,10 @@ const { listCapabilities } = require('./capability_registry');
 const { buildPackageGraph } = require('./package_graph');
 const { selectCodexProfile } = require('./codex_profile_engine');
 const {
+  collectMatchDetails,
   detectIntentSignals,
   detectLanguageSignals,
+  detectPersonaSignals,
   detectSteeringSignals,
   deterministicCapabilityMatches,
 } = require('./intent_lexicon');
@@ -193,7 +195,7 @@ function deterministicMatches(goalText) {
   ])];
 }
 
-function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeringPreferences, originalGoal = normalizedGoal) {
+function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeringPreferences, personaSignals = null, originalGoal = normalizedGoal) {
   let score = 0;
   const reasons = [];
   const tokens = new Set(normalizedGoal.split(' ').filter(Boolean));
@@ -209,6 +211,10 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
   const keywords = (capability.keywords || [])
     .map((entry) => normalizeWorkflowControlUtterance(entry))
     .filter((entry) => entry && !aliases.includes(entry));
+  const fuzzyAliasMatches = collectMatchDetails(originalGoal || normalizedGoal, capability.aliases || [])
+    .filter((item) => item.mode === 'fuzzy');
+  const fuzzyKeywordMatches = collectMatchDetails(originalGoal || normalizedGoal, capability.keywords || [])
+    .filter((item) => item.mode === 'fuzzy');
   const deterministic = deterministicMatches(originalGoal || normalizedGoal);
 
   if (deterministic.includes(capability.id)) {
@@ -243,6 +249,20 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
       score += 1;
       reasons.push(`Matched keyword tokens: ${keyword}`);
     }
+  }
+
+  for (const match of fuzzyAliasMatches) {
+    const normalized = normalizeWorkflowControlUtterance(match.phrase);
+    const tokenCount = normalized.split(' ').filter(Boolean).length;
+    score += tokenCount > 1 ? 4 : 2;
+    reasons.push(`Recovered typo-tolerant alias: ${normalized}`);
+  }
+
+  for (const match of fuzzyKeywordMatches) {
+    const normalized = normalizeWorkflowControlUtterance(match.phrase);
+    const tokenCount = normalized.split(' ').filter(Boolean).length;
+    score += tokenCount > 1 ? 2 : 1;
+    reasons.push(`Recovered typo-tolerant keyword: ${normalized}`);
   }
 
   if (capability.domain === 'review' && intent.review) {
@@ -380,6 +400,18 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
   }
   if (repoSignals.frontendActive && capability.supportsFrontend) {
     score += 1;
+  }
+  if (personaSignals) {
+    const directBoost = Number(personaSignals.capabilityBoosts?.[capability.id] || 0);
+    const domainBoost = Number(personaSignals.domainBoosts?.[capability.domain] || 0);
+    if (directBoost > 0) {
+      score += directBoost;
+      reasons.push(`Persona pack boosts ${capability.id}.`);
+    }
+    if (domainBoost > 0) {
+      score += domainBoost;
+      reasons.push(`Persona pack prefers ${capability.domain} work.`);
+    }
   }
 
   return { score, reasons };
@@ -604,14 +636,19 @@ function analyzeIntent(cwd, rootDir, goal, options = {}) {
   const intent = inferIntent(goal);
   const risk = inferRisk(goal);
   const steering = detectSteering(goal);
+  const personaSignals = detectPersonaSignals(goal);
   const steeringMemory = options.persistSteering === false
     ? buildEphemeralSteeringMemory(goal, steering, options.seedSteeringPreferences || {})
     : persistSteeringMemory(cwd, goal, steering);
+  const steeringPreferences = {
+    ...(steeringMemory.preferences || {}),
+    ...(personaSignals.steeringPreferences || {}),
+  };
   const repoSignals = buildRepoSignals(cwd, rootDir);
   const capabilities = listCapabilities();
   const scored = capabilities
     .map((capability) => {
-      const result = scoreCapability(capability, normalizedGoal, intent, repoSignals, steeringMemory.preferences || {}, goal);
+      const result = scoreCapability(capability, normalizedGoal, intent, repoSignals, steeringPreferences, personaSignals, goal);
       return {
         ...capability,
         score: result.score,
@@ -623,7 +660,7 @@ function analyzeIntent(cwd, rootDir, goal, options = {}) {
   const candidates = scored.length > 0 ? scored : capabilities.slice(0, 3).map((capability) => ({ ...capability, score: 0, reasons: ['Fallback candidate.'] }));
   const chosenCapability = candidates[0];
   const fallbackCapability = candidates[1] || candidates[0];
-  const secondaryCapability = chooseSecondaryCapability(candidates, chosenCapability, repoSignals, steeringMemory.preferences || {});
+  const secondaryCapability = chooseSecondaryCapability(candidates, chosenCapability, repoSignals, steeringPreferences);
   const confidence = confidenceForCandidates(candidates);
   const profile = selectCodexProfile({
     analysis: {
@@ -655,10 +692,11 @@ function analyzeIntent(cwd, rootDir, goal, options = {}) {
     intent,
     risk,
     languageMix: inferLanguageMix(goal),
+    personaSignals,
     rejectedAlternatives: buildRejectedAlternatives(candidates, chosenCapability),
     repoSignals,
-    steering: steeringMemory.preferences || {},
-    verificationPlan: verificationPlanFor(chosenCapability, repoSignals, steeringMemory.preferences || {}),
+    steering: steeringPreferences,
+    verificationPlan: verificationPlanFor(chosenCapability, repoSignals, steeringPreferences),
     evidenceOutputs: chosenCapability.evidenceOutputs,
     profile,
   };

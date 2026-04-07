@@ -165,6 +165,43 @@ test('english and turkish conversational routing covers broader Codex operator p
   assert.ok(turkishReview.languageMix.matchedLanguages.includes('tr'));
 });
 
+test('persona packs and typo-tolerant routing stay effective for English and Turkish goals', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  seedFrontendRepo(targetRepo);
+
+  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const englishLeadReview = JSON.parse(run(
+    'node',
+    [targetBin, 'do', 'act like a head developer and go ovre the diff and call out blokers', '--json'],
+    targetRepo,
+  ));
+  const englishQaBrowser = JSON.parse(run(
+    'node',
+    [targetBin, 'do', 'as a qa engineer smoe test the preview and capture screen shots', '--json'],
+    targetRepo,
+  ));
+  const turkishLeadPlan = JSON.parse(run(
+    'node',
+    [targetBin, 'do', 'teknik lider gibi bir sonraki milestone paketini hazrla ve verify planini ekle', '--json'],
+    targetRepo,
+  ));
+  const turkishDesigner = JSON.parse(run(
+    'node',
+    [targetBin, 'do', 'urun tasarimcisi gibi premium dashboard ui spec hazrla', '--json'],
+    targetRepo,
+  ));
+
+  assert.equal(englishLeadReview.capability, 'review.deep_review');
+  assert.ok(englishLeadReview.personaSignals.matchedPersonaIds.includes('lead_engineer'));
+  assert.equal(englishQaBrowser.capability, 'verify.browser');
+  assert.ok(englishQaBrowser.personaSignals.matchedPersonaIds.includes('qa_guardian'));
+  assert.equal(turkishLeadPlan.capability, 'plan.execution_packet');
+  assert.ok(turkishLeadPlan.personaSignals.matchedPersonaIds.includes('lead_engineer'));
+  assert.equal(turkishDesigner.capability, 'frontend.ui_spec');
+  assert.ok(turkishDesigner.personaSignals.matchedPersonaIds.includes('product_designer'));
+});
+
 test('ui direction and ui plan generate taste-aware frontend guidance for Codex', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);

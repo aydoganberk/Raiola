@@ -7,8 +7,10 @@ const {
   buildFrontendProfile,
   buildJourneyAudit,
   buildMissingStateAudit,
+  buildPrimitiveOpportunityAudit,
   buildResponsiveMatrix,
   buildScorecard,
+  buildSemanticAudit,
   buildTokenDriftAudit,
   collectComponentInventory,
   latestBrowserArtifacts,
@@ -34,15 +36,20 @@ async function buildUiReview(cwd, rootDir, args = {}) {
   const browserArtifacts = latestBrowserArtifacts(cwd);
   const missingStateAudit = buildMissingStateAudit(cwd, inventory);
   const tokenDriftAudit = buildTokenDriftAudit(cwd, inventory);
+  const semanticAudit = buildSemanticAudit(cwd, inventory);
   const accessibilityAudit = buildAccessibilityAudit(profile, browserArtifacts);
   const journeyAudit = buildJourneyAudit(profile, browserArtifacts, inventory);
+  const primitiveOpportunities = buildPrimitiveOpportunityAudit(cwd, profile, inventory);
   const debt = buildDesignDebt(profile, inventory, browserArtifacts, {
     missingStateAudit,
     tokenDriftAudit,
+    semanticAudit,
     accessibilityAudit,
     journeyAudit,
+    primitiveOpportunities: primitiveOpportunities.opportunities,
   });
   const scorecard = buildScorecard(profile, inventory, debt, browserArtifacts, {
+    semanticAudit,
     accessibilityAudit,
     journeyAudit,
   });
@@ -96,6 +103,18 @@ ${tokenDriftAudit.totalIssues > 0
     ? tokenDriftAudit.issues.slice(0, 8).map((issue) => `- [${issue.severity}] \`${issue.kind}\` ${issue.file} -> ${issue.detail}`).join('\n')
     : '- `No obvious token drift signals were detected in the scanned UI files.`'}
 
+## Semantic Audit
+
+${semanticAudit.issueCount > 0
+    ? semanticAudit.issues.slice(0, 8).map((issue) => `- [${issue.severity}] \`${issue.rule}\` ${issue.file} -> ${issue.detail}`).join('\n')
+    : '- `No semantic structure issues were detected in the scanned UI files.`'}
+
+## Primitive Opportunities
+
+${primitiveOpportunities.opportunities.length > 0
+    ? primitiveOpportunities.opportunities.map((item) => `- [${item.priority}] \`${item.title}\` ${item.recommendation} (${item.stackTranslation})`).join('\n')
+    : '- `No repeated primitive opportunities were detected yet.`'}
+
 ## Browser Evidence
 
 ${browserArtifacts.length > 0
@@ -111,8 +130,10 @@ ${browserArtifacts.length > 0
     debt,
     missingStateAudit,
     tokenDriftAudit,
+    semanticAudit,
     accessibilityAudit,
     journeyAudit,
+    primitiveOpportunities,
   };
   writeRuntimeJson(cwd, 'frontend-review.json', payload);
   return payload;

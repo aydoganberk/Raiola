@@ -155,7 +155,7 @@ function buildHealthReport(cwd, rootDir, options = {}) {
       : 'fail',
     `WINDOW decision -> ${windowStatus.decision}`,
   );
-  for (const check of buildRuntimePrerequisiteChecks(cwd)) {
+  for (const check of buildRuntimePrerequisiteChecks(cwd, { surface: 'health' })) {
     pushCheck(check.status, check.message, { fix: check.fix || null });
   }
 

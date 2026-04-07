@@ -5,7 +5,9 @@ const {
   buildFrontendProfile,
   buildJourneyAudit,
   buildMissingStateAudit,
+  buildPrimitiveOpportunityAudit,
   buildResponsiveMatrix,
+  buildSemanticAudit,
   buildTokenDriftAudit,
   collectComponentInventory,
   latestBrowserArtifacts,
@@ -37,9 +39,11 @@ function buildUiSpec(cwd, rootDir, options = {}) {
   const matrix = buildResponsiveMatrix(profile, inventory);
   const missingStateAudit = buildMissingStateAudit(cwd, inventory);
   const tokenDriftAudit = buildTokenDriftAudit(cwd, inventory);
+  const semanticAudit = buildSemanticAudit(cwd, inventory);
   const browserArtifacts = latestBrowserArtifacts(cwd);
   const accessibilityAudit = buildAccessibilityAudit(profile, browserArtifacts);
   const journeyAudit = buildJourneyAudit(profile, browserArtifacts, inventory);
+  const primitiveOpportunities = buildPrimitiveOpportunityAudit(cwd, profile, inventory);
   const contextDoc = readIfExists(path.join(rootDir, 'CONTEXT.md')) || '';
   const userIntent = tryExtractSection(contextDoc, 'User Intent', '').trim() || 'No explicit UI intent note was recorded.';
   const touchedFiles = tryExtractSection(contextDoc, 'Touched Files', '').trim();
@@ -82,6 +86,23 @@ ${direction.signatureMoments.map((item) => `- \`${item.title}: ${item.descriptio
 
 ${direction.screenBlueprints.map((item) => `- \`${item.title}: ${item.recipe}\``).join('\n')}
 
+## Native-First Decisions
+
+${direction.nativeFirstRecommendations.map((item) => `- \`${item.title}\` -> ${item.native} -> ${item.stackTranslation}`).join('\n')}
+
+## Recipe Pack
+
+${direction.recipePack.map((item) => `- \`${item.title}\` -> ${item.structure} (${item.implementationBias})`).join('\n')}
+
+## Prototype Mode
+
+- \`Recommended: ${direction.prototypeMode.recommended ? 'yes' : 'no'}\`
+- \`Mode: ${direction.prototypeMode.mode}\`
+- \`Rationale: ${direction.prototypeMode.rationale}\`
+- \`Entry strategy: ${direction.prototypeMode.entryStrategy}\`
+${direction.prototypeMode.deliverables.map((item) => `- \`Prototype deliverable: ${item}\``).join('\n')}
+${direction.prototypeMode.handoffSteps.map((item) => `- \`Handoff: ${item}\``).join('\n')}
+
 ## User Flows
 
 - \`${userIntent}\`
@@ -116,6 +137,13 @@ ${direction.copyVoice.donts.map((item) => `- \`Avoid: ${item}\``).join('\n')}
 - \`Color/contrast issues are reviewed during UI review.\`
 - \`Accessibility audit verdict: ${accessibilityAudit.verdict} (${accessibilityAudit.issueCount} issue signals)\`
 
+## Semantic Quality
+
+- \`Semantic audit verdict: ${semanticAudit.verdict} (${semanticAudit.issueCount} issue signals)\`
+${semanticAudit.issueCount > 0
+    ? semanticAudit.issues.slice(0, 8).map((issue) => `- \`${issue.rule}\` ${issue.file} -> ${issue.detail}`).join('\n')
+    : '- `No semantic structure issues were detected in the scanned UI files.`'}
+
 ## Design Token Usage
 
 - \`Styling layers: ${profile.styling.detected.join(', ')}\`
@@ -123,6 +151,7 @@ ${direction.copyVoice.donts.map((item) => `- \`Avoid: ${item}\``).join('\n')}
 - \`Token drift issues detected: ${tokenDriftAudit.totalIssues}\`
 - \`Taste token targets: ${Object.entries(direction.designTokens).map(([key, value]) => `${key}=${value}`).join(' | ')}\`
 - \`Component cues: ${direction.componentCues.slice(0, 3).join(' | ')}\`
+${direction.semanticGuardrails.map((item) => `- \`Semantic guardrail: ${item}\``).join('\n')}
 ${direction.designSystemActions.map((item) => `- \`${item}\``).join('\n')}
 ${direction.implementationPrompts.map((item) => `- \`Prompt: ${item}\``).join('\n')}
 
@@ -137,6 +166,12 @@ ${missingStateAudit.missing.length > 0
 ${browserArtifacts.length > 0
     ? browserArtifacts.slice(0, 4).map((entry) => `- \`${entry.path}\``).join('\n')
     : '- `Capture at least one browser verification artifact before closeout.`'}
+
+## Primitive Opportunities
+
+${primitiveOpportunities.opportunities.length > 0
+    ? primitiveOpportunities.opportunities.map((item) => `- \`${item.title}\` -> ${item.recommendation} (${item.stackTranslation})`).join('\n')
+    : '- `No repeated primitive opportunities were detected yet.`'}
 `;
 
   const filePath = writeDoc(path.join(rootDir, 'UI-SPEC.md'), 'UI SPEC', body);
@@ -146,8 +181,10 @@ ${browserArtifacts.length > 0
     matrix,
     missingStateAudit,
     tokenDriftAudit,
+    semanticAudit,
     accessibilityAudit,
     journeyAudit,
+    primitiveOpportunities,
     direction,
     file: relativePath(cwd, filePath),
   };

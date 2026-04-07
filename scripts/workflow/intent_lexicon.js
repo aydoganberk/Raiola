@@ -350,6 +350,7 @@ const EXTRA_LANGUAGE_MARKERS = Object.freeze({
 });
 
 const LANGUAGE_BUCKETS = Object.freeze(mergedBuckets(LANGUAGE_MARKERS, EXTRA_LANGUAGE_MARKERS));
+const TYPO_TOLERANT_LANGUAGE_DETECTION = new Set(['en', 'tr']);
 
 const EXTRA_INTENT_BUCKETS = Object.freeze({
   research: ['zbadaj', 'досліди', 'ερευνα', 'έρευνα', 'nghien cuu', 'nghiên cứu', 'selidiki', 'วิจัย', 'חקור', 'تحقیق', 'investigheaza', 'investighează', 'prozkoumej', 'undersok', 'undersök'],
@@ -387,6 +388,91 @@ const EXTRA_DETERMINISTIC_CAPABILITIES = Object.freeze([
   },
 ]);
 
+const PERSONA_INTENT_PACKS = Object.freeze([
+  {
+    id: 'lead_engineer',
+    label: 'Lead Engineer',
+    phrases: [
+      'lead engineer', 'lead developer', 'head developer', 'staff engineer', 'principal engineer', 'tech lead', 'technical lead',
+      'teknik lider', 'lider gelistirici', 'lider geliştirici', 'bas gelistirici', 'baş geliştirici',
+      'kidemli muhendis', 'kıdemli mühendis', 'staff engineer gibi', 'head developer gibi', 'teknik lider gibi',
+    ],
+    capabilityBoosts: {
+      'review.deep_review': 6,
+      'plan.execution_packet': 5,
+      'research.discuss': 3,
+    },
+    domainBoosts: {
+      review: 2,
+      plan: 2,
+    },
+    steering: {
+      preferReview: true,
+      strictVerify: true,
+    },
+  },
+  {
+    id: 'qa_guardian',
+    label: 'QA Guardian',
+    phrases: [
+      'qa', 'qa engineer', 'qa lead', 'test engineer', 'quality engineer', 'quality gate', 'test lead',
+      'qa gibi', 'kalite muhendisi', 'kalite mühendisi', 'test muhendisi', 'test mühendisi',
+      'kalite guvencesi', 'kalite güvencesi', 'qa gibi davran', 'test lideri',
+    ],
+    capabilityBoosts: {
+      'verify.shell': 5,
+      'verify.browser': 5,
+      'review.deep_review': 2,
+    },
+    domainBoosts: {
+      verify: 2,
+    },
+    steering: {
+      strictVerify: true,
+      preferReview: true,
+    },
+  },
+  {
+    id: 'product_designer',
+    label: 'Product Designer',
+    phrases: [
+      'designer', 'product designer', 'ux designer', 'ui designer', 'design lead',
+      'tasarimci', 'tasarımcı', 'urun tasarimcisi', 'ürün tasarımcısı',
+      'ux tasarimcisi', 'ux tasarımcısı', 'ui tasarimcisi', 'ui tasarımcısı', 'tasarim lideri', 'tasarım lideri',
+    ],
+    capabilityBoosts: {
+      'frontend.ui_spec': 6,
+      'frontend.ui_review': 5,
+      'verify.browser': 2,
+    },
+    domainBoosts: {
+      frontend: 3,
+    },
+    steering: {
+      preferBrowser: true,
+    },
+  },
+  {
+    id: 'release_manager',
+    label: 'Release Manager',
+    phrases: [
+      'release manager', 'release owner', 'ship manager', 'delivery lead',
+      'surum yoneticisi', 'sürüm yöneticisi', 'yayin sorumlusu', 'yayın sorumlusu', 'teslim lideri',
+    ],
+    capabilityBoosts: {
+      'ship.release': 7,
+      'review.deep_review': 2,
+      'verify.shell': 2,
+    },
+    domainBoosts: {
+      ship: 3,
+    },
+    steering: {
+      strictVerify: true,
+    },
+  },
+]);
+
 function mergedBuckets(base, extra) {
   const merged = {};
   for (const [key, value] of Object.entries(base || {})) {
@@ -418,44 +504,187 @@ function normalizeMultilingualText(value) {
   return {
     raw,
     normalized: normalizeWorkflowControlUtterance(value),
+    normalizedTokens: normalizeWorkflowControlUtterance(value).split(' ').filter(Boolean),
   };
 }
 
-function containsPhrase(forms, phrase) {
+function tokenTypoBudget(token) {
+  const length = String(token || '').length;
+  if (length < 3) {
+    return 0;
+  }
+  if (length >= 8) {
+    return 2;
+  }
+  return 1;
+}
+
+function optimalStringAlignmentDistance(left, right, maxDistance) {
+  const a = String(left || '');
+  const b = String(right || '');
+  if (a === b) {
+    return 0;
+  }
+  if (Math.abs(a.length - b.length) > maxDistance) {
+    return maxDistance + 1;
+  }
+
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const matrix = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+  for (let i = 0; i < rows; i += 1) {
+    matrix[i][0] = i;
+  }
+  for (let j = 0; j < cols; j += 1) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i < rows; i += 1) {
+    let rowMin = maxDistance + 1;
+    for (let j = 1; j < cols; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      let value = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost,
+      );
+      if (
+        i > 1
+        && j > 1
+        && a[i - 1] === b[j - 2]
+        && a[i - 2] === b[j - 1]
+      ) {
+        value = Math.min(value, matrix[i - 2][j - 2] + 1);
+      }
+      matrix[i][j] = value;
+      rowMin = Math.min(rowMin, value);
+    }
+    if (rowMin > maxDistance) {
+      return maxDistance + 1;
+    }
+  }
+
+  return matrix[a.length][b.length];
+}
+
+function looksLikeNearbyTypo(actual, expected) {
+  if (!actual || !expected) {
+    return false;
+  }
+  if (actual[0] !== expected[0] && actual.slice(0, 2) !== expected.slice(0, 2)) {
+    return false;
+  }
+  const budget = Math.max(tokenTypoBudget(actual), tokenTypoBudget(expected));
+  if (budget === 0) {
+    return false;
+  }
+  return optimalStringAlignmentDistance(actual, expected, budget) <= budget;
+}
+
+function fuzzyPhraseMatch(forms, normalizedPhrase) {
+  const phraseTokens = String(normalizedPhrase || '').split(' ').filter(Boolean);
+  if (phraseTokens.length === 0) {
+    return false;
+  }
+  const tokens = forms.normalizedTokens || [];
+  if (tokens.length < phraseTokens.length) {
+    return false;
+  }
+
+  for (let start = 0; start <= tokens.length - phraseTokens.length; start += 1) {
+    let fuzzyHits = 0;
+    let ok = true;
+    for (let index = 0; index < phraseTokens.length; index += 1) {
+      const actual = tokens[start + index];
+      const expected = phraseTokens[index];
+      if (actual === expected) {
+        continue;
+      }
+      if (!looksLikeNearbyTypo(actual, expected)) {
+        ok = false;
+        break;
+      }
+      fuzzyHits += 1;
+    }
+    if (ok && fuzzyHits > 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function matchPhrase(forms, phrase, options = {}) {
   const rawPhrase = String(phrase || '').trim().toLowerCase();
   if (!rawPhrase) {
-    return false;
+    return { matched: false, mode: null };
   }
   const normalizedPhrase = normalizeWorkflowControlUtterance(rawPhrase);
   if (!normalizedPhrase && !NON_LATIN_PATTERN.test(rawPhrase)) {
-    return false;
+    return { matched: false, mode: null };
   }
 
   if (NON_LATIN_PATTERN.test(rawPhrase)) {
-    return forms.raw.includes(rawPhrase);
+    return forms.raw.includes(rawPhrase)
+      ? { matched: true, mode: 'exact' }
+      : { matched: false, mode: null };
   }
 
   if (rawPhrase.includes(' ') && forms.raw.includes(rawPhrase)) {
-    return true;
+    return { matched: true, mode: 'exact' };
   }
 
   if (normalizedPhrase.includes(' ')) {
-    return forms.normalized.includes(normalizedPhrase);
+    if (forms.normalized.includes(normalizedPhrase)) {
+      return { matched: true, mode: 'exact' };
+    }
+    if (options.allowFuzzy !== false && fuzzyPhraseMatch(forms, normalizedPhrase)) {
+      return { matched: true, mode: 'fuzzy' };
+    }
+    return { matched: false, mode: null };
   }
 
   const pattern = new RegExp(`(?:^|\\s)${escapeRegExp(normalizedPhrase)}(?=\\s|$)`, 'i');
-  return pattern.test(forms.normalized);
-}
-
-function collectMatches(text, phrases) {
-  const forms = typeof text === 'string' ? normalizeMultilingualText(text) : text;
-  const matches = [];
-  for (const phrase of phrases || []) {
-    if (containsPhrase(forms, phrase)) {
-      matches.push(phrase);
+  if (pattern.test(forms.normalized)) {
+    return { matched: true, mode: 'exact' };
+  }
+  if (options.allowFuzzy !== false) {
+    for (const token of forms.normalizedTokens || []) {
+      if (looksLikeNearbyTypo(token, normalizedPhrase)) {
+        return { matched: true, mode: 'fuzzy' };
+      }
     }
   }
-  return [...new Set(matches)];
+  return { matched: false, mode: null };
+}
+
+function containsPhrase(forms, phrase, options = {}) {
+  return matchPhrase(forms, phrase, options).matched;
+}
+
+function collectMatchDetails(text, phrases, options = {}) {
+  const forms = typeof text === 'string' ? normalizeMultilingualText(text) : text;
+  const seen = new Map();
+  for (const phrase of phrases || []) {
+    const result = matchPhrase(forms, phrase, options);
+    if (!result.matched) {
+      continue;
+    }
+    const key = String(phrase);
+    const previous = seen.get(key);
+    if (!previous || previous.mode === 'fuzzy') {
+      seen.set(key, {
+        phrase,
+        mode: result.mode,
+      });
+    }
+  }
+  return [...seen.values()];
+}
+
+function collectMatches(text, phrases, options = {}) {
+  return collectMatchDetails(text, phrases, options).map((item) => item.phrase);
 }
 
 function languageMarkerKey(phrase) {
@@ -525,13 +754,60 @@ function resolveMatchedLanguages(scores, counts) {
 function detectBucketMatches(text, buckets) {
   const forms = typeof text === 'string' ? normalizeMultilingualText(text) : text;
   return Object.fromEntries(Object.entries(buckets).map(([key, phrases]) => {
-    const matches = collectMatches(forms, phrases);
+    const details = collectMatchDetails(forms, phrases);
+    const matches = details.map((item) => item.phrase);
     return [key, {
       active: matches.length > 0,
       count: matches.length,
       matches,
+      fuzzyMatches: details.filter((item) => item.mode === 'fuzzy').map((item) => item.phrase),
     }];
   }));
+}
+
+function detectPersonaSignals(text) {
+  const forms = normalizeMultilingualText(text);
+  const personas = PERSONA_INTENT_PACKS
+    .map((pack) => {
+      const details = collectMatchDetails(forms, pack.phrases);
+      return {
+        ...pack,
+        matches: details.map((item) => item.phrase),
+        fuzzyMatches: details.filter((item) => item.mode === 'fuzzy').map((item) => item.phrase),
+      };
+    })
+    .filter((pack) => pack.matches.length > 0);
+
+  const capabilityBoosts = {};
+  const domainBoosts = {};
+  const steeringPreferences = {};
+
+  for (const persona of personas) {
+    for (const [capabilityId, boost] of Object.entries(persona.capabilityBoosts || {})) {
+      capabilityBoosts[capabilityId] = (capabilityBoosts[capabilityId] || 0) + Number(boost || 0);
+    }
+    for (const [domain, boost] of Object.entries(persona.domainBoosts || {})) {
+      domainBoosts[domain] = (domainBoosts[domain] || 0) + Number(boost || 0);
+    }
+    for (const [key, value] of Object.entries(persona.steering || {})) {
+      if (value) {
+        steeringPreferences[key] = true;
+      }
+    }
+  }
+
+  return {
+    matchedPersonaIds: personas.map((persona) => persona.id),
+    personas: personas.map((persona) => ({
+      id: persona.id,
+      label: persona.label,
+      matches: persona.matches,
+      fuzzyMatches: persona.fuzzyMatches,
+    })),
+    capabilityBoosts,
+    domainBoosts,
+    steeringPreferences,
+  };
 }
 
 function detectIntentSignals(text) {
@@ -569,7 +845,9 @@ function detectLanguageSignals(text) {
   const forms = normalizeMultilingualText(text);
   const matches = Object.fromEntries(Object.entries(LANGUAGE_BUCKETS).map(([language, phrases]) => [
     language,
-    collectMatches(forms, phrases),
+    collectMatches(forms, phrases, {
+      allowFuzzy: TYPO_TOLERANT_LANGUAGE_DETECTION.has(language),
+    }),
   ]));
   const counts = Object.fromEntries(Object.entries(matches).map(([language, languageMatches]) => [
     language,
@@ -600,8 +878,10 @@ function deterministicCapabilityMatches(text) {
 }
 
 module.exports = {
+  collectMatchDetails,
   detectIntentSignals,
   detectLanguageSignals,
+  detectPersonaSignals,
   detectSteeringSignals,
   deterministicCapabilityMatches,
   normalizeMultilingualText,

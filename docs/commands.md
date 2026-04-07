@@ -9,7 +9,7 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 - `cwf codex`
   Safe Codex control plane. Supports `setup`, `doctor`, `diff-config`, `rollback`, `sync`, role scaffolding, skill install/remove, `profile suggest`, `bootstrap`, `resume-card`, `promptpack`, and `plan-subagents`.
 - `cwf do`
-  Route a natural-language intent into `quick`, `full`, `review`, `frontend`, or `team` lanes with explainable capability and verify plans.
+  Route a natural-language intent into `quick`, `full`, `review`, `frontend`, or `team` lanes with explainable capability and verify plans. English/Turkish persona framing and nearby typos are tolerated on the routing path.
 - `cwf note`
   Capture a runtime inbox note and optionally promote it into backlog, thread, or seeds.
 - `cwf thread`
@@ -29,7 +29,7 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 - `cwf doctor`
   Verify install/runtime integrity and host prerequisites. Use `--repair` for a dry-run self-heal plan.
 - `cwf health`
-  Verify workflow/runtime health and prerequisite drift. Use `--repair` for a dry-run self-heal plan.
+  Verify blocking workflow/runtime health. Host-tool advisories stay in `doctor`. Use `--repair` for a dry-run self-heal plan.
 - `cwf discuss`
   Generate a discuss brief from current workflow state, open questions, and active assumptions.
 - `cwf questions`

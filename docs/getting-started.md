@@ -76,7 +76,7 @@ cwf hud --compact
 cwf next
 ```
 
-`cwf doctor --strict` will also verify host prerequisites such as Git, ripgrep, and platform-specific browser opener helpers before you start depending on the runtime.
+`cwf doctor --strict` will also verify host prerequisites such as Git, ripgrep, and platform-specific browser opener helpers before you start depending on the runtime. `cwf health --strict` stays reserved for blocking workflow/runtime issues.
 
 ## Need the full shell?
 

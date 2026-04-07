@@ -706,6 +706,10 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile) {
     lines.push(`- Archetype: \`${frontendDirection.archetype.label}\``);
     lines.push(`- Taste profile: \`${frontendDirection.taste.profile.label}\``);
     lines.push(`- Taste signature: \`${frontendDirection.taste.tagline}\``);
+    lines.push(`- Prototype mode: \`${frontendDirection.prototypeMode.mode}\` (${frontendDirection.prototypeMode.recommended ? 'recommended' : 'optional'})`);
+    lines.push(...frontendDirection.semanticGuardrails.slice(0, 5).map((item) => `- Guardrail: ${item}`));
+    lines.push(...frontendDirection.nativeFirstRecommendations.slice(0, 4).map((item) => `- Native first: ${item.title} -> ${item.native}`));
+    lines.push(...frontendDirection.recipePack.slice(0, 3).map((item) => `- Recipe: ${item.title} -> ${item.structure}`));
     lines.push(...frontendDirection.codexRecipes.slice(0, 6).map((item) => `- ${item}`));
     lines.push('');
   }
@@ -762,6 +766,10 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile) {
       archetype: frontendDirection.archetype.label,
       taste: frontendDirection.taste.tagline,
       tasteProfile: frontendDirection.taste.profile,
+      semanticGuardrails: frontendDirection.semanticGuardrails,
+      nativeFirst: frontendDirection.nativeFirstRecommendations,
+      recipePack: frontendDirection.recipePack,
+      prototypeMode: frontendDirection.prototypeMode,
     } : null,
     monorepo: monorepo ? {
       markdownFile: monorepo.markdownFile,

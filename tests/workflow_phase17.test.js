@@ -109,7 +109,8 @@ test('ui review exposes missing-state and token-drift audits', () => {
   fs.mkdirSync(path.join(targetRepo, 'components'), { recursive: true });
   fs.writeFileSync(path.join(targetRepo, 'components.json'), '{ "style": "default" }\n');
   fs.writeFileSync(path.join(targetRepo, 'app', 'layout.tsx'), 'export default function Layout({ children }) { return <html><body>{children}</body></html>; }\n');
-  fs.writeFileSync(path.join(targetRepo, 'components', 'Card.tsx'), 'export function Card() { return <div style={{ color: "#ff00aa", borderRadius: "18px" }}>Card</div>; }\n');
+  fs.writeFileSync(path.join(targetRepo, 'components', 'Card.tsx'), 'export function Card() { return <div onClick={() => {}} style={{ color: "#ff00aa", borderRadius: "18px" }}><input /></div>; }\n');
+  fs.writeFileSync(path.join(targetRepo, 'components', 'Modal.tsx'), 'export function Modal() { return <div className="modal-shell"><button>Close</button></div>; }\n');
   fs.writeFileSync(path.join(targetRepo, 'app', 'page.tsx'), 'export default function Page() { return <main><h1>Audit</h1></main>; }\n');
   fs.writeFileSync(path.join(targetRepo, 'preview.html'), '<!doctype html><html><body><main><h1>Preview</h1><button>Ship</button></main></body></html>\n');
 
@@ -122,9 +123,13 @@ test('ui review exposes missing-state and token-drift audits', () => {
   assert.ok(uiReview.debt.some((item) => item.area === 'token drift'));
   assert.ok(['pass', 'warn', 'fail', 'inconclusive'].includes(uiReview.accessibilityAudit.verdict));
   assert.ok(['pass', 'warn', 'incomplete', 'inconclusive'].includes(uiReview.journeyAudit.coverage));
+  assert.ok(uiReview.semanticAudit.issueCount >= 1);
+  assert.ok(uiReview.primitiveOpportunities.opportunityCount >= 1);
   assert.ok(uiSpec.missingStateAudit.missing.includes('loading'));
   assert.ok(uiSpec.accessibilityAudit);
   assert.ok(uiSpec.journeyAudit);
+  assert.ok(uiSpec.semanticAudit.issueCount >= 1);
+  assert.ok(uiSpec.primitiveOpportunities.opportunityCount >= 1);
 });
 
 test('review engine detects API drift and data migration risks in diff mode', () => {

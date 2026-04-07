@@ -116,9 +116,31 @@ test('ui-direction accepts explicit taste profiles and exports richer design sig
   assert.ok(Object.keys(direction.designTokens).length >= 5);
   assert.ok(direction.componentCues.length >= 2);
   assert.ok(direction.styleGuardrails.length >= 2);
+  assert.ok(direction.semanticGuardrails.length >= 2);
+  assert.ok(direction.nativeFirstRecommendations.length >= 4);
+  assert.ok(direction.recipePack.length >= 3);
+  assert.ok(direction.prototypeMode.mode);
   assert.equal(spec.direction.taste.profile.id, 'premium-minimal');
+  assert.ok(spec.direction.nativeFirstRecommendations.length >= 4);
+  assert.ok(spec.direction.recipePack.length >= 3);
+  assert.ok(spec.semanticAudit);
+  assert.ok(spec.primitiveOpportunities);
   assert.ok(fs.existsSync(path.join(targetRepo, direction.file)));
   assert.ok(fs.existsSync(path.join(targetRepo, spec.file)));
+});
+
+test('component-map reports primitive opportunities for repeated frontend patterns', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  seedFrontendRepo(targetRepo);
+  writeFile(targetRepo, 'components/Modal.tsx', 'export function Modal() { return <div className="modal-shell"><button>Close</button></div>; }\n');
+  writeFile(targetRepo, 'components/DataGrid.tsx', 'export function DataGrid() { return <div className="grid"><div>Row</div></div>; }\n');
+
+  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const inventory = JSON.parse(run('node', [targetBin, 'component-map', '--json'], targetRepo));
+
+  assert.ok(inventory.inventory.length >= 2);
+  assert.ok(inventory.primitiveOpportunities.opportunityCount >= 1);
 });
 
 test('review-tasks builds a blocker-first four-wave task graph for large review loops', () => {
@@ -210,6 +232,10 @@ test('codex contextpack wraps workflow, repo, frontend, and review context into 
   assert.ok(pack.focusFiles.length >= 1);
   assert.ok(pack.frontend);
   assert.ok(pack.frontend.tasteProfile);
+  assert.ok(pack.frontend.semanticGuardrails.length >= 2);
+  assert.ok(pack.frontend.nativeFirst.length >= 3);
+  assert.ok(pack.frontend.recipePack.length >= 2);
+  assert.ok(pack.frontend.prototypeMode);
   assert.ok(pack.review);
   assert.equal(pack.review.waveCount, 4);
 });

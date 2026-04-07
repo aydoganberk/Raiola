@@ -41,6 +41,36 @@ const TASTE_PROFILES = Object.freeze([
     ],
   },
   {
+    id: 'semantic-minimal',
+    label: 'Semantic Minimal',
+    cues: ['semantic', 'native', 'html', 'html-first', 'lightweight', 'zero dependency', 'progressive enhancement', 'minimal js', 'primitive', 'plain css'],
+    visualTone: 'calm utility with semantic structure, native affordances, and very low implementation noise',
+    density: 'lean but not sparse',
+    motion: 'nearly motionless; only state feedback and structural transitions earn motion',
+    hierarchy: 'semantic landmarks, obvious action flow, and stable state treatment beat decorative composition',
+    designTokens: {
+      typeScale: 'content-led headings with sober body copy and strong monospace support where helpful',
+      radius: '6-10px radius with restrained shape language',
+      spacing: '8px grid with steady section cadence and low chrome overhead',
+      surfaces: 'flat or lightly layered surfaces with clear borders and minimal shadow reliance',
+      contrast: 'high readability with limited color variance',
+      accentStrategy: 'one restrained accent plus explicit semantic states',
+    },
+    componentCues: [
+      'Prefer semantic shells, native elements, and thin wrappers before large component abstractions.',
+      'When a pattern repeats, extract a small named primitive instead of growing utility/class piles forever.',
+      'States should look intentional even when the implementation stays extremely small.',
+    ],
+    interactionCues: [
+      'Use native browser affordances where they reduce custom JS and improve resilience.',
+      'Keyboard and focus behavior should be explicit before animation or flourish is added.',
+    ],
+    guardrails: [
+      'Do not replace semantic HTML with div soup just to satisfy a visual sketch.',
+      'Do not introduce a heavy dependency when a native primitive already solves the interaction.',
+    ],
+  },
+  {
     id: 'premium-minimal',
     label: 'Premium Minimal',
     cues: ['premium', 'minimal', 'clean', 'elegant', 'luxury', 'tasteful', 'sade', 'premium', 'şık', 'sik', 'sofistike'],
@@ -271,6 +301,9 @@ function scoreTasteProfile(profile, text, archetype) {
   if (profile.id === 'editorial-contrast' && archetype.id === 'editorial-marketing') {
     score += 2;
   }
+  if (profile.id === 'semantic-minimal' && /\b(semantic|native|primitive|lightweight|zero dependency|progressive enhancement)\b/.test(text)) {
+    score += 3;
+  }
   return score;
 }
 
@@ -378,6 +411,9 @@ function buildPatterns(profile, inventory, archetype, tasteProfile) {
   if (profile.styling.detected.includes('Tailwind')) {
     patterns.push('Prefer semantic Tailwind component wrappers over long inline utility piles when a pattern repeats more than twice.');
   }
+  if (tasteProfile.id === 'semantic-minimal') {
+    patterns.push('Prefer semantic HTML plus thin wrappers before reaching for dependency-heavy component abstractions.');
+  }
   if (inventoryNames.length > 0) {
     patterns.push(`Lean on existing component inventory first: ${inventoryNames.slice(0, 8).join(', ')}.`);
   }
@@ -402,6 +438,9 @@ function buildAntiPatterns(archetype, tasteProfile) {
   if (archetype.id === 'control-plane') {
     shared.push('Avoid oversized cards that waste vertical space and slow operator scanning.');
   }
+  if (tasteProfile.id === 'semantic-minimal') {
+    shared.push('Avoid div-click widgets, generic wrapper stacks, and custom JS where native elements already solve the interaction.');
+  }
   return shared;
 }
 
@@ -422,6 +461,12 @@ function buildCodexRecipes(profile, archetype, signature, tasteProfile) {
   }
   if (archetype.id === 'control-plane') {
     recipes.push('For operational surfaces, prefer composable table/filter/panel primitives over custom dashboard art direction.');
+  }
+  if (tasteProfile.id === 'semantic-minimal') {
+    recipes.push('Prefer native browser primitives and semantic wrappers before introducing new UI dependencies or div-based interactions.');
+  }
+  if (profile.uiSystem.primary === 'custom') {
+    recipes.push('If the screen is still ambiguous, prototype it in semantic HTML/CSS first and translate only after the shell and state model stabilize.');
   }
   return recipes;
 }
@@ -601,11 +646,257 @@ function buildDifferentiators(archetype, tasteProfile) {
 }
 
 function buildDesignSystemActions(profile, tasteProfile) {
-  return [
+  const actions = [
     `Encode ${tasteProfile.label} through tokens first: ${Object.entries(tasteProfile.designTokens || {}).map(([key, value]) => `${key}=${value}`).join(' | ')}.`,
     'Refactor repeated utility piles into semantic wrappers or shared primitives once patterns repeat.',
     `Keep ${profile.uiSystem.primary} primitives, but restyle density, radius, spacing, and typography systematically.`,
   ];
+  if (tasteProfile.id === 'semantic-minimal') {
+    actions.push('Write the semantic/native interaction contract first, then translate it into the active UI layer with the smallest practical wrapper.');
+  }
+  return actions;
+}
+
+function translatePrimitive(profile, primitive) {
+  const uiSystem = normalizeText(profile.uiSystem.primary);
+  const family = uiSystem.includes('shadcn') || uiSystem.includes('radix')
+    ? 'shadcn'
+    : uiSystem.includes('mui')
+      ? 'mui'
+      : uiSystem.includes('chakra')
+        ? 'chakra'
+        : 'custom';
+  const map = {
+    dialog: {
+      shadcn: 'Translate the approved shell into Dialog/Sheet primitives without losing the explicit close and focus contract.',
+      mui: 'Translate into MUI Dialog/Drawer while preserving native-like focus, dismissal, and return-state behavior.',
+      chakra: 'Translate into Chakra Dialog/Drawer after the semantic open/close rules are settled.',
+      custom: 'Start from <dialog> or a very thin wrapper before introducing custom portal choreography.',
+    },
+    disclosure: {
+      shadcn: 'Map to Accordion/Collapsible after the details/summary behavior is explicit.',
+      mui: 'Map to Accordion once summary/content semantics and keyboard behavior are clear.',
+      chakra: 'Map to Accordion/Collapse only after the disclosure contract is documented.',
+      custom: 'Use <details>/<summary> for first-pass behavior, then wrap only if the repo needs extra control.',
+    },
+    menu: {
+      shadcn: 'Translate to DropdownMenu/Popover primitives while keeping trigger, focus, and dismissal behavior simple.',
+      mui: 'Translate to Menu/Popover after the action grouping and target semantics are explicit.',
+      chakra: 'Translate to Menu/Popover after trigger, focus, and dismissal behavior are defined.',
+      custom: 'Start with button + popover/menu semantics rather than bespoke trays and invisible div click zones.',
+    },
+    table: {
+      shadcn: 'Keep real table semantics underneath shared table wrappers or data-grid polish.',
+      mui: 'Translate to MUI Table/DataGrid only after the header/body/row contract is written semantically.',
+      chakra: 'Translate to Chakra Table once header/body semantics are stable.',
+      custom: 'Prefer <table>/<thead>/<tbody> before composing custom grid chrome.',
+    },
+    feedback: {
+      shadcn: 'Use Toast/Alert rendering primitives, but keep output/aria-live and recovery messaging explicit.',
+      mui: 'Translate to Snackbar/Alert after the status message contract is explicit.',
+      chakra: 'Translate to Toast/Alert once the feedback contract and recovery copy are stable.',
+      custom: 'Use output/aria-live plus one shared toast helper instead of page-local success banners.',
+    },
+    form: {
+      shadcn: 'Keep form primitives thin and preserve label/fieldset/help/error semantics under the styled wrappers.',
+      mui: 'Translate to MUI form controls while keeping labels, hints, and validation ownership explicit.',
+      chakra: 'Translate to Chakra form controls only after label/help/error semantics are locked.',
+      custom: 'Start with label/input/select/fieldset semantics and add wrappers only when repeated patterns emerge.',
+    },
+  };
+  return map[primitive]?.[family] || map[primitive]?.custom || 'Preserve the semantic contract first, then translate it into the active UI stack.';
+}
+
+function buildNativeFirstRecommendations(profile, archetype) {
+  const recommendations = [
+    {
+      id: 'table',
+      title: 'Relational data views',
+      native: 'table + thead + tbody',
+      useWhen: archetype.id === 'control-plane'
+        ? 'Use for operator lists, audit logs, comparison screens, and anything row/column driven.'
+        : 'Use whenever users compare rows, scan columns, or sort/filter structured data.',
+      why: 'Real table semantics preserve scan speed, keyboard expectations, and accessible structure.',
+      stackTranslation: translatePrimitive(profile, 'table'),
+    },
+    {
+      id: 'dialog',
+      title: 'Confirm, edit, or drill-in overlays',
+      native: 'dialog',
+      useWhen: 'Use for confirm flows, inline editing overlays, inspectors, and focused task interruptions.',
+      why: 'A dialog contract keeps dismissal, focus return, and escape behavior predictable.',
+      stackTranslation: translatePrimitive(profile, 'dialog'),
+    },
+    {
+      id: 'disclosure',
+      title: 'Advanced settings and expandable sections',
+      native: 'details + summary',
+      useWhen: 'Use when secondary metadata, FAQs, advanced filters, or low-frequency settings expand inline.',
+      why: 'Disclosure primitives reduce custom JS and make collapsed vs expanded state explicit.',
+      stackTranslation: translatePrimitive(profile, 'disclosure'),
+    },
+    {
+      id: 'form',
+      title: 'Forms and inline validation',
+      native: 'label + input/select/textarea + fieldset',
+      useWhen: 'Use for settings, onboarding, account flows, and any form that needs clear helper and error copy.',
+      why: 'Native form semantics keep labels, validation, and keyboard flow resilient before styling decisions compound.',
+      stackTranslation: translatePrimitive(profile, 'form'),
+    },
+    {
+      id: 'menu',
+      title: 'Secondary actions and contextual menus',
+      native: 'button + popover/menu',
+      useWhen: 'Use for row actions, filter menus, split buttons, and compact secondary command surfaces.',
+      why: 'Button-targeted menus make trigger ownership and dismissal rules easier to standardize.',
+      stackTranslation: translatePrimitive(profile, 'menu'),
+    },
+    {
+      id: 'feedback',
+      title: 'Status, success, and recovery messaging',
+      native: 'output + aria-live + progress/meter where relevant',
+      useWhen: 'Use for save/delete/retry flows, async jobs, uploads, and transient result messaging.',
+      why: 'Status feedback becomes easier to reuse when message semantics are explicit before the toast/banner styling layer.',
+      stackTranslation: translatePrimitive(profile, 'feedback'),
+    },
+  ];
+  return archetype.id === 'control-plane'
+    ? recommendations
+    : recommendations.filter((item) => item.id !== 'table' || profile.stack.data.length > 0 || profile.framework.primary === 'Next');
+}
+
+function buildRecipePack(profile, archetype) {
+  const recipes = [
+    {
+      id: 'semantic-shell',
+      title: 'Semantic page shell',
+      useWhen: 'Use for any new page, dashboard, settings screen, or content workspace.',
+      structure: 'header/nav -> main -> primary action lane -> secondary rail or footer',
+      implementationBias: 'Start with landmarks and one obvious primary action before decorative treatment.',
+    },
+    {
+      id: 'async-state-cluster',
+      title: 'Async state cluster',
+      useWhen: 'Use whenever a screen loads remote data, saves, retries, or can become empty.',
+      structure: 'loading skeleton -> empty state -> error/recovery state -> success confirmation',
+      implementationBias: 'Implement all four states together so the happy path does not monopolize polish.',
+    },
+    {
+      id: 'form-card',
+      title: 'Form card / settings section',
+      useWhen: 'Use for settings, onboarding, account forms, and edit panels.',
+      structure: 'section header -> labeled fields -> helper/error copy -> action row',
+      implementationBias: 'Keep labels, helper text, and validation semantics explicit before spacing polish.',
+    },
+  ];
+
+  if (archetype.id === 'control-plane') {
+    recipes.push(
+      {
+        id: 'filter-table-inspector',
+        title: 'Filter -> table -> inspector',
+        useWhen: 'Use for admin, ops, queues, audit, or review-heavy surfaces.',
+        structure: 'filter bar -> relational table -> sticky detail/inspector pane -> action/status rail',
+        implementationBias: 'Favor true table semantics and predictable inspector behavior over oversized summary cards.',
+      },
+      {
+        id: 'command-summary-rail',
+        title: 'Command + summary rail',
+        useWhen: 'Use when operators need risk, next action, and status visible while scanning detail.',
+        structure: 'top command lane -> summary metrics -> main work area -> evidence/status rail',
+        implementationBias: 'Keep scan speed ahead of novelty and let the summary rail anchor decision-making.',
+      },
+    );
+  } else if (archetype.id === 'editorial-marketing') {
+    recipes.push({
+      id: 'hero-proof-story',
+      title: 'Hero -> proof -> story stack',
+      useWhen: 'Use for landing pages, campaigns, and narrative product surfaces.',
+      structure: 'hero -> proof strip -> benefits/story blocks -> testimonial/evidence -> CTA close',
+      implementationBias: 'Prototype in semantic HTML first so hierarchy and pacing land before visual flourishes.',
+    });
+  } else if (archetype.id === 'content-studio') {
+    recipes.push({
+      id: 'focus-editor-shell',
+      title: 'Focus editor shell',
+      useWhen: 'Use for CMS, editor, studio, or media-management experiences.',
+      structure: 'quiet top bar -> main authoring area -> secondary metadata rail -> autosave/status zone',
+      implementationBias: 'Keep chrome low-noise and preserve focus on the primary content area.',
+    });
+  } else {
+    recipes.push({
+      id: 'detail-dialog-flow',
+      title: 'Detail + dialog flow',
+      useWhen: 'Use for CRUD/detail flows where a list or page launches focused edits and confirmations.',
+      structure: 'primary content -> supporting metadata -> focused dialog/drawer -> inline status feedback',
+      implementationBias: 'Keep the semantic contract simple enough to prototype before translating to the final component system.',
+    });
+  }
+
+  if (profile.uiSystem.primary === 'custom') {
+    recipes.push({
+      id: 'prototype-translation-lane',
+      title: 'Prototype -> translation lane',
+      useWhen: 'Use when the repo lacks a strong shared UI system or a new surface is still ambiguous.',
+      structure: 'semantic HTML prototype -> approval snapshot -> thin shared primitive extraction -> stack translation',
+      implementationBias: 'Reduce churn by settling hierarchy and state semantics before framework-specific styling expands.',
+    });
+  }
+
+  return recipes;
+}
+
+function buildPrototypeMode(profile, archetype, inventory, options = {}) {
+  const goalText = normalizeText(options.goal || '');
+  const sharedCount = inventory.filter((item) => item.shared).length;
+  const recommended = profile.uiSystem.primary === 'custom'
+    || sharedCount < 3
+    || ['control-plane', 'editorial-marketing', 'content-studio'].includes(archetype.id)
+    || /\b(prototype|landing|hero|dashboard|new screen|new page|new view|shell)\b/.test(goalText);
+  const mode = recommended ? 'semantic-html-first' : 'stack-native-direct';
+
+  return {
+    recommended,
+    mode,
+    rationale: recommended
+      ? 'Start with a semantic HTML/CSS prototype to settle hierarchy, state coverage, and native interaction contracts before stack translation.'
+      : 'The repo already has enough structure to build directly in the native component stack without a separate prototype-first pass.',
+    entryStrategy: recommended
+      ? 'Prototype the shell, state variants, and one primary flow with low-JS semantic primitives, then translate only after the structure feels stable.'
+      : 'Implement directly in the repo stack, but still write the semantic/native contract before polishing page-local abstractions.',
+    deliverables: recommended
+      ? [
+        'Prototype shell with semantic landmarks and one primary action lane.',
+        'Loading, empty, error, and success states captured before visual polish.',
+        'Translation notes that map each native primitive to the target stack equivalent.',
+      ]
+      : [
+        'Direct stack implementation with semantic landmarks preserved.',
+        'Shared primitive or wrapper decisions recorded before bespoke components multiply.',
+      ],
+    handoffSteps: [
+      'Freeze hierarchy and state behavior before translating to repo-local components.',
+      'Map native primitives to the target UI stack deliberately instead of re-inventing them page by page.',
+      'Re-run browser/UI review after translation so the semantic contract survives the final polish layer.',
+    ],
+  };
+}
+
+function buildSemanticGuardrails(profile, archetype) {
+  const lines = [
+    'Prefer semantic landmarks (`header`, `nav`, `main`, `section`, `article`, `footer`) before anonymous wrapper stacks.',
+    'Reach for `button`, `a`, `label`, `fieldset`, `dialog`, `details`, `table`, `progress`, `meter`, and `output` before custom div-based interactions.',
+    'If a pattern repeats more than twice, extract a small named primitive or semantic wrapper instead of cloning utility piles.',
+    'Write the state contract first: loading, empty, error, success, disabled, and recovery paths are first-class UI.',
+    'Preserve keyboard, focus, and dismissal behavior as part of the design contract, not as post-polish cleanup.',
+  ];
+  if (profile.styling.detected.includes('Tailwind')) {
+    lines.push('Keep utility strings from becoming the design system; graduate repeated clusters into semantic wrappers or shared components.');
+  }
+  if (archetype.id === 'control-plane') {
+    lines.push('When data is relational, real table semantics and stable summary rails beat decorative card farms.');
+  }
+  return lines;
 }
 
 function buildImplementationPrompts(archetype, signature, tasteProfile) {
@@ -622,6 +913,7 @@ function renderDirectionMarkdown(payload) {
   const componentCues = payload.componentCues.map((item) => `- ${item}`);
   const interactionCues = payload.interactionCues.map((item) => `- ${item}`);
   const guardrails = payload.styleGuardrails.map((item) => `- ${item}`);
+  const semanticGuardrails = payload.semanticGuardrails.map((item) => `- ${item}`);
   const lines = [
     `- Workflow root: \`${payload.workflowRootRelative}\``,
     `- Archetype: \`${payload.archetype.label}\``,
@@ -711,6 +1003,40 @@ function renderDirectionMarkdown(payload) {
     '',
     ...payload.designSystemActions.map((item) => `- ${item}`),
     '',
+    '## Semantic Guardrails',
+    '',
+    ...semanticGuardrails,
+    '',
+    '## Native-First Decision Matrix',
+    '',
+    ...payload.nativeFirstRecommendations.flatMap((item) => ([
+      `### ${item.title}`,
+      '',
+      `- Native first: \`${item.native}\``,
+      `- Use when: ${item.useWhen}`,
+      `- Why: ${item.why}`,
+      `- Stack translation: ${item.stackTranslation}`,
+      '',
+    ])),
+    '## Recipe Pack',
+    '',
+    ...payload.recipePack.flatMap((item) => ([
+      `### ${item.title}`,
+      '',
+      `- Use when: ${item.useWhen}`,
+      `- Structure: ${item.structure}`,
+      `- Implementation bias: ${item.implementationBias}`,
+      '',
+    ])),
+    '## Prototype Mode',
+    '',
+    `- Recommended: \`${payload.prototypeMode.recommended ? 'yes' : 'no'}\``,
+    `- Mode: \`${payload.prototypeMode.mode}\``,
+    `- Rationale: ${payload.prototypeMode.rationale}`,
+    `- Entry strategy: ${payload.prototypeMode.entryStrategy}`,
+    ...(payload.prototypeMode.deliverables || []).map((item) => `- Deliverable: ${item}`),
+    ...(payload.prototypeMode.handoffSteps || []).map((item) => `- Handoff: ${item}`),
+    '',
     '## Codex Implementation Recipes',
     '',
     ...payload.codexRecipes.map((item) => `- ${item}`),
@@ -749,6 +1075,10 @@ function buildUiDirection(cwd, rootDir, options = {}) {
   const screenBlueprints = buildScreenBlueprints(archetype);
   const differentiators = buildDifferentiators(archetype, tasteProfile);
   const designSystemActions = buildDesignSystemActions(profile, tasteProfile);
+  const semanticGuardrails = buildSemanticGuardrails(profile, archetype);
+  const nativeFirstRecommendations = buildNativeFirstRecommendations(profile, archetype);
+  const recipePack = buildRecipePack(profile, archetype);
+  const prototypeMode = buildPrototypeMode(profile, archetype, inventory, options);
   const implementationPrompts = buildImplementationPrompts(archetype, taste, tasteProfile);
   const payload = {
     generatedAt: new Date().toISOString(),
@@ -763,6 +1093,10 @@ function buildUiDirection(cwd, rootDir, options = {}) {
     screenBlueprints,
     differentiators,
     designSystemActions,
+    semanticGuardrails,
+    nativeFirstRecommendations,
+    recipePack,
+    prototypeMode,
     implementationPrompts,
     designTokens,
     componentCues: [...(tasteProfile.componentCues || [])],

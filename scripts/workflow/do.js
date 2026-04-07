@@ -57,6 +57,7 @@ function buildDoPayload(cwd, rootDir, goal) {
     ambiguityReasons: analysis.ambiguityReasons,
     ambiguityClass: analysis.ambiguityClass,
     languageMix: analysis.languageMix,
+    personaSignals: analysis.personaSignals,
     rejectedAlternatives: analysis.rejectedAlternatives,
     packet,
     trust: {

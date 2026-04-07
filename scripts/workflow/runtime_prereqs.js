@@ -20,6 +20,8 @@ const PLATFORM_SUPPORT = Object.freeze({
   },
 });
 
+const DEFAULT_SURFACE = 'doctor';
+
 function packageJsonPath(cwd) {
   return path.join(cwd, 'package.json');
 }
@@ -105,50 +107,72 @@ function resolveBinary(binaryName) {
 
 function buildBinaryCheck(binaryName, options = {}) {
   const {
+    surface = DEFAULT_SURFACE,
+    resolve = resolveBinary,
     missingStatus = 'warn',
+    advisoryMissingStatus = null,
     presentLabel = binaryName,
     missingFix = null,
     missingSummary = `${binaryName} is not on PATH`,
+    advisoryMissingSummary = null,
     presentSummary = null,
   } = options;
-  const resolved = resolveBinary(binaryName);
+  const resolved = resolve(binaryName);
+  const effectiveMissingStatus = advisoryMissingStatus && surface === 'health'
+    ? advisoryMissingStatus
+    : missingStatus;
+  const effectiveMissingSummary = advisoryMissingSummary && surface === 'health'
+    ? advisoryMissingSummary
+    : missingSummary;
   return {
-    status: resolved ? 'pass' : missingStatus,
+    status: resolved ? 'pass' : effectiveMissingStatus,
     message: resolved
       ? `${presentLabel} -> ${presentSummary || resolved}`
-      : `${presentLabel} -> ${missingSummary}`,
+      : `${presentLabel} -> ${effectiveMissingSummary}`,
     fix: resolved ? null : missingFix,
     resolved,
   };
 }
 
-function buildRuntimePrerequisiteChecks(cwd) {
+function buildRuntimePrerequisiteChecks(cwd, options = {}) {
+  const surface = options.surface || DEFAULT_SURFACE;
+  const platform = options.platform || process.platform;
+  const nodeVersion = options.nodeVersion || process.version;
+  const resolve = options.resolveBinary || resolveBinary;
   const checks = [];
-  const support = PLATFORM_SUPPORT[process.platform] || {
+  const support = PLATFORM_SUPPORT[platform] || {
     status: 'warn',
     tier: 'unsupported',
-    summary: `Platform ${process.platform} is not part of the documented support matrix.`,
+    summary: `Platform ${platform} is not part of the documented support matrix.`,
   };
+  const platformStatus = surface === 'health' && support.status === 'warn'
+    ? 'pass'
+    : support.status;
+  const platformMessage = platformStatus === support.status
+    ? `Platform support -> ${platform} (${support.tier}): ${support.summary}`
+    : `Platform support -> ${platform} (${support.tier}): ${support.summary} Core workflow surfaces remain available; run doctor for host-specific advisories.`;
 
   checks.push({
-    status: nodeVersionSatisfies(SUPPORTED_NODE_RANGE)
+    status: nodeVersionSatisfies(SUPPORTED_NODE_RANGE, nodeVersion)
       ? 'pass'
       : 'fail',
-    message: `Node.js runtime -> ${process.version} (workflow support: ${SUPPORTED_NODE_RANGE})`,
-    fix: nodeVersionSatisfies(SUPPORTED_NODE_RANGE)
+    message: `Node.js runtime -> ${nodeVersion} (workflow support: ${SUPPORTED_NODE_RANGE})`,
+    fix: nodeVersionSatisfies(SUPPORTED_NODE_RANGE, nodeVersion)
       ? null
       : `Install a Node.js version that satisfies ${SUPPORTED_NODE_RANGE}`,
   });
 
   checks.push({
-    status: support.status,
-    message: `Platform support -> ${process.platform} (${support.tier}): ${support.summary}`,
-    fix: support.status === 'warn'
+    status: platformStatus,
+    message: platformMessage,
+    fix: platformStatus === 'warn'
       ? 'Prefer macOS or Linux for the full workflow surface'
       : null,
   });
 
   checks.push(buildBinaryCheck('git', {
+    surface,
+    resolve,
     missingStatus: 'fail',
     presentLabel: 'Git',
     missingSummary: 'git is required for diffs, worktrees, patch flows, and review surfaces',
@@ -156,33 +180,49 @@ function buildRuntimePrerequisiteChecks(cwd) {
   }));
 
   checks.push(buildBinaryCheck('rg', {
+    surface,
+    resolve,
     missingStatus: 'warn',
+    advisoryMissingStatus: 'pass',
     presentLabel: 'Ripgrep',
     missingSummary: 'rg is missing; cwf explore will fall back to slower built-in search',
+    advisoryMissingSummary: 'optional; rg is missing, so cwf explore will fall back to slower built-in search',
     missingFix: 'Install ripgrep (rg) for faster repo search',
   }));
 
-  if (process.platform === 'darwin') {
+  if (platform === 'darwin') {
     checks.push(buildBinaryCheck('open', {
+      surface,
+      resolve,
       missingStatus: 'warn',
+      advisoryMissingStatus: 'pass',
       presentLabel: 'Dashboard opener',
       missingSummary: 'open is missing; cwf dashboard --open cannot auto-launch the browser',
+      advisoryMissingSummary: 'optional; open is missing, so cwf dashboard --open cannot auto-launch the browser',
       missingFix: 'Restore the open command or open the generated HTML manually',
     }));
     checks.push(buildBinaryCheck('qlmanage', {
+      surface,
+      resolve,
       missingStatus: 'warn',
+      advisoryMissingStatus: 'pass',
       presentLabel: 'Quick Look renderer',
       missingSummary: 'qlmanage is missing; verify-browser will fall back to SVG screenshots',
+      advisoryMissingSummary: 'optional; qlmanage is missing, so verify-browser will fall back to SVG screenshots',
       missingFix: 'Restore qlmanage to regain PNG browser artifacts',
     }));
-  } else if (process.platform === 'linux') {
+  } else if (platform === 'linux') {
     checks.push(buildBinaryCheck('xdg-open', {
+      surface,
+      resolve,
       missingStatus: 'warn',
+      advisoryMissingStatus: 'pass',
       presentLabel: 'Dashboard opener',
       missingSummary: 'xdg-open is missing; cwf dashboard --open cannot auto-launch the browser',
+      advisoryMissingSummary: 'optional; xdg-open is missing, so cwf dashboard --open cannot auto-launch the browser',
       missingFix: 'Install xdg-utils or open the generated HTML manually',
     }));
-  } else if (process.platform === 'win32') {
+  } else if (platform === 'win32') {
     checks.push({
       status: 'pass',
       message: 'Dashboard opener -> Windows shell start fallback is available',
@@ -195,6 +235,7 @@ function buildRuntimePrerequisiteChecks(cwd) {
 
 module.exports = {
   buildRuntimePrerequisiteChecks,
+  buildBinaryCheck,
   nodeVersionSatisfies,
   readPackageMetadata,
   resolveBinary,

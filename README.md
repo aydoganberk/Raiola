@@ -97,7 +97,8 @@ node bin/cwf.js doctor --strict
 - Node.js: `>=20` (`.nvmrc` is pinned to `20` for local development)
 - Full support: macOS and Linux
 - Smoke-tested install/help flows: Windows
-- `cwf doctor --strict` now checks runtime prerequisites such as Git, ripgrep, platform support, and browser-opening helpers
+- `cwf doctor --strict` checks install integrity plus host advisories such as Git, ripgrep, platform support, and browser-opening helpers
+- `cwf health --strict` stays focused on blocking workflow/runtime issues so optional host-tool gaps do not downgrade the main gate
 
 ## Daily loop
 
@@ -146,6 +147,8 @@ The current build adds repo-native surfaces aimed at making Codex materially str
   Multilingual routing now grounds intent, steering, and deterministic capability picks across major languages instead of assuming English-only prompts.
 - `cwf do "look into why the verification plan feels weak before patching"` or `cwf do "neden verify plani zayif bir bak ve kok nedeni acikla"`  
   English and Turkish conversational routing now handles more natural operator phrasing such as `look into`, `put together`, `go over`, `double-check`, `get this out`, `bir bak`, `hazirla`, `elden gecir`, `previewu smoke et`, `parcalara bol`, and `yayina al`.
+- `cwf do "act like a head developer and go ovre the diff"` or `cwf do "teknik lider gibi milestone paketini hazrla"`  
+  English/Turkish routing now also recognizes persona-based intent packs and nearby typos, so role framing and lightly misspelled operator phrases still route to the right Codex lane.
 - `cwf codex promptpack --goal "review the auth diff"`  
   Writes a ready-to-paste Codex prompt pack with profile, verify contract, repo signals, the generated context pack, optional UI direction, monorepo hotspots, and the latest review orchestration/task-graph context.
 - `cwf codex contextpack --goal "review the auth diff"`  
@@ -171,6 +174,8 @@ These surfaces are designed to stay backward-compatible with the canonical markd
 - Verify: `double-check the test suite`, `previewu smoke et ve ekran goruntusu al`
 - Team: `split this up across packages`, `bunu parcalara bol ve paketlere dagit`
 - Ship: `get this out with handoff notes`, `bunu yayina al ve handoff notlarini ekle`
+- Persona-aware: `as a qa engineer smoke test the preview`, `urun tasarimcisi gibi premium dashboard ui spec hazrla`
+- Typo-tolerant: `go ovre the diff and call out blokers`, `milestone paketini hazrla`
 
 This support is enforced through the routing corpus and roadmap audit rather than living only in docs.
 

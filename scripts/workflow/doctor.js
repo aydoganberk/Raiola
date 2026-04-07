@@ -147,7 +147,7 @@ function buildDoctorReport(cwd, rootDir) {
     ['none', 'branch', 'worktree'].includes(preferences.gitIsolation) ? 'pass' : 'fail',
     `Git isolation -> ${preferences.gitIsolation}`,
   );
-  for (const check of buildRuntimePrerequisiteChecks(cwd)) {
+  for (const check of buildRuntimePrerequisiteChecks(cwd, { surface: 'doctor' })) {
     pushCheck(check.status, check.message, check.fix || null);
   }
   if (!productManifest) {
