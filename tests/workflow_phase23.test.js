@@ -6,6 +6,7 @@ const { test } = require('node:test');
 const childProcess = require('node:child_process');
 const { safeArtifactToken } = require('../scripts/workflow/common');
 const { createPatchBundle } = require('../scripts/workflow/team_runtime_artifacts');
+const { run: runPackSmoke } = require('../scripts/smoke_pack_install');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
@@ -49,6 +50,30 @@ function setExecuteStep(targetRepo) {
     readFile(targetRepo, 'docs/workflow/STATUS.md').replace('- Current milestone step: `discuss`', '- Current milestone step: `execute`'),
   );
 }
+
+test('pack smoke uses shell-backed process launch for Windows npm shims', () => {
+  let invocation = null;
+  const stdout = runPackSmoke(
+    'npm.cmd',
+    ['pack', '--json'],
+    { cwd: repoRoot },
+    {
+      platform: 'win32',
+      execFileSync(command, args, options) {
+        invocation = { command, args, options };
+        return '[]';
+      },
+    },
+  );
+
+  assert.equal(stdout, '[]');
+  assert.deepEqual(invocation?.args, ['pack', '--json']);
+  assert.equal(invocation?.command, 'npm.cmd');
+  assert.equal(invocation?.options.cwd, repoRoot);
+  assert.equal(invocation?.options.shell, true);
+  assert.equal(invocation?.options.windowsHide, true);
+  assert.deepEqual(invocation?.options.stdio, ['ignore', 'pipe', 'pipe']);
+});
 
 function createFakeCodex(targetRepo) {
   const fakeCodexPath = path.join(targetRepo, 'fake-codex');

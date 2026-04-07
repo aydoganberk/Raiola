@@ -29,12 +29,20 @@ function commandName(base) {
   return process.platform === 'win32' ? `${base}.cmd` : base;
 }
 
-function run(command, args, options = {}) {
-  return childProcess.execFileSync(command, args, {
+function run(command, args, options = {}, overrides = {}) {
+  const execFileSync = overrides.execFileSync || childProcess.execFileSync;
+  const platform = overrides.platform || process.platform;
+  const execOptions = {
     cwd: options.cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
-  });
+    windowsHide: true,
+  };
+  if (platform === 'win32') {
+    // GitHub's Windows runners expose npm/npx via .cmd shims that require a shell-backed launch.
+    execOptions.shell = true;
+  }
+  return execFileSync(command, args, execOptions);
 }
 
 function resolveTarball(args, cwd) {
@@ -111,4 +119,12 @@ function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  commandName,
+  run,
+  resolveTarball,
+};
