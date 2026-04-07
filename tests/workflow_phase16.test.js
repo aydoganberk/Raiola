@@ -105,6 +105,8 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
 
   const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
   const uiSpec = JSON.parse(run('node', [targetBin, 'ui-spec', '--json'], targetRepo));
+  const designDna = JSON.parse(run('node', [targetBin, 'design-dna', '--json'], targetRepo));
+  const stateAtlas = JSON.parse(run('node', [targetBin, 'state-atlas', '--json'], targetRepo));
   const uiRecipe = JSON.parse(run('node', [targetBin, 'ui-recipe', '--goal', 'build an analytics review dashboard', '--json'], targetRepo));
   const uiPlan = JSON.parse(run('node', [targetBin, 'ui-plan', '--json'], targetRepo));
   const componentMap = JSON.parse(run('node', [targetBin, 'component-map', '--json'], targetRepo));
@@ -116,6 +118,8 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
   const dashboard = JSON.parse(run('node', [targetBin, 'dashboard', '--json'], targetRepo));
 
   assert.ok(fs.existsSync(path.join(targetRepo, uiSpec.file)));
+  assert.ok(fs.existsSync(path.join(targetRepo, designDna.file)));
+  assert.ok(fs.existsSync(path.join(targetRepo, stateAtlas.file)));
   assert.ok(fs.existsSync(path.join(targetRepo, uiRecipe.file)));
   assert.ok(fs.existsSync(path.join(targetRepo, uiPlan.file)));
   assert.ok(fs.existsSync(path.join(targetRepo, componentMap.file)));
@@ -127,11 +131,18 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
   assert.ok(uiRecipe.translationNotes.length >= 3);
   assert.ok(uiRecipe.verificationPlan.length >= 2);
   assert.ok(uiSpec.primitiveContractAudit);
+  assert.ok(uiSpec.designDna.references.length >= 2);
+  assert.ok(uiSpec.stateAtlas.requiredStates.length >= 4);
+  assert.ok(designDna.references.length >= 2);
+  assert.ok(stateAtlas.states.length >= 5);
   assert.ok(uiPlan.uiRecipe);
+  assert.ok(uiPlan.designDna);
+  assert.ok(uiPlan.stateAtlas);
   assert.ok(uiReview.browserArtifacts.length >= 1);
   assert.ok(['pass', 'warn', 'fail', 'inconclusive'].includes(uiReview.accessibilityAudit.verdict));
   assert.ok(['pass', 'warn', 'incomplete', 'inconclusive'].includes(uiReview.journeyAudit.coverage));
   assert.ok(uiReview.primitiveContractAudit.issueCount >= 1);
+  assert.ok(uiReview.designContractAudit);
   assert.ok(review.findings.length >= 1);
   assert.ok(review.packageHeatmap.length >= 1);
   assert.ok(review.personas.length >= 1);

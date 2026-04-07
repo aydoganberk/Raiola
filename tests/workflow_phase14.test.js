@@ -4,6 +4,8 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const childProcess = require('node:child_process');
+const { buildDoctorReport } = require('../scripts/workflow/doctor');
+const { buildRepairPlan } = require('../scripts/workflow/repair');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
@@ -149,6 +151,28 @@ test('doctor and health repair flows detect and apply safe runtime fixes', () =>
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'VERSION.md')));
   assert.ok(healthRepair.repair.safeActionCount >= 1);
   assert.doesNotThrow(() => JSON.parse(readFile(targetRepo, '.workflow/fs-index.json')));
+});
+
+test('doctor repair reports invalid package.json instead of crashing', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
+  fs.writeFileSync(path.join(targetRepo, 'package.json'), '{broken');
+
+  const rootDir = path.join(targetRepo, 'docs', 'workflow');
+  const report = buildDoctorReport(targetRepo, rootDir);
+  const repair = buildRepairPlan(targetRepo, rootDir, { kind: 'doctor' });
+
+  assert.ok(
+    report.checks.some(
+      (check) => check.status === 'fail'
+        && check.message.includes('package.json is invalid JSON'),
+    ),
+  );
+  assert.ok(
+    repair.manualIssues.some(
+      (issue) => issue.type === 'invalid_package_json',
+    ),
+  );
 });
 
 test('team runtime can run, dispatch, monitor, and collect through the worktree adapter', () => {

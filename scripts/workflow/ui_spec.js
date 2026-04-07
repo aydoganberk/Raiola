@@ -17,6 +17,9 @@ const {
 } = require('./frontend_os');
 const { writeRuntimeJson } = require('./runtime_helpers');
 const { buildUiDirection } = require('./design_intelligence');
+const { buildDesignDnaDoc, buildStateAtlasDoc } = require('./design_contracts');
+const { buildDesignMdDoc, buildPageBlueprintDoc } = require('./frontend_briefs');
+const { buildComponentStrategyDoc, buildDesignBenchmarkDoc } = require('./frontend_strategy');
 
 function printHelp() {
   console.log(`
@@ -28,6 +31,7 @@ Usage:
 Options:
   --goal <text>  Optional product/UI goal to steer the brief
   --taste <id>   Optional explicit taste profile override
+  --page <id>    Optional explicit page type override for downstream briefs
   --root <path>  Workflow root. Defaults to active workstream root
   --json         Print machine-readable output
   `);
@@ -49,6 +53,12 @@ function buildUiSpec(cwd, rootDir, options = {}) {
   const contextDoc = readIfExists(path.join(rootDir, 'CONTEXT.md')) || '';
   const userIntent = tryExtractSection(contextDoc, 'User Intent', '').trim() || 'No explicit UI intent note was recorded.';
   const touchedFiles = tryExtractSection(contextDoc, 'Touched Files', '').trim();
+  const designDna = buildDesignDnaDoc(cwd, rootDir, direction, options);
+  const stateAtlas = buildStateAtlasDoc(cwd, rootDir, direction, designDna, options);
+  const pageBlueprint = buildPageBlueprintDoc(cwd, rootDir, direction, designDna, stateAtlas, options);
+  const designMd = buildDesignMdDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint, options);
+  const componentStrategy = buildComponentStrategyDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint);
+  const designBenchmark = buildDesignBenchmarkDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint, componentStrategy);
 
   const body = `
 - Workflow root: \`${relativePath(cwd, rootDir)}\`
@@ -56,6 +66,12 @@ function buildUiSpec(cwd, rootDir, options = {}) {
 - UI system: \`${profile.uiSystem.primary}\`
 - Frontend mode: \`${profile.frontendMode.status}\`
 - UI direction: \`${direction.file}\`
+- Design DNA: \`${designDna.file}\`
+- State atlas: \`${stateAtlas.file}\`
+- Page blueprint: \`${pageBlueprint.file}\`
+- DESIGN.md export: \`${designMd.file}\`
+- Component strategy: \`${componentStrategy.file}\`
+- Design benchmark: \`${designBenchmark.file}\`
 - Taste profile: \`${direction.taste.profile.label}\`
 - Taste signature: \`${direction.taste.tagline}\`
 
@@ -74,6 +90,15 @@ function buildUiSpec(cwd, rootDir, options = {}) {
 - \`Taste profile source: ${direction.taste.profile.source}\`
 - \`Codex should respect the UI direction document before improvising new aesthetics.\`
 
+## External Design DNA
+
+- \`Product category: ${designDna.productCategory.label}\`
+- \`Reference blend: ${designDna.blend.summary}\`
+- \`North star: ${designDna.northStar.promise}\`
+${designDna.references.map((item) => `- \`${item.label}\` -> ${item.signature}`).join('\n')}
+${designDna.codexRules.map((item) => `- \`Rule: ${item}\``).join('\n')}
+${designDna.antiPatterns.slice(0, 6).map((item) => `- \`Ban: ${item}\``).join('\n')}
+
 ## Experience Thesis
 
 - \`${direction.experienceThesis.title}\`
@@ -83,6 +108,26 @@ function buildUiSpec(cwd, rootDir, options = {}) {
 ## Signature Moments
 
 ${direction.signatureMoments.map((item) => `- \`${item.title}: ${item.description}\``).join('\n')}
+
+## Page Blueprint
+
+- \`Page type: ${pageBlueprint.pageType.label}\`
+- \`Primary outcome: ${pageBlueprint.primaryOutcome}\`
+${pageBlueprint.sections.map((item) => `- \`${item.title}\` -> ${item.goal} | states: ${item.states.join(', ')}`).join('\n')}
+
+## Component Strategy
+
+${componentStrategy.reuseNow.length > 0
+    ? componentStrategy.reuseNow.map((item) => `- \`Reuse ${item.title}\` -> ${item.reason}`).join('\n')
+    : '- `No obvious shared reuse candidate was detected yet.`'}
+${componentStrategy.buildNow.length > 0
+    ? componentStrategy.buildNow.map((item) => `- \`${item.title}\` -> ${item.target}`).join('\n')
+    : '- `Current inventory already covers the page blueprint well.`'}
+
+## Design Benchmark
+
+${designBenchmark.differentiationPlays.map((item) => `- \`${item.title}\` -> ${item.move}`).join('\n')}
+${designBenchmark.commodityRisks.slice(0, 4).map((item) => `- \`Avoid: ${item}\``).join('\n')}
 
 ## Screen Blueprints
 
@@ -121,6 +166,12 @@ ${inventory.length > 0 ? inventory.slice(0, 15).map((item) => `- \`${item.name}\
 - \`loading\` should preserve layout stability
 - \`error\` should expose recovery language
 - \`success\` should confirm completion and next action
+
+## State Atlas
+
+- \`Required state families: ${stateAtlas.requiredStates.join(', ')}\`
+${stateAtlas.states.map((item) => `- \`${item.label}\` -> ${item.guidance} | evidence: ${item.evidenceSignals.join(', ')}`).join('\n')}
+${stateAtlas.screenCoverage.map((item) => `- \`Screen: ${item.screen}\` -> ${item.states.join(', ')}`).join('\n')}
 
 ## Responsive Behavior
 
@@ -195,6 +246,12 @@ ${primitiveContractAudit.issueCount > 0
     primitiveContractAudit,
     primitiveOpportunities,
     direction,
+    designDna,
+    pageBlueprint,
+    designMd,
+    componentStrategy,
+    designBenchmark,
+    stateAtlas,
     file: relativePath(cwd, filePath),
   };
   writeRuntimeJson(cwd, 'frontend-spec.json', payload);
@@ -212,6 +269,7 @@ function main(argv = process.argv.slice(2)) {
   const payload = buildUiSpec(cwd, rootDir, {
     goal: args.goal ? String(args.goal).trim() : '',
     taste: args.taste ? String(args.taste).trim() : '',
+    page: args.page ? String(args.page).trim() : '',
   });
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));

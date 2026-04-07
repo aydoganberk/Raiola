@@ -3,6 +3,9 @@ const { parseArgs, resolveWorkflowRoot } = require('./common');
 const { buildUiRecipeScaffold } = require('./ui_recipe');
 const { buildUiSpec } = require('./ui_spec');
 const { buildUiDirection } = require('./design_intelligence');
+const { buildDesignDnaDoc, buildStateAtlasDoc } = require('./design_contracts');
+const { buildDesignMdDoc, buildPageBlueprintDoc } = require('./frontend_briefs');
+const { buildComponentStrategyDoc, buildDesignBenchmarkDoc } = require('./frontend_strategy');
 const { relativePath, writeDoc } = require('./frontend_os');
 
 function printHelp() {
@@ -15,6 +18,7 @@ Usage:
 Options:
   --goal <text>  Optional product/UI goal to steer the brief
   --taste <id>   Optional explicit taste profile override
+  --page <id>    Optional explicit page type override for downstream briefs
   --root <path>  Workflow root. Defaults to active workstream root
   --json         Print machine-readable output
   `);
@@ -31,13 +35,26 @@ function main(argv = process.argv.slice(2)) {
   const uiOptions = {
     goal: args.goal ? String(args.goal).trim() : '',
     taste: args.taste ? String(args.taste).trim() : '',
+    page: args.page ? String(args.page).trim() : '',
   };
   const spec = buildUiSpec(cwd, rootDir, uiOptions);
   const direction = buildUiDirection(cwd, rootDir, uiOptions);
+  const designDna = buildDesignDnaDoc(cwd, rootDir, direction, uiOptions);
+  const stateAtlas = buildStateAtlasDoc(cwd, rootDir, direction, designDna, uiOptions);
+  const pageBlueprint = buildPageBlueprintDoc(cwd, rootDir, direction, designDna, stateAtlas, uiOptions);
+  const designMd = buildDesignMdDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint, uiOptions);
+  const componentStrategy = buildComponentStrategyDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint);
+  const designBenchmark = buildDesignBenchmarkDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint, componentStrategy);
   const recipe = buildUiRecipeScaffold(cwd, rootDir, uiOptions);
   const body = `
 - UI spec: \`${spec.file}\`
 - UI direction: \`${direction.file}\`
+- Design DNA: \`${designDna.file}\`
+- State atlas: \`${stateAtlas.file}\`
+- Page blueprint: \`${pageBlueprint.file}\`
+- DESIGN.md export: \`${designMd.file}\`
+- Component strategy: \`${componentStrategy.file}\`
+- Design benchmark: \`${designBenchmark.file}\`
 - UI recipe: \`${recipe.file}\`
 - Primary framework: \`${spec.profile.framework.primary}\`
 - Product archetype: \`${direction.archetype.label}\`
@@ -48,13 +65,49 @@ function main(argv = process.argv.slice(2)) {
 ## Execution Order
 
 - \`Lock shell hierarchy, core states, and responsive layout before decorative polish.\`
-- \`Prefer shared components from the inventory before adding new primitives.\`
+- \`Choose the external design blend (${designDna.blend.summary}) before touching hero art, card styling, or accent color usage.\`
+- \`Use ${pageBlueprint.pageType.label} as the default section spine instead of inventing page structure ad hoc.\`
+- \`Follow ${componentStrategy.file} so reuse/extract/build decisions happen before page-local duplication spreads.\`
 - \`Translate the UI direction into tokens, spacing, radius, and typography decisions early.\`
+- \`Use STATE-ATLAS as a hard requirement for loading, empty, error, success, and high-risk transitions.\`
 - \`Use the selected recipe scaffold (${recipe.recipe.title}) as the first implementation slice before widening the surface.\`
 - \`Use the selected taste profile (${direction.taste.profile.label}) as the tie-breaker when multiple UI options seem valid.\`
 - \`Patch empty/loading/error/success states together when they share the same component boundary.\`
 - \`Validate responsive behavior on each breakpoint row.\`
 - \`Close with ui-review plus browser evidence.\`
+
+## Reference Blend
+
+- \`${designDna.blend.summary}\`
+${designDna.references.map((item) => `- \`${item.label}\` -> adopt ${item.adopt[0]}`).join('\n')}
+
+## Required State Atlas
+
+${stateAtlas.requiredStates.map((item) => `- \`${item}\``).join('\n')}
+${stateAtlas.atlasGuidance.map((item) => `- \`${item}\``).join('\n')}
+
+## Page Blueprint
+
+${pageBlueprint.sections.map((item) => `- \`${item.title}\` -> components: ${item.components.join(', ')} | states: ${item.states.join(', ')}`).join('\n')}
+
+## Component Strategy
+
+${componentStrategy.reuseNow.length > 0
+    ? componentStrategy.reuseNow.map((item) => `- \`Reuse ${item.title}\` -> ${item.file}`).join('\n')
+    : '- `No obvious shared reuse candidate was detected yet.`'}
+${componentStrategy.buildNow.length > 0
+    ? componentStrategy.buildNow.map((item) => `- \`Build ${item.title}\` -> ${item.target}`).join('\n')
+    : '- `No urgent build target is missing from inventory coverage.`'}
+
+## Design Benchmark
+
+${designBenchmark.differentiationPlays.map((item) => `- \`${item.title}\` -> ${item.move}`).join('\n')}
+${designBenchmark.reviewQuestions.slice(0, 3).map((item) => `- \`${item}\``).join('\n')}
+
+## DESIGN.md Export
+
+- \`${designMd.file}\`
+- \`Use this file as the portable design contract when another agent or tool expects a DESIGN.md surface.\`
 
 ## Signature Moments To Land
 
@@ -87,6 +140,12 @@ ${direction.codexRecipes.map((item) => `- \`${item}\``).join('\n')}
     file: relativePath(cwd, filePath),
     uiSpec: spec.file,
     uiDirection: direction.file,
+    designDna: designDna.file,
+    stateAtlas: stateAtlas.file,
+    pageBlueprint: pageBlueprint.file,
+    designMd: designMd.file,
+    componentStrategy: componentStrategy.file,
+    designBenchmark: designBenchmark.file,
     uiRecipe: recipe.file,
     archetype: direction.archetype.label,
     tasteProfile: direction.taste.profile.id,

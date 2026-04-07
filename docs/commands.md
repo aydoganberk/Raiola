@@ -118,6 +118,20 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
   Replay the current diff against the latest review history.
 - `cwf ui-direction`
   Generate the taste-aware UI direction pack that Codex can implement against.
+- `cwf design-dna`
+  Generate `docs/workflow/DESIGN-DNA.md` with external reference blend, product category, and anti-pattern bans.
+- `cwf page-blueprint`
+  Generate `docs/workflow/PAGE-BLUEPRINT.md` with section map, proof surfaces, and page-type priorities.
+- `cwf design-md`
+  Generate `docs/workflow/DESIGN.md` as a portable design contract and optional repo-root `DESIGN.md` mirror.
+- `cwf component-strategy`
+  Generate `docs/workflow/COMPONENT-STRATEGY.md` with reuse/extract/build guidance for the current repo and target page family.
+- `cwf design-benchmark`
+  Generate `docs/workflow/DESIGN-BENCHMARK.md` with differentiation plays and commodity-risk checks from the active reference blend.
+- `cwf state-atlas`
+  Generate `docs/workflow/STATE-ATLAS.md` with required UX states and review hooks.
+- `cwf frontend-brief`
+  Generate `docs/workflow/FRONTEND-BRIEF.md` as a one-shot pack for external-site frontend work.
 - `cwf ui-recipe`
   Generate `docs/workflow/UI-RECIPE.md` with a semantic prototype, stack scaffold, and translation notes.
 - `cwf ui-spec`
@@ -211,6 +225,13 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 - `cwf dashboard` -> `.workflow/runtime/dashboard/{index.html,state.json}`
 - `cwf monorepo` -> `.workflow/cache/monorepo-intelligence.json` plus `docs/workflow/MONOREPO.md`
 - `cwf ui-direction` -> `.workflow/runtime/ui-direction.json` plus `docs/workflow/UI-DIRECTION.md`
+- `cwf design-dna` -> `.workflow/runtime/design-dna.json` plus `docs/workflow/DESIGN-DNA.md`
+- `cwf page-blueprint` -> `.workflow/runtime/page-blueprint.json` plus `docs/workflow/PAGE-BLUEPRINT.md`
+- `cwf design-md` -> `.workflow/runtime/design-md.json` plus `docs/workflow/DESIGN.md`
+- `cwf component-strategy` -> `.workflow/runtime/component-strategy.json` plus `docs/workflow/COMPONENT-STRATEGY.md`
+- `cwf design-benchmark` -> `.workflow/runtime/design-benchmark.json` plus `docs/workflow/DESIGN-BENCHMARK.md`
+- `cwf state-atlas` -> `.workflow/runtime/state-atlas.json` plus `docs/workflow/STATE-ATLAS.md`
+- `cwf frontend-brief` -> `.workflow/runtime/frontend-brief.json` plus `docs/workflow/FRONTEND-BRIEF.md`
 - `cwf ui-recipe` -> `.workflow/runtime/ui-recipe.json` plus `docs/workflow/UI-RECIPE.md`
 - `cwf ui-spec` -> `docs/workflow/UI-SPEC.md`
 - `cwf ui-plan` -> `docs/workflow/UI-PLAN.md`
@@ -281,6 +302,13 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 - `npm run workflow:pr-review`
 - `npm run workflow:re-review`
 - `npm run workflow:ui-direction`
+- `npm run workflow:design-dna`
+- `npm run workflow:page-blueprint`
+- `npm run workflow:design-md`
+- `npm run workflow:component-strategy`
+- `npm run workflow:design-benchmark`
+- `npm run workflow:state-atlas`
+- `npm run workflow:frontend-brief`
 - `npm run workflow:ui-recipe`
 - `npm run workflow:ui-spec`
 - `npm run workflow:ui-plan`
@@ -317,6 +345,13 @@ Use `cwf help` for the three golden flows, `cwf help <topic>` for focused catego
 - `cwf checkpoint` -> `npm run workflow:checkpoint -- --next "Resume here"`
 - `cwf review-orchestrate` -> `npm run workflow:review-orchestrate`
 - `cwf ui-direction` -> `npm run workflow:ui-direction`
+- `cwf design-dna` -> `npm run workflow:design-dna`
+- `cwf page-blueprint` -> `npm run workflow:page-blueprint`
+- `cwf design-md` -> `npm run workflow:design-md`
+- `cwf component-strategy` -> `npm run workflow:component-strategy`
+- `cwf design-benchmark` -> `npm run workflow:design-benchmark`
+- `cwf state-atlas` -> `npm run workflow:state-atlas`
+- `cwf frontend-brief` -> `npm run workflow:frontend-brief`
 - `cwf ui-recipe` -> `npm run workflow:ui-recipe`
 - `cwf ui-spec` -> `npm run workflow:ui-spec`
 - `cwf ui-review` -> `npm run workflow:ui-review -- --url ./preview.html`

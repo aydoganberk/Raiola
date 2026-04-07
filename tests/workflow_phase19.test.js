@@ -220,6 +220,38 @@ test('ui direction and ui plan generate taste-aware frontend guidance for Codex'
   assert.ok(fs.existsSync(path.join(targetRepo, plan.file)));
   assert.equal(plan.uiDirection, direction.file);
   assert.equal(spec.direction.file, direction.file);
+  assert.ok(plan.pageBlueprint);
+  assert.ok(plan.designMd);
+  assert.ok(fs.existsSync(path.join(targetRepo, plan.pageBlueprint)));
+  assert.ok(fs.existsSync(path.join(targetRepo, plan.designMd)));
+});
+
+test('codex promptpack carries external-site frontend artifacts for implementation sessions', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  seedFrontendRepo(targetRepo);
+
+  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const promptPack = JSON.parse(run(
+    'node',
+    [targetBin, 'codex', 'promptpack', '--goal', 'build a developer tool landing page for AI agents', '--page', 'landing-page', '--json'],
+    targetRepo,
+  ));
+  const promptJson = JSON.parse(fs.readFileSync(path.join(targetRepo, promptPack.jsonFile), 'utf8'));
+
+  assert.equal(promptPack.action, 'promptpack');
+  assert.ok(promptJson.frontendDirection);
+  assert.ok(promptJson.frontendDirection.designDnaFile);
+  assert.ok(promptJson.frontendDirection.pageBlueprintFile);
+  assert.ok(promptJson.frontendDirection.designMdFile);
+  assert.ok(promptJson.frontendDirection.componentStrategyFile);
+  assert.ok(promptJson.frontendDirection.designBenchmarkFile);
+  assert.ok(promptJson.frontendDirection.productCategory);
+  assert.ok(promptJson.frontendDirection.referenceBlend);
+  assert.ok(promptJson.frontendDirection.pageType);
+  assert.ok(promptJson.frontendDirection.pageSections.length >= 3);
+  assert.ok(promptJson.frontendDirection.differentiationPlays.length >= 2);
+  assert.ok(promptJson.frontendDirection.buildNow.length >= 1);
 });
 
 test('review orchestration builds package and persona waves on top of review mode', () => {

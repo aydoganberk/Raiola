@@ -114,6 +114,8 @@ test('ui-direction exports experience thesis, signature moments, and codex promp
 
   assert.equal(direction.taste.profile.id, 'premium-minimal');
   assert.ok(direction.experienceThesis?.title);
+  assert.ok(direction.designDna.productCategory.label);
+  assert.ok(direction.designDna.references.length >= 2);
   assert.ok(direction.signatureMoments.length >= 2);
   assert.ok(direction.screenBlueprints.length >= 2);
   assert.ok(direction.motionSystem.transitions.length >= 2);
@@ -141,6 +143,7 @@ test('ui-direction accepts the semantic-minimal taste profile for native-first g
   assert.equal(direction.taste.profile.id, 'semantic-minimal');
   assert.ok(direction.semanticGuardrails.some((item) => item.includes('semantic')));
   assert.ok(direction.nativeFirstRecommendations.some((item) => item.native.includes('dialog') || item.native.includes('table')));
+  assert.ok(direction.designDna.references.some((item) => item.label.includes('OpenCode') || item.label.includes('Replicate') || item.label.includes('Linear')));
 });
 
 test('review-mode produces a distinct execution spine, context pack, and artifacts', () => {

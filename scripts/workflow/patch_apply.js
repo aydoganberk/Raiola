@@ -1,10 +1,16 @@
 const path = require('node:path');
 const childProcess = require('node:child_process');
-const { parseArgs } = require('./common');
+const { parseArgs, safeArtifactToken } = require('./common');
 const { relativePath } = require('./roadmap_os');
 
 function patchPath(cwd, taskId) {
-  return path.join(cwd, '.workflow', 'orchestration', 'patches', `${taskId}.patch`);
+  return path.join(
+    cwd,
+    '.workflow',
+    'orchestration',
+    'patches',
+    `${safeArtifactToken(taskId, { label: 'Task id', prefix: 'task' })}.patch`,
+  );
 }
 
 function main() {

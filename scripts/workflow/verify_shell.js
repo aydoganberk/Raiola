@@ -36,8 +36,9 @@ function artifactDirFor(cwd, artifactId) {
 
 
 function resolveShellBinary() {
+  const allowedUnixShells = new Set(['zsh', 'bash', 'sh']);
   const unixCandidates = [
-    process.env.SHELL,
+    allowedUnixShells.has(path.basename(String(process.env.SHELL || ''))) ? process.env.SHELL : null,
     '/bin/zsh',
     '/usr/bin/zsh',
     '/bin/bash',

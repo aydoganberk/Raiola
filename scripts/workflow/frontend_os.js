@@ -396,6 +396,8 @@ function buildMissingStateAudit(cwd, inventory = collectComponentInventory(cwd))
     success: /\b(success|done|saved|completed)\b/i,
     disabled: /\b(disabled|aria-disabled|isDisabled)\b/i,
     interaction: /\b(hover|focus|active|focus-visible)\b/i,
+    'form-validation': /\b(validation|invalid|required field|field error|helper text|aria-invalid)\b/i,
+    'mobile-nav': /\b(hamburger|mobile nav|mobile menu|drawer navigation|menu open)\b/i,
   };
   const evidence = Object.fromEntries(Object.keys(definitions).map((key) => [key, []]));
 

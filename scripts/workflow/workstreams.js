@@ -255,7 +255,7 @@ function healthStatusFromChecks(checks) {
 
 function runJsonSibling(scriptName, argv, cwd) {
   return JSON.parse(childProcess.execFileSync(
-    'node',
+    process.execPath,
     [path.join(__dirname, scriptName), ...argv],
     {
       cwd,
@@ -299,7 +299,7 @@ function stabilizeRegisteredWorkstreams(cwd) {
 
     try {
       childProcess.execFileSync(
-        'node',
+        process.execPath,
         [path.join(__dirname, 'build_packet.js'), '--root', row.root, '--all', '--sync'],
         {
           cwd,

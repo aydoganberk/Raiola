@@ -18,7 +18,7 @@ const { selectCodexProfile, getCodexProfiles } = require('./codex_profile_engine
 const { buildUiDirection } = require('./design_intelligence');
 const { buildMonorepoIntelligence } = require('./monorepo');
 const { loadLatestReviewTaskGraph } = require('./review_task_graph');
-const { buildCodexContextPack } = require('./context_pack');
+const { buildCodexContextPack, frontendRequested } = require('./context_pack');
 const {
   appendJsonl,
   deriveRepoRoles,
@@ -87,6 +87,7 @@ Options:
   --role <name>    Role name for install-skill/remove-skill
   --goal <text>    Goal text for profile/bootstrapping/contextpack actions
   --taste <id>     Optional explicit frontend taste override for context packs
+  --page <id>      Optional explicit frontend page type for context packs
   --from repo-profile
                    Generate roles from repo signals
   --json           Print machine-readable output
@@ -639,16 +640,19 @@ function loadLatestReviewOrchestration(cwd) {
   return readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'review-orchestration.json'));
 }
 
-function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile) {
+function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile, options = {}) {
   const monorepo = analysis.repoSignals?.monorepo
     ? buildMonorepoIntelligence(cwd, rootDir, { writeFiles: true, maxWorkers: 4 })
     : null;
-  const frontendDirection = (analysis.chosenCapability.domain === 'frontend' || analysis.repoSignals?.frontendActive)
-    ? buildUiDirection(cwd, rootDir, { goal })
+  const wantsFrontend = frontendRequested(analysis, null, { ...options, goal });
+  const frontendDirection = wantsFrontend
+    ? buildUiDirection(cwd, rootDir, { goal, taste: options.taste })
     : null;
   const reviewOrchestration = loadLatestReviewOrchestration(cwd);
   const reviewTaskGraph = loadLatestReviewTaskGraph(cwd);
   const contextPack = buildCodexContextPack(cwd, rootDir, goal, analysis, profile, {
+    taste: options.taste,
+    page: options.page,
     writeFiles: true,
   });
   const suggestedCommands = [
@@ -656,7 +660,7 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile) {
     'cwf codex contextpack --goal "<goal>"',
     analysis.chosenCapability.domain === 'review' ? 'cwf review-tasks --json' : '',
     analysis.chosenCapability.domain === 'review' ? 'cwf review-orchestrate --json' : '',
-    analysis.chosenCapability.domain === 'frontend' ? 'cwf ui-direction --json && cwf ui-review' : '',
+    wantsFrontend ? 'cwf frontend-brief --json && cwf component-strategy --json && cwf ui-review' : '',
     monorepo ? 'cwf monorepo --json' : '',
   ].filter(Boolean);
 
@@ -706,9 +710,20 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile) {
     lines.push(`- Archetype: \`${frontendDirection.archetype.label}\``);
     lines.push(`- Taste profile: \`${frontendDirection.taste.profile.label}\``);
     lines.push(`- Taste signature: \`${frontendDirection.taste.tagline}\``);
+    lines.push(`- Design DNA: \`${contextPack.frontend?.designDnaFile || 'n/a'}\``);
+    lines.push(`- Page blueprint: \`${contextPack.frontend?.pageBlueprintFile || 'n/a'}\``);
+    lines.push(`- DESIGN.md export: \`${contextPack.frontend?.designMdFile || 'n/a'}\``);
+    lines.push(`- Component strategy: \`${contextPack.frontend?.componentStrategyFile || 'n/a'}\``);
+    lines.push(`- Design benchmark: \`${contextPack.frontend?.designBenchmarkFile || 'n/a'}\``);
+    lines.push(`- Product category: \`${contextPack.frontend?.productCategory?.label || 'n/a'}\``);
+    lines.push(`- Reference blend: \`${contextPack.frontend?.referenceBlend?.summary || 'n/a'}\``);
+    lines.push(`- Page type: \`${contextPack.frontend?.pageType?.label || 'n/a'}\``);
     lines.push(`- Recipe scaffold: \`${contextPack.frontend?.recipeFile || 'n/a'}\``);
     lines.push(`- Selected recipe: \`${contextPack.frontend?.selectedRecipe?.title || 'n/a'}\``);
     lines.push(`- Prototype mode: \`${frontendDirection.prototypeMode.mode}\` (${frontendDirection.prototypeMode.recommended ? 'recommended' : 'optional'})`);
+    lines.push(...(contextPack.frontend?.pageSections || []).slice(0, 4).map((item) => `- Section: ${item.title} -> ${item.goal}`));
+    lines.push(...(contextPack.frontend?.differentiationPlays || []).slice(0, 3).map((item) => `- Differentiation: ${item.title} -> ${item.move}`));
+    lines.push(...(contextPack.frontend?.buildNow || []).slice(0, 3).map((item) => `- Build next: ${item.title} -> ${item.target}`));
     lines.push(...frontendDirection.semanticGuardrails.slice(0, 5).map((item) => `- Guardrail: ${item}`));
     lines.push(...frontendDirection.nativeFirstRecommendations.slice(0, 4).map((item) => `- Native first: ${item.title} -> ${item.native}`));
     lines.push(...frontendDirection.recipePack.slice(0, 3).map((item) => `- Recipe: ${item.title} -> ${item.structure}`));
@@ -768,8 +783,20 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile) {
       archetype: frontendDirection.archetype.label,
       taste: frontendDirection.taste.tagline,
       tasteProfile: frontendDirection.taste.profile,
+      designDnaFile: contextPack.frontend?.designDnaFile || null,
+      pageBlueprintFile: contextPack.frontend?.pageBlueprintFile || null,
+      designMdFile: contextPack.frontend?.designMdFile || null,
+      componentStrategyFile: contextPack.frontend?.componentStrategyFile || null,
+      designBenchmarkFile: contextPack.frontend?.designBenchmarkFile || null,
+      productCategory: contextPack.frontend?.productCategory || null,
+      referenceBlend: contextPack.frontend?.referenceBlend || null,
+      pageType: contextPack.frontend?.pageType || null,
       recipeFile: contextPack.frontend?.recipeFile || null,
       selectedRecipe: contextPack.frontend?.selectedRecipe || null,
+      pageSections: contextPack.frontend?.pageSections || [],
+      buildNow: contextPack.frontend?.buildNow || [],
+      differentiationPlays: contextPack.frontend?.differentiationPlays || [],
+      commodityRisks: contextPack.frontend?.commodityRisks || [],
       semanticGuardrails: frontendDirection.semanticGuardrails,
       nativeFirst: frontendDirection.nativeFirstRecommendations,
       recipePack: frontendDirection.recipePack,
@@ -807,7 +834,10 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile) {
 function doPromptPack(cwd, args) {
   const { goal, rootDir, analysis } = buildIntentAnalysisForCodex(cwd, args);
   const profile = selectCodexProfile({ analysis });
-  const pack = buildCodexPromptPack(cwd, rootDir, goal, analysis, profile);
+  const pack = buildCodexPromptPack(cwd, rootDir, goal, analysis, profile, {
+    taste: args.taste ? String(args.taste).trim() : '',
+    page: args.page ? String(args.page).trim() : '',
+  });
   return {
     action: 'promptpack',
     scope: scopeName(args),
@@ -825,6 +855,7 @@ function doContextPack(cwd, args) {
   const profile = selectCodexProfile({ analysis });
   const pack = buildCodexContextPack(cwd, rootDir, goal, analysis, profile, {
     taste: args.taste ? String(args.taste).trim() : '',
+    page: args.page ? String(args.page).trim() : '',
     writeFiles: true,
   });
   return {
@@ -863,7 +894,10 @@ function doProfileSuggest(cwd, args) {
 function doBootstrap(cwd, args) {
   const { goal, rootDir, analysis } = buildIntentAnalysisForCodex(cwd, args);
   const profile = selectCodexProfile({ analysis });
-  const promptPack = buildCodexPromptPack(cwd, rootDir, goal, analysis, profile);
+  const promptPack = buildCodexPromptPack(cwd, rootDir, goal, analysis, profile, {
+    taste: args.taste ? String(args.taste).trim() : '',
+    page: args.page ? String(args.page).trim() : '',
+  });
   const payload = {
     action: 'bootstrap',
     scope: scopeName(args),
@@ -983,7 +1017,12 @@ function doPlanSubagents(cwd, args) {
   const monorepo = analysis.repoSignals.monorepo
     ? buildMonorepoIntelligence(cwd, rootDir, { writeFiles: true, maxWorkers: 4 })
     : null;
-  const frontendDirection = analysis.chosenCapability.domain === 'frontend' || analysis.repoSignals.frontendActive
+  const wantsFrontend = frontendRequested(analysis, null, {
+    goal,
+    taste: args.taste ? String(args.taste).trim() : '',
+    page: args.page ? String(args.page).trim() : '',
+  });
+  const frontendDirection = wantsFrontend
     ? buildUiDirection(cwd, rootDir, { goal })
     : null;
 
@@ -1037,11 +1076,11 @@ function doPlanSubagents(cwd, args) {
       plan.push({ owner: 'worker-1', focus: 'correctness/perf/security review', scope: 'read-only changed files', mode: 'parallel_readonly' });
       plan.push({ owner: 'worker-2', focus: 'test-gap and replay review', scope: 'tests + workflow reports', mode: 'parallel_readonly' });
     }
-  } else if (analysis.chosenCapability.domain === 'frontend') {
+  } else if (wantsFrontend) {
     plan.push({
       owner: 'worker-1',
       focus: frontendDirection ? `Apply UI direction (${frontendDirection.archetype.label}) with ${frontendDirection.taste.profile.label} taste while shaping shared primitives.` : 'UI spec + component inventory',
-      scope: frontendDirection ? `${frontendDirection.file}, ${frontendDirection.profile.workflowRootRelative}/UI-SPEC.md` : 'docs/workflow/UI-*.md and component map',
+      scope: frontendDirection ? `${frontendDirection.file}, ${frontendDirection.profile.workflowRootRelative}/UI-SPEC.md, ${frontendDirection.profile.workflowRootRelative}/DESIGN-DNA.md, ${frontendDirection.profile.workflowRootRelative}/STATE-ATLAS.md, ${frontendDirection.profile.workflowRootRelative}/COMPONENT-STRATEGY.md, ${frontendDirection.profile.workflowRootRelative}/DESIGN-BENCHMARK.md` : 'docs/workflow/UI-*.md, DESIGN-DNA.md, STATE-ATLAS.md, COMPONENT-STRATEGY.md, DESIGN-BENCHMARK.md, and component map',
       mode: 'bounded',
     });
     plan.push({ owner: 'worker-2', focus: 'browser evidence + responsive review', scope: 'preview/browser verification only', mode: 'parallel_readonly' });
@@ -1072,7 +1111,10 @@ function doPlanSubagents(cwd, args) {
     plan.push({ owner: 'worker-1', focus: 'supporting exploration or verification', scope: 'read-only supporting files', mode: 'parallel_readonly' });
   }
 
-  const promptPack = buildCodexPromptPack(cwd, rootDir, goal, analysis, profile);
+  const promptPack = buildCodexPromptPack(cwd, rootDir, goal, analysis, profile, {
+    taste: args.taste ? String(args.taste).trim() : '',
+    page: args.page ? String(args.page).trim() : '',
+  });
   return {
     action: 'plan-subagents',
     scope: scopeName(args),

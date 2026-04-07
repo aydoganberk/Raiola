@@ -10,6 +10,9 @@ const {
 } = require('./common');
 const { buildCodebaseMap } = require('./map_codebase');
 const { buildComponentInventoryDoc } = require('./component_inventory');
+const { buildDesignDnaDoc, buildStateAtlasDoc } = require('./design_contracts');
+const { buildDesignMdDoc, buildPageBlueprintDoc } = require('./frontend_briefs');
+const { buildComponentStrategyDoc, buildDesignBenchmarkDoc } = require('./frontend_strategy');
 const { buildUiDirection } = require('./design_intelligence');
 const { buildUiRecipeScaffold } = require('./ui_recipe');
 const { buildUiSpec } = require('./ui_spec');
@@ -144,20 +147,42 @@ function collectRepoAttachments(cwd, rootDir) {
 }
 
 function collectFrontendAttachments(cwd, rootDir, analysis, options = {}) {
-  if (!(analysis?.chosenCapability?.domain === 'frontend' || analysis?.repoSignals?.frontendActive)) {
+  if (!frontendRequested(analysis, null, options)) {
     return null;
   }
   const direction = buildUiDirection(cwd, rootDir, {
     goal: options.goal,
     taste: options.taste,
   });
+  const designDna = buildDesignDnaDoc(cwd, rootDir, direction, {
+    goal: options.goal,
+    taste: options.taste,
+  });
+  const stateAtlas = buildStateAtlasDoc(cwd, rootDir, direction, designDna, {
+    goal: options.goal,
+    taste: options.taste,
+  });
+  const pageBlueprint = buildPageBlueprintDoc(cwd, rootDir, direction, designDna, stateAtlas, {
+    goal: options.goal,
+    taste: options.taste,
+    page: options.page,
+  });
+  const designMd = buildDesignMdDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint, {
+    goal: options.goal,
+    taste: options.taste,
+    page: options.page,
+  });
+  const componentStrategy = buildComponentStrategyDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint);
+  const designBenchmark = buildDesignBenchmarkDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint, componentStrategy);
   const spec = buildUiSpec(cwd, rootDir, {
     goal: options.goal,
     taste: options.taste,
+    page: options.page,
   });
   const recipe = buildUiRecipeScaffold(cwd, rootDir, {
     goal: options.goal,
     taste: options.taste,
+    page: options.page,
   });
   const inventory = buildComponentInventoryDoc(cwd, rootDir);
   const attachments = [];
@@ -172,6 +197,48 @@ function collectFrontendAttachments(cwd, rootDir, analysis, options = {}) {
     id: 'ui-spec',
     title: 'UI specification',
     reason: 'Flow, state, responsive, and accessibility contract for frontend work.',
+    lane: 'frontend',
+    priority: 'recommended',
+  });
+  pushAttachment(attachments, cwd, path.join(rootDir, 'DESIGN-DNA.md'), {
+    id: 'design-dna',
+    title: 'Design DNA',
+    reason: 'Reference blend and external design benchmark for the target product surface.',
+    lane: 'frontend',
+    priority: 'recommended',
+  });
+  pushAttachment(attachments, cwd, path.join(rootDir, 'STATE-ATLAS.md'), {
+    id: 'state-atlas',
+    title: 'State atlas',
+    reason: 'Required UX states and review hooks for the current frontend slice.',
+    lane: 'frontend',
+    priority: 'recommended',
+  });
+  pushAttachment(attachments, cwd, path.join(rootDir, 'PAGE-BLUEPRINT.md'), {
+    id: 'page-blueprint',
+    title: 'Page blueprint',
+    reason: 'Section map, proof surfaces, and conversion structure for the current page family.',
+    lane: 'frontend',
+    priority: 'recommended',
+  });
+  pushAttachment(attachments, cwd, path.join(rootDir, 'DESIGN.md'), {
+    id: 'design-md',
+    title: 'DESIGN.md export',
+    reason: 'Portable design-system markdown for downstream agent-driven UI implementation.',
+    lane: 'frontend',
+    priority: 'recommended',
+  });
+  pushAttachment(attachments, cwd, path.join(rootDir, 'COMPONENT-STRATEGY.md'), {
+    id: 'component-strategy',
+    title: 'Component strategy',
+    reason: 'Reuse/extract/build guidance for adapting the current repo to the target page family.',
+    lane: 'frontend',
+    priority: 'recommended',
+  });
+  pushAttachment(attachments, cwd, path.join(rootDir, 'DESIGN-BENCHMARK.md'), {
+    id: 'design-benchmark',
+    title: 'Design benchmark',
+    reason: 'Differentiation plays and commodity-risk checks derived from the selected reference blend.',
     lane: 'frontend',
     priority: 'recommended',
   });
@@ -191,6 +258,12 @@ function collectFrontendAttachments(cwd, rootDir, analysis, options = {}) {
   });
   return {
     direction,
+    designDna,
+    pageBlueprint,
+    designMd,
+    componentStrategy,
+    designBenchmark,
+    stateAtlas,
     spec,
     recipe,
     inventory,
@@ -198,11 +271,18 @@ function collectFrontendAttachments(cwd, rootDir, analysis, options = {}) {
   };
 }
 
-function frontendRequested(analysis, frontend) {
+function goalLooksFrontend(goal) {
+  return /\b(ui|ux|frontend|landing|landing page|website|site|page|screen|dashboard|pricing|settings|hero|component|responsive|design system)\b/i.test(String(goal || ''));
+}
+
+function frontendRequested(analysis, frontend, options = {}) {
   return Boolean(
     frontend
       || analysis?.chosenCapability?.domain === 'frontend'
-      || analysis?.repoSignals?.frontendActive,
+      || analysis?.repoSignals?.frontendActive
+      || options.page
+      || options.taste
+      || goalLooksFrontend(options.goal),
   );
 }
 
@@ -480,7 +560,15 @@ function renderMarkdown(payload) {
       '## Frontend Guidance',
       '',
       `- Taste signature: \`${payload.frontend.taste}\``,
+      `- Product category: \`${payload.frontend.productCategory?.label || 'n/a'}\``,
+      `- Reference blend: \`${payload.frontend.referenceBlend?.summary || 'n/a'}\``,
+      `- Page type: \`${payload.frontend.pageType?.label || 'n/a'}\``,
+      `- Component strategy: \`${payload.frontend.componentStrategyFile || 'n/a'}\``,
+      `- Design benchmark: \`${payload.frontend.designBenchmarkFile || 'n/a'}\``,
       `- Prototype mode: \`${payload.frontend.prototypeMode?.mode || 'n/a'}\` (${payload.frontend.prototypeMode?.recommended ? 'recommended' : 'optional'})`,
+      ...(payload.frontend.pageSections || []).slice(0, 4).map((item) => `- Section: \`${item.title}\` -> ${item.goal}`),
+      ...(payload.frontend.differentiationPlays || []).slice(0, 3).map((item) => `- Differentiation: \`${item.title}\` -> ${item.move}`),
+      ...(payload.frontend.buildNow || []).slice(0, 3).map((item) => `- Build next: \`${item.title}\` -> ${item.target}`),
       ...(payload.frontend.semanticGuardrails || []).map((item) => `- Guardrail: ${item}`),
       ...(payload.frontend.nativeFirst || []).slice(0, 4).map((item) => `- Native first: \`${item.title}\` -> \`${item.native}\``),
       ...(payload.frontend.recipePack || []).slice(0, 4).map((item) => `- Recipe: \`${item.title}\` -> ${item.structure}`),
@@ -503,7 +591,10 @@ function buildCodexContextPack(cwd, rootDir, goal, analysis, profile, options = 
   };
   const repo = collectRepoAttachments(cwd, rootDir);
   const monorepo = collectMonorepoAttachments(cwd, rootDir, analysis);
-  const frontend = collectFrontendAttachments(cwd, rootDir, analysis, options);
+  const frontend = collectFrontendAttachments(cwd, rootDir, analysis, {
+    ...options,
+    goal,
+  });
   const review = collectReviewAttachments(cwd, analysis);
   const attachments = uniqueByPath([
     ...workflow.attachments,
@@ -538,12 +629,18 @@ function buildCodexContextPack(cwd, rootDir, goal, analysis, profile, options = 
     deep: buildBudgetPreset(4200, [...readOrder, ...attachments.filter((item) => item.priority === 'defer')]),
   };
   const avoidPatterns = buildAvoidPatterns();
-  const wantsFrontend = frontendRequested(analysis, frontend);
+  const wantsFrontend = frontendRequested(analysis, frontend, { ...options, goal });
   const suggestedCommands = [
     'cwf codex promptpack --goal "<goal>"',
     analysis?.chosenCapability?.domain === 'review' ? 'cwf review-tasks --json' : '',
     analysis?.repoSignals?.monorepo ? 'cwf monorepo --json' : '',
+    wantsFrontend ? 'cwf frontend-brief --json' : '',
     wantsFrontend ? 'cwf ui-direction --json' : '',
+    wantsFrontend ? 'cwf design-dna --json' : '',
+    wantsFrontend ? 'cwf page-blueprint --json' : '',
+    wantsFrontend ? 'cwf design-md --json' : '',
+    wantsFrontend ? 'cwf component-strategy --json' : '',
+    wantsFrontend ? 'cwf design-benchmark --json' : '',
     wantsFrontend ? 'cwf ui-spec --json' : '',
     wantsFrontend ? 'cwf ui-recipe --json' : '',
   ].filter(Boolean);
@@ -569,16 +666,29 @@ function buildCodexContextPack(cwd, rootDir, goal, analysis, profile, options = 
     } : null,
     frontend: frontend?.direction ? {
       file: frontend.direction.file,
+      designDnaFile: frontend.designDna?.file || null,
+      pageBlueprintFile: frontend.pageBlueprint?.file || null,
+      designMdFile: frontend.designMd?.file || null,
+      componentStrategyFile: frontend.componentStrategy?.file || null,
+      designBenchmarkFile: frontend.designBenchmark?.file || null,
+      stateAtlasFile: frontend.stateAtlas?.file || null,
       specFile: frontend.spec?.file || null,
       recipeFile: frontend.recipe?.file || null,
       componentInventoryFile: frontend.inventory?.file || null,
       taste: frontend.direction.taste.tagline,
       tasteProfile: frontend.direction.taste.profile || null,
+      productCategory: frontend.designDna?.productCategory || null,
+      referenceBlend: frontend.designDna?.blend || null,
       tokens: frontend.direction.designTokens || null,
       experienceThesis: frontend.direction.experienceThesis || null,
       semanticGuardrails: frontend.direction.semanticGuardrails || [],
       nativeFirst: frontend.direction.nativeFirstRecommendations || [],
       recipePack: frontend.direction.recipePack || [],
+      pageType: frontend.pageBlueprint?.pageType || null,
+      pageSections: frontend.pageBlueprint?.sections || [],
+      buildNow: frontend.componentStrategy?.buildNow || [],
+      differentiationPlays: frontend.designBenchmark?.differentiationPlays || [],
+      commodityRisks: frontend.designBenchmark?.commodityRisks || [],
       prototypeMode: frontend.direction.prototypeMode || null,
       selectedRecipe: frontend.recipe?.recipe || null,
       signatureMoments: frontend.direction.signatureMoments || [],
@@ -616,6 +726,7 @@ Options:
   --goal <text>   Goal text for routing and context shaping
   --root <path>   Workflow root. Defaults to active workstream root
   --taste <id>    Optional explicit taste profile for frontend packs
+  --page <id>     Optional explicit page type for frontend packs
   --json          Print machine-readable output
   `);
 }
@@ -632,6 +743,7 @@ function main(argv = process.argv.slice(2)) {
   const analysis = optionsAnalyzeIntent(cwd, rootDir, goal);
   const payload = buildCodexContextPack(cwd, rootDir, goal, analysis.analysis, analysis.profile, {
     taste: args.taste,
+    page: args.page,
   });
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -656,6 +768,7 @@ function optionsAnalyzeIntent(cwd, rootDir, goal) {
 
 module.exports = {
   buildCodexContextPack,
+  frontendRequested,
   main,
 };
 

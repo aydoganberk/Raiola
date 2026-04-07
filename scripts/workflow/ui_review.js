@@ -18,12 +18,25 @@ const {
   relativePath,
   writeDoc,
 } = require('./frontend_os');
+const { buildUiDirection } = require('./design_intelligence');
+const {
+  buildDesignContractAudit,
+  buildDesignDnaDoc,
+  buildStateAtlasDoc,
+} = require('./design_contracts');
+const { buildDesignMdDoc, buildPageBlueprintDoc } = require('./frontend_briefs');
+const { buildComponentStrategyDoc, buildDesignBenchmarkDoc } = require('./frontend_strategy');
 const { writeRuntimeJson } = require('./runtime_helpers');
 
 async function buildUiReview(cwd, rootDir, args = {}) {
   const profile = buildFrontendProfile(cwd, rootDir, { scope: 'workstream', refresh: 'incremental' });
   const inventory = collectComponentInventory(cwd);
   const responsiveMatrix = buildResponsiveMatrix(profile, inventory);
+  const uiOptions = {
+    goal: args.goal ? String(args.goal).trim() : '',
+    taste: args.taste ? String(args.taste).trim() : '',
+  };
+  const direction = buildUiDirection(cwd, rootDir, uiOptions);
 
   if (args.url) {
     await runVerifyBrowser(cwd, {
@@ -42,6 +55,17 @@ async function buildUiReview(cwd, rootDir, args = {}) {
   const journeyAudit = buildJourneyAudit(profile, browserArtifacts, inventory);
   const primitiveContractAudit = buildPrimitiveContractAudit(cwd, profile, inventory);
   const primitiveOpportunities = buildPrimitiveOpportunityAudit(cwd, profile, inventory);
+  const designDna = buildDesignDnaDoc(cwd, rootDir, direction, uiOptions);
+  const stateAtlas = buildStateAtlasDoc(cwd, rootDir, direction, designDna, uiOptions);
+  const pageBlueprint = buildPageBlueprintDoc(cwd, rootDir, direction, designDna, stateAtlas, uiOptions);
+  const designMd = buildDesignMdDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint, uiOptions);
+  const componentStrategy = buildComponentStrategyDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint);
+  const designBenchmark = buildDesignBenchmarkDoc(cwd, rootDir, direction, designDna, stateAtlas, pageBlueprint, componentStrategy);
+  const designContractAudit = buildDesignContractAudit(designDna, stateAtlas, {
+    missingStateAudit,
+    tokenDriftAudit,
+    browserArtifacts,
+  });
   const debt = buildDesignDebt(profile, inventory, browserArtifacts, {
     missingStateAudit,
     tokenDriftAudit,
@@ -60,6 +84,7 @@ async function buildUiReview(cwd, rootDir, args = {}) {
 - Frontend mode: \`${profile.frontendMode.status}\`
 - Browser artifacts: \`${browserArtifacts.length}\`
 - Overall score: \`${scorecard.overall}/5\`
+- Design contract: \`${designContractAudit.verdict}\` (${designContractAudit.score}/5)
 
 ## Scorecard
 
@@ -69,6 +94,27 @@ async function buildUiReview(cwd, rootDir, args = {}) {
 - \`accessibility\` ${scorecard.accessibility}/5
 - \`component hygiene\` ${scorecard.componentHygiene}/5
 - \`copy consistency\` ${scorecard.copyConsistency}/5
+
+## Design Contract Audit
+
+- \`Design DNA\` ${designDna.file}
+- \`Page blueprint\` ${pageBlueprint.file}
+- \`DESIGN.md export\` ${designMd.file}
+- \`Component strategy\` ${componentStrategy.file}
+- \`Design benchmark\` ${designBenchmark.file}
+- \`Reference blend\` ${designContractAudit.referenceBlend}
+- \`Verdict\` ${designContractAudit.verdict}
+- \`Score\` ${designContractAudit.score}/5
+- \`Primary references\` ${designContractAudit.primaryReferences.join(', ')}
+- \`Required atlas states\` ${designContractAudit.requiredStates.join(', ')}
+${designContractAudit.missingRequiredStates.length > 0
+    ? designContractAudit.missingRequiredStates.map((item) => `- [missing] \`${item.id}\` -> signals ${item.missingSignals.join(', ')}`).join('\n')
+    : '- `Required atlas states have code-level evidence signals.`'}
+${designContractAudit.concerns.length > 0
+    ? designContractAudit.concerns.map((item) => `- [${item.severity}] \`${item.area}\` ${item.detail}`).join('\n')
+    : '- `No design-contract concerns were detected.`'}
+- \`Benchmark plays\` ${designBenchmark.differentiationPlays.map((item) => item.title).join(', ')}
+- \`${designContractAudit.guidance}\`
 
 ## Responsive Audit
 
@@ -87,6 +133,7 @@ ${debt.length > 0 ? debt.map((item) => `- [${item.severity}] \`${item.area}\` ${
 ${missingStateAudit.missing.length > 0
     ? `- Missing coverage: \`${missingStateAudit.missing.join(', ')}\``
     : '- `Core loading/empty/error/success/disabled/interaction states were detected in the UI surface.`'}
+${stateAtlas.requiredStates.map((item) => `- \`Atlas requires: ${item}\``).join('\n')}
 
 ## Accessibility Audit
 
@@ -136,6 +183,14 @@ ${browserArtifacts.length > 0
     file: relativePath(cwd, filePath),
     scorecard,
     browserArtifacts,
+    direction,
+    designDna,
+    pageBlueprint,
+    designMd,
+    componentStrategy,
+    designBenchmark,
+    stateAtlas,
+    designContractAudit,
     debt,
     missingStateAudit,
     tokenDriftAudit,

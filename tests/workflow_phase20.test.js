@@ -113,6 +113,9 @@ test('ui-direction accepts explicit taste profiles and exports richer design sig
 
   assert.equal(direction.taste.profile.id, 'premium-minimal');
   assert.equal(direction.taste.profile.source, 'explicit');
+  assert.ok(direction.designDna);
+  assert.ok(direction.designDna.references.length >= 2);
+  assert.ok(direction.designDna.productCategory.label);
   assert.ok(Object.keys(direction.designTokens).length >= 5);
   assert.ok(direction.componentCues.length >= 2);
   assert.ok(direction.styleGuardrails.length >= 2);
@@ -121,12 +124,110 @@ test('ui-direction accepts explicit taste profiles and exports richer design sig
   assert.ok(direction.recipePack.length >= 3);
   assert.ok(direction.prototypeMode.mode);
   assert.equal(spec.direction.taste.profile.id, 'premium-minimal');
+  assert.ok(spec.designDna.references.length >= 2);
+  assert.ok(spec.stateAtlas.requiredStates.includes('loading'));
   assert.ok(spec.direction.nativeFirstRecommendations.length >= 4);
   assert.ok(spec.direction.recipePack.length >= 3);
   assert.ok(spec.semanticAudit);
   assert.ok(spec.primitiveOpportunities);
   assert.ok(fs.existsSync(path.join(targetRepo, direction.file)));
   assert.ok(fs.existsSync(path.join(targetRepo, spec.file)));
+  assert.ok(fs.existsSync(path.join(targetRepo, spec.designDna.file)));
+  assert.ok(fs.existsSync(path.join(targetRepo, spec.stateAtlas.file)));
+});
+
+test('design-dna and state-atlas generate downstream site-building contracts', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  seedFrontendRepo(targetRepo);
+  writeFile(
+    targetRepo,
+    'app/page.tsx',
+    'export default function Page() { return <main><h1>CLI for AI agents</h1><p>Ship faster with traceable workflows.</p><form><input aria-label="Email" /><button type="submit">Join</button></form></main>; }\n',
+  );
+
+  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const designDna = JSON.parse(run(
+    'node',
+    [targetBin, 'design-dna', '--goal', 'build a developer tool landing page for AI agents', '--json'],
+    targetRepo,
+  ));
+  const stateAtlas = JSON.parse(run(
+    'node',
+    [targetBin, 'state-atlas', '--goal', 'build a developer tool landing page for AI agents', '--json'],
+    targetRepo,
+  ));
+
+  assert.ok(designDna.productCategory.id === 'developer-tool' || designDna.productCategory.id === 'ai-platform');
+  assert.ok(designDna.references.length >= 2);
+  assert.ok(designDna.blend.summary.includes('+'));
+  assert.ok(stateAtlas.requiredStates.includes('success'));
+  assert.ok(stateAtlas.states.some((item) => item.id === 'form-validation'));
+  assert.ok(fs.existsSync(path.join(targetRepo, designDna.file)));
+  assert.ok(fs.existsSync(path.join(targetRepo, stateAtlas.file)));
+  assert.ok(fs.existsSync(path.join(targetRepo, designDna.runtimeFile)));
+  assert.ok(fs.existsSync(path.join(targetRepo, stateAtlas.runtimeFile)));
+});
+
+test('page-blueprint, design-md, component-strategy, design-benchmark, and frontend-brief generate external-site artifact packs', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  seedFrontendRepo(targetRepo);
+  writeFile(
+    targetRepo,
+    'app/page.tsx',
+    'export default function Page() { return <main><h1>AI agent platform</h1><p>Ship trusted workflows fast.</p><button type="button">Start building</button></main>; }\n',
+  );
+
+  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const blueprint = JSON.parse(run(
+    'node',
+    [targetBin, 'page-blueprint', '--goal', 'build a developer tool landing page for AI agents', '--json'],
+    targetRepo,
+  ));
+  const designMd = JSON.parse(run(
+    'node',
+    [targetBin, 'design-md', '--goal', 'build a developer tool landing page for AI agents', '--project-root', '--json'],
+    targetRepo,
+  ));
+  const componentStrategy = JSON.parse(run(
+    'node',
+    [targetBin, 'component-strategy', '--goal', 'build a developer tool landing page for AI agents', '--json'],
+    targetRepo,
+  ));
+  const designBenchmark = JSON.parse(run(
+    'node',
+    [targetBin, 'design-benchmark', '--goal', 'build a developer tool landing page for AI agents', '--json'],
+    targetRepo,
+  ));
+  const frontendBrief = JSON.parse(run(
+    'node',
+    [targetBin, 'frontend-brief', '--goal', 'build a developer tool landing page for AI agents', '--project-root', '--json'],
+    targetRepo,
+  ));
+
+  assert.equal(blueprint.pageType.id, 'landing-page');
+  assert.ok(blueprint.sections.length >= 5);
+  assert.ok(blueprint.sections.some((item) => item.id === 'hero'));
+  assert.ok(designMd.file.endsWith('docs/workflow/DESIGN.md'));
+  assert.equal(designMd.projectRootFile, 'DESIGN.md');
+  assert.ok(componentStrategy.file.endsWith('COMPONENT-STRATEGY.md'));
+  assert.ok(componentStrategy.buildNow.length >= 1);
+  assert.ok(componentStrategy.componentPolicy.length >= 3);
+  assert.ok(designBenchmark.file.endsWith('DESIGN-BENCHMARK.md'));
+  assert.ok(designBenchmark.differentiationPlays.length >= 2);
+  assert.ok(designBenchmark.commodityRisks.length >= 2);
+  assert.ok(fs.existsSync(path.join(targetRepo, designMd.file)));
+  assert.ok(fs.existsSync(path.join(targetRepo, designMd.projectRootFile)));
+  assert.ok(fs.existsSync(path.join(targetRepo, componentStrategy.file)));
+  assert.ok(fs.existsSync(path.join(targetRepo, designBenchmark.file)));
+  assert.ok(frontendBrief.pageBlueprint.file.endsWith('PAGE-BLUEPRINT.md'));
+  assert.ok(frontendBrief.designMd.file.endsWith('DESIGN.md'));
+  assert.ok(frontendBrief.componentStrategy.file.endsWith('COMPONENT-STRATEGY.md'));
+  assert.ok(frontendBrief.designBenchmark.file.endsWith('DESIGN-BENCHMARK.md'));
+  assert.ok(frontendBrief.spec.file.endsWith('UI-SPEC.md'));
+  assert.ok(fs.existsSync(path.join(targetRepo, frontendBrief.file)));
+  assert.ok(fs.existsSync(path.join(targetRepo, frontendBrief.runtimeFile)));
 });
 
 test('ui-recipe scaffolds a framework-aware semantic-first slice', () => {
@@ -262,13 +363,32 @@ test('codex contextpack wraps workflow, repo, frontend, and review context into 
   assert.ok(pack.focusFiles.length >= 1);
   assert.ok(pack.frontend);
   assert.ok(pack.frontend.tasteProfile);
+  assert.ok(pack.frontend.designDnaFile);
+  assert.ok(pack.frontend.pageBlueprintFile);
+  assert.ok(pack.frontend.designMdFile);
+  assert.ok(pack.frontend.componentStrategyFile);
+  assert.ok(pack.frontend.designBenchmarkFile);
+  assert.ok(pack.frontend.productCategory);
+  assert.ok(pack.frontend.referenceBlend);
+  assert.ok(pack.frontend.pageType);
+  assert.ok(pack.frontend.pageSections.length >= 3);
+  assert.ok(pack.frontend.buildNow.length >= 1);
+  assert.ok(pack.frontend.differentiationPlays.length >= 2);
   assert.ok(pack.frontend.semanticGuardrails.length >= 2);
   assert.ok(pack.frontend.nativeFirst.length >= 3);
   assert.ok(pack.frontend.recipePack.length >= 2);
   assert.ok(pack.frontend.prototypeMode);
   assert.ok(pack.frontend.recipeFile);
   assert.ok(pack.frontend.selectedRecipe);
+  assert.ok(pack.attachments.some((item) => item.id === 'page-blueprint'));
+  assert.ok(pack.attachments.some((item) => item.id === 'design-md'));
+  assert.ok(pack.attachments.some((item) => item.id === 'component-strategy'));
+  assert.ok(pack.attachments.some((item) => item.id === 'design-benchmark'));
   assert.ok(pack.attachments.some((item) => item.id === 'ui-recipe'));
+  assert.ok(pack.suggestedCommands.includes('cwf frontend-brief --json'));
+  assert.ok(pack.suggestedCommands.includes('cwf design-md --json'));
+  assert.ok(pack.suggestedCommands.includes('cwf component-strategy --json'));
+  assert.ok(pack.suggestedCommands.includes('cwf design-benchmark --json'));
   assert.ok(pack.suggestedCommands.includes('cwf ui-recipe --json'));
   assert.ok(pack.review);
   assert.equal(pack.review.waveCount, 4);

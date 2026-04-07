@@ -163,35 +163,43 @@ function buildDoctorReport(cwd, rootDir) {
       'cwf update --overwrite-scripts',
     );
   } else {
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    const currentScripts = packageJson.scripts || {};
-    const missingScripts = [];
-    const mismatchedScripts = [];
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      const currentScripts = packageJson.scripts || {};
+      const missingScripts = [];
+      const mismatchedScripts = [];
 
-    for (const [name, expected] of expectedScriptEntries) {
-      if (!(name in currentScripts)) {
-        missingScripts.push(name);
-        continue;
+      for (const [name, expected] of expectedScriptEntries) {
+        if (!(name in currentScripts)) {
+          missingScripts.push(name);
+          continue;
+        }
+        if (currentScripts[name] !== expected) {
+          mismatchedScripts.push(name);
+        }
       }
-      if (currentScripts[name] !== expected) {
-        mismatchedScripts.push(name);
-      }
-    }
 
-    if (missingScripts.length === 0 && mismatchedScripts.length === 0) {
-      pushCheck('pass', `Package scripts -> ${expectedScriptEntries.length} expected workflow:* mappings are installed`);
-    } else {
-      const details = [];
-      if (missingScripts.length > 0) {
-        details.push(`missing=${summarizeItems(missingScripts)}`);
+      if (missingScripts.length === 0 && mismatchedScripts.length === 0) {
+        pushCheck('pass', `Package scripts -> ${expectedScriptEntries.length} expected workflow:* mappings are installed`);
+      } else {
+        const details = [];
+        if (missingScripts.length > 0) {
+          details.push(`missing=${summarizeItems(missingScripts)}`);
+        }
+        if (mismatchedScripts.length > 0) {
+          details.push(`mismatched=${summarizeItems(mismatchedScripts)}`);
+        }
+        pushCheck(
+          'fail',
+          `Package scripts -> ${details.join(' | ')}`,
+          'cwf update --overwrite-scripts',
+        );
       }
-      if (mismatchedScripts.length > 0) {
-        details.push(`mismatched=${summarizeItems(mismatchedScripts)}`);
-      }
+    } catch (error) {
       pushCheck(
         'fail',
-        `Package scripts -> ${details.join(' | ')}`,
-        'cwf update --overwrite-scripts',
+        `Package scripts -> package.json is invalid JSON (${String(error.message || error)})`,
+        'Fix package.json JSON syntax, then rerun cwf doctor --repair',
       );
     }
   }

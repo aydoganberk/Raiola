@@ -125,11 +125,14 @@ test('ui review exposes missing-state and token-drift audits', () => {
   assert.ok(['pass', 'warn', 'incomplete', 'inconclusive'].includes(uiReview.journeyAudit.coverage));
   assert.ok(uiReview.semanticAudit.issueCount >= 1);
   assert.ok(uiReview.primitiveOpportunities.opportunityCount >= 1);
+  assert.ok(['pass', 'warn', 'fail'].includes(uiReview.designContractAudit.verdict));
+  assert.ok(uiReview.designContractAudit.missingRequiredStates.some((item) => item.id === 'loading'));
   assert.ok(uiSpec.missingStateAudit.missing.includes('loading'));
   assert.ok(uiSpec.accessibilityAudit);
   assert.ok(uiSpec.journeyAudit);
   assert.ok(uiSpec.semanticAudit.issueCount >= 1);
   assert.ok(uiSpec.primitiveOpportunities.opportunityCount >= 1);
+  assert.ok(uiSpec.stateAtlas.requiredStates.includes('loading'));
 });
 
 test('review engine detects API drift and data migration risks in diff mode', () => {

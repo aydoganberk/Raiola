@@ -8,7 +8,7 @@ Full workflow canonical files live under `docs/workflow/` or the active named wo
 
 That canonical set now includes governance surfaces such as `docs/workflow/POLICY.md`; runtime mirrors remain derived state only.
 
-Frontend OS canonical files now include `docs/workflow/UI-DIRECTION.md`, `UI-SPEC.md`, `UI-PLAN.md`, `UI-REVIEW.md`, `RESPONSIVE-MATRIX.md`, `COMPONENT-INVENTORY.md`, and `DESIGN-DEBT.md`.
+Frontend OS canonical files now include `docs/workflow/UI-DIRECTION.md`, `DESIGN-DNA.md`, `STATE-ATLAS.md`, `PAGE-BLUEPRINT.md`, `DESIGN.md`, `COMPONENT-STRATEGY.md`, `DESIGN-BENCHMARK.md`, `FRONTEND-BRIEF.md`, `UI-SPEC.md`, `UI-PLAN.md`, `UI-REVIEW.md`, `RESPONSIVE-MATRIX.md`, `COMPONENT-INVENTORY.md`, and `DESIGN-DEBT.md`.
 
 Quick mode canonical files live under `.workflow/quick/*.md`.
 
@@ -55,7 +55,7 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 - `review_engine.js` and `review_findings.js` add the multi-pass Review OS with findings, heatmap, blockers, replay, and patch suggestions.
 - `review_semantic.js` deepens Review OS with exported-surface, auth-guard, error-path, and frontend semantic analysis on top of raw diff heuristics.
 - `review_orchestration.js` turns review output into package-aware, persona-aware, wave-based execution plans for large repos and monorepos.
-- `frontend_os.js`, `design_intelligence.js`, `ui_direction.js`, `ui_spec.js`, `ui_plan.js`, `ui_review.js`, `component_inventory.js`, `responsive_matrix.js`, `design_debt.js`, and `preview.js` add the Frontend OS surface plus taste-aware direction generation.
+- `frontend_os.js`, `design_intelligence.js`, `design_contracts.js`, `frontend_briefs.js`, `frontend_strategy.js`, `ui_direction.js`, `design_dna.js`, `page_blueprint.js`, `design_md.js`, `component_strategy.js`, `design_benchmark.js`, `state_atlas.js`, `frontend_brief.js`, `ui_spec.js`, `ui_plan.js`, `ui_review.js`, `component_inventory.js`, `responsive_matrix.js`, `design_debt.js`, and `preview.js` add the Frontend OS surface plus taste-aware direction generation.
 - `package_graph.js`, `monorepo.js`, and `.workflowignore`-aware `fs_index.js` add the Scale OS package graph, impacted-test visibility, review shard planning, verify planning, and denylist layer.
 - `policy.js` and `approvals.js` treat `docs/workflow/POLICY.md` as the source of truth and keep `.workflow/runtime/policy.json` plus `.workflow/runtime/approvals.json` in sync as derived mirrors.
 - `cwf doctor` audits both canonical workflow health and install-surface integrity, including package scripts, runtime files, skill installation, and the visible version marker.

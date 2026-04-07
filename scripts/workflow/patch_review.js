@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseArgs } = require('./common');
+const { parseArgs, safeArtifactToken } = require('./common');
 const { listEntries, relativePath } = require('./roadmap_os');
 
 function patchDir(cwd) {
@@ -14,7 +14,7 @@ function main() {
     return;
   }
   const cwd = process.cwd();
-  const task = args.task ? String(args.task) : '';
+  const task = args.task ? safeArtifactToken(String(args.task), { label: 'Task id', prefix: 'task' }) : '';
   const patches = listEntries(patchDir(cwd), { filesOnly: true })
     .filter((entry) => entry.name.endsWith('.patch') && (!task || entry.name === `${task}.patch`))
     .map((entry) => ({

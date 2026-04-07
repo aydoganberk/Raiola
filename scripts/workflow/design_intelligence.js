@@ -7,6 +7,7 @@ const {
   relativePath,
   writeDoc,
 } = require('./frontend_os');
+const { buildDesignDnaPayload } = require('./design_contracts');
 const { writeRuntimeJson } = require('./runtime_helpers');
 
 const TASTE_PROFILES = Object.freeze([
@@ -914,6 +915,7 @@ function renderDirectionMarkdown(payload) {
   const interactionCues = payload.interactionCues.map((item) => `- ${item}`);
   const guardrails = payload.styleGuardrails.map((item) => `- ${item}`);
   const semanticGuardrails = payload.semanticGuardrails.map((item) => `- ${item}`);
+  const dnaReferences = (payload.designDna?.references || []).map((item) => `- \`${item.label}\` -> ${item.signature}`);
   const lines = [
     `- Workflow root: \`${payload.workflowRootRelative}\``,
     `- Archetype: \`${payload.archetype.label}\``,
@@ -924,6 +926,13 @@ function renderDirectionMarkdown(payload) {
     '## Product Direction',
     '',
     `- ${payload.archetype.summary}`,
+    '',
+    '## External Design DNA',
+    '',
+    `- Product category: \`${payload.designDna.productCategory.label}\``,
+    `- Reference blend: \`${payload.designDna.blend.summary}\``,
+    `- North star: ${payload.designDna.northStar.promise}`,
+    ...dnaReferences,
     '',
     '## Experience Thesis',
     '',
@@ -990,6 +999,7 @@ function renderDirectionMarkdown(payload) {
     '## Anti-Patterns',
     '',
     ...payload.antiPatterns.map((item) => `- ${item}`),
+    ...(payload.designDna?.antiPatterns || []).slice(0, 4).map((item) => `- Contract ban: ${item}`),
     '',
     '## Style Guardrails',
     '',
@@ -1080,6 +1090,18 @@ function buildUiDirection(cwd, rootDir, options = {}) {
   const recipePack = buildRecipePack(profile, archetype);
   const prototypeMode = buildPrototypeMode(profile, archetype, inventory, options);
   const implementationPrompts = buildImplementationPrompts(archetype, taste, tasteProfile);
+  const styleGuardrails = buildStyleGuardrails(tasteProfile, archetype);
+  const principles = buildPrinciples(profile, archetype, tasteProfile);
+  const patterns = buildPatterns(profile, inventory, archetype, tasteProfile);
+  const antiPatterns = buildAntiPatterns(archetype, tasteProfile);
+  const codexRecipes = buildCodexRecipes(profile, archetype, taste, tasteProfile);
+  const acceptanceChecklist = buildAcceptanceChecklist(profile, archetype, tasteProfile);
+  const designDna = buildDesignDnaPayload(cwd, rootDir, {
+    profile,
+    archetype,
+    taste,
+    antiPatterns,
+  }, options);
   const payload = {
     generatedAt: new Date().toISOString(),
     workflowRootRelative: relativePath(cwd, rootDir),
@@ -1098,15 +1120,16 @@ function buildUiDirection(cwd, rootDir, options = {}) {
     recipePack,
     prototypeMode,
     implementationPrompts,
+    designDna,
     designTokens,
     componentCues: [...(tasteProfile.componentCues || [])],
     interactionCues: [...(tasteProfile.interactionCues || [])],
-    styleGuardrails: buildStyleGuardrails(tasteProfile, archetype),
-    principles: buildPrinciples(profile, archetype, tasteProfile),
-    patterns: buildPatterns(profile, inventory, archetype, tasteProfile),
-    antiPatterns: buildAntiPatterns(archetype, tasteProfile),
-    codexRecipes: buildCodexRecipes(profile, archetype, taste, tasteProfile),
-    acceptanceChecklist: buildAcceptanceChecklist(profile, archetype, tasteProfile),
+    styleGuardrails,
+    principles,
+    patterns,
+    antiPatterns,
+    codexRecipes,
+    acceptanceChecklist,
     inventoryPreview: inventory.slice(0, 12).map((item) => item.file),
     uiFilePreview: uiFiles.slice(0, 12),
   };

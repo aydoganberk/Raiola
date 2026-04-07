@@ -149,6 +149,25 @@ function slugify(value) {
     .slice(0, 60);
 }
 
+function safeArtifactToken(value, options = {}) {
+  const normalized = String(value || '').trim();
+  const label = String(options.label || 'Value');
+  const prefix = slugify(options.prefix || label) || 'item';
+  const maxBaseLength = Math.max(8, Math.min(48, Number(options.maxBaseLength || 48)));
+
+  if (!normalized) {
+    throw new Error(`${label} is required`);
+  }
+
+  const slug = slugify(normalized);
+  if (slug && slug === normalized) {
+    return normalized;
+  }
+
+  const base = (slug || prefix).slice(0, maxBaseLength) || prefix;
+  return `${base}-${shortHash(hashString(normalized), 10)}`;
+}
+
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -2373,6 +2392,7 @@ module.exports = {
   runGit,
   sanitizeContentForHash,
   safeExec,
+  safeArtifactToken,
   setActiveMilestoneCard,
   shortHash,
   slugify,

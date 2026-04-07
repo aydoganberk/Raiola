@@ -4,6 +4,8 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const childProcess = require('node:child_process');
+const { safeArtifactToken } = require('../scripts/workflow/common');
+const { createPatchBundle } = require('../scripts/workflow/team_runtime_artifacts');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
@@ -87,6 +89,56 @@ EOF
   fs.chmodSync(fakeCodexPath, 0o755);
   return fakeCodexPath;
 }
+
+test('task artifact ids are sanitized before patch bundles are written', () => {
+  const targetRepo = makeTempRepo('codex-workflow-kit-phase23-artifacts-');
+  const unsafeTaskId = '../../../../escape/../../task';
+  const safeTaskId = safeArtifactToken(unsafeTaskId, { label: 'Task id', prefix: 'task' });
+  const bundle = createPatchBundle(
+    targetRepo,
+    { mode: 'snapshot', path: targetRepo },
+    unsafeTaskId,
+    { changedFiles: [] },
+  );
+
+  assert.match(safeTaskId, /^[a-z0-9-]+$/);
+  assert.ok(!safeTaskId.includes('..'));
+  assert.equal(path.basename(bundle.patchFile, '.patch'), safeTaskId);
+  assert.ok(bundle.patchFile.startsWith('.workflow/orchestration/patches/'));
+  assert.ok(!bundle.patchFile.includes('..'));
+  assert.ok(fs.existsSync(path.join(targetRepo, bundle.patchFile)));
+});
+
+test('patch apply keeps task ids inside the patch directory', () => {
+  const targetRepo = makeTempRepo('codex-workflow-kit-phase23-patch-');
+  const patchDir = path.join(targetRepo, '.workflow', 'orchestration', 'patches');
+  fs.mkdirSync(patchDir, { recursive: true });
+
+  const outsidePatch = path.join(path.dirname(targetRepo), 'outside-apply.patch');
+  fs.writeFileSync(outsidePatch, '# malicious patch outside workflow patch dir\n');
+
+  try {
+    const traversalTaskId = path.relative(
+      patchDir,
+      outsidePatch.replace(/\.patch$/, ''),
+    ).replace(/\\/g, '/');
+    const payload = JSON.parse(run(
+      'node',
+      [path.join(repoRoot, 'scripts', 'workflow', 'patch_apply.js'), '--task', traversalTaskId, '--json'],
+      targetRepo,
+    ));
+
+    assert.equal(payload.applied, false);
+    assert.equal(
+      path.basename(payload.file, '.patch'),
+      safeArtifactToken(traversalTaskId, { label: 'Task id', prefix: 'task' }),
+    );
+    assert.ok(payload.file.startsWith('.workflow/orchestration/patches/'));
+    assert.ok(!payload.file.includes('..'));
+  } finally {
+    fs.rmSync(outsidePatch, { force: true });
+  }
+});
 
 test('doctor fails on source-repo product version drift between package, marker, and manifest', () => {
   const targetRepo = makeTempRepo('codex-workflow-kit-phase23-drift-');

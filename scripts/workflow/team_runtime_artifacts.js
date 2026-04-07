@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
-const { ensureDir, slugify } = require('./common');
+const { ensureDir, safeArtifactToken } = require('./common');
 const { appendJsonl, relativePath, writeJsonFile } = require('./roadmap_os');
 const { runReviewEngine } = require('./review_engine');
 
@@ -205,7 +205,10 @@ function createPatchBundle(cwd, workspace, task, options = {}) {
   const taskId = typeof task === 'string' ? task : task?.id;
   const taskObject = typeof task === 'string' ? null : task;
   const changedFiles = options.changedFiles || detectChangedFilesForWorkspace(cwd, workspace, taskObject);
-  const patchPath = path.join(patchDir(cwd), `${slugify(taskId) || taskId}.patch`);
+  const patchPath = path.join(
+    patchDir(cwd),
+    `${safeArtifactToken(taskId, { label: 'Task id', prefix: 'task' })}.patch`,
+  );
   let patchText = '';
 
   if (workspace?.mode === 'git-worktree' && fs.existsSync(workspace.path)) {

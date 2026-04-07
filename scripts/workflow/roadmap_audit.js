@@ -58,12 +58,12 @@ function makeTempRepo(prefix) {
 }
 
 function installWorkflow(targetRepo) {
-  run('node', [path.join(REPO_ROOT, 'bin', 'cwf.js'), 'setup', '--target', targetRepo, '--skip-verify'], REPO_ROOT);
+  run(process.execPath, [path.join(REPO_ROOT, 'bin', 'cwf.js'), 'setup', '--target', targetRepo, '--skip-verify'], REPO_ROOT);
 }
 
 function openMilestone(targetRepo, goal) {
   run(
-    'node',
+    process.execPath,
     [
       path.join(targetRepo, 'scripts', 'workflow', 'new_milestone.js'),
       '--id', 'M40',

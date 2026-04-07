@@ -40,23 +40,33 @@ function frontendFlow(goal) {
   return {
     primaryCommand: `cwf ui-plan --goal ${qGoal}`,
     secondaryCommands: [
+      `cwf frontend-brief --goal ${qGoal} --json`,
       `cwf ui-direction --goal ${qGoal} --json`,
+      `cwf design-dna --goal ${qGoal} --json`,
+      `cwf page-blueprint --goal ${qGoal} --json`,
+      `cwf design-md --goal ${qGoal} --json`,
+      `cwf component-strategy --goal ${qGoal} --json`,
+      `cwf design-benchmark --goal ${qGoal} --json`,
+      `cwf state-atlas --goal ${qGoal} --json`,
       `cwf ui-spec --goal ${qGoal} --json`,
       `cwf ui-recipe --goal ${qGoal} --json`,
       'cwf ui-review',
     ],
     cliFlow: [
+      'Use frontend-brief when you need the full external-site artifact pack in one pass.',
       'Generate UI direction first so the shell, tokens, and taste profile are explicit.',
+      'Lock the external design blend and required state atlas before patching any screen family.',
+      'Use component-strategy to decide reuse/extract/build sequencing before page-local JSX starts multiplying.',
       'Convert the direction into a UI plan/spec and recipe scaffold before patching screens.',
       'Capture visual verification at the end of each UI slice.',
     ],
     codexAppFlow: [
-      'Pin UI-DIRECTION, UI-SPEC, UI-RECIPE, and the latest browser artifacts in the Codex app.',
+      'Pin UI-DIRECTION, DESIGN-DNA, STATE-ATLAS, UI-SPEC, UI-RECIPE, and the latest browser artifacts in the Codex app.',
       'Keep one task thread per screen family to avoid mixing unrelated visual decisions.',
       'Use design-system actions as the tie-breaker when several implementations look acceptable.',
     ],
     parallelFlow: [
-      'Read-only agents can inspect responsiveness, state coverage, and accessibility in parallel.',
+      'Read-only agents can inspect responsiveness, state coverage, and design-reference drift in parallel.',
       'A single write lane should own the token/system pass before multiple UI patches land.',
     ],
     specialtyFlows: {

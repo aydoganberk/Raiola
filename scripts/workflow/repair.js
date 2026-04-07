@@ -76,6 +76,27 @@ function readProductManifest(cwd) {
   return readJsonIfExists(filePath);
 }
 
+function readPackageScripts(cwd) {
+  const packageJsonPath = path.join(cwd, 'package.json');
+  if (!fs.existsSync(packageJsonPath)) {
+    return { valid: true, scripts: {} };
+  }
+
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    return {
+      valid: true,
+      scripts: packageJson.scripts || {},
+    };
+  } catch (error) {
+    return {
+      valid: false,
+      scripts: {},
+      error: String(error.message || error),
+    };
+  }
+}
+
 function buildRepairPlan(cwd, rootDir, options = {}) {
   const kind = options.kind === 'health' ? 'health' : 'doctor';
   const runtimeIssues = [];
@@ -115,18 +136,22 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
     });
   }
 
-  const packageJsonPath = path.join(cwd, 'package.json');
   const expectedScripts = productManifest?.runtimeScripts || loadTargetRuntimeScripts();
-  let currentScripts = {};
-  if (fs.existsSync(packageJsonPath)) {
-    currentScripts = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).scripts || {};
-  }
-  const missingScripts = Object.keys(expectedScripts).filter((name) => currentScripts[name] !== expectedScripts[name]);
-  if (missingScripts.length > 0) {
-    runtimeIssues.push({
-      type: 'runtime_script_drift',
-      scripts: missingScripts,
+  const packageScripts = readPackageScripts(cwd);
+  if (!packageScripts.valid) {
+    manualIssues.push({
+      type: 'invalid_package_json',
+      command: 'Fix package.json JSON syntax before applying workflow repairs.',
+      reason: packageScripts.error || 'package.json could not be parsed.',
     });
+  } else {
+    const missingScripts = Object.keys(expectedScripts).filter((name) => packageScripts.scripts[name] !== expectedScripts[name]);
+    if (missingScripts.length > 0) {
+      runtimeIssues.push({
+        type: 'runtime_script_drift',
+        scripts: missingScripts,
+      });
+    }
   }
 
   const missingRuntimeFiles = (productManifest?.runtimeFiles
@@ -243,7 +268,7 @@ function applyRepairPlan(cwd, rootDir, plan) {
 
   try {
     childProcess.execFileSync(
-      'node',
+      process.execPath,
       [path.join(__dirname, 'hud.js'), '--root', relativePath(cwd, rootDir), '--json'],
       {
         cwd,
@@ -256,7 +281,7 @@ function applyRepairPlan(cwd, rootDir, plan) {
   }
   try {
     childProcess.execFileSync(
-      'node',
+      process.execPath,
       [path.join(__dirname, 'explore.js'), '--repo', '--root', relativePath(cwd, rootDir), '--json'],
       {
         cwd,
@@ -285,7 +310,7 @@ function main() {
   const rootDir = resolveWorkflowRoot(cwd, args.root);
   const healthReport = args.kind === 'health'
     ? JSON.parse(childProcess.execFileSync(
-      'node',
+      process.execPath,
       [path.join(__dirname, 'health.js'), '--root', relativePath(cwd, rootDir), '--json'],
       {
         cwd,

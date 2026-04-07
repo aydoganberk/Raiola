@@ -89,7 +89,7 @@ const CAPABILITIES = Object.freeze([
     repoSignals: ['frontend_active'],
     preconditions: ['frontend_surface_present'],
     postconditions: ['ui_spec_written'],
-    evidenceOutputs: ['docs/workflow/UI-SPEC.md', 'docs/workflow/UI-PLAN.md'],
+    evidenceOutputs: ['docs/workflow/UI-SPEC.md', 'docs/workflow/UI-PLAN.md', 'docs/workflow/DESIGN-DNA.md', 'docs/workflow/STATE-ATLAS.md', 'docs/workflow/PAGE-BLUEPRINT.md', 'docs/workflow/DESIGN.md', 'docs/workflow/COMPONENT-STRATEGY.md', 'docs/workflow/DESIGN-BENCHMARK.md'],
     supportsMonorepo: true,
     supportsFrontend: true,
     supportsReview: false,

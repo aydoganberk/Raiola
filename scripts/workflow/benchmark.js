@@ -4,18 +4,20 @@ const path = require('node:path');
 const childProcess = require('node:child_process');
 const { parseArgs } = require('./common');
 
+const NODE_BINARY = process.execPath;
+
 const COMMANDS = {
-  launch: ['node', ['scripts/workflow/launch.js', '--json']],
-  hud: ['node', ['scripts/workflow/hud.js', '--compact']],
-  manager: ['node', ['scripts/workflow/manager.js', '--json']],
-  next: ['node', ['scripts/workflow/next_step.js', '--json']],
-  'next-prompt': ['node', ['scripts/workflow/next_prompt.js', '--mode', 'minimal', '--json']],
-  doctor: ['node', ['scripts/workflow/doctor.js', '--strict']],
-  health: ['node', ['scripts/workflow/health.js', '--strict']],
-  'map-codebase': ['node', ['scripts/workflow/map_codebase.js', '--compact']],
-  'map-frontend': ['node', ['scripts/workflow/map_frontend.js', '--compact']],
-  'codex-contextpack': ['node', ['scripts/workflow/codex_control.js', 'contextpack', '--goal', 'review the current diff', '--json']],
-  'codex-promptpack': ['node', ['scripts/workflow/codex_control.js', 'promptpack', '--goal', 'review the current diff', '--json']],
+  launch: [NODE_BINARY, ['scripts/workflow/launch.js', '--json']],
+  hud: [NODE_BINARY, ['scripts/workflow/hud.js', '--compact']],
+  manager: [NODE_BINARY, ['scripts/workflow/manager.js', '--json']],
+  next: [NODE_BINARY, ['scripts/workflow/next_step.js', '--json']],
+  'next-prompt': [NODE_BINARY, ['scripts/workflow/next_prompt.js', '--mode', 'minimal', '--json']],
+  doctor: [NODE_BINARY, ['scripts/workflow/doctor.js', '--strict']],
+  health: [NODE_BINARY, ['scripts/workflow/health.js', '--strict']],
+  'map-codebase': [NODE_BINARY, ['scripts/workflow/map_codebase.js', '--compact']],
+  'map-frontend': [NODE_BINARY, ['scripts/workflow/map_frontend.js', '--compact']],
+  'codex-contextpack': [NODE_BINARY, ['scripts/workflow/codex_control.js', 'contextpack', '--goal', 'review the current diff', '--json']],
+  'codex-promptpack': [NODE_BINARY, ['scripts/workflow/codex_control.js', 'promptpack', '--goal', 'review the current diff', '--json']],
 };
 const DEFAULT_SLO_MS = Object.freeze({
   launch: 800,

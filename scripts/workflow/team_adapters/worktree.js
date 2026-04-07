@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const childProcess = require('node:child_process');
-const { ensureDir, slugify } = require('../common');
+const { ensureDir, safeArtifactToken, slugify } = require('../common');
 const {
   buildFailureResult,
   inspectCodexWorker,
@@ -23,7 +23,12 @@ function repoSlug(cwd) {
 }
 
 function workspacePathFor(cwd, taskId) {
-  return path.join(os.tmpdir(), 'cwf-worktrees', repoSlug(cwd), taskId);
+  return path.join(
+    os.tmpdir(),
+    'cwf-worktrees',
+    repoSlug(cwd),
+    safeArtifactToken(taskId, { label: 'Task id', prefix: 'task' }),
+  );
 }
 
 function canUseGitWorktree(cwd) {

@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { ensureDir, slugify } = require('../common');
+const { ensureDir, safeArtifactToken } = require('../common');
 const {
   buildFailureResult,
   inspectCodexWorker,
@@ -9,7 +9,13 @@ const {
 } = require('./codex_exec_driver');
 
 function workspacePathFor(cwd, taskId) {
-  return path.join(cwd, '.workflow', 'orchestration', 'subagents', `${slugify(taskId) || taskId}`);
+  return path.join(
+    cwd,
+    '.workflow',
+    'orchestration',
+    'subagents',
+    safeArtifactToken(taskId, { label: 'Task id', prefix: 'task' }),
+  );
 }
 
 function writeWorkspaceTaskFiles(state, task, workspacePath) {

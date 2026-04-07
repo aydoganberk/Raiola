@@ -155,6 +155,20 @@ The current build adds repo-native surfaces aimed at making Codex materially str
   Produces a budgeted context pack for Codex app/CLI sessions with ordered attachments, focus files, compact/balanced/deep presets, and explicit avoid-patterns to fight context rot on wide repos.
 - `cwf ui-direction --goal "premium minimal analytics dashboard" --taste premium-minimal`  
   Produces a taste-aware design brief (`docs/workflow/UI-DIRECTION.md`) with archetype-aware design tokens, component cues, interaction cues, and style guardrails so frontend work is not just “correct” but intentionally styled.
+- `cwf design-dna --goal "developer tool landing page with product proof"`  
+  Produces `docs/workflow/DESIGN-DNA.md` with external reference blend, product-category reasoning, and anti-pattern bans so Codex can borrow the right visual DNA without cloning one source.
+- `cwf page-blueprint --goal "developer tool landing page"`  
+  Produces `docs/workflow/PAGE-BLUEPRINT.md` with section map, proof surfaces, responsive priorities, and page-type sequencing for the current frontend slice.
+- `cwf design-md --goal "developer tool landing page" --project-root`  
+  Produces `docs/workflow/DESIGN.md` plus an optional repo-root `DESIGN.md` mirror so downstream agents/tools can consume a portable design contract directly.
+- `cwf component-strategy --goal "developer tool landing page"`  
+  Produces `docs/workflow/COMPONENT-STRATEGY.md` so Codex can decide what to reuse, extract, and build before page-local component sprawl starts.
+- `cwf design-benchmark --goal "developer tool landing page"`  
+  Produces `docs/workflow/DESIGN-BENCHMARK.md` with differentiation plays and commodity-risk checks so external-site UI work stays distinctive instead of template-like.
+- `cwf state-atlas --goal "analytics dashboard with filters and detail panes"`  
+  Produces `docs/workflow/STATE-ATLAS.md` with required loading/empty/error/success and high-risk transition states so frontend work does not stop at the happy path.
+- `cwf frontend-brief --goal "developer tool landing page"`  
+  Produces a one-shot frontend artifact pack (`FRONTEND-BRIEF`, `DESIGN.md`, benchmark, component strategy, blueprint, state atlas, UI spec) for external-site work.
 - `cwf review-tasks`  
   Converts review findings into a blocker-first four-wave task graph (triage → synthesis → fix → verify) that can drive large-repo review and re-review loops.
 - `cwf review-orchestrate`  
