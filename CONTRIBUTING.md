@@ -2,17 +2,28 @@
 
 Thanks for contributing to `raiola`.
 
-The public shell is `rai`. New docs, examples, screenshots, and tests should use `rai` as the command surface. Compatibility aliases should only appear when a change is explicitly about backward-compatibility behavior.
+Raiola is a product repo, not just a script collection. Changes here affect the public shell, repo-local installers, canonical workflow files, runtime mirrors, and the generated surfaces people rely on day to day.
 
-## Product principles
+## Naming Rules
+
+- Use `rai` for user-facing commands in docs, screenshots, help text, and tests.
+- Use `raiola` when referring to the package, product, or published npm artifact.
+- Use `raiola-on` only for the blank-state onboarding entry.
+- Keep `raiola:*` for repo-local npm fallback scripts.
+- Do not introduce new user-facing references to retired names such as `cwf` or `codex-workflow`.
+
+Legacy names are still allowed in migration, repair, setup, update, and uninstall code when they exist only to keep installed repos moving forward safely.
+
+## Product Principles
 
 - Keep markdown canonical. Do not move source-of-truth workflow state into hidden runtime files.
+- Treat install, update, repair, and uninstall quality as product surfaces.
 - Prefer additive wrappers and migrations over breaking installed repos.
-- Treat repo-local install quality as a product surface, not just a packaging detail.
 - Keep verification close to the feature. New command surfaces should ship with tests.
-- When behavior changes, update the docs that operators actually read.
+- Keep drift low between `rai help`, `docs/commands.md`, README examples, and golden snapshots.
+- When behavior changes, update the docs people actually read, not only the implementation.
 
-## Local setup
+## Local Setup
 
 ```bash
 npm test
@@ -27,47 +38,68 @@ node scripts/workflow/roadmap_audit.js --assert --json
 node scripts/workflow/setup.js --target /tmp/raiola-smoke --skip-verify
 ```
 
-## Before opening a PR
+If you touched installer behavior, also smoke the repo-local shell in the temp target:
 
-- Run `npm test`.
-- Run `npm run pack:smoke`.
-- If routing, help text, or command output changed, update the related golden snapshots and command docs.
-- If install behavior changed, smoke the setup flow against a temp repo.
-- If canonical markdown or cache semantics changed, update [docs/architecture.md](./docs/architecture.md) or [docs/performance.md](./docs/performance.md) as needed.
-- If the README, product positioning, or user-facing examples changed, keep the naming consistent with `raiola` and `rai`.
+```bash
+node /tmp/raiola-smoke/bin/rai.js help
+node /tmp/raiola-smoke/bin/raiola-on.js next --json
+```
 
-## Change guidance
+## Where Changes Usually Belong
 
-### CLI and workflow behavior
+### Product shell and command routing
 
+- Edit `bin/` and `scripts/cli/` for public command behavior.
+- Keep `rai help` output aligned with README and `docs/commands.md`.
 - Preserve `raiola:*` compatibility unless the change intentionally includes a migration path.
-- Prefer editing the product shell and wrappers in ways that keep installed repos stable.
-- Keep `doctor`, `health`, and setup/update flows safe-by-default.
 
-### Quick, full, and team lanes
+### Installer and migration behavior
 
-- Use `rai quick` changes for quick-mode surfaces.
-- Use `rai milestone` and canonical workflow docs for full-workflow changes.
-- Use `rai team` changes for orchestration, routing, and runtime fan-out behavior.
-- Use lifecycle report tests when editing review, ship, PR brief, release notes, or session-report outputs.
+- Edit `scripts/workflow/setup.js`, `install_common.js`, `update.js`, `repair.js`, and `uninstall.js` together when a change affects installed repos.
+- Keep setup/update/repair safe-by-default.
+- If you remove or rename anything user-facing, make sure older installs can still be repaired or upgraded cleanly.
+
+### Canonical workflow state
+
+- Use `docs/workflow/` for full-workflow source-of-truth changes.
+- Use `.workflow/quick/` semantics for quick-lane changes.
+- Use `.workflow/orchestration/` semantics for Team Lite changes.
+- Do not make runtime JSON the only contract for a feature that should survive pause and resume.
+
+### Review, verification, and generated artifacts
+
+- Use artifact-path assertions when a command writes files.
+- Keep report formats stable unless the change intentionally revs the contract.
+- If shell or browser verification behavior changes, keep evidence output explicit and inspectable.
 
 ### Docs and product messaging
 
-- README should stay product-oriented and onboarding-friendly.
-- Command docs should stay exhaustive and operational.
-- Skill docs should keep a short daily-use layer and a deeper contract layer.
-- Prefer one naming standard: product = `raiola`, shell = `rai`.
+- README should stay product-oriented, onboarding-friendly, and accurate to the current shipped surface.
+- `docs/commands.md` should stay exhaustive.
+- `docs/getting-started.md` should stay short and practical.
+- Skill docs should preserve a short daily-use layer plus a deeper contract layer.
 
-## Testing expectations
+## Before Opening A PR
+
+- Run `npm test`.
+- Run `npm run pack:smoke`.
+- If help text or command output changed, update the related golden snapshots.
+- If command coverage changed, update `docs/commands.md`.
+- If onboarding, positioning, or naming changed, update README and keep `rai` / `raiola` / `raiola-on` usage consistent.
+- If install behavior changed, smoke the setup flow against a temp repo.
+- If canonical markdown or cache semantics changed, update [docs/architecture.md](./docs/architecture.md) or [docs/performance.md](./docs/performance.md) as needed.
+
+## Testing Expectations
 
 - Add or update tests for every new command surface.
 - Add regression coverage for compatibility-sensitive behavior.
 - If a feature produces files, assert on the artifact path or emitted content shape.
 - If help text changes, keep the command reference and golden help snapshots in sync.
+- If setup/update/uninstall behavior changes, add or update install-surface tests.
 
-## Release process
+## Release Process
 
-- Keep `CHANGELOG.md` updated under `## Unreleased` as normal work lands.
+- Keep `CHANGELOG.md` updated under `## Unreleased`.
 - Use the `Cut Release` GitHub Actions workflow to bump version, rewrite the embedded product version, roll the changelog section, create the release commit, and push the tag.
 - The tag-driven `Release` workflow is the only path that should publish `raiola` to npm.
 - During first publish or while trusted publishing is not configured on npm, keep the `NPM_TOKEN` repository secret available as the publish fallback.
