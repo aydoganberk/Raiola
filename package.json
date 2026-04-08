@@ -49,6 +49,8 @@
     "node": ">=22"
   },
   "scripts": {
+    "release:cut": "node scripts/release/cut_release.js",
+    "release:notes": "node scripts/release/release_notes_from_changelog.js",
     "test": "node --test tests/*.test.js",
     "pack:smoke": "node scripts/smoke_pack_install.js --pack",
     "workflow:approval": "node scripts/workflow/approvals.js",

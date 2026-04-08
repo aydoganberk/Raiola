@@ -281,6 +281,16 @@ node bin/rai.js help
 
 `npm test` covers the CLI, workflow surfaces, review/runtime behavior, and golden help/docs drift checks. `npm run pack:smoke` verifies that the packaged tarball installs cleanly into a temp consumer repo.
 
+## Maintainer release flow
+
+`raiola` now has a two-step automated release path:
+
+1. Run the `Cut Release` GitHub Actions workflow and choose `patch`, `minor`, or `major`.
+2. The workflow updates `package.json`, `scripts/workflow/product_version.js`, and `CHANGELOG.md`, commits the release, creates `vX.Y.Z`, and pushes both to `main`.
+3. The tag triggers the `Release` workflow, which runs smoke checks, publishes to npm, and creates or updates the matching GitHub Release from the `CHANGELOG.md` section for that version.
+
+Until npm trusted publishing is configured for the package, the `Release` workflow can still publish by using the `NPM_TOKEN` repository secret. After trusted publishing is set on npm, the same workflow can publish without a long-lived token.
+
 ## Contributing, security, license
 
 - [Contributing](./CONTRIBUTING.md)

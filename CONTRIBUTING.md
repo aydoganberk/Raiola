@@ -64,3 +64,10 @@ node scripts/workflow/setup.js --target /tmp/raiola-smoke --skip-verify
 - Add regression coverage for compatibility-sensitive behavior.
 - If a feature produces files, assert on the artifact path or emitted content shape.
 - If help text changes, keep the command reference and golden help snapshots in sync.
+
+## Release process
+
+- Keep `CHANGELOG.md` updated under `## Unreleased` as normal work lands.
+- Use the `Cut Release` GitHub Actions workflow to bump version, rewrite the embedded product version, roll the changelog section, create the release commit, and push the tag.
+- The tag-driven `Release` workflow is the only path that should publish `raiola` to npm.
+- During first publish or while trusted publishing is not configured on npm, keep the `NPM_TOKEN` repository secret available as the publish fallback.
