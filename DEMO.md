@@ -3,21 +3,21 @@
 ## 1. Install the product shell
 
 ```bash
-cwf setup
+npx raiola setup
 ```
 
 Expected outcome:
 
 - `docs/workflow/` exists
 - runtime scripts are installed under `scripts/workflow/`
-- the repo can run `cwf doctor`, `cwf hud`, and `cwf next`
+- the repo can run `rai doctor`, `rai hud`, and `rai next`
 
 ## 2. Run the daily loop
 
 ```bash
-cwf doctor --strict
-cwf hud --compact
-cwf next
+rai doctor --strict
+rai hud --compact
+rai next
 ```
 
 Expected outcome:
@@ -29,7 +29,7 @@ Expected outcome:
 ## 3. Start a quick task
 
 ```bash
-cwf quick start --goal "Fix a narrow regression"
+rai quick start --goal "Fix a narrow regression"
 ```
 
 Expected outcome:
@@ -42,7 +42,7 @@ Expected outcome:
 ## 4. Escalate to full workflow when needed
 
 ```bash
-cwf quick escalate --summary "This needs a broader plan" --open-full-workflow --milestone-id Q1
+rai quick escalate --summary "This needs a broader plan" --open-full-workflow --milestone-id Q1
 ```
 
 Expected outcome:
@@ -54,8 +54,8 @@ Expected outcome:
 ## 5. Generate closeout packages
 
 ```bash
-cwf review
-cwf ship
+rai review
+rai ship
 ```
 
 Expected outcome:
@@ -66,7 +66,7 @@ Expected outcome:
 ## 6. Benchmark hot paths
 
 ```bash
-cwf benchmark
+rai benchmark
 ```
 
 Expected outcome:

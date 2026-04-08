@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const SUPPORTED_NODE_RANGE = '>=20';
+const SUPPORTED_NODE_RANGE = '>=22';
 const PLATFORM_SUPPORT = Object.freeze({
   darwin: {
     status: 'pass',

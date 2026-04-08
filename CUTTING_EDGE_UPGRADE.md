@@ -1,9 +1,11 @@
 # Cutting-Edge Upgrade Summary
 
+Primary shell note: the current public CLI is `rai`. Legacy examples that mention `cwf` refer to the compatibility alias.
+
 ## What was added
 
 ### 1) Advanced review mode
-- `cwf review-mode` is now a real, artifact-producing mode instead of a thin alias.
+- `rai review-mode` is now a real, artifact-producing mode instead of a thin alias.
 - Produces a unified review bundle with:
   - review lenses
   - top blockers
@@ -40,7 +42,7 @@
 
 ### 4) Command planning for Codex app + CLI
 - Added `scripts/workflow/command_plan.js`.
-- `cwf do` now emits a `commandPlan` with:
+- `rai do` now emits a `commandPlan` with:
   - primary command
   - secondary commands
   - CLI flow
@@ -64,11 +66,11 @@
   - Indonesian
 
 ## Recommended commands
-- `cwf review-mode --goal "review the current diff"`
-- `cwf monorepo --json`
-- `cwf ui-direction --goal "premium minimal analytics dashboard" --json`
-- `cwf ui-plan --goal "premium minimal analytics dashboard"`
-- `cwf do --goal "design a premium frontend analytics dashboard with better taste" --json`
+- `rai review-mode --goal "review the current diff"`
+- `rai monorepo --json`
+- `rai ui-direction --goal "premium minimal analytics dashboard" --json`
+- `rai ui-plan --goal "premium minimal analytics dashboard"`
+- `rai do --goal "design a premium frontend analytics dashboard with better taste" --json`
 
 ## Validation run
 - `node --test tests/workflow_phase20.test.js tests/workflow_phase21.test.js`

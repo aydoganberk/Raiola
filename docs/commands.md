@@ -2,6 +2,8 @@
 
 Use `rai help` for the three golden flows, `rai help <topic>` for focused categories, and `rai help all` for the full shell.
 
+`rai` is the primary shell. `cwf` and `codex-workflow` remain available as backward-compatible aliases.
+
 ## Primary verbs
 
 - `rai launch`

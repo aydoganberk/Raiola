@@ -15,19 +15,20 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            node: 20
-          - os: ubuntu-latest
             node: 22
+          - os: ubuntu-latest
+            node: 24
           - os: macos-latest
-            node: 20
+            node: 22
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
+          package-manager-cache: false
       - run: npm test
       - run: node scripts/workflow/roadmap_audit.js --assert --json > roadmap-audit-report.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: workflow-roadmap-audit-${{ matrix.os }}-node${{ matrix.node }}
@@ -45,13 +46,14 @@ jobs:
           - macos-latest
           - windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version-file: .nvmrc
+          package-manager-cache: false
       - run: npm pack --dry-run --json > pack-dry-run.json
       - run: node scripts/smoke_pack_install.js --pack --json > smoke-pack-report.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: workflow-pack-smoke-${{ matrix.os }}
@@ -65,12 +67,13 @@ jobs:
       - test
       - pack-smoke
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version-file: .nvmrc
+          package-manager-cache: false
       - run: node scripts/workflow/benchmark.js --runs 3 --assert-slo --json > benchmark-report.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: workflow-benchmark-report

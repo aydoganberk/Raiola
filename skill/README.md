@@ -2,6 +2,8 @@
 
 `raiola` is the Codex-facing skill surface for the workflow product.
 
+The primary CLI shell is `rai`. The published package is `raiola`. Legacy aliases `cwf` and `codex-workflow` remain available for compatibility.
+
 It stays opt-in. If the user did not explicitly ask for workflow, milestone, handoff, closeout, quick mode, or team orchestration, normal task execution should continue without activating this skill.
 
 ## Quick command layer

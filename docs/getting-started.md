@@ -4,9 +4,11 @@
 
 Supported runtime baseline:
 
-- Node.js `>=20`
+- Node.js `>=22`
 - Full support on macOS and Linux
 - Smoke-tested install/help flows on Windows
+
+The primary shell is `rai`, the published package is `raiola`, and legacy aliases such as `cwf` still exist for compatibility.
 
 From a published package:
 

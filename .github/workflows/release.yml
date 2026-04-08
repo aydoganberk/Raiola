@@ -27,13 +27,14 @@ jobs:
           - macos-latest
           - windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version-file: .nvmrc
+          package-manager-cache: false
       - run: npm test
       - run: node scripts/smoke_pack_install.js --pack --json > smoke-pack-report.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: release-smoke-${{ matrix.os }}
@@ -48,10 +49,11 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version-file: .nvmrc
+          package-manager-cache: false
           registry-url: https://registry.npmjs.org
       - name: Verify tag matches package version
         if: github.event_name == 'push'

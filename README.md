@@ -1,374 +1,288 @@
 # raiola
 
-`raiola` is a repo-native workflow product for Codex.
+`raiola` is a repo-native workflow OS for Codex.
 
-It turns workflow discipline into an installable CLI and runtime companion instead of a loose script bundle. The goal is simple: keep long-running work safe, resumable, auditable, observable, and fast enough to use every day.
+It installs a product shell, a markdown-canonical control plane, and repo-local runtime helpers so long-running engineering work stays resumable, reviewable, auditable, and safe to parallelize.
 
-## Why it exists
+`rai` is the primary CLI shell. The published package is `raiola`. Compatibility aliases such as `cwf` and `codex-workflow` still exist for older repos, but the product documentation now standardizes on `rai`.
 
-This project is for repositories where “just continue from memory” is not enough.
+## Why raiola exists
 
-It helps when you need:
+`raiola` is built for repositories where "just continue from memory" stops working.
 
-- canonical markdown state instead of hidden runtime state
-- explicit plan gates before execute starts
+It is useful when you need:
+
 - checkpoint-first continuity across sessions
-- quick mode for small tasks without losing audit trails
-- Team Lite orchestration with visible write-scope safety
-- review-ready and ship-ready closeout packages
-- live operator visibility, bounded verification, and dry-run repair
+- canonical markdown state instead of hidden agent state
+- explicit plan and audit gates before changes are called done
+- bounded shell and browser verification with stored evidence
+- review and ship-readiness surfaces that produce reusable artifacts
+- repo-local Codex prompt packs and context packs
+- safe delegation with visible write scopes for parallel work
 
-## Product surface
+## What the product includes
 
-### Three golden flows
+- `rai do`, `rai next`, and `rai route` for daily intent routing
+- full workflow milestones with discuss, research, plan, execute, audit, and complete phases
+- quick mode for narrow 15-60 minute tasks
+- Team Lite orchestration for bounded parallel execution
+- review, re-review, PR review, patch review, and ship-readiness surfaces
+- frontend and design-direction surfaces for UI-heavy work
+- repo-local Codex control, prompt packs, context packs, and resume aids
+- operator visibility through `hud`, `manager`, `dashboard`, telemetry, and reports
 
-- Solo daily loop: `rai do`, `rai next`, `rai verify-shell`, `rai checkpoint`, `rai next-prompt`
-- Deep review: `rai route`, `rai review`, `rai ui-review`, `rai verify-work`, `rai ship-readiness`
-- Team parallel: `rai monorepo`, `rai team run`, `rai team supervise`, `rai team merge-queue`, `rai patch-review`, `rai sessions`
+## Core ideas
 
-Run `rai help` to start from these flows. Use `rai help all` for the full shell, or `rai help <topic>` for focused categories like `frontend`, `trust`, `runtime`, or `codex`.
-
-### Core shell
-
-- `rai setup`
-- `rai doctor`
-- `rai do`
-- `rai next`
-- `rai review`
-- `rai team`
-- `rai dashboard`
-
-### Full reference
-
-The full command surface still exists; it now lives in [Commands](./docs/commands.md) and `rai help all`. Fresh `pilot` installs intentionally start with a narrower shell so first-run repos only see the highest-signal commands.
-
-### Backward compatibility
-
-`core` and `full` installs keep the broader legacy `workflow:*` compatibility surface. The default `pilot` install trims first-run aliases and command entrypoints, but `rai update --script-profile core` or `rai update --script-profile full` expands the repo in place without changing the canonical markdown contract.
-
-### Skill aliases
-
-- `$workflow-help`
-- `$workflow-next`
-- `$workflow-quick`
-- `$workflow-checkpoint`
-- `$workflow-team`
-- `$workflow-review`
-- `$workflow-ship`
+- Markdown is canonical.
+  Files under `docs/workflow/`, `.workflow/quick/`, and `.workflow/orchestration/` are the source of truth for workflow state.
+- Runtime JSON is derived.
+  Cache, telemetry, dashboard, packet, and runtime mirrors are convenience surfaces, not the contract.
+- Resume safety is checkpoint-first.
+  `raiola` is designed so a session can stop and resume without relying on hidden memory.
+- Parallel work must be explicit.
+  Write-capable fan-out only becomes safe when ownership and write scopes are clear.
 
 ## Install
 
-If the package is available through `npx`:
+### Try it with `npx`
 
 ```bash
 npx raiola setup
 ```
 
-Fresh `setup` installs now default to a focused `pilot` profile so package.json and the repo-local shell stay lean on day one. Move up to `core` for the full shell with curated npm aliases, or jump straight to `full` if you want every backward-compatible npm alias immediately:
+Fresh installs default to the focused `pilot` profile so first-run repos only get the highest-signal shell.
+
+Upgrade the install surface when you need more:
 
 ```bash
 npx raiola setup --script-profile core
 npx raiola setup --script-profile full
 ```
 
-If you are working from this repository:
+### Install from this source repository
 
 ```bash
 node bin/rai.js setup --target /path/to/target-repo
 ```
 
-Inside a repo where the package is already available:
+### Use it after install
 
 ```bash
-rai help solo
-rai codex setup --repo
-rai do "Land the first slice"
-rai note "Capture the first risk" --promote backlog
-rai manager
-rai dashboard --open
+rai help
 rai doctor --strict
-rai discuss --goal "Clarify the next slice"
-rai hud --compact
+rai do "land the next safe slice"
 rai next
 ```
 
-Repo-local fallback if the global `rai` binary is not installed yet:
+If `rai` is not on PATH yet, the repo-local fallback still works:
 
 ```bash
 node bin/rai.js help
 node bin/rai.js doctor --strict
 ```
 
-`setup`, `init`, `migrate`, and `update` also patch `.gitignore` by default so non-canonical runtime state like `.workflow/` and `.agents/` does not flood your git status. Pass `--skip-gitignore` only if your repo intentionally tracks those paths.
-
 ## Runtime support
 
-- Node.js: `>=20` (`.nvmrc` is pinned to `20` for local development)
-- Full support: macOS and Linux
-- Smoke-tested install/help flows: Windows
-- `rai doctor --strict` checks install integrity plus host advisories such as Git, ripgrep, platform support, and browser-opening helpers
-- `rai health --strict` stays focused on blocking workflow/runtime issues so optional host-tool gaps do not downgrade the main gate
+- Node.js `>=22`
+- `.nvmrc` is pinned to `22` for local development
+- CI covers Node `22` and `24`
+- Full support on macOS and Linux
+- Smoke-tested install and help flows on Windows
 
-## Daily loop
+`setup`, `init`, `migrate`, and `update` also patch `.gitignore` by default so `.workflow/` and `.agents/` do not flood normal repo diffs.
 
-Use the product shell when the repo already has workflow installed:
+## First 5 minutes
 
 ```bash
-rai do "resume the current slice"
-rai manager
-rai dashboard
+npx raiola setup
+rai help
+rai doctor --strict
 rai hud --compact
-rai explore --changed
-rai packet compile --step plan
-rai secure
-rai assumptions add "Playwright may be absent locally" --impact medium --exit-trigger "Browser adapter is installed"
-rai verify-shell --cmd "npm test"
-rai claims check
-rai evidence
-rai verify-work
-rai ui-spec
-rai ui-review
-rai approval plan
-rai ship-readiness
+rai do "resume the current slice"
 rai next
-rai checkpoint --next "Resume here"
+```
+
+If you are setting up Codex-specific repo helpers as well:
+
+```bash
+rai codex setup --repo
+rai manager
+rai dashboard --open
+```
+
+## The three golden flows
+
+### Solo daily loop
+
+Use this when one operator is moving one safe slice at a time.
+
+```bash
+rai help solo
+rai do "resume the current slice"
+rai explore --changed
+rai verify-shell --cmd "npm test"
+rai checkpoint --next "Resume from verification follow-up"
 rai next-prompt
-rai review
-rai ship
 ```
 
-Legacy equivalents still work:
+### Deep review loop
+
+Use this when the repo already has changes and your main goal is risk reduction.
 
 ```bash
-npm run workflow:launch
-npm run workflow:hud -- --compact
-npm run workflow:next
-npm run workflow:checkpoint -- --next "Resume here"
-npm run workflow:review
-npm run workflow:ship
+rai help review
+rai route --goal "review the current diff" --why
+rai review --heatmap
+rai ui-review --url ./preview.html
+rai verify-work
+rai ship-readiness
 ```
 
-## Advanced Codex surfaces
+### Team parallel loop
 
-The current build adds repo-native surfaces aimed at making Codex materially stronger on large and messy codebases:
-
-- `rai do "请做代码审查并验证浏览器"` or `rai do "revisa el frontend y mejora el diseño"`  
-  Multilingual routing now grounds intent, steering, and deterministic capability picks across major languages instead of assuming English-only prompts.
-- `rai do "look into why the verification plan feels weak before patching"` or `rai do "neden verify plani zayif bir bak ve kok nedeni acikla"`  
-  English and Turkish conversational routing now handles more natural operator phrasing such as `look into`, `put together`, `go over`, `double-check`, `get this out`, `bir bak`, `hazirla`, `elden gecir`, `previewu smoke et`, `parcalara bol`, and `yayina al`.
-- `rai do "act like a head developer and go ovre the diff"` or `rai do "teknik lider gibi milestone paketini hazrla"`  
-  English/Turkish routing now also recognizes persona-based intent packs and nearby typos, so role framing and lightly misspelled operator phrases still route to the right Codex lane.
-- `rai codex promptpack --goal "review the auth diff"`  
-  Writes a ready-to-paste Codex prompt pack with profile, verify contract, repo signals, the generated context pack, optional UI direction, monorepo hotspots, and the latest review orchestration/task-graph context.
-- `rai codex contextpack --goal "review the auth diff"`  
-  Produces a budgeted context pack for Codex app/CLI sessions with ordered attachments, focus files, compact/balanced/deep presets, and explicit avoid-patterns to fight context rot on wide repos.
-- `rai ui-direction --goal "premium minimal analytics dashboard" --taste premium-minimal`  
-  Produces a taste-aware design brief (`docs/workflow/UI-DIRECTION.md`) with archetype-aware design tokens, component cues, interaction cues, and style guardrails so frontend work is not just “correct” but intentionally styled.
-- `rai design-dna --goal "developer tool landing page with product proof"`  
-  Produces `docs/workflow/DESIGN-DNA.md` with external reference blend, product-category reasoning, and anti-pattern bans so Codex can borrow the right visual DNA without cloning one source.
-- `rai page-blueprint --goal "developer tool landing page"`  
-  Produces `docs/workflow/PAGE-BLUEPRINT.md` with section map, proof surfaces, responsive priorities, and page-type sequencing for the current frontend slice.
-- `rai design-md --goal "developer tool landing page" --project-root`  
-  Produces `docs/workflow/DESIGN.md` plus an optional repo-root `DESIGN.md` mirror so downstream agents/tools can consume a portable design contract directly.
-- `rai component-strategy --goal "developer tool landing page"`  
-  Produces `docs/workflow/COMPONENT-STRATEGY.md` so Codex can decide what to reuse, extract, and build before page-local component sprawl starts.
-- `rai design-benchmark --goal "developer tool landing page"`  
-  Produces `docs/workflow/DESIGN-BENCHMARK.md` with differentiation plays and commodity-risk checks so external-site UI work stays distinctive instead of template-like.
-- `rai state-atlas --goal "analytics dashboard with filters and detail panes"`  
-  Produces `docs/workflow/STATE-ATLAS.md` with required loading/empty/error/success and high-risk transition states so frontend work does not stop at the happy path.
-- `rai frontend-brief --goal "developer tool landing page"`  
-  Produces a one-shot frontend artifact pack (`FRONTEND-BRIEF`, `DESIGN.md`, benchmark, component strategy, blueprint, state atlas, UI spec) for external-site work.
-- `rai review-tasks`  
-  Converts review findings into a blocker-first four-wave task graph (triage → synthesis → fix → verify) that can drive large-repo review and re-review loops.
-- `rai review-orchestrate`  
-  Converts review findings into package/persona/wave-based review work for large repos and monorepos.
-- `rai monorepo`  
-  Builds package-aware write scopes, review shards, hotspots, context slices, context budgets, targeted verify plans, and performance-risk notes for broad repos.
-
-These surfaces are designed to stay backward-compatible with the canonical markdown workflow instead of replacing it.
-
-## Natural-Language Routing
-
-`rai do` is no longer tuned just for terse command-like prompts. The current routing layer is optimized to understand both English and Turkish operator language in a more natural form.
-
-- Research: `look into why routing confidence is low`, `bir bak neden verify plani zayif`
-- Plan: `put together the next execution packet`, `bir sonraki milestone paketini hazirla`
-- Review: `go over the diff and call out blockers`, `elden gecir ve riskleri yaz`
-- Verify: `double-check the test suite`, `previewu smoke et ve ekran goruntusu al`
-- Team: `split this up across packages`, `bunu parcalara bol ve paketlere dagit`
-- Ship: `get this out with handoff notes`, `bunu yayina al ve handoff notlarini ekle`
-- Persona-aware: `as a qa engineer smoke test the preview`, `urun tasarimcisi gibi premium dashboard ui spec hazrla`
-- Typo-tolerant: `go ovre the diff and call out blokers`, `milestone paketini hazrla`
-
-This support is enforced through the routing corpus and roadmap audit rather than living only in docs.
-
-## Quick, Full, Team
-
-### Quick mode
-
-Use `rai quick` for 15-60 minute, single-operator work with a narrow touched surface.
-
-Quick mode stores canonical markdown under `.workflow/quick/`:
-
-- `context.md`
-- `plan.md`
-- `verify.md`
-- `handoff.md`
-
-`session.json` is only a resume/index helper. A quick task is not “done” until markdown scope, verify, and handoff notes exist.
-
-### Full workflow
-
-Use the full workflow when the task needs milestone planning, cross-session coordination, stronger validation, or review/ship closeout.
-
-Canonical markdown lives in `docs/workflow/` or the active named workstream root:
-
-- `STATUS.md`
-- `CONTEXT.md`
-- `EXECPLAN.md`
-- `VALIDATION.md`
-- `HANDOFF.md`
-- `WINDOW.md`
-- `POLICY.md`
-
-### Team Lite orchestration
-
-Use `rai team` when the user explicitly asks for parallelism or delegation.
-
-Canonical orchestration artifacts live under `.workflow/orchestration/`:
-
-- `PLAN.md`
-- `STATUS.md`
-- `WAVES.md`
-- `RESULTS.md`
-
-`state.json` is runtime metadata only. It is not the source of truth. Adapter runtime metadata lives under `.workflow/orchestration/runtime/`. The `worktree` adapter creates real child workspaces when the repo has a usable git history, `subagent` creates packet/result workspaces, and `hybrid` splits tasks between them while keeping mailbox/timeline state visible.
-
-## Trust model
-
-These rules are the core contract:
-
-- Markdown remains canonical.
-- Runtime JSON is cache, index, HUD, manager, launch, or telemetry convenience only.
-- `.workflow/runtime/*.json` and `.workflow/runtime/*.md` are derived operator surfaces only.
-- `rai policy` and `rai approvals` keep `docs/workflow/POLICY.md` canonical and mirror it into `.workflow/runtime/policy.json` plus `.workflow/runtime/approvals.json`.
-- Visible product version metadata lives at `.workflow/VERSION.md` so `rai update` can reason about install drift.
-- Quick mode does not bypass the plan/checkpoint/audit spine.
-- Write-capable parallel work requires explicit disjoint write scope.
-- Resume safety is checkpoint-first, not memory-first.
-- `doctor --repair` and `health --repair` default to dry-run and do not silently rewrite canonical markdown.
-- `rai codex` uses a repo-local virtual `.codex` root and stores the generated control-plane mirror under `.workflow/runtime/codex-control/` so the flow remains rollback-safe inside the repo sandbox.
-- `common.js` remains backward-compatible while newer modules take over hot-path responsibilities.
-
-## Performance
-
-The runtime now includes:
-
-- invocation-scope file read caching
-- markdown field/section cache
-- packet snapshot cache
-- repo fs index at `.workflow/fs-index.json`
-- repo-specific `.workflowignore` support for index hot paths
-- package graph cache at `.workflow/cache/package-graph.json`
-- write-on-change state/index writes
-- shared in-process collector for `launch`, `hud`, `manager`, and `next-prompt`
-- benchmark output at `.workflow/benchmarks/latest.json`
-
-Current product targets for medium-size repos:
-
-- `hud <300ms`
-- `next <500ms`
-- `doctor <1s`
-- `health <1s`
-- `map-codebase <2s`
-- `map-frontend <2s`
-- `launch <800ms cold / <300ms warm`
-- `manager <400ms warm`
-- `next-prompt <150ms warm`
-- `codex contextpack <1.5s warm`
-- `codex promptpack <1.8s warm`
-
-Run the benchmark harness:
+Use this when the user explicitly asks for delegation or the repo is broad enough that write scopes matter.
 
 ```bash
-rai benchmark
+rai help team
+rai monorepo
+rai team run --adapter hybrid --activation-text "parallel yap" --write-scope packages/app-one,packages/app-two
+rai team collect --patch-first
+rai patch-review
+rai sessions
 ```
 
-The benchmark surface covers every documented hot-path target, including `launch`, `manager`, `next-prompt`, `codex contextpack`, and `codex promptpack`.
+## Major product surfaces
 
-Run the roadmap truth-reset audit:
+### Workflow lanes
+
+- `rai quick`
+  Start, inspect, close, or escalate a narrow task.
+- `rai milestone`
+  Open a full-workflow milestone with explicit lifecycle state.
+- `rai team`
+  Operate Team Lite orchestration and runtime collection.
+
+### Trust and verification
+
+- `rai doctor --strict`
+  Audit install integrity and host prerequisites.
+- `rai health --strict`
+  Check blocking workflow/runtime health only.
+- `rai verify-shell`
+  Run a bounded shell verification command and store evidence.
+- `rai verify-browser`
+  Run browser smoke checks and selector-level assertions.
+- `rai verify-work`
+  Summarize verification gaps and emit an actionable fix plan.
+
+### Review and ship
+
+- `rai review`
+  Run the multi-pass review engine and emit structured findings.
+- `rai review-mode`
+  Use the deeper explicit review lane.
+- `rai review-tasks`
+  Turn findings into a blocker-first task graph.
+- `rai review-orchestrate`
+  Split review work into package/persona/wave plans for larger repos.
+- `rai ship-readiness`
+  Produce a ship gate with remaining blockers and risks.
+
+### Codex surfaces
+
+- `rai codex promptpack --goal "..."`
+  Build a ready-to-paste Codex prompt pack with route, verify, and repo context.
+- `rai codex contextpack --goal "..."`
+  Build a budgeted attachment set for Codex app or CLI sessions.
+- `rai next-prompt`
+  Emit a compact resume prompt for the next session.
+- `rai manager`
+  Produce the repo-local operator summary surface.
+- `rai dashboard --open`
+  Open the local HTML control room for route, review, and screenshot state.
+
+### Frontend and design direction
+
+- `rai ui-direction`
+  Create a taste-aware direction brief for UI work.
+- `rai design-dna`
+  Capture product-category and reference-system guidance.
+- `rai page-blueprint`
+  Build a section map and proof plan for a page.
+- `rai component-strategy`
+  Decide what to reuse, extract, and build before UI sprawl starts.
+- `rai design-benchmark`
+  Check differentiation and template-risk for external-facing UI.
+- `rai state-atlas`
+  Enumerate empty, loading, error, and transition states.
+- `rai frontend-brief`
+  Produce a one-shot frontend artifact pack for implementation sessions.
+
+## What gets written into the repo
+
+### Canonical workflow files
+
+- Full workflow: `docs/workflow/`
+- Quick mode: `.workflow/quick/`
+- Team Lite orchestration: `.workflow/orchestration/`
+
+### Derived runtime and evidence
+
+- Runtime mirrors and dashboards: `.workflow/runtime/`
+- Verification evidence: `.workflow/verifications/`
+- Reports: `.workflow/reports/`
+- Cache and indexes: `.workflow/cache/`, `.workflow/fs-index.json`
+
+The design rule is simple: if it is markdown workflow state, it is canonical; if it is JSON or operator UI state, it is derived.
+
+## Install profiles
+
+- `pilot`
+  Lean default install with the highest-signal surface.
+- `core`
+  Broader day-to-day shell with curated npm aliases.
+- `full`
+  Maximum backward-compatible install surface, including the full legacy `workflow:*` alias layer.
+
+Move between them in-place:
 
 ```bash
-npm run workflow:roadmap-audit
+rai update --script-profile core
+rai update --script-profile full
 ```
 
-Or:
+## Compatibility model
 
-```bash
-npm run workflow:benchmark -- --commands hud,doctor,map-codebase --assert-slo
-```
+- `rai` is the public shell used in docs and examples.
+- `raiola` is the package name.
+- `workflow:*` npm scripts remain supported for installed repos.
+- `cwf` and `codex-workflow` remain compatibility aliases for older automation and historical setups.
 
-Or benchmark the operator surfaces directly:
-
-```bash
-rai benchmark --commands launch,manager,next-prompt
-```
-
-Fixture-backed benchmark runs are also supported:
-
-```bash
-rai benchmark --fixture medium --commands hud,map-codebase
-rai benchmark --fixture large --commands hud
-```
-
-CI also runs the benchmark with SLO enforcement via [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
-
-## Runtime companion surfaces
-
-- `rai launch` writes `.workflow/runtime/launch.json`
-- `rai hud` writes `.workflow/runtime/hud.json`
-- `rai manager` writes `.workflow/runtime/manager.json`
-- `rai next-prompt` writes `.workflow/runtime/next-prompt.md`
-- `rai verify-shell` writes `.workflow/verifications/shell/*`
-- `rai verify-browser` writes `.workflow/verifications/browser/*` with HTML, headers, and a visual evidence artifact
-- `rai route` writes `.workflow/cache/model-routing.json`
-
-## Closeout surfaces
-
-These commands write operator-facing reports under `.workflow/reports/`:
-
-- `rai review` -> `review.md`
-- `rai ship` -> `ship.md`
-- `rai pr-brief` -> `pr-brief.md`
-- `rai release-notes` -> `release-notes.md`
-- `rai session-report` -> `session-report.md`
-
-## Repository docs
+## Documentation map
 
 - [Getting Started](./docs/getting-started.md)
 - [Commands](./docs/commands.md)
 - [Architecture](./docs/architecture.md)
 - [Performance](./docs/performance.md)
+- [Codex Integration](./docs/codex-integration.md)
+- [Codex Upgrade](./docs/codex-upgrade.md)
 - [Roadmap Audit](./docs/roadmap-audit.md)
-- [Demo](./DEMO.md)
-- [Contributing](./CONTRIBUTING.md)
-- [Changelog](./CHANGELOG.md)
 
-## Development
+## Developing raiola
 
-Run the full test suite:
+For work on this repository itself:
 
 ```bash
 npm test
-```
-
-Smoke the product shell:
-
-```bash
+npm run pack:smoke
+node scripts/workflow/roadmap_audit.js --assert --json
 node bin/rai.js help
-node scripts/workflow/setup.js --target /tmp/example-repo --skip-verify
 ```
 
-## License
+`npm test` covers the CLI, workflow surfaces, review/runtime behavior, and golden help/docs drift checks. `npm run pack:smoke` verifies that the packaged tarball installs cleanly into a temp consumer repo.
 
-[MIT](./LICENSE)
+## Contributing, security, license
+
+- [Contributing](./CONTRIBUTING.md)
+- [Security Policy](./SECURITY.md)
+- [MIT License](./LICENSE)

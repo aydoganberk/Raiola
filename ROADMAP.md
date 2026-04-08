@@ -1,9 +1,11 @@
-# Roadmap.md — codex-workflow-kit'i Cutting-Edge Codex Development OS'a Dönüştürme Planı
+# Roadmap.md — raiola'yı Cutting-Edge Codex Development OS'a Dönüştürme Planı
 
 > Tarih: 2026-04-06  
 > Hazırlayan: E2E ürün + mimari + Codex workflow audit  
 > Kapsam: mevcut repo incelemesi + `oh-my-codex` ve `get-shit-done` karşılaştırması + uygulanabilir step-by-step ürün rotası  
-> Hedef: `codex-workflow-kit`'i güçlü bir repo-native workflow companion seviyesinden, **Codex-native Development OS** seviyesine taşımak
+> Hedef: `raiola`'yı güçlü bir repo-native workflow companion seviyesinden, **Codex-native Development OS** seviyesine taşımak
+
+Not: Bu roadmap tarihsel plan metni olduğu için aşağıdaki örneklerin bir kısmı eski `cwf` alias'ını kullanır. Güncel birincil shell `rai`, paket adı ise `raiola`dır.
 
 ---
 

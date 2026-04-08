@@ -2,7 +2,25 @@
   "name": "raiola",
   "version": "0.3.1",
   "private": false,
-  "description": "raiola is a repo-native Codex workflow product with CLI, quick mode, orchestration, and closeout surfaces.",
+  "description": "raiola is a repo-native workflow OS for Codex with natural-language routing, review orchestration, prompt packs, and closeout tooling.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aydoganberk/raiola.git"
+  },
+  "homepage": "https://github.com/aydoganberk/raiola#readme",
+  "bugs": {
+    "url": "https://github.com/aydoganberk/raiola/issues"
+  },
+  "keywords": [
+    "codex",
+    "workflow",
+    "cli",
+    "developer-tools",
+    "review",
+    "monorepo",
+    "orchestration"
+  ],
   "bin": {
     "rai": "bin/rai.js",
     "raiola": "bin/raiola.js",
@@ -28,7 +46,7 @@
     "SECURITY.md"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "test": "node --test tests/*.test.js",

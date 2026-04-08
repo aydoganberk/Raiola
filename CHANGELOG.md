@@ -1,11 +1,15 @@
 # Changelog
 
+Primary shell note: `rai` is the current public CLI. Historical entries may mention legacy aliases such as `cwf` or `codex-workflow` because those were the public shells at the time.
+
 ## Unreleased
 
-- Added a lighter `core` workflow script profile and made `cwf setup` default to it on fresh installs to reduce package.json churn during pilot adoption.
-- Added a focused `pilot` install profile, made `cwf setup` default to it, and taught `cwf help` plus command routing to stay profile-aware inside repo-local installs.
-- Added runtime-surface pruning during profile downgrades so `cwf update --script-profile pilot` removes stale entrypoints and legacy npm aliases instead of only adding new files.
-- Added installer source-root metadata so repo-local `cwf update` can keep working after setup instead of depending on the source repo being the active working tree.
+- Updated GitHub Actions workflows to Node 24-ready action majors and moved the supported repo runtime baseline to Node 22, with CI coverage on Node 22 and 24.
+- Refreshed GitHub-facing docs and package metadata around the `raiola` brand, the primary `rai` shell, and the current product surface.
+- Added a lighter `core` workflow script profile and made `rai setup` default to it on fresh installs to reduce package.json churn during pilot adoption.
+- Added a focused `pilot` install profile, made `rai setup` default to it, and taught `rai help` plus command routing to stay profile-aware inside repo-local installs.
+- Added runtime-surface pruning during profile downgrades so `rai update --script-profile pilot` removes stale entrypoints and legacy npm aliases instead of only adding new files.
+- Added installer source-root metadata so repo-local `rai update` can keep working after setup instead of depending on the source repo being the active working tree.
 - Added automatic `.gitignore` hygiene for `.workflow/` and `.agents/`, plus doctor/repair coverage for missing runtime ignore entries.
 - Reduced maintenance pressure by extracting common argument, table, and preference helpers out of `scripts/workflow/common.js`.
 - Split oversized Codex control, team runtime, and UI-direction modules into dedicated catalog/packet/state/model helpers to lower entrypoint complexity.
@@ -17,7 +21,7 @@
 
 - Fixed command-reference drift so the documented `cwf` surface matches the shipped CLI, including `cwf review-tasks`.
 - Added an explicit publish whitelist, `.npmignore`, and a tarball smoke-install script to keep the npm package focused on runtime assets.
-- Declared the supported Node.js baseline (`>=20`) and added repo-local `.nvmrc`.
+- Declared the then-current supported Node.js baseline (`>=20`) and added repo-local `.nvmrc`.
 - Expanded runtime prerequisite diagnostics in `doctor` and `health`, and reduced child-process `node` PATH coupling by using `process.execPath`.
 - Added cross-platform install/release workflows, smoke-install checks, and repository governance files (`SECURITY.md`, `CODEOWNERS`).
 - Reduced maintenance blast radius by extracting workflow-control, milestone seed content, and delegation runtime logic into dedicated modules.
