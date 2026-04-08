@@ -1,4 +1,4 @@
-# raiola
+# Raiola
 
 `raiola` is a repo-native workflow OS for Codex.
 
