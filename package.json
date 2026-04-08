@@ -6,11 +6,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aydoganberk/raiola.git"
+    "url": "git+https://github.com/aydoganberk/Raiola.git"
   },
-  "homepage": "https://github.com/aydoganberk/raiola#readme",
+  "homepage": "https://github.com/aydoganberk/Raiola#readme",
   "bugs": {
-    "url": "https://github.com/aydoganberk/raiola/issues"
+    "url": "https://github.com/aydoganberk/Raiola/issues"
   },
   "keywords": [
     "codex",
