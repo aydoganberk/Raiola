@@ -1,9 +1,9 @@
 ---
-name: codex-workflow
+name: raiola
 description: "Repo workstream continuity protocol. Use only when the user explicitly asks for workflow/milestone/handoff/closeout discipline, or when resuming a workflow milestone they explicitly started."
 ---
 
-# codex-workflow
+# raiola
 
 This skill is used to run multi-session work inside a repository through one durable workflow protocol.
 It is not the default path; if the user did not explicitly ask for workflow, continue with the normal task flow.
@@ -33,13 +33,13 @@ It is not the default path; if the user did not explicitly ask for workflow, con
 
 ## Alias Mapping
 
-- `$workflow-help` -> `cwf help`
-- `$workflow-next` -> `cwf next`
-- `$workflow-quick` -> `cwf quick`
-- `$workflow-checkpoint` -> `cwf checkpoint`
-- `$workflow-team` -> `cwf team`
-- `$workflow-review` -> `cwf review`
-- `$workflow-ship` -> `cwf ship`
+- `$workflow-help` -> `rai help`
+- `$workflow-next` -> `rai next`
+- `$workflow-quick` -> `rai quick`
+- `$workflow-checkpoint` -> `rai checkpoint`
+- `$workflow-team` -> `rai team`
+- `$workflow-review` -> `rai review`
+- `$workflow-ship` -> `rai ship`
 
 ## Granularity
 
@@ -72,7 +72,7 @@ It is not the default path; if the user did not explicitly ask for workflow, con
 - Read `Automation mode` and `Automation status` from `STATUS.md`, `CONTEXT.md`, and `HANDOFF.md` as the active behavior contract.
 - Users may set or change this with:
 - `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation phase`
-- `cwf milestone --id Mx --name "..." --goal "..." --profile standard --automation phase`
+- `rai milestone --id Mx --name "..." --goal "..." --profile standard --automation phase`
   - `npm run workflow:automation -- --mode full`
 - When automation is active, Codex should own:
   - `discussion flow`
@@ -188,7 +188,7 @@ An active milestone always follows this loop:
 - `npm run workflow:step-fulfillment -- --utterance "plan kismini gecelim"`
 - `npm run workflow:delegation-plan`
 - `npm run workflow:plan-check -- --sync --strict`
-- `cwf milestone --id Mx --name "..." --goal "..." --profile standard --automation manual`
+- `rai milestone --id Mx --name "..." --goal "..." --profile standard --automation manual`
 - `npm run workflow:automation -- --mode phase`
 - `npm run workflow:checkpoint -- --next "..."`
 - `npm run workflow:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths src/foo,tests/foo`

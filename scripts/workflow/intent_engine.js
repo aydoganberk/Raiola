@@ -420,51 +420,51 @@ function scoreCapability(capability, normalizedGoal, intent, repoSignals, steeri
 function verificationPlanFor(capability, repoSignals, steeringPreferences) {
   const plan = [];
   if (capability.domain === 'research') {
-    plan.push('cwf explore --repo');
-    plan.push('cwf packet compile --step plan');
+    plan.push('rai explore --repo');
+    plan.push('rai packet compile --step plan');
   }
   if (capability.domain === 'plan') {
-    plan.push('cwf packet compile --step plan');
-    plan.push('cwf next');
+    plan.push('rai packet compile --step plan');
+    plan.push('rai next');
   }
   if (capability.domain === 'execute') {
-    plan.push('cwf verify-shell --cmd "npm test"');
+    plan.push('rai verify-shell --cmd "npm test"');
     if (repoSignals.frontendActive || steeringPreferences.preferBrowser) {
-      plan.push('cwf ui-review');
+      plan.push('rai ui-review');
     }
   }
   if (capability.domain === 'review') {
-    plan.push('cwf review --heatmap');
-    plan.push('cwf review --blockers');
+    plan.push('rai review --heatmap');
+    plan.push('rai review --blockers');
   }
   if (capability.domain === 'frontend') {
-    plan.push('cwf ui-recipe');
-    plan.push('cwf ui-spec');
-    plan.push('cwf responsive-matrix');
-    plan.push('cwf ui-review');
-    plan.push('cwf verify-browser --smoke');
+    plan.push('rai ui-recipe');
+    plan.push('rai ui-spec');
+    plan.push('rai responsive-matrix');
+    plan.push('rai ui-review');
+    plan.push('rai verify-browser --smoke');
   }
   if (capability.domain === 'verify' && capability.id === 'verify.browser') {
-    plan.push('cwf verify-browser --smoke');
-    plan.push('cwf preview');
+    plan.push('rai verify-browser --smoke');
+    plan.push('rai preview');
   }
   if (capability.domain === 'verify' && capability.id === 'verify.shell') {
-    plan.push('cwf verify-shell --cmd "npm test"');
+    plan.push('rai verify-shell --cmd "npm test"');
   }
   if (capability.id === 'team.parallel') {
-    plan.push('cwf team run --adapter hybrid');
-    plan.push('cwf team collect --patch-first');
+    plan.push('rai team run --adapter hybrid');
+    plan.push('rai team collect --patch-first');
   }
   if (capability.id === 'ship.release') {
-    plan.push('cwf review');
-    plan.push('cwf ship');
+    plan.push('rai review');
+    plan.push('rai ship');
   }
   if (capability.id === 'incident.triage') {
-    plan.push('cwf incident open');
-    plan.push('cwf verify-shell --cmd "npm test"');
+    plan.push('rai incident open');
+    plan.push('rai verify-shell --cmd "npm test"');
   }
   if (steeringPreferences.strictVerify && !plan.some((item) => item.includes('verify'))) {
-    plan.push('cwf verify-shell --cmd "npm test"');
+    plan.push('rai verify-shell --cmd "npm test"');
   }
   return [...new Set(plan)];
 }
@@ -569,21 +569,21 @@ function buildRerouteRecommendation(payload) {
   if (payload.repoSignals.frontendActive && !payload.verificationPlan.some((item) => item.includes('ui-review'))) {
     return {
       capability: 'frontend.ui_review',
-      command: 'cwf ui-review',
+      command: 'rai ui-review',
       reason: 'Frontend-active work should escalate into the UI review lane.',
     };
   }
   if (payload.risk.level === 'high' && !payload.verificationPlan.some((item) => item.includes('review'))) {
     return {
       capability: 'review.deep_review',
-      command: 'cwf review --heatmap',
+      command: 'rai review --heatmap',
       reason: 'High-risk work should add a deep review pass before ship or release.',
     };
   }
   if (payload.confidence < 0.65) {
     return {
       capability: payload.fallbackCapability.id,
-      command: `cwf do --explain "${payload.goal}"`,
+      command: `rai do --explain "${payload.goal}"`,
       reason: 'Routing confidence is low, so the fallback capability should be rechecked with explanation.',
     };
   }

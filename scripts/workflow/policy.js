@@ -355,7 +355,7 @@ function checkPolicy(cwd, args) {
       approvalTarget: matchingApproval ? matchingApproval.target : '',
       overrideHint: escalatedDecision === 'block'
         ? 'No override available in-product; change scope or review the policy doc.'
-        : `Run cwf approvals grant --target ${domain} --reason "Document the approval"` ,
+        : `Run rai approvals grant --target ${domain} --reason "Document the approval"` ,
     };
   });
   return {

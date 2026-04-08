@@ -34,12 +34,12 @@ These surfaces are cache, index, telemetry, verification, or operator helpers on
 
 Deleting them may reduce performance or resume convenience, but it must not break workflow semantics.
 
-`cwf update` uses `.workflow/VERSION.md` as the visible product-version marker for migrate and refresh decisions.
+`rai update` uses `.workflow/VERSION.md` as the visible product-version marker for migrate and refresh decisions.
 
 ## Control-plane layers
 
-- `cwf` is the product shell.
-- installed repos also get `bin/cwf.js` and `scripts/cli/cwf.js` as a repo-local CLI fallback.
+- `rai` is the product shell.
+- installed repos also get `bin/rai.js` and `scripts/cli/rai.js` as a repo-local CLI fallback.
 - `workflow:*` scripts remain backward-compatible.
 - `common.js` is still the facade for legacy callers.
 - newer modules in `scripts/workflow/io`, `markdown`, `packet`, and `perf` take over hot-path responsibilities incrementally.
@@ -59,7 +59,7 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 - `frontend_os.js`, `design_intelligence.js`, `design_contracts.js`, `frontend_briefs.js`, `frontend_strategy.js`, `ui_direction.js`, `design_dna.js`, `page_blueprint.js`, `design_md.js`, `component_strategy.js`, `design_benchmark.js`, `state_atlas.js`, `frontend_brief.js`, `ui_spec.js`, `ui_plan.js`, `ui_review.js`, `component_inventory.js`, `responsive_matrix.js`, `design_debt.js`, and `preview.js` add the Frontend OS surface plus taste-aware direction generation.
 - `package_graph.js`, `monorepo.js`, and `.workflowignore`-aware `fs_index.js` add the Scale OS package graph, impacted-test visibility, review shard planning, verify planning, and denylist layer.
 - `policy.js` and `approvals.js` treat `docs/workflow/POLICY.md` as the source of truth and keep `.workflow/runtime/policy.json` plus `.workflow/runtime/approvals.json` in sync as derived mirrors.
-- `cwf doctor` audits both canonical workflow health and install-surface integrity, including package scripts, runtime files, skill installation, and the visible version marker.
+- `rai doctor` audits both canonical workflow health and install-surface integrity, including package scripts, runtime files, skill installation, and the visible version marker.
 
 ## Workflow lanes
 
@@ -70,16 +70,16 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 
 ## Runtime companion layer
 
-- `cwf launch` and `cwf codex` provide strong-start orientation.
-- `cwf codex` also manages the virtual `.codex` surface via the repo-local safe mirror under `.workflow/runtime/codex-control/`.
-- `cwf manager` and `cwf hud --watch` provide live operator visibility.
-- `cwf explore`, `cwf verify-shell`, and `cwf verify-browser` provide purpose-built exploration and evidence capture.
-- `cwf route`, `cwf stats`, `cwf profile`, and `cwf workspaces` provide operator routing, telemetry, and workspace center surfaces.
-- `cwf route --why` and `cwf do --explain` now expose rejected alternatives, ambiguity class, and language-mix grounding for the chosen lane.
-- `cwf packet explain` now emits a compiler summary that condenses route, scope, risks, questions, claims, impacted packages/tests, and evidence slots into a task-aware context packet.
-- `cwf route replay`, `cwf route eval`, `cwf codex bootstrap`, `cwf codex promptpack`, and `cwf codex resume-card` extend the operator surface from phase-only routing into task-aware bootstrap packets, prompt packs, and resume cards.
-- `cwf team mailbox`, `cwf team timeline`, `cwf team supervise`, `cwf team merge-queue`, and `cwf patch-review` expose runtime collect/merge/review state directly in-product.
-- `cwf monorepo` materializes package-aware write scopes, verify plans, and performance risk notes under both docs and runtime cache surfaces.
-- `cwf review-orchestrate` materializes package/persona/wave review plans that can feed Team Lite, subagents, or Codex plan-subagents.
-- `cwf verify-browser` and `cwf ui-review` now carry browser-level accessibility and journey audits alongside visual evidence.
-- `cwf ui-direction` gives frontend lanes a taste-aware target before UI spec and plan generation starts.
+- `rai launch` and `rai codex` provide strong-start orientation.
+- `rai codex` also manages the virtual `.codex` surface via the repo-local safe mirror under `.workflow/runtime/codex-control/`.
+- `rai manager` and `rai hud --watch` provide live operator visibility.
+- `rai explore`, `rai verify-shell`, and `rai verify-browser` provide purpose-built exploration and evidence capture.
+- `rai route`, `rai stats`, `rai profile`, and `rai workspaces` provide operator routing, telemetry, and workspace center surfaces.
+- `rai route --why` and `rai do --explain` now expose rejected alternatives, ambiguity class, and language-mix grounding for the chosen lane.
+- `rai packet explain` now emits a compiler summary that condenses route, scope, risks, questions, claims, impacted packages/tests, and evidence slots into a task-aware context packet.
+- `rai route replay`, `rai route eval`, `rai codex bootstrap`, `rai codex promptpack`, and `rai codex resume-card` extend the operator surface from phase-only routing into task-aware bootstrap packets, prompt packs, and resume cards.
+- `rai team mailbox`, `rai team timeline`, `rai team supervise`, `rai team merge-queue`, and `rai patch-review` expose runtime collect/merge/review state directly in-product.
+- `rai monorepo` materializes package-aware write scopes, verify plans, and performance risk notes under both docs and runtime cache surfaces.
+- `rai review-orchestrate` materializes package/persona/wave review plans that can feed Team Lite, subagents, or Codex plan-subagents.
+- `rai verify-browser` and `rai ui-review` now carry browser-level accessibility and journey audits alongside visual evidence.
+- `rai ui-direction` gives frontend lanes a taste-aware target before UI spec and plan generation starts.

@@ -13,40 +13,40 @@ This build pushes the product toward a stronger Codex-native workflow for large 
 
 ## New commands
 
-- `cwf ui-direction`
-- `cwf review-orchestrate`
-- `cwf monorepo`
-- `cwf codex promptpack --goal "..."`
-- richer `cwf do` behavior on multilingual prompts
-- richer `cwf review-mode` output via orchestration artifacts
+- `rai ui-direction`
+- `rai review-orchestrate`
+- `rai monorepo`
+- `rai codex promptpack --goal "..."`
+- richer `rai do` behavior on multilingual prompts
+- richer `rai review-mode` output via orchestration artifacts
 
 ## Suggested flows
 
 ### Frontend slice
 
 ```bash
-cwf do "mejora el frontend con una dirección visual premium"
-cwf ui-direction
-cwf ui-spec
-cwf ui-plan
-cwf ui-review
+rai do "mejora el frontend con una dirección visual premium"
+rai ui-direction
+rai ui-spec
+rai ui-plan
+rai ui-review
 ```
 
 ### Large-repo review
 
 ```bash
-cwf do "请做代码审查并验证浏览器"
-cwf review-mode
-cwf review-orchestrate
-cwf codex promptpack --goal "review the diff and verify auth"
+rai do "请做代码审查并验证浏览器"
+rai review-mode
+rai review-orchestrate
+rai codex promptpack --goal "review the diff and verify auth"
 ```
 
 ### Monorepo execution
 
 ```bash
-cwf monorepo
-cwf team run --parallel --activation-text "aynı anda paketleri ilerlet" 
-cwf codex promptpack --goal "implement package-local fixes and verify impacted scopes"
+rai monorepo
+rai team run --parallel --activation-text "aynı anda paketleri ilerlet" 
+rai codex promptpack --goal "implement package-local fixes and verify impacted scopes"
 ```
 
 ## Main artifacts

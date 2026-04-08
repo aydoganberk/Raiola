@@ -137,7 +137,7 @@ function buildVerifyTasks(review, graph, packageGroups) {
       id: 'verify-ui-review',
       owner: 'verifier-frontend',
       focus: 'Re-run UI review/browser evidence for touched frontend surfaces after fixes land.',
-      commands: ['cwf ui-review', 'cwf verify-browser --url <preview-or-localhost>'],
+      commands: ['rai ui-review', 'rai verify-browser --url <preview-or-localhost>'],
       mode: 'ui_verify',
     });
   }
@@ -146,7 +146,7 @@ function buildVerifyTasks(review, graph, packageGroups) {
       id: 'verify-reroute-review',
       owner: 'verifier-replay',
       focus: 'After blocker fixes, rerun replay/re-review against the latest diff.',
-      commands: ['cwf re-review'],
+      commands: ['rai re-review'],
       mode: 're_review',
     });
   }
@@ -155,7 +155,7 @@ function buildVerifyTasks(review, graph, packageGroups) {
       id: 'verify-closeout',
       owner: 'verifier',
       focus: 'Close the review loop with the fastest targeted verification available for changed packages.',
-      commands: ['cwf review --heatmap'],
+      commands: ['rai review --heatmap'],
       mode: 'review_verify',
     });
   }

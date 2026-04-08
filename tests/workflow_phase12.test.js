@@ -9,11 +9,11 @@ const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
 const setupScript = path.join(repoRoot, 'scripts', 'workflow', 'setup.js');
 const initScript = path.join(repoRoot, 'scripts', 'workflow', 'init.js');
-const cwfBin = path.join(repoRoot, 'bin', 'cwf.js');
-const helpGolden = path.join(repoRoot, 'tests', 'golden', 'workflow', 'cwf-help.txt');
+const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
+const helpGolden = path.join(repoRoot, 'tests', 'golden', 'workflow', 'rai-help.txt');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase12-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase12-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }
@@ -34,7 +34,7 @@ function writeFile(targetRepo, relativePath, content) {
   fs.writeFileSync(path.join(targetRepo, relativePath), content);
 }
 
-test('cwf help and setup expose the product shell while uninstall keeps canonical docs safe', () => {
+test('rai help and setup expose the product shell while uninstall keeps canonical docs safe', () => {
   const targetRepo = makeTempRepo();
   const helpOutput = run('node', [cwfBin, 'help'], repoRoot);
   const reviewHelp = run('node', [cwfBin, 'help', 'review'], repoRoot);
@@ -43,12 +43,12 @@ test('cwf help and setup expose the product shell while uninstall keeps canonica
   const expectedHelp = fs.readFileSync(helpGolden, 'utf8');
 
   assert.equal(helpOutput.trim(), expectedHelp.trim());
-  assert.match(reviewHelp, /CWF DEEP REVIEW/);
-  assert.match(reviewHelp, /cwf review --heatmap/);
+  assert.match(reviewHelp, /raiola Deep Review/);
+  assert.match(reviewHelp, /rai review --heatmap/);
   assert.match(categoriesHelp, /solo/);
   assert.match(categoriesHelp, /runtime/);
-  assert.match(fullHelp, /FULL COMMAND REFERENCE/);
-  assert.match(fullHelp, /cwf milestone/);
+  assert.match(fullHelp, /raiola Full Command Reference/);
+  assert.match(fullHelp, /rai milestone/);
 
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
 
@@ -64,28 +64,28 @@ test('cwf help and setup expose the product shell while uninstall keeps canonica
   assert.equal(packageJson.scripts['workflow:uninstall'], 'node scripts/workflow/uninstall.js');
   assert.equal(packageJson.scripts['workflow:notify'], undefined);
   assert.equal(packageJson.scripts['workflow:assumptions'], undefined);
-  assert.equal(packageJson.scripts.cwf, 'node bin/cwf.js');
+  assert.equal(packageJson.scripts.rai, 'node bin/rai.js');
   assert.match(gitignore, /\.workflow\//);
   assert.match(gitignore, /\.agents\//);
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'quick.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'setup.js')));
   assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'notify.js')));
   assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'ui_direction.js')));
-  assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'cli', 'cwf.js')));
-  assert.ok(fs.existsSync(path.join(targetRepo, 'bin', 'cwf.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'cli', 'rai.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'bin', 'rai.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'VERSION.md')));
-  const pilotHelp = run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'help'], targetRepo);
+  const pilotHelp = run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'help'], targetRepo);
   assert.match(pilotHelp, /Focused install/i);
   assert.match(pilotHelp, /pilot/);
-  assert.doesNotMatch(pilotHelp, /cwf help review/);
-  const filteredHelp = run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'help', 'all'], targetRepo);
-  assert.match(filteredHelp, /cwf milestone/);
+  assert.doesNotMatch(pilotHelp, /rai help review/);
+  const filteredHelp = run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'help', 'all'], targetRepo);
+  assert.match(filteredHelp, /rai milestone/);
   assert.doesNotMatch(filteredHelp, /notify/);
   assert.doesNotMatch(filteredHelp, /Frontend/);
 
   const unavailable = childProcess.spawnSync(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'notify'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'notify'],
     {
       cwd: targetRepo,
       encoding: 'utf8',
@@ -94,14 +94,14 @@ test('cwf help and setup expose the product shell while uninstall keeps canonica
   );
   assert.equal(unavailable.status, 1);
   assert.match(unavailable.stderr, /not installed in this repo's current shell/i);
-  assert.match(unavailable.stderr, /cwf update --script-profile core/);
+  assert.match(unavailable.stderr, /rai update --script-profile core/);
 
   const uninstallPayload = JSON.parse(run('node', [cwfBin, 'uninstall', '--target', targetRepo, '--json'], repoRoot));
   assert.ok(fs.existsSync(path.join(targetRepo, 'docs', 'workflow', 'STATUS.md')));
   assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'quick.js')));
   assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'setup.js')));
-  assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'cli', 'cwf.js')));
-  assert.ok(!fs.existsSync(path.join(targetRepo, 'bin', 'cwf.js')));
+  assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'cli', 'rai.js')));
+  assert.ok(!fs.existsSync(path.join(targetRepo, 'bin', 'rai.js')));
   assert.ok(!fs.existsSync(path.join(targetRepo, '.workflow', 'product-manifest.json')));
   assert.ok(!fs.existsSync(path.join(targetRepo, '.workflow', 'VERSION.md')));
   assert.ok(uninstallPayload.removed.some((item) => item.endsWith('scripts/workflow/quick.js')));
@@ -124,7 +124,7 @@ test('workflow:update can contract a full install down to the pilot surface', ()
 
   run(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'update', '--script-profile', 'pilot', '--skip-verify'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'update', '--script-profile', 'pilot', '--skip-verify'],
     targetRepo,
   );
 
@@ -138,7 +138,7 @@ test('workflow:update can contract a full install down to the pilot surface', ()
   assert.equal(packageJson.scripts['workflow:quick'], 'node scripts/workflow/quick.js');
 });
 
-test('cwf milestone opens a full-workflow milestone without npm script indirection', () => {
+test('rai milestone opens a full-workflow milestone without npm script indirection', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
 
@@ -164,7 +164,7 @@ test('workflow:doctor audits install-surface drift and suggests fix commands', (
   delete packageJson.scripts['workflow:quick'];
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
   fs.writeFileSync(path.join(targetRepo, '.gitignore'), '# test-only gitignore\n');
-  fs.rmSync(path.join(targetRepo, '.agents', 'skills', 'codex-workflow', 'SKILL.md'));
+  fs.rmSync(path.join(targetRepo, '.agents', 'skills', 'raiola', 'SKILL.md'));
   fs.rmSync(path.join(targetRepo, '.workflow', 'VERSION.md'));
 
   const result = childProcess.spawnSync(
@@ -179,11 +179,11 @@ test('workflow:doctor audits install-surface drift and suggests fix commands', (
 
   assert.equal(result.status, 1);
   assert.match(result.stdout, /Package scripts -> missing=workflow:quick/);
-  assert.match(result.stdout, /fix: `cwf update --overwrite-scripts`/);
+  assert.match(result.stdout, /fix: `rai update --overwrite-scripts`/);
   assert.match(result.stdout, /Gitignore hygiene -> missing \.workflow\/, \.agents\//);
-  assert.match(result.stdout, /Skill surface -> \.agents\/skills\/codex-workflow\/SKILL\.md is missing/);
+  assert.match(result.stdout, /Skill surface -> \.agents\/skills\/raiola\/SKILL\.md is missing/);
   assert.match(result.stdout, /Product version marker -> \.workflow\/VERSION\.md is missing/);
-  assert.match(result.stdout, /fix: `cwf update`/);
+  assert.match(result.stdout, /fix: `rai update`/);
 });
 
 test('workflow:quick start and close keep markdown artifacts visible', () => {

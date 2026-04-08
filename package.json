@@ -1,9 +1,11 @@
 {
-  "name": "codex-workflow-kit",
+  "name": "raiola",
   "version": "0.3.1",
   "private": false,
-  "description": "Repo-native Codex workflow product with CLI, quick mode, orchestration, and closeout surfaces.",
+  "description": "raiola is a repo-native Codex workflow product with CLI, quick mode, orchestration, and closeout surfaces.",
   "bin": {
+    "rai": "bin/rai.js",
+    "raiola": "bin/raiola.js",
     "cwf": "bin/cwf.js",
     "codex-workflow": "bin/cwf.js"
   },

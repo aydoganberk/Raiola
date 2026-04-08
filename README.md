@@ -1,6 +1,6 @@
-# codex-workflow-kit
+# raiola
 
-`codex-workflow-kit` is a repo-native workflow product for Codex.
+`raiola` is a repo-native workflow product for Codex.
 
 It turns workflow discipline into an installable CLI and runtime companion instead of a loose script bundle. The goal is simple: keep long-running work safe, resumable, auditable, observable, and fast enough to use every day.
 
@@ -22,29 +22,29 @@ It helps when you need:
 
 ### Three golden flows
 
-- Solo daily loop: `cwf do`, `cwf next`, `cwf verify-shell`, `cwf checkpoint`, `cwf next-prompt`
-- Deep review: `cwf route`, `cwf review`, `cwf ui-review`, `cwf verify-work`, `cwf ship-readiness`
-- Team parallel: `cwf monorepo`, `cwf team run`, `cwf team supervise`, `cwf team merge-queue`, `cwf patch-review`, `cwf sessions`
+- Solo daily loop: `rai do`, `rai next`, `rai verify-shell`, `rai checkpoint`, `rai next-prompt`
+- Deep review: `rai route`, `rai review`, `rai ui-review`, `rai verify-work`, `rai ship-readiness`
+- Team parallel: `rai monorepo`, `rai team run`, `rai team supervise`, `rai team merge-queue`, `rai patch-review`, `rai sessions`
 
-Run `cwf help` to start from these flows. Use `cwf help all` for the full shell, or `cwf help <topic>` for focused categories like `frontend`, `trust`, `runtime`, or `codex`.
+Run `rai help` to start from these flows. Use `rai help all` for the full shell, or `rai help <topic>` for focused categories like `frontend`, `trust`, `runtime`, or `codex`.
 
 ### Core shell
 
-- `cwf setup`
-- `cwf doctor`
-- `cwf do`
-- `cwf next`
-- `cwf review`
-- `cwf team`
-- `cwf dashboard`
+- `rai setup`
+- `rai doctor`
+- `rai do`
+- `rai next`
+- `rai review`
+- `rai team`
+- `rai dashboard`
 
 ### Full reference
 
-The full command surface still exists; it now lives in [Commands](./docs/commands.md) and `cwf help all`. Fresh `pilot` installs intentionally start with a narrower shell so first-run repos only see the highest-signal commands.
+The full command surface still exists; it now lives in [Commands](./docs/commands.md) and `rai help all`. Fresh `pilot` installs intentionally start with a narrower shell so first-run repos only see the highest-signal commands.
 
 ### Backward compatibility
 
-`core` and `full` installs keep the broader legacy `workflow:*` compatibility surface. The default `pilot` install trims first-run aliases and command entrypoints, but `cwf update --script-profile core` or `cwf update --script-profile full` expands the repo in place without changing the canonical markdown contract.
+`core` and `full` installs keep the broader legacy `workflow:*` compatibility surface. The default `pilot` install trims first-run aliases and command entrypoints, but `rai update --script-profile core` or `rai update --script-profile full` expands the repo in place without changing the canonical markdown contract.
 
 ### Skill aliases
 
@@ -61,42 +61,42 @@ The full command surface still exists; it now lives in [Commands](./docs/command
 If the package is available through `npx`:
 
 ```bash
-npx codex-workflow-kit setup
+npx raiola setup
 ```
 
 Fresh `setup` installs now default to a focused `pilot` profile so package.json and the repo-local shell stay lean on day one. Move up to `core` for the full shell with curated npm aliases, or jump straight to `full` if you want every backward-compatible npm alias immediately:
 
 ```bash
-npx codex-workflow-kit setup --script-profile core
-npx codex-workflow-kit setup --script-profile full
+npx raiola setup --script-profile core
+npx raiola setup --script-profile full
 ```
 
 If you are working from this repository:
 
 ```bash
-node bin/cwf.js setup --target /path/to/target-repo
+node bin/rai.js setup --target /path/to/target-repo
 ```
 
 Inside a repo where the package is already available:
 
 ```bash
-cwf help solo
-cwf codex setup --repo
-cwf do "Land the first slice"
-cwf note "Capture the first risk" --promote backlog
-cwf manager
-cwf dashboard --open
-cwf doctor --strict
-cwf discuss --goal "Clarify the next slice"
-cwf hud --compact
-cwf next
+rai help solo
+rai codex setup --repo
+rai do "Land the first slice"
+rai note "Capture the first risk" --promote backlog
+rai manager
+rai dashboard --open
+rai doctor --strict
+rai discuss --goal "Clarify the next slice"
+rai hud --compact
+rai next
 ```
 
-Repo-local fallback if the global `cwf` binary is not installed yet:
+Repo-local fallback if the global `rai` binary is not installed yet:
 
 ```bash
-node bin/cwf.js help
-node bin/cwf.js doctor --strict
+node bin/rai.js help
+node bin/rai.js doctor --strict
 ```
 
 `setup`, `init`, `migrate`, and `update` also patch `.gitignore` by default so non-canonical runtime state like `.workflow/` and `.agents/` does not flood your git status. Pass `--skip-gitignore` only if your repo intentionally tracks those paths.
@@ -106,35 +106,35 @@ node bin/cwf.js doctor --strict
 - Node.js: `>=20` (`.nvmrc` is pinned to `20` for local development)
 - Full support: macOS and Linux
 - Smoke-tested install/help flows: Windows
-- `cwf doctor --strict` checks install integrity plus host advisories such as Git, ripgrep, platform support, and browser-opening helpers
-- `cwf health --strict` stays focused on blocking workflow/runtime issues so optional host-tool gaps do not downgrade the main gate
+- `rai doctor --strict` checks install integrity plus host advisories such as Git, ripgrep, platform support, and browser-opening helpers
+- `rai health --strict` stays focused on blocking workflow/runtime issues so optional host-tool gaps do not downgrade the main gate
 
 ## Daily loop
 
 Use the product shell when the repo already has workflow installed:
 
 ```bash
-cwf do "resume the current slice"
-cwf manager
-cwf dashboard
-cwf hud --compact
-cwf explore --changed
-cwf packet compile --step plan
-cwf secure
-cwf assumptions add "Playwright may be absent locally" --impact medium --exit-trigger "Browser adapter is installed"
-cwf verify-shell --cmd "npm test"
-cwf claims check
-cwf evidence
-cwf verify-work
-cwf ui-spec
-cwf ui-review
-cwf approval plan
-cwf ship-readiness
-cwf next
-cwf checkpoint --next "Resume here"
-cwf next-prompt
-cwf review
-cwf ship
+rai do "resume the current slice"
+rai manager
+rai dashboard
+rai hud --compact
+rai explore --changed
+rai packet compile --step plan
+rai secure
+rai assumptions add "Playwright may be absent locally" --impact medium --exit-trigger "Browser adapter is installed"
+rai verify-shell --cmd "npm test"
+rai claims check
+rai evidence
+rai verify-work
+rai ui-spec
+rai ui-review
+rai approval plan
+rai ship-readiness
+rai next
+rai checkpoint --next "Resume here"
+rai next-prompt
+rai review
+rai ship
 ```
 
 Legacy equivalents still work:
@@ -152,44 +152,44 @@ npm run workflow:ship
 
 The current build adds repo-native surfaces aimed at making Codex materially stronger on large and messy codebases:
 
-- `cwf do "请做代码审查并验证浏览器"` or `cwf do "revisa el frontend y mejora el diseño"`  
+- `rai do "请做代码审查并验证浏览器"` or `rai do "revisa el frontend y mejora el diseño"`  
   Multilingual routing now grounds intent, steering, and deterministic capability picks across major languages instead of assuming English-only prompts.
-- `cwf do "look into why the verification plan feels weak before patching"` or `cwf do "neden verify plani zayif bir bak ve kok nedeni acikla"`  
+- `rai do "look into why the verification plan feels weak before patching"` or `rai do "neden verify plani zayif bir bak ve kok nedeni acikla"`  
   English and Turkish conversational routing now handles more natural operator phrasing such as `look into`, `put together`, `go over`, `double-check`, `get this out`, `bir bak`, `hazirla`, `elden gecir`, `previewu smoke et`, `parcalara bol`, and `yayina al`.
-- `cwf do "act like a head developer and go ovre the diff"` or `cwf do "teknik lider gibi milestone paketini hazrla"`  
+- `rai do "act like a head developer and go ovre the diff"` or `rai do "teknik lider gibi milestone paketini hazrla"`  
   English/Turkish routing now also recognizes persona-based intent packs and nearby typos, so role framing and lightly misspelled operator phrases still route to the right Codex lane.
-- `cwf codex promptpack --goal "review the auth diff"`  
+- `rai codex promptpack --goal "review the auth diff"`  
   Writes a ready-to-paste Codex prompt pack with profile, verify contract, repo signals, the generated context pack, optional UI direction, monorepo hotspots, and the latest review orchestration/task-graph context.
-- `cwf codex contextpack --goal "review the auth diff"`  
+- `rai codex contextpack --goal "review the auth diff"`  
   Produces a budgeted context pack for Codex app/CLI sessions with ordered attachments, focus files, compact/balanced/deep presets, and explicit avoid-patterns to fight context rot on wide repos.
-- `cwf ui-direction --goal "premium minimal analytics dashboard" --taste premium-minimal`  
+- `rai ui-direction --goal "premium minimal analytics dashboard" --taste premium-minimal`  
   Produces a taste-aware design brief (`docs/workflow/UI-DIRECTION.md`) with archetype-aware design tokens, component cues, interaction cues, and style guardrails so frontend work is not just “correct” but intentionally styled.
-- `cwf design-dna --goal "developer tool landing page with product proof"`  
+- `rai design-dna --goal "developer tool landing page with product proof"`  
   Produces `docs/workflow/DESIGN-DNA.md` with external reference blend, product-category reasoning, and anti-pattern bans so Codex can borrow the right visual DNA without cloning one source.
-- `cwf page-blueprint --goal "developer tool landing page"`  
+- `rai page-blueprint --goal "developer tool landing page"`  
   Produces `docs/workflow/PAGE-BLUEPRINT.md` with section map, proof surfaces, responsive priorities, and page-type sequencing for the current frontend slice.
-- `cwf design-md --goal "developer tool landing page" --project-root`  
+- `rai design-md --goal "developer tool landing page" --project-root`  
   Produces `docs/workflow/DESIGN.md` plus an optional repo-root `DESIGN.md` mirror so downstream agents/tools can consume a portable design contract directly.
-- `cwf component-strategy --goal "developer tool landing page"`  
+- `rai component-strategy --goal "developer tool landing page"`  
   Produces `docs/workflow/COMPONENT-STRATEGY.md` so Codex can decide what to reuse, extract, and build before page-local component sprawl starts.
-- `cwf design-benchmark --goal "developer tool landing page"`  
+- `rai design-benchmark --goal "developer tool landing page"`  
   Produces `docs/workflow/DESIGN-BENCHMARK.md` with differentiation plays and commodity-risk checks so external-site UI work stays distinctive instead of template-like.
-- `cwf state-atlas --goal "analytics dashboard with filters and detail panes"`  
+- `rai state-atlas --goal "analytics dashboard with filters and detail panes"`  
   Produces `docs/workflow/STATE-ATLAS.md` with required loading/empty/error/success and high-risk transition states so frontend work does not stop at the happy path.
-- `cwf frontend-brief --goal "developer tool landing page"`  
+- `rai frontend-brief --goal "developer tool landing page"`  
   Produces a one-shot frontend artifact pack (`FRONTEND-BRIEF`, `DESIGN.md`, benchmark, component strategy, blueprint, state atlas, UI spec) for external-site work.
-- `cwf review-tasks`  
+- `rai review-tasks`  
   Converts review findings into a blocker-first four-wave task graph (triage → synthesis → fix → verify) that can drive large-repo review and re-review loops.
-- `cwf review-orchestrate`  
+- `rai review-orchestrate`  
   Converts review findings into package/persona/wave-based review work for large repos and monorepos.
-- `cwf monorepo`  
+- `rai monorepo`  
   Builds package-aware write scopes, review shards, hotspots, context slices, context budgets, targeted verify plans, and performance-risk notes for broad repos.
 
 These surfaces are designed to stay backward-compatible with the canonical markdown workflow instead of replacing it.
 
 ## Natural-Language Routing
 
-`cwf do` is no longer tuned just for terse command-like prompts. The current routing layer is optimized to understand both English and Turkish operator language in a more natural form.
+`rai do` is no longer tuned just for terse command-like prompts. The current routing layer is optimized to understand both English and Turkish operator language in a more natural form.
 
 - Research: `look into why routing confidence is low`, `bir bak neden verify plani zayif`
 - Plan: `put together the next execution packet`, `bir sonraki milestone paketini hazirla`
@@ -206,7 +206,7 @@ This support is enforced through the routing corpus and roadmap audit rather tha
 
 ### Quick mode
 
-Use `cwf quick` for 15-60 minute, single-operator work with a narrow touched surface.
+Use `rai quick` for 15-60 minute, single-operator work with a narrow touched surface.
 
 Quick mode stores canonical markdown under `.workflow/quick/`:
 
@@ -233,7 +233,7 @@ Canonical markdown lives in `docs/workflow/` or the active named workstream root
 
 ### Team Lite orchestration
 
-Use `cwf team` when the user explicitly asks for parallelism or delegation.
+Use `rai team` when the user explicitly asks for parallelism or delegation.
 
 Canonical orchestration artifacts live under `.workflow/orchestration/`:
 
@@ -251,13 +251,13 @@ These rules are the core contract:
 - Markdown remains canonical.
 - Runtime JSON is cache, index, HUD, manager, launch, or telemetry convenience only.
 - `.workflow/runtime/*.json` and `.workflow/runtime/*.md` are derived operator surfaces only.
-- `cwf policy` and `cwf approvals` keep `docs/workflow/POLICY.md` canonical and mirror it into `.workflow/runtime/policy.json` plus `.workflow/runtime/approvals.json`.
-- Visible product version metadata lives at `.workflow/VERSION.md` so `cwf update` can reason about install drift.
+- `rai policy` and `rai approvals` keep `docs/workflow/POLICY.md` canonical and mirror it into `.workflow/runtime/policy.json` plus `.workflow/runtime/approvals.json`.
+- Visible product version metadata lives at `.workflow/VERSION.md` so `rai update` can reason about install drift.
 - Quick mode does not bypass the plan/checkpoint/audit spine.
 - Write-capable parallel work requires explicit disjoint write scope.
 - Resume safety is checkpoint-first, not memory-first.
 - `doctor --repair` and `health --repair` default to dry-run and do not silently rewrite canonical markdown.
-- `cwf codex` uses a repo-local virtual `.codex` root and stores the generated control-plane mirror under `.workflow/runtime/codex-control/` so the flow remains rollback-safe inside the repo sandbox.
+- `rai codex` uses a repo-local virtual `.codex` root and stores the generated control-plane mirror under `.workflow/runtime/codex-control/` so the flow remains rollback-safe inside the repo sandbox.
 - `common.js` remains backward-compatible while newer modules take over hot-path responsibilities.
 
 ## Performance
@@ -291,7 +291,7 @@ Current product targets for medium-size repos:
 Run the benchmark harness:
 
 ```bash
-cwf benchmark
+rai benchmark
 ```
 
 The benchmark surface covers every documented hot-path target, including `launch`, `manager`, `next-prompt`, `codex contextpack`, and `codex promptpack`.
@@ -311,37 +311,37 @@ npm run workflow:benchmark -- --commands hud,doctor,map-codebase --assert-slo
 Or benchmark the operator surfaces directly:
 
 ```bash
-cwf benchmark --commands launch,manager,next-prompt
+rai benchmark --commands launch,manager,next-prompt
 ```
 
 Fixture-backed benchmark runs are also supported:
 
 ```bash
-cwf benchmark --fixture medium --commands hud,map-codebase
-cwf benchmark --fixture large --commands hud
+rai benchmark --fixture medium --commands hud,map-codebase
+rai benchmark --fixture large --commands hud
 ```
 
 CI also runs the benchmark with SLO enforcement via [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
 
 ## Runtime companion surfaces
 
-- `cwf launch` writes `.workflow/runtime/launch.json`
-- `cwf hud` writes `.workflow/runtime/hud.json`
-- `cwf manager` writes `.workflow/runtime/manager.json`
-- `cwf next-prompt` writes `.workflow/runtime/next-prompt.md`
-- `cwf verify-shell` writes `.workflow/verifications/shell/*`
-- `cwf verify-browser` writes `.workflow/verifications/browser/*` with HTML, headers, and a visual evidence artifact
-- `cwf route` writes `.workflow/cache/model-routing.json`
+- `rai launch` writes `.workflow/runtime/launch.json`
+- `rai hud` writes `.workflow/runtime/hud.json`
+- `rai manager` writes `.workflow/runtime/manager.json`
+- `rai next-prompt` writes `.workflow/runtime/next-prompt.md`
+- `rai verify-shell` writes `.workflow/verifications/shell/*`
+- `rai verify-browser` writes `.workflow/verifications/browser/*` with HTML, headers, and a visual evidence artifact
+- `rai route` writes `.workflow/cache/model-routing.json`
 
 ## Closeout surfaces
 
 These commands write operator-facing reports under `.workflow/reports/`:
 
-- `cwf review` -> `review.md`
-- `cwf ship` -> `ship.md`
-- `cwf pr-brief` -> `pr-brief.md`
-- `cwf release-notes` -> `release-notes.md`
-- `cwf session-report` -> `session-report.md`
+- `rai review` -> `review.md`
+- `rai ship` -> `ship.md`
+- `rai pr-brief` -> `pr-brief.md`
+- `rai release-notes` -> `release-notes.md`
+- `rai session-report` -> `session-report.md`
 
 ## Repository docs
 
@@ -365,7 +365,7 @@ npm test
 Smoke the product shell:
 
 ```bash
-node bin/cwf.js help
+node bin/rai.js help
 node scripts/workflow/setup.js --target /tmp/example-repo --skip-verify
 ```
 

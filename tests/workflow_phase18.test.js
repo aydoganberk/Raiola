@@ -7,10 +7,10 @@ const childProcess = require('node:child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'cwf.js');
+const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase18-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase18-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }
@@ -26,7 +26,7 @@ function run(command, args, cwd) {
 test('phase 8 trust surfaces generate fix plans, approval plans, ship gates, and richer evidence graphs', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
 
   run('git', ['init'], targetRepo);
   run('git', ['config', 'user.email', 'trust@example.com'], targetRepo);
@@ -91,7 +91,7 @@ test('phase 8 trust surfaces generate fix plans, approval plans, ship gates, and
 test('roadmap-compatible wrappers and aliases are scriptable', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
 
   run(
     'node',
@@ -118,7 +118,7 @@ test('roadmap-compatible wrappers and aliases are scriptable', () => {
   assert.equal(backlog.action, 'park');
   assert.ok(Array.isArray(validationMap.checks));
   assert.ok(subagents.suggestedPlan.length >= 1);
-  assert.equal(nextFromGap.recommendation.command, 'cwf verify-work');
+  assert.equal(nextFromGap.recommendation.command, 'rai verify-work');
   assert.match(hud, /intent=|cost=|risk=/);
   assert.ok(['pass', 'warn'].includes(approval.verdict));
 });

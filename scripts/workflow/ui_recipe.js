@@ -553,8 +553,8 @@ function buildTargetFiles(profile, recipe) {
 
 function buildVerificationPlan(recipe) {
   const plan = [
-    'cwf ui-review',
-    'cwf verify-browser --smoke',
+    'rai ui-review',
+    'rai verify-browser --smoke',
   ];
   if (/filter|table|command/.test(recipe.id)) {
     plan.unshift('Check table semantics, filter labels, and scan speed on narrow and wide widths.');

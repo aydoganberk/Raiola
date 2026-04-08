@@ -8,10 +8,10 @@ const childProcess = require('node:child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'cwf.js');
+const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase19-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase19-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }
@@ -111,7 +111,7 @@ test('multilingual natural-language routing handles Chinese, Spanish, and Turkis
     }, null, 2)}\n`,
   );
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const chineseReview = JSON.parse(run('node', [targetBin, 'do', '请做代码审查并验证浏览器', '--json'], targetRepo));
   const spanishFrontend = JSON.parse(run('node', [targetBin, 'do', 'crea una especificación UI frontend con diseño premium y revisión responsive', '--json'], targetRepo));
   const turkishReview = JSON.parse(run('node', [targetBin, 'do', 'kapsamlı ürün değerlendirmesi yap', '--json'], targetRepo));
@@ -140,7 +140,7 @@ test('english and turkish conversational routing covers broader Codex operator p
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const englishResearch = JSON.parse(run('node', [targetBin, 'do', 'look into why the verification plan feels weak before patching', '--json'], targetRepo));
   const englishPlan = JSON.parse(run('node', [targetBin, 'do', 'put together the next execution packet with risks and checks', '--json'], targetRepo));
   const englishReview = JSON.parse(run('node', [targetBin, 'do', 'go over the diff and call out blockers', '--json'], targetRepo));
@@ -170,7 +170,7 @@ test('persona packs and typo-tolerant routing stay effective for English and Tur
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const englishLeadReview = JSON.parse(run(
     'node',
     [targetBin, 'do', 'act like a head developer and go ovre the diff and call out blokers', '--json'],
@@ -207,7 +207,7 @@ test('ui direction and ui plan generate taste-aware frontend guidance for Codex'
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const direction = JSON.parse(run('node', [targetBin, 'ui-direction', '--json'], targetRepo));
   const spec = JSON.parse(run('node', [targetBin, 'ui-spec', '--json'], targetRepo));
   const plan = JSON.parse(run('node', [targetBin, 'ui-plan', '--json'], targetRepo));
@@ -231,7 +231,7 @@ test('codex promptpack carries external-site frontend artifacts for implementati
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const promptPack = JSON.parse(run(
     'node',
     [targetBin, 'codex', 'promptpack', '--goal', 'build a developer tool landing page for AI agents', '--page', 'landing-page', '--json'],
@@ -279,7 +279,7 @@ test('review orchestration builds package and persona waves on top of review mod
     'export default function Page() { console.log("debug"); return <main><h1>After</h1><p>TODO tighten copy</p></main>; }\n',
   );
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const review = JSON.parse(run('node', [targetBin, 'review-orchestrate', '--json'], targetRepo));
 
   assert.ok(review.findings.length >= 2);
@@ -312,7 +312,7 @@ test('monorepo intelligence and delegation plan auto-synthesize package-local wr
 
   fs.writeFileSync(path.join(targetRepo, 'packages', 'app-one', 'src', 'index.ts'), 'export const appone = false;\n');
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const monorepo = JSON.parse(run('node', [targetBin, 'monorepo', '--json'], targetRepo));
   const delegation = JSON.parse(run(
     'node',

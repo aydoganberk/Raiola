@@ -76,7 +76,7 @@ function main() {
       cleanupPaths.push(tarball.tarballPath);
     }
 
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-pack-smoke-'));
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'rai-pack-smoke-'));
     const consumerDir = path.join(tempRoot, 'consumer');
     const targetRepo = path.join(tempRoot, 'target-repo');
     fs.mkdirSync(consumerDir, { recursive: true });
@@ -84,8 +84,8 @@ function main() {
 
     run(commandName('npm'), ['init', '-y'], { cwd: consumerDir });
     run(commandName('npm'), ['install', '--silent', tarball.tarballPath], { cwd: consumerDir });
-    run(commandName('npx'), ['--yes', 'cwf', 'help'], { cwd: consumerDir });
-    const setupPayload = run(commandName('npx'), ['--yes', 'cwf', 'setup', '--target', targetRepo, '--skip-verify', '--json'], {
+    run(commandName('npx'), ['--yes', 'raiola', 'help'], { cwd: consumerDir });
+    const setupPayload = run(commandName('npx'), ['--yes', 'raiola', 'setup', '--target', targetRepo, '--skip-verify', '--json'], {
       cwd: consumerDir,
     });
 

@@ -189,12 +189,12 @@ const GOLDEN_FLOWS = Object.freeze([
     summary: 'Best default for a single operator moving one safe slice at a time.',
     commands: ['do', 'next', 'verify-shell', 'checkpoint', 'next-prompt', 'quick', 'milestone'],
     sequence: [
-      'cwf setup',
-      'cwf doctor --strict',
-      'cwf milestone --id M1 --name "Initial slice" --goal "Land the next safe slice"',
-      'cwf do "land the next safe slice"',
-      'cwf next',
-      'cwf checkpoint --next "Resume here"',
+      'rai setup',
+      'rai doctor --strict',
+      'rai milestone --id M1 --name "Initial slice" --goal "Land the next safe slice"',
+      'rai do "land the next safe slice"',
+      'rai next',
+      'rai checkpoint --next "Resume here"',
     ],
     relatedGroup: 'solo',
   },
@@ -204,12 +204,12 @@ const GOLDEN_FLOWS = Object.freeze([
     summary: 'Use when the main job is understanding risk, regressions, or readiness to ship.',
     commands: ['route', 'review', 'review-tasks', 'ui-review', 'verify-work', 'ship-readiness', 'ship'],
     sequence: [
-      'cwf route --goal "review the current diff" --why',
-      'cwf review --heatmap',
-      'cwf review-tasks --json',
-      'cwf ui-review --url ./preview.html',
-      'cwf verify-work',
-      'cwf ship-readiness',
+      'rai route --goal "review the current diff" --why',
+      'rai review --heatmap',
+      'rai review-tasks --json',
+      'rai ui-review --url ./preview.html',
+      'rai verify-work',
+      'rai ship-readiness',
     ],
     relatedGroup: 'review',
   },
@@ -219,11 +219,11 @@ const GOLDEN_FLOWS = Object.freeze([
     summary: 'Use when the user explicitly wants parallel work with bounded write scopes.',
     commands: ['monorepo', 'team', 'subagents', 'patch-review', 'sessions'],
     sequence: [
-      'cwf monorepo',
-      'cwf team run --adapter hybrid --activation-text "parallel yap" --write-scope src,tests',
-      'cwf team collect --patch-first',
-      'cwf team mailbox',
-      'cwf patch-review',
+      'rai monorepo',
+      'rai team run --adapter hybrid --activation-text "parallel yap" --write-scope src,tests',
+      'rai team collect --patch-first',
+      'rai team mailbox',
+      'rai patch-review',
     ],
     relatedGroup: 'team',
   },
@@ -232,54 +232,54 @@ const GOLDEN_FLOWS = Object.freeze([
 const CORE_COMMANDS = ['setup', 'doctor', 'do', 'next', 'review', 'team', 'dashboard'];
 
 const LEGACY_EQUIVALENTS = [
-  ['cwf milestone', 'npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."'],
-  ['cwf doctor', 'npm run workflow:doctor -- --strict'],
-  ['cwf health', 'npm run workflow:health -- --strict'],
-  ['cwf discuss', 'npm run workflow:discuss'],
-  ['cwf assumptions', 'npm run workflow:assumptions'],
-  ['cwf hud', 'npm run workflow:hud -- --compact'],
-  ['cwf next', 'npm run workflow:next'],
-  ['cwf launch', 'npm run workflow:launch'],
-  ['cwf manager', 'npm run workflow:manager'],
-  ['cwf dashboard', 'npm run workflow:dashboard'],
-  ['cwf do', 'npm run workflow:do -- "..."'],
-  ['cwf note', 'npm run workflow:note -- "..."'],
-  ['cwf packet', 'npm run workflow:packet -- --step plan'],
-  ['cwf explore', 'npm run workflow:explore -- "query"'],
-  ['cwf verify-shell', 'npm run workflow:verify-shell -- --cmd "npm test"'],
-  ['cwf verify-browser', 'npm run workflow:verify-browser -- --url http://localhost:3000'],
-  ['cwf verify-work', 'npm run workflow:verify-work'],
-  ['cwf next-prompt', 'npm run workflow:next-prompt'],
-  ['cwf checkpoint', 'npm run workflow:checkpoint -- --next "Resume here"'],
-  ['cwf quick', 'npm run workflow:quick'],
-  ['cwf team', 'npm run workflow:team'],
-  ['cwf subagents', 'npm run workflow:subagents -- plan'],
-  ['cwf approval', 'npm run workflow:approval -- plan'],
-  ['cwf review', 'npm run workflow:review'],
-  ['cwf review-mode', 'npm run workflow:review-mode'],
-  ['cwf review-tasks', 'npm run workflow:review-tasks'],
-  ['cwf pr-review', 'npm run workflow:pr-review'],
-  ['cwf re-review', 'npm run workflow:re-review'],
-  ['cwf ui-spec', 'npm run workflow:ui-spec'],
-  ['cwf design-dna', 'npm run workflow:design-dna'],
-  ['cwf page-blueprint', 'npm run workflow:page-blueprint'],
-  ['cwf design-md', 'npm run workflow:design-md'],
-  ['cwf component-strategy', 'npm run workflow:component-strategy'],
-  ['cwf design-benchmark', 'npm run workflow:design-benchmark'],
-  ['cwf state-atlas', 'npm run workflow:state-atlas'],
-  ['cwf frontend-brief', 'npm run workflow:frontend-brief'],
-  ['cwf ui-recipe', 'npm run workflow:ui-recipe'],
-  ['cwf ui-plan', 'npm run workflow:ui-plan'],
-  ['cwf ui-review', 'npm run workflow:ui-review'],
-  ['cwf preview', 'npm run workflow:preview'],
-  ['cwf component-map', 'npm run workflow:component-map'],
-  ['cwf responsive-matrix', 'npm run workflow:responsive-matrix'],
-  ['cwf design-debt', 'npm run workflow:design-debt'],
-  ['cwf ship-readiness', 'npm run workflow:ship-readiness'],
-  ['cwf ship', 'npm run workflow:ship'],
-  ['cwf pr-brief', 'npm run workflow:pr-brief'],
-  ['cwf release-notes', 'npm run workflow:release-notes'],
-  ['cwf session-report', 'npm run workflow:session-report'],
+  ['rai milestone', 'npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."'],
+  ['rai doctor', 'npm run workflow:doctor -- --strict'],
+  ['rai health', 'npm run workflow:health -- --strict'],
+  ['rai discuss', 'npm run workflow:discuss'],
+  ['rai assumptions', 'npm run workflow:assumptions'],
+  ['rai hud', 'npm run workflow:hud -- --compact'],
+  ['rai next', 'npm run workflow:next'],
+  ['rai launch', 'npm run workflow:launch'],
+  ['rai manager', 'npm run workflow:manager'],
+  ['rai dashboard', 'npm run workflow:dashboard'],
+  ['rai do', 'npm run workflow:do -- "..."'],
+  ['rai note', 'npm run workflow:note -- "..."'],
+  ['rai packet', 'npm run workflow:packet -- --step plan'],
+  ['rai explore', 'npm run workflow:explore -- "query"'],
+  ['rai verify-shell', 'npm run workflow:verify-shell -- --cmd "npm test"'],
+  ['rai verify-browser', 'npm run workflow:verify-browser -- --url http://localhost:3000'],
+  ['rai verify-work', 'npm run workflow:verify-work'],
+  ['rai next-prompt', 'npm run workflow:next-prompt'],
+  ['rai checkpoint', 'npm run workflow:checkpoint -- --next "Resume here"'],
+  ['rai quick', 'npm run workflow:quick'],
+  ['rai team', 'npm run workflow:team'],
+  ['rai subagents', 'npm run workflow:subagents -- plan'],
+  ['rai approval', 'npm run workflow:approval -- plan'],
+  ['rai review', 'npm run workflow:review'],
+  ['rai review-mode', 'npm run workflow:review-mode'],
+  ['rai review-tasks', 'npm run workflow:review-tasks'],
+  ['rai pr-review', 'npm run workflow:pr-review'],
+  ['rai re-review', 'npm run workflow:re-review'],
+  ['rai ui-spec', 'npm run workflow:ui-spec'],
+  ['rai design-dna', 'npm run workflow:design-dna'],
+  ['rai page-blueprint', 'npm run workflow:page-blueprint'],
+  ['rai design-md', 'npm run workflow:design-md'],
+  ['rai component-strategy', 'npm run workflow:component-strategy'],
+  ['rai design-benchmark', 'npm run workflow:design-benchmark'],
+  ['rai state-atlas', 'npm run workflow:state-atlas'],
+  ['rai frontend-brief', 'npm run workflow:frontend-brief'],
+  ['rai ui-recipe', 'npm run workflow:ui-recipe'],
+  ['rai ui-plan', 'npm run workflow:ui-plan'],
+  ['rai ui-review', 'npm run workflow:ui-review'],
+  ['rai preview', 'npm run workflow:preview'],
+  ['rai component-map', 'npm run workflow:component-map'],
+  ['rai responsive-matrix', 'npm run workflow:responsive-matrix'],
+  ['rai design-debt', 'npm run workflow:design-debt'],
+  ['rai ship-readiness', 'npm run workflow:ship-readiness'],
+  ['rai ship', 'npm run workflow:ship'],
+  ['rai pr-brief', 'npm run workflow:pr-brief'],
+  ['rai release-notes', 'npm run workflow:release-notes'],
+  ['rai session-report', 'npm run workflow:session-report'],
 ];
 
 function validateCommandGroups() {
@@ -353,9 +353,9 @@ function visibleAdvancedGroupsForSurface(surface) {
 
 function upgradeHintForSurface(surface) {
   if (surface.scriptProfile === 'pilot') {
-    return 'Run `cwf update --script-profile core` for the full shell with curated npm aliases, or `cwf update --script-profile full` for every legacy alias.';
+    return 'Run `rai update --script-profile core` for the full shell with curated npm aliases, or `rai update --script-profile full` for every legacy alias.';
   }
-  return 'Run `cwf doctor --strict` or `cwf update` to repair the local shell.';
+  return 'Run `rai doctor --strict` or `rai update` to repair the local shell.';
 }
 
 function printUnavailableSurface(topic, surface) {
@@ -373,38 +373,38 @@ function flowById(flowId) {
 }
 
 function printDefaultHelp() {
-  console.log(`# CWF
+  console.log(`# raiola
 
 Usage:
-  cwf <command> [options]
-  cwf help <topic>
+  rai <command> [options]
+  rai help <topic>
 
 Start here:
-  cwf help solo      Single-operator daily loop for most repos
-  cwf help review    Deep review, risk triage, and closeout
-  cwf help team      Parallel Team Lite flow with bounded scopes
+  rai help solo      Single-operator daily loop for most repos
+  rai help review    Deep review, risk triage, and closeout
+  rai help team      Parallel Team Lite flow with bounded scopes
 
 Core commands:
 ${formatCommandRows(CORE_COMMANDS)}
 
 Golden flows:
-  solo    -> cwf do, cwf next, cwf verify-shell, cwf checkpoint, cwf next-prompt
-  review  -> cwf route, cwf review, cwf ui-review, cwf verify-work, cwf ship-readiness
-  team    -> cwf monorepo, cwf team run, cwf team collect, cwf patch-review, cwf sessions
+  solo    -> rai do, rai next, rai verify-shell, rai checkpoint, rai next-prompt
+  review  -> rai route, rai review, rai ui-review, rai verify-work, rai ship-readiness
+  team    -> rai monorepo, rai team run, rai team collect, rai patch-review, rai sessions
 
 More help:
-  cwf help categories   Browse command groups
-  cwf help frontend     UI direction, spec, review, and preview surfaces
-  cwf help trust        Discuss, claims, approvals, and policy surfaces
-  cwf help runtime      Dashboard, telemetry, daemon, and fleet surfaces
-  cwf help codex        Codex control plane and closeout packages
-  cwf help all          Full command reference
+  rai help categories   Browse command groups
+  rai help frontend     UI direction, spec, review, and preview surfaces
+  rai help trust        Discuss, claims, approvals, and policy surfaces
+  rai help runtime      Dashboard, telemetry, daemon, and fleet surfaces
+  rai help codex        Codex control plane and closeout packages
+  rai help all          Full command reference
 
 Examples:
-  cwf setup
-  cwf help solo
-  cwf help review
-  cwf help team
+  rai setup
+  rai help solo
+  rai help review
+  rai help team
 `);
 }
 
@@ -413,22 +413,22 @@ function printFilteredDefaultHelp(surface) {
   const visibleFlows = GOLDEN_FLOWS.filter((flow) => isFlowAvailable(flow, surface));
   const visibleAdvancedGroups = visibleAdvancedGroupsForSurface(surface);
 
-  console.log(`# CWF
+  console.log(`# raiola
 
 Usage:
-  cwf <command> [options]
-  cwf help <topic>
+  rai <command> [options]
+  rai help <topic>
 
 Focused install:
-  This repo is using the \`pilot\` shell profile. Upgrade later with \`cwf update --script-profile core\` or \`cwf update --script-profile full\`.
+  This repo is using the \`pilot\` shell profile. Upgrade later with \`rai update --script-profile core\` or \`rai update --script-profile full\`.
 
 Start here:`);
   if (visibleFlows.length > 0) {
     for (const flow of visibleFlows) {
-      console.log(`  cwf help ${flow.id.padEnd(9)} ${flow.summary}`);
+      console.log(`  rai help ${flow.id.padEnd(9)} ${flow.summary}`);
     }
   } else {
-    console.log('  cwf help categories  Browse the currently installed command groups');
+    console.log('  rai help categories  Browse the currently installed command groups');
   }
 
   console.log(`
@@ -436,38 +436,38 @@ Core commands:
 ${formatCommandRows(visibleCoreCommands)}
 
 More help:
-  cwf help categories   Browse command groups`);
+  rai help categories   Browse command groups`);
   for (const group of visibleAdvancedGroups) {
-    console.log(`  cwf help ${group.id.padEnd(12)} ${group.description}`);
+    console.log(`  rai help ${group.id.padEnd(12)} ${group.description}`);
   }
   console.log(`
 Examples:
-  cwf help solo
-  cwf do "land the next safe slice"
-  cwf next
+  rai help solo
+  rai do "land the next safe slice"
+  rai next
 `);
 }
 
 function printCategoriesHelp(surface) {
   if (!surface.isFiltered) {
-    console.log('# CWF CATEGORIES\n');
+    console.log('# raiola Categories\n');
     for (const group of COMMAND_GROUPS) {
       console.log(`- \`${group.id}\` -> ${group.title}: ${group.description}`);
     }
-    console.log('\nUse `cwf help <category>` for the commands inside a category, or `cwf help all` for the full shell.');
+    console.log('\nUse `rai help <category>` for the commands inside a category, or `rai help all` for the full shell.');
     return;
   }
 
-  console.log('# CWF CATEGORIES\n');
+  console.log('# raiola Categories\n');
   for (const group of visibleGroupsForSurface(surface)) {
     console.log(`- \`${group.id}\` -> ${group.title}: ${group.description}`);
   }
-  console.log('\nUse `cwf help <category>` for the commands inside a category, or `cwf help all` for the full shell.');
+  console.log('\nUse `rai help <category>` for the commands inside a category, or `rai help all` for the full shell.');
 }
 
 function printFlowHelp(flow) {
   const relatedGroup = groupById(flow.relatedGroup);
-  console.log(`# CWF ${flow.title.toUpperCase()}\n`);
+  console.log(`# raiola ${flow.title}\n`);
   console.log(`- Summary: \`${flow.summary}\``);
   console.log('\n## Starter Commands\n');
   console.log(formatCommandRows(flow.commands));
@@ -476,7 +476,7 @@ function printFlowHelp(flow) {
     console.log(`- \`${command}\``);
   }
   if (relatedGroup) {
-    const relatedCommand = relatedGroup.id === flow.id ? 'cwf help all' : `cwf help ${relatedGroup.id}`;
+    const relatedCommand = relatedGroup.id === flow.id ? 'rai help all' : `rai help ${relatedGroup.id}`;
     const relatedDescription = relatedGroup.id === flow.id
       ? `Full command reference including the ${relatedGroup.title.toLowerCase()} surfaces.`
       : relatedGroup.description;
@@ -485,7 +485,7 @@ function printFlowHelp(flow) {
 }
 
 function printGroupHelp(group) {
-  console.log(`# CWF ${group.title.toUpperCase()}\n`);
+  console.log(`# raiola ${group.title}\n`);
   console.log(`- ${group.description}`);
   console.log('\n## Commands\n');
   console.log(formatCommandRows(group.commands));
@@ -493,26 +493,26 @@ function printGroupHelp(group) {
 
 function printAdvancedHelp(surface) {
   if (!surface.isFiltered) {
-    console.log('# CWF ADVANCED\n');
+    console.log('# raiola Advanced\n');
     console.log('- `frontend` -> UI direction, review, responsive, and design debt surfaces');
     console.log('- `trust` -> discuss, assumptions, claims, approvals, and policy');
     console.log('- `runtime` -> dashboard, stats, hooks, daemon, gc, incident, and fleet');
     console.log('- `codex` -> control plane, prompt packs, lifecycle closeout, and benchmark');
-    console.log('\nOpen any of them with `cwf help <topic>` or use `cwf help all` for the full command reference.');
+    console.log('\nOpen any of them with `rai help <topic>` or use `rai help all` for the full command reference.');
     return;
   }
 
-  console.log('# CWF ADVANCED\n');
+  console.log('# raiola Advanced\n');
   for (const group of visibleAdvancedGroupsForSurface(surface)) {
     console.log(`- \`${group.id}\` -> ${group.description}`);
   }
-  console.log('\nOpen any of them with `cwf help <topic>` or use `cwf help all` for the full command reference.');
+  console.log('\nOpen any of them with `rai help <topic>` or use `rai help all` for the full command reference.');
 }
 
 function printAllHelp(surface) {
   if (!surface.isFiltered) {
-    console.log('# CWF FULL COMMAND REFERENCE\n');
-    console.log('Use `cwf help solo`, `cwf help review`, or `cwf help team` for the three golden flows.\n');
+    console.log('# raiola Full Command Reference\n');
+    console.log('Use `rai help solo`, `rai help review`, or `rai help team` for the three golden flows.\n');
     for (const group of COMMAND_GROUPS) {
       console.log(`## ${group.title}\n`);
       console.log(`${group.description}\n`);
@@ -525,15 +525,15 @@ function printAllHelp(surface) {
     return;
   }
 
-  console.log('# CWF FULL COMMAND REFERENCE\n');
-  console.log('Use `cwf help solo` for the installed starter flow. Upgrade to `core` or `full` to unlock the broader shell.\n');
+  console.log('# raiola Full Command Reference\n');
+  console.log('Use `rai help solo` for the installed starter flow. Upgrade to `core` or `full` to unlock the broader shell.\n');
   for (const group of visibleGroupsForSurface(surface)) {
     console.log(`## ${group.title}\n`);
     console.log(`${group.description}\n`);
     console.log(`${formatCommandRows(group.commands)}\n`);
   }
   console.log('## Installed legacy command equivalence\n');
-  for (const [current, legacy] of LEGACY_EQUIVALENTS.filter(([current]) => surface.availableCommands.has(current.replace(/^cwf\s+/, '')))) {
+  for (const [current, legacy] of LEGACY_EQUIVALENTS.filter(([current]) => surface.availableCommands.has(current.replace(/^rai\s+/, '')))) {
     console.log(`- \`${current}\` -> \`${legacy}\``);
   }
 }
@@ -579,7 +579,7 @@ function printHelp(topic, surface) {
   }
 
   console.error(`Unknown help topic: ${topic}`);
-  console.error('Run `cwf help categories` to browse available help topics.');
+  console.error('Run `rai help categories` to browse available help topics.');
   process.exitCode = 1;
 }
 
@@ -623,7 +623,7 @@ function main(argv = process.argv.slice(2)) {
   const entry = CLI_COMMANDS[command];
   if (!entry) {
     console.error(`Unknown command: ${command}`);
-    console.error('Run `cwf help` for the golden flows or `cwf help all` for the full shell.');
+    console.error('Run `rai help` for the golden flows or `rai help all` for the full shell.');
     process.exitCode = 1;
     return;
   }

@@ -189,35 +189,35 @@ function buildRepairHints(payload) {
   if (payload.healthReport.failCount > 0) {
     hints.push({
       level: 'high',
-      command: 'cwf health --repair',
+      command: 'rai health --repair',
       reason: `${payload.healthReport.failCount} health failure(s) are active`,
     });
   }
   if (payload.doctorReport && payload.doctorReport.failCount > 0) {
     hints.push({
       level: 'high',
-      command: 'cwf doctor --repair',
+      command: 'rai doctor --repair',
       reason: `${payload.doctorReport.failCount} install/runtime failure(s) are active`,
     });
   }
   if (payload.state.drift.count > 0) {
     hints.push({
       level: 'medium',
-      command: 'cwf next-prompt --mode full',
+      command: 'rai next-prompt --mode full',
       reason: `Packet drift detected in ${payload.state.drift.packets.join(', ')}`,
     });
   }
   if (payload.verifications.shell.latest && payload.verifications.shell.latest.verdict === 'fail') {
     hints.push({
       level: 'medium',
-      command: 'cwf verify-shell --cmd "..."',
+      command: 'rai verify-shell --cmd "..."',
       reason: 'Latest shell verification failed; re-run with a bounded command',
     });
   }
   if (payload.orchestration.active && payload.orchestration.status === 'blocked') {
     hints.push({
       level: 'medium',
-      command: 'cwf team monitor',
+      command: 'rai team monitor',
       reason: 'Team runtime is blocked and needs operator attention',
     });
   }

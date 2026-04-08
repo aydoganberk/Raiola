@@ -419,7 +419,7 @@ function buildContextSlices(graph, writeScopes, hotspots, reviewShards, verify) 
       label: 'Review shards',
       reason: 'Keep review diff-scoped by package or test lane instead of re-reading the whole repo.',
       readFirst: uniquePaths(reviewShards.flatMap((shard) => shard.readScope.slice(0, 4))).slice(0, 12),
-      verifyFirst: ['cwf review --heatmap', 'cwf review --blockers'],
+      verifyFirst: ['rai review --heatmap', 'rai review --blockers'],
     });
   }
 

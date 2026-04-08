@@ -1,251 +1,251 @@
 # Commands
 
-Use `cwf help` for the three golden flows, `cwf help <topic>` for focused categories, and `cwf help all` for the full shell.
+Use `rai help` for the three golden flows, `rai help <topic>` for focused categories, and `rai help all` for the full shell.
 
 ## Primary verbs
 
-- `cwf launch`
+- `rai launch`
   Strong-start launcher that recommends the lane, first command, and minimal resume prompt.
-- `cwf codex`
+- `rai codex`
   Safe Codex control plane. Supports `setup`, `doctor`, `diff-config`, `rollback`, `sync`, role scaffolding, skill install/remove, `profile suggest`, `bootstrap`, `resume-card`, `promptpack`, and `plan-subagents`.
-- `cwf do`
+- `rai do`
   Route a natural-language intent into `quick`, `full`, `review`, `frontend`, or `team` lanes with explainable capability and verify plans. English/Turkish persona framing and nearby typos are tolerated on the routing path.
-- `cwf note`
+- `rai note`
   Capture a runtime inbox note and optionally promote it into backlog, thread, or seeds.
-- `cwf thread`
+- `rai thread`
   Open, list, and resume named thread docs under `docs/workflow/THREADS/`.
-- `cwf backlog`
+- `rai backlog`
   Add and review canonical backlog items.
-- `cwf manager`
+- `rai manager`
   Single-screen operator view with health, next route, team runtime, verify queue, and repair hints.
-- `cwf dashboard`
+- `rai dashboard`
   Generate `.workflow/runtime/dashboard/index.html`, a local HTML operator surface with command palette, context compiler, route/review/frontend boards, and screenshot state.
-- `cwf setup`
+- `rai setup`
   Install or refresh the workflow product in the current repo.
-- `cwf init`
+- `rai init`
   Bootstrap workflow control-plane files in the current repo.
-- `cwf milestone`
+- `rai milestone`
   Open a new full-workflow milestone.
-- `cwf doctor`
+- `rai doctor`
   Verify install/runtime integrity and host prerequisites. Use `--repair` for a dry-run self-heal plan.
-- `cwf health`
+- `rai health`
   Verify blocking workflow/runtime health. Host-tool advisories stay in `doctor`. Use `--repair` for a dry-run self-heal plan.
-- `cwf discuss`
+- `rai discuss`
   Generate a discuss brief from current workflow state, open questions, and active assumptions.
-- `cwf questions`
+- `rai questions`
   Capture unresolved questions in `docs/workflow/QUESTIONS.md`.
-- `cwf assumptions`
+- `rai assumptions`
   Track active assumptions in `docs/workflow/ASSUMPTIONS.md`, including impact and exit triggers.
-- `cwf claims`
+- `rai claims`
   Track evidence-backed claims in `docs/workflow/CLAIMS.md`, then `check` or `trace` them.
-- `cwf secure`
+- `rai secure`
   Run the secure-phase heuristic scan over changed or targeted files.
-- `cwf hud`
+- `rai hud`
   Show compact workflow state. `--watch` provides a live HUD, and `--intent --cost --risk` exposes route, budget, and risk detail.
-- `cwf next`
+- `rai next`
   Recommend the next safe operator action. `--from-gap` biases toward the biggest current trust or review gap.
-- `cwf explore`
+- `rai explore`
   Explore the repo using search, changed-files, workflow, frontend, or repo-structure lenses.
-- `cwf verify-shell`
+- `rai verify-shell`
   Run a bounded shell verification command and store normalized evidence.
-- `cwf verify-browser`
+- `rai verify-browser`
   Run smoke browser verification, optional `--adapter playwright`, and simple selector assertions.
-- `cwf verify-work`
+- `rai verify-work`
   Run the trust-layer verification pass, summarize gaps, and emit a fix plan when needed.
-- `cwf packet`
+- `rai packet`
   Compile, explain, lock, diff, sync, and verify role-aware packets.
-- `cwf evidence`
+- `rai evidence`
   Build the repo-local evidence graph from claims, verifications, and touched files.
-- `cwf validation-map`
+- `rai validation-map`
   Roadmap-compatible wrapper for the validation contract surface.
-- `cwf checkpoint`
+- `rai checkpoint`
   Write a continuity checkpoint.
-- `cwf next-prompt`
+- `rai next-prompt`
   Generate a minimal or full resume prompt for the next session.
-- `cwf quick`
+- `rai quick`
   Start, inspect, close, or escalate quick mode.
-- `cwf team`
+- `rai team`
   Plan or operate Team Lite orchestration and the adapter runtime.
-- `cwf subagents`
-  Roadmap-compatible wrapper for `cwf codex plan-subagents`.
-- `cwf policy`
+- `rai subagents`
+  Roadmap-compatible wrapper for `rai codex plan-subagents`.
+- `rai policy`
   Evaluate the approval matrix for file domains, operations, actors, and policy modes from `docs/workflow/POLICY.md`.
-- `cwf approval`
+- `rai approval`
   Roadmap-compatible alias for approval planning and grants.
-- `cwf approvals`
+- `rai approvals`
   Record explicit human approvals in `docs/workflow/POLICY.md` and refresh the derived runtime mirror.
-- `cwf route`
+- `rai route`
   Recommend a model preset and capability for the current phase or explicit goal. Supports `--why`, `replay`, and `eval`.
-- `cwf stats`
+- `rai stats`
   Show benchmark, verification, routing, and runtime telemetry.
-- `cwf profile`
+- `rai profile`
   Show the workflow/operator profile and budget defaults.
-- `cwf workspaces`
+- `rai workspaces`
   Show the workspace/workstream registry center.
-- `cwf hooks`
+- `rai hooks`
   Seed or inspect the disabled-by-default hooks surface.
-- `cwf mcp`
+- `rai mcp`
   Inspect the repo-local MCP manifest surface.
-- `cwf notify`
+- `rai notify`
   Emit a notification smoke event.
-- `cwf daemon`
+- `rai daemon`
   Show or restart the optional daemon heartbeat.
-- `cwf gc`
+- `rai gc`
   Prune old verifications, packet artifacts, and Codex control backups.
-- `cwf incident`
+- `rai incident`
   Open or list incident memory entries.
-- `cwf fleet`
+- `rai fleet`
   Show the current repo operator-center summary.
-- `cwf sessions`
+- `rai sessions`
   Show workflow, quick, team, and handoff session status.
-- `cwf patch-review`
+- `rai patch-review`
   Review collected patch bundles.
-- `cwf patch-apply`
+- `rai patch-apply`
   Apply a collected patch bundle with `git apply --3way`.
-- `cwf patch-rollback`
+- `rai patch-rollback`
   Reverse an applied patch bundle with `git apply -R --3way`.
-- `cwf review`
+- `rai review`
   Run the multi-pass review engine and write `.workflow/reports/review.md` plus structured findings.
-- `cwf review-mode`
+- `rai review-mode`
   Run the deep review engine explicitly.
-- `cwf review-orchestrate`
+- `rai review-orchestrate`
   Build package/persona/wave-based review orchestration for large repos and monorepos.
-- `cwf review-tasks`
+- `rai review-tasks`
   Convert review findings into a blocker-first four-wave task graph.
-- `cwf pr-review`
+- `rai pr-review`
   Review a PR or diff-oriented surface with risk heatmap and blockers.
-- `cwf re-review`
+- `rai re-review`
   Replay the current diff against the latest review history.
-- `cwf ui-direction`
+- `rai ui-direction`
   Generate the taste-aware UI direction pack that Codex can implement against.
-- `cwf design-dna`
+- `rai design-dna`
   Generate `docs/workflow/DESIGN-DNA.md` with external reference blend, product category, and anti-pattern bans.
-- `cwf page-blueprint`
+- `rai page-blueprint`
   Generate `docs/workflow/PAGE-BLUEPRINT.md` with section map, proof surfaces, and page-type priorities.
-- `cwf design-md`
+- `rai design-md`
   Generate `docs/workflow/DESIGN.md` as a portable design contract and optional repo-root `DESIGN.md` mirror.
-- `cwf component-strategy`
+- `rai component-strategy`
   Generate `docs/workflow/COMPONENT-STRATEGY.md` with reuse/extract/build guidance for the current repo and target page family.
-- `cwf design-benchmark`
+- `rai design-benchmark`
   Generate `docs/workflow/DESIGN-BENCHMARK.md` with differentiation plays and commodity-risk checks from the active reference blend.
-- `cwf state-atlas`
+- `rai state-atlas`
   Generate `docs/workflow/STATE-ATLAS.md` with required UX states and review hooks.
-- `cwf frontend-brief`
+- `rai frontend-brief`
   Generate `docs/workflow/FRONTEND-BRIEF.md` as a one-shot pack for external-site frontend work.
-- `cwf ui-recipe`
+- `rai ui-recipe`
   Generate `docs/workflow/UI-RECIPE.md` with a semantic prototype, stack scaffold, and translation notes.
-- `cwf ui-spec`
+- `rai ui-spec`
   Generate `docs/workflow/UI-SPEC.md`.
-- `cwf ui-plan`
+- `rai ui-plan`
   Generate `docs/workflow/UI-PLAN.md`.
-- `cwf ui-review`
+- `rai ui-review`
   Generate `docs/workflow/UI-REVIEW.md` plus a frontend scorecard.
-- `cwf preview`
+- `rai preview`
   Write `.workflow/runtime/preview-gallery.md` from browser artifacts.
-- `cwf component-map`
+- `rai component-map`
   Generate `docs/workflow/COMPONENT-INVENTORY.md`.
-- `cwf responsive-matrix`
+- `rai responsive-matrix`
   Generate `docs/workflow/RESPONSIVE-MATRIX.md`.
-- `cwf design-debt`
+- `rai design-debt`
   Generate `docs/workflow/DESIGN-DEBT.md`.
-- `cwf monorepo`
+- `rai monorepo`
   Generate package-aware monorepo execution, review shards, and verify guidance.
-- `cwf ship-readiness`
+- `rai ship-readiness`
   Score ship readiness from review, evidence, approvals, and verify-work results.
-- `cwf ship`
+- `rai ship`
   Write `.workflow/reports/ship.md`.
-- `cwf pr-brief`
+- `rai pr-brief`
   Write `.workflow/reports/pr-brief.md`.
-- `cwf release-notes`
+- `rai release-notes`
   Write `.workflow/reports/release-notes.md`.
-- `cwf session-report`
+- `rai session-report`
   Write `.workflow/reports/session-report.md`.
-- `cwf update`
+- `rai update`
   Refresh runtime files while preserving canonical markdown.
-- `cwf uninstall`
+- `rai uninstall`
   Safely remove installed runtime surfaces.
-- `cwf benchmark`
+- `rai benchmark`
   Run the hot-path benchmark harness.
 
 ## Quick mode
 
-- `cwf quick start --goal "..."`
-- `cwf quick`
-- `cwf quick close --summary "..."`
-- `cwf quick escalate --summary "..." --open-full-workflow`
+- `rai quick start --goal "..."`
+- `rai quick`
+- `rai quick close --summary "..."`
+- `rai quick escalate --summary "..." --open-full-workflow`
 
 ## Team runtime
 
-- `cwf team`
-- `cwf team start --parallel --activation-text "..."`
-- `cwf team run --adapter worktree|subagent|hybrid --activation-text "parallel yap" --write-scope src,tests`
-- `cwf team dispatch`
-- `cwf team monitor`
-- `cwf team collect`
-- `cwf team supervise --cycles 3 --interval 5`
-- `cwf team watch --interval 5`
-- `cwf team conflicts`
-- `cwf team merge-queue --apply-next|--apply-all`
-- `cwf team quality`
-- `cwf team pr-feedback import --file review-comments.json`
-- `cwf team pr-feedback resolve --id comment-1`
-- `cwf team mailbox`
-- `cwf team timeline`
-- `cwf team steer --note "..."`
-- `cwf team status`
-- `cwf team stop --summary "..."`
-- `cwf team resume`
-- `cwf team advance`
+- `rai team`
+- `rai team start --parallel --activation-text "..."`
+- `rai team run --adapter worktree|subagent|hybrid --activation-text "parallel yap" --write-scope src,tests`
+- `rai team dispatch`
+- `rai team monitor`
+- `rai team collect`
+- `rai team supervise --cycles 3 --interval 5`
+- `rai team watch --interval 5`
+- `rai team conflicts`
+- `rai team merge-queue --apply-next|--apply-all`
+- `rai team quality`
+- `rai team pr-feedback import --file review-comments.json`
+- `rai team pr-feedback resolve --id comment-1`
+- `rai team mailbox`
+- `rai team timeline`
+- `rai team steer --note "..."`
+- `rai team status`
+- `rai team stop --summary "..."`
+- `rai team resume`
+- `rai team advance`
 
 ## Runtime artifacts
 
-- `cwf launch` -> `.workflow/runtime/launch.json`
-- `cwf hud` -> `.workflow/runtime/hud.json`
-- `cwf manager` -> `.workflow/runtime/manager.json`
-- `cwf next-prompt` -> `.workflow/runtime/next-prompt.md`
-- `cwf verify-shell` -> `.workflow/verifications/shell/*`
-- `cwf verify-browser` -> `.workflow/verifications/browser/*`
-- `cwf verify-work` -> `.workflow/reports/verify-work.{md,json}`
-- `cwf packet` -> `.workflow/packets/*` and `.workflow/cache/packet-locks.json`
-- `cwf evidence` -> `.workflow/evidence-graph/latest.json`
-- `cwf ship-readiness` -> `.workflow/reports/ship-readiness.{md,json}`
-- `cwf review-orchestrate` -> `.workflow/reports/review-orchestration.{md,json}`
-- `cwf codex` -> `.workflow/runtime/codex-control/*` with a virtual repo-local `.codex` root
-- `cwf team mailbox` -> `.workflow/orchestration/runtime/mailbox.jsonl`
-- `cwf team timeline` -> `.workflow/orchestration/runtime/timeline.jsonl`
-- `cwf team supervise` / `cwf team watch` -> `.workflow/orchestration/runtime/supervisor.json`
-- `cwf team conflicts` -> `.workflow/orchestration/runtime/conflicts.json`
-- `cwf team merge-queue` -> `.workflow/orchestration/runtime/merge-queue.json`
-- `cwf team quality` -> `.workflow/orchestration/runtime/quality.json`
-- `cwf team pr-feedback` -> `.workflow/orchestration/runtime/pr-feedback.json` plus `.workflow/orchestration/runtime/pr-feedback-followups.md`
-- `cwf team collect` -> `.workflow/orchestration/runtime/review-loop.{json,md}` plus `.workflow/orchestration/runtime/combined.patch`
-- `cwf patch-review` -> `.workflow/orchestration/patches/*`
-- `cwf route` -> `.workflow/cache/model-routing.json`
-- `cwf do` / `cwf route` -> `.workflow/cache/intent-route-history.json`
-- `cwf dashboard` -> `.workflow/runtime/dashboard/{index.html,state.json}`
-- `cwf monorepo` -> `.workflow/cache/monorepo-intelligence.json` plus `docs/workflow/MONOREPO.md`
-- `cwf ui-direction` -> `.workflow/runtime/ui-direction.json` plus `docs/workflow/UI-DIRECTION.md`
-- `cwf design-dna` -> `.workflow/runtime/design-dna.json` plus `docs/workflow/DESIGN-DNA.md`
-- `cwf page-blueprint` -> `.workflow/runtime/page-blueprint.json` plus `docs/workflow/PAGE-BLUEPRINT.md`
-- `cwf design-md` -> `.workflow/runtime/design-md.json` plus `docs/workflow/DESIGN.md`
-- `cwf component-strategy` -> `.workflow/runtime/component-strategy.json` plus `docs/workflow/COMPONENT-STRATEGY.md`
-- `cwf design-benchmark` -> `.workflow/runtime/design-benchmark.json` plus `docs/workflow/DESIGN-BENCHMARK.md`
-- `cwf state-atlas` -> `.workflow/runtime/state-atlas.json` plus `docs/workflow/STATE-ATLAS.md`
-- `cwf frontend-brief` -> `.workflow/runtime/frontend-brief.json` plus `docs/workflow/FRONTEND-BRIEF.md`
-- `cwf ui-recipe` -> `.workflow/runtime/ui-recipe.json` plus `docs/workflow/UI-RECIPE.md`
-- `cwf ui-spec` -> `docs/workflow/UI-SPEC.md`
-- `cwf ui-plan` -> `docs/workflow/UI-PLAN.md`
-- `cwf ui-review` -> `docs/workflow/UI-REVIEW.md`
-- `cwf component-map` -> `docs/workflow/COMPONENT-INVENTORY.md`
-- `cwf responsive-matrix` -> `docs/workflow/RESPONSIVE-MATRIX.md`
-- `cwf design-debt` -> `docs/workflow/DESIGN-DEBT.md`
-- `cwf policy` / `cwf approvals` -> canonical `docs/workflow/POLICY.md` plus derived `.workflow/runtime/policy.json` and `.workflow/runtime/approvals.json`
-- `cwf discuss` -> `.workflow/runtime/discuss.{json,md}`
-- `cwf codex promptpack` -> `.workflow/runtime/codex-control/promptpack.{md,json}`
+- `rai launch` -> `.workflow/runtime/launch.json`
+- `rai hud` -> `.workflow/runtime/hud.json`
+- `rai manager` -> `.workflow/runtime/manager.json`
+- `rai next-prompt` -> `.workflow/runtime/next-prompt.md`
+- `rai verify-shell` -> `.workflow/verifications/shell/*`
+- `rai verify-browser` -> `.workflow/verifications/browser/*`
+- `rai verify-work` -> `.workflow/reports/verify-work.{md,json}`
+- `rai packet` -> `.workflow/packets/*` and `.workflow/cache/packet-locks.json`
+- `rai evidence` -> `.workflow/evidence-graph/latest.json`
+- `rai ship-readiness` -> `.workflow/reports/ship-readiness.{md,json}`
+- `rai review-orchestrate` -> `.workflow/reports/review-orchestration.{md,json}`
+- `rai codex` -> `.workflow/runtime/codex-control/*` with a virtual repo-local `.codex` root
+- `rai team mailbox` -> `.workflow/orchestration/runtime/mailbox.jsonl`
+- `rai team timeline` -> `.workflow/orchestration/runtime/timeline.jsonl`
+- `rai team supervise` / `rai team watch` -> `.workflow/orchestration/runtime/supervisor.json`
+- `rai team conflicts` -> `.workflow/orchestration/runtime/conflicts.json`
+- `rai team merge-queue` -> `.workflow/orchestration/runtime/merge-queue.json`
+- `rai team quality` -> `.workflow/orchestration/runtime/quality.json`
+- `rai team pr-feedback` -> `.workflow/orchestration/runtime/pr-feedback.json` plus `.workflow/orchestration/runtime/pr-feedback-followups.md`
+- `rai team collect` -> `.workflow/orchestration/runtime/review-loop.{json,md}` plus `.workflow/orchestration/runtime/combined.patch`
+- `rai patch-review` -> `.workflow/orchestration/patches/*`
+- `rai route` -> `.workflow/cache/model-routing.json`
+- `rai do` / `rai route` -> `.workflow/cache/intent-route-history.json`
+- `rai dashboard` -> `.workflow/runtime/dashboard/{index.html,state.json}`
+- `rai monorepo` -> `.workflow/cache/monorepo-intelligence.json` plus `docs/workflow/MONOREPO.md`
+- `rai ui-direction` -> `.workflow/runtime/ui-direction.json` plus `docs/workflow/UI-DIRECTION.md`
+- `rai design-dna` -> `.workflow/runtime/design-dna.json` plus `docs/workflow/DESIGN-DNA.md`
+- `rai page-blueprint` -> `.workflow/runtime/page-blueprint.json` plus `docs/workflow/PAGE-BLUEPRINT.md`
+- `rai design-md` -> `.workflow/runtime/design-md.json` plus `docs/workflow/DESIGN.md`
+- `rai component-strategy` -> `.workflow/runtime/component-strategy.json` plus `docs/workflow/COMPONENT-STRATEGY.md`
+- `rai design-benchmark` -> `.workflow/runtime/design-benchmark.json` plus `docs/workflow/DESIGN-BENCHMARK.md`
+- `rai state-atlas` -> `.workflow/runtime/state-atlas.json` plus `docs/workflow/STATE-ATLAS.md`
+- `rai frontend-brief` -> `.workflow/runtime/frontend-brief.json` plus `docs/workflow/FRONTEND-BRIEF.md`
+- `rai ui-recipe` -> `.workflow/runtime/ui-recipe.json` plus `docs/workflow/UI-RECIPE.md`
+- `rai ui-spec` -> `docs/workflow/UI-SPEC.md`
+- `rai ui-plan` -> `docs/workflow/UI-PLAN.md`
+- `rai ui-review` -> `docs/workflow/UI-REVIEW.md`
+- `rai component-map` -> `docs/workflow/COMPONENT-INVENTORY.md`
+- `rai responsive-matrix` -> `docs/workflow/RESPONSIVE-MATRIX.md`
+- `rai design-debt` -> `docs/workflow/DESIGN-DEBT.md`
+- `rai policy` / `rai approvals` -> canonical `docs/workflow/POLICY.md` plus derived `.workflow/runtime/policy.json` and `.workflow/runtime/approvals.json`
+- `rai discuss` -> `.workflow/runtime/discuss.{json,md}`
+- `rai codex promptpack` -> `.workflow/runtime/codex-control/promptpack.{md,json}`
 
 ## Backward-compatible scripts
 
-Fresh `cwf setup` installs the focused `pilot` profile by default so package.json and the repo-local shell stay smaller on day one. Use `cwf update --script-profile core` for the full shell with curated npm aliases, or `cwf update --script-profile full` when you want the full legacy `workflow:*` alias surface restored.
+Fresh `rai setup` installs the focused `pilot` profile by default so package.json and the repo-local shell stay smaller on day one. Use `rai update --script-profile core` for the full shell with curated npm aliases, or `rai update --script-profile full` when you want the full legacy `workflow:*` alias surface restored.
 
 - `npm run workflow:launch`
 - `npm run workflow:codex`
@@ -331,32 +331,32 @@ Fresh `cwf setup` installs the focused `pilot` profile by default so package.jso
 
 ## Command mapping examples
 
-- `cwf launch` -> `npm run workflow:launch`
-- `cwf codex` -> `npm run workflow:codex`
-- `cwf do` -> `npm run workflow:do -- "..." `
-- `cwf note` -> `npm run workflow:note -- "..." `
-- `cwf manager` -> `npm run workflow:manager`
-- `cwf doctor` -> `npm run workflow:doctor -- --strict`
-- `cwf health` -> `npm run workflow:health -- --strict`
-- `cwf hud` -> `npm run workflow:hud -- --compact`
-- `cwf next` -> `npm run workflow:next`
-- `cwf explore` -> `npm run workflow:explore -- "query"`
-- `cwf verify-shell` -> `npm run workflow:verify-shell -- --cmd "npm test"`
-- `cwf verify-browser` -> `npm run workflow:verify-browser -- --url http://localhost:3000`
-- `cwf packet` -> `npm run workflow:packet-os -- compile --step plan`
-- `cwf checkpoint` -> `npm run workflow:checkpoint -- --next "Resume here"`
-- `cwf review-orchestrate` -> `npm run workflow:review-orchestrate`
-- `cwf ui-direction` -> `npm run workflow:ui-direction`
-- `cwf design-dna` -> `npm run workflow:design-dna`
-- `cwf page-blueprint` -> `npm run workflow:page-blueprint`
-- `cwf design-md` -> `npm run workflow:design-md`
-- `cwf component-strategy` -> `npm run workflow:component-strategy`
-- `cwf design-benchmark` -> `npm run workflow:design-benchmark`
-- `cwf state-atlas` -> `npm run workflow:state-atlas`
-- `cwf frontend-brief` -> `npm run workflow:frontend-brief`
-- `cwf ui-recipe` -> `npm run workflow:ui-recipe`
-- `cwf ui-spec` -> `npm run workflow:ui-spec`
-- `cwf ui-review` -> `npm run workflow:ui-review -- --url ./preview.html`
-- `cwf monorepo` -> `npm run workflow:monorepo`
-- `cwf codex promptpack` -> `npm run workflow:codex -- promptpack --goal "review the diff"`
-- `cwf ship-readiness` -> `npm run workflow:ship-readiness`
+- `rai launch` -> `npm run workflow:launch`
+- `rai codex` -> `npm run workflow:codex`
+- `rai do` -> `npm run workflow:do -- "..." `
+- `rai note` -> `npm run workflow:note -- "..." `
+- `rai manager` -> `npm run workflow:manager`
+- `rai doctor` -> `npm run workflow:doctor -- --strict`
+- `rai health` -> `npm run workflow:health -- --strict`
+- `rai hud` -> `npm run workflow:hud -- --compact`
+- `rai next` -> `npm run workflow:next`
+- `rai explore` -> `npm run workflow:explore -- "query"`
+- `rai verify-shell` -> `npm run workflow:verify-shell -- --cmd "npm test"`
+- `rai verify-browser` -> `npm run workflow:verify-browser -- --url http://localhost:3000`
+- `rai packet` -> `npm run workflow:packet-os -- compile --step plan`
+- `rai checkpoint` -> `npm run workflow:checkpoint -- --next "Resume here"`
+- `rai review-orchestrate` -> `npm run workflow:review-orchestrate`
+- `rai ui-direction` -> `npm run workflow:ui-direction`
+- `rai design-dna` -> `npm run workflow:design-dna`
+- `rai page-blueprint` -> `npm run workflow:page-blueprint`
+- `rai design-md` -> `npm run workflow:design-md`
+- `rai component-strategy` -> `npm run workflow:component-strategy`
+- `rai design-benchmark` -> `npm run workflow:design-benchmark`
+- `rai state-atlas` -> `npm run workflow:state-atlas`
+- `rai frontend-brief` -> `npm run workflow:frontend-brief`
+- `rai ui-recipe` -> `npm run workflow:ui-recipe`
+- `rai ui-spec` -> `npm run workflow:ui-spec`
+- `rai ui-review` -> `npm run workflow:ui-review -- --url ./preview.html`
+- `rai monorepo` -> `npm run workflow:monorepo`
+- `rai codex promptpack` -> `npm run workflow:codex -- promptpack --goal "review the diff"`
+- `rai ship-readiness` -> `npm run workflow:ship-readiness`

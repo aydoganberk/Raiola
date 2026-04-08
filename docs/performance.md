@@ -43,7 +43,7 @@ Current product targets for medium-size repos:
 Run:
 
 ```bash
-cwf benchmark
+rai benchmark
 ```
 
 The benchmark surface covers every documented hot-path target, including `launch`, `manager`, `next-prompt`, `codex contextpack`, and `codex promptpack`.
@@ -57,15 +57,15 @@ npm run workflow:benchmark -- --commands hud,doctor,map-codebase --runs 3 --asse
 Or focus on operator-facing runtime commands directly:
 
 ```bash
-cwf benchmark --commands launch,manager,next-prompt --assert-slo
+rai benchmark --commands launch,manager,next-prompt --assert-slo
 ```
 
 Fixture-backed benchmarks are also supported:
 
 ```bash
-cwf benchmark --fixture small --commands hud,next
-cwf benchmark --fixture medium --commands hud,map-codebase
-cwf benchmark --fixture large --commands hud
+rai benchmark --fixture small --commands hud,next
+rai benchmark --fixture medium --commands hud,map-codebase
+rai benchmark --fixture large --commands hud
 ```
 
 The benchmark writes `.workflow/benchmarks/latest.json`.
@@ -73,7 +73,7 @@ The benchmark writes `.workflow/benchmarks/latest.json`.
 Use `--thresholds` to override the default medium-repo budgets when you need an explicit pass/fail gate:
 
 ```bash
-cwf benchmark --assert-slo --thresholds hud=300,next=500,doctor=1000
+rai benchmark --assert-slo --thresholds hud=300,next=500,doctor=1000
 ```
 
 Release CI runs the benchmark with `--assert-slo` from [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
@@ -106,9 +106,9 @@ Useful counters include:
 
 For very large repos, the fastest path is no longer “scan everything, then decide”:
 
-- run `cwf monorepo` once and reuse the generated package slices, review shards, and verify plan
-- let `cwf review-orchestrate` split deep review into parallel read-only package/persona waves
-- use `cwf codex promptpack` so Codex sessions inherit the latest route, verify contract, UI direction, and review/monorepo context without rebuilding them each time
+- run `rai monorepo` once and reuse the generated package slices, review shards, and verify plan
+- let `rai review-orchestrate` split deep review into parallel read-only package/persona waves
+- use `rai codex promptpack` so Codex sessions inherit the latest route, verify contract, UI direction, and review/monorepo context without rebuilding them each time
 - prefer package-local write scopes over broad repo-root scopes during Team Lite or subagent execution
 
 This reduces redundant repo walks, narrows verification, and keeps large-repo orchestration fluid under parallel execution.

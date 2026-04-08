@@ -67,7 +67,7 @@ function buildWorkerPrompt(state, task, workspace, runtimeState, options = {}) {
   const readOnly = Boolean(options.readOnly);
   const declaredSandbox = runtimeState?.runner?.sandbox || (readOnly ? 'read-only' : 'workspace-write');
 
-  return `You are ${task.id}, a Codex worker running inside codex-workflow-kit Team runtime.
+  return `You are ${task.id}, a Codex worker running inside raiola Team runtime.
 
 Follow the task packet and keep ownership tight.
 

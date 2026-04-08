@@ -21,7 +21,7 @@ Rule:
 ## 2026-04-01 - Workflow is invoked through a repo-local skill
 
 - Decision:
-  - Keep this system available as a repo-local skill under `.agents/skills/codex-workflow/`.
+  - Keep this system available as a repo-local skill under `.agents/skills/raiola/`.
 - Why:
   - It reduces the need to re-explain the workflow in future Codex sessions.
   - Together with `AGENTS.md`, the skill provides both durable rules and task-level workflow behavior.

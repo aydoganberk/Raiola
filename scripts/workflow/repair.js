@@ -69,7 +69,11 @@ function expectedRuntimeFiles() {
   visit(source.scriptsDir);
   visit(source.cliDir);
   files.push({ source: source.binFile, relative: relativePath(source.repoRoot, source.binFile) });
+  for (const aliasBinFile of source.aliasBinFiles || []) {
+    files.push({ source: aliasBinFile, relative: relativePath(source.repoRoot, aliasBinFile) });
+  }
   files.push({ source: source.compareScript, relative: relativePath(source.repoRoot, source.compareScript) });
+  files.push({ source: source.skillFile, relative: '.agents/skills/raiola/SKILL.md' });
   files.push({ source: source.skillFile, relative: '.agents/skills/codex-workflow/SKILL.md' });
   return files;
 }
@@ -197,7 +201,7 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
       if (String(check.message).includes('VALIDATION') || String(check.message).includes('Validation')) {
         manualIssues.push({
           type: 'validation_contract',
-          command: 'cwf explore --workflow',
+          command: 'rai explore --workflow',
           reason: check.message,
         });
       }
@@ -252,7 +256,10 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
           const source = sourceLayout();
           for (const relativeFile of issue.files) {
             let sourcePath = path.join(source.repoRoot, relativeFile);
-            if (relativeFile === '.agents/skills/codex-workflow/SKILL.md') {
+            if (
+              relativeFile === '.agents/skills/raiola/SKILL.md'
+              || relativeFile === '.agents/skills/codex-workflow/SKILL.md'
+            ) {
               sourcePath = source.skillFile;
             }
             const targetPath = path.join(cwd, relativeFile);

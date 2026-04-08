@@ -7,10 +7,10 @@ const childProcess = require('node:child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'cwf.js');
+const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase15-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase15-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }
@@ -31,20 +31,20 @@ test('roadmap daily-intent and trust surfaces work end-to-end', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
-  const codex = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'codex', 'setup', '--repo', '--json'], targetRepo));
-  const intent = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'do', 'investigate audit drift', '--json'], targetRepo));
-  const note = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'note', 'Remember this task', '--promote', 'backlog', '--json'], targetRepo));
-  const thread = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'thread', 'open', 'audit-loop', '--json'], targetRepo));
-  const question = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'questions', 'add', 'Why is the plan gate stale?', '--json'], targetRepo));
+  const codex = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'codex', 'setup', '--repo', '--json'], targetRepo));
+  const intent = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'do', 'investigate audit drift', '--json'], targetRepo));
+  const note = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'note', 'Remember this task', '--promote', 'backlog', '--json'], targetRepo));
+  const thread = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'thread', 'open', 'audit-loop', '--json'], targetRepo));
+  const question = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'questions', 'add', 'Why is the plan gate stale?', '--json'], targetRepo));
   const shellVerify = JSON.parse(run(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'verify-shell', '--cmd', 'node -e "console.log(\'ok\')"', '--json'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'verify-shell', '--cmd', 'node -e "console.log(\'ok\')"', '--json'],
     targetRepo,
   ));
   const claim = JSON.parse(run(
     'node',
     [
-      path.join(targetRepo, 'bin', 'cwf.js'),
+      path.join(targetRepo, 'bin', 'rai.js'),
       'claims',
       'add',
       'Shell verify passes',
@@ -54,15 +54,15 @@ test('roadmap daily-intent and trust surfaces work end-to-end', () => {
     ],
     targetRepo,
   ));
-  const secure = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'secure', '--json'], targetRepo));
-  const packetLock = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'packet', 'lock', '--step', 'plan', '--json'], targetRepo));
-  const packetVerify = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'packet', 'verify', '--step', 'plan', '--json'], targetRepo));
-  const evidence = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'evidence', '--json'], targetRepo));
+  const secure = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'secure', '--json'], targetRepo));
+  const packetLock = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'packet', 'lock', '--step', 'plan', '--json'], targetRepo));
+  const packetVerify = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'packet', 'verify', '--step', 'plan', '--json'], targetRepo));
+  const evidence = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'evidence', '--json'], targetRepo));
 
   assert.match(codex.configFile, /codex-control\/repo-codex\/config\.toml$/);
   assert.ok(codex.roles.length >= 2);
   assert.equal(intent.previewFirst, true);
-  assert.ok(intent.suggestedCommands.includes('cwf packet compile'));
+  assert.ok(intent.suggestedCommands.includes('rai packet compile'));
   assert.ok(fs.existsSync(path.join(targetRepo, note.inbox)));
   assert.ok(fs.existsSync(path.join(targetRepo, note.promotedTo)));
   assert.match(thread.file, /THREADS\/audit-loop\.md$/);
@@ -78,7 +78,7 @@ test('codex control-plane lifecycle stays rollback-safe and scriptable', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const setup = JSON.parse(run('node', [targetBin, 'codex', 'setup', '--repo', '--json'], targetRepo));
   const diff = JSON.parse(run('node', [targetBin, 'codex', 'diff-config', '--repo', '--json'], targetRepo));
   const doctor = JSON.parse(run('node', [targetBin, 'codex', 'doctor', '--repo', '--json'], targetRepo));
@@ -119,7 +119,7 @@ test('roadmap governance and operator-center surfaces stay scriptable', () => {
   const policy = JSON.parse(run(
     'node',
     [
-      path.join(targetRepo, 'bin', 'cwf.js'),
+      path.join(targetRepo, 'bin', 'rai.js'),
       'policy',
       'check',
       '--files',
@@ -134,17 +134,17 @@ test('roadmap governance and operator-center surfaces stay scriptable', () => {
   ));
   const approval = JSON.parse(run(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'approvals', 'grant', '--target', 'config', '--reason', 'Allow package edits', '--json'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'approvals', 'grant', '--target', 'config', '--reason', 'Allow package edits', '--json'],
     targetRepo,
   ));
-  const hooks = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'hooks', 'init', '--json'], targetRepo));
-  const mcp = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'mcp', 'status', '--json'], targetRepo));
-  const notify = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'notify', 'test', '--json'], targetRepo));
-  const daemon = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'daemon', 'restart', '--json'], targetRepo));
+  const hooks = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'hooks', 'init', '--json'], targetRepo));
+  const mcp = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'mcp', 'status', '--json'], targetRepo));
+  const notify = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'notify', 'test', '--json'], targetRepo));
+  const daemon = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'daemon', 'restart', '--json'], targetRepo));
   const incident = JSON.parse(run(
     'node',
     [
-      path.join(targetRepo, 'bin', 'cwf.js'),
+      path.join(targetRepo, 'bin', 'rai.js'),
       'incident',
       'open',
       '--title',
@@ -152,14 +152,14 @@ test('roadmap governance and operator-center surfaces stay scriptable', () => {
       '--summary',
       'Need a repair recipe',
       '--command',
-      'cwf verify-browser',
+      'rai verify-browser',
       '--json',
     ],
     targetRepo,
   ));
-  const fleet = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'fleet', 'status', '--json'], targetRepo));
-  const sessions = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'sessions', '--json'], targetRepo));
-  const gc = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'gc', '--keep', '1', '--json'], targetRepo));
+  const fleet = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'fleet', 'status', '--json'], targetRepo));
+  const sessions = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'sessions', '--json'], targetRepo));
+  const gc = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'gc', '--keep', '1', '--json'], targetRepo));
 
   assert.equal(policy.results.length, 2);
   assert.ok(['warn', 'fail', 'pass'].includes(policy.verdict));
@@ -207,7 +207,7 @@ test('hybrid team runtime, browser adapter, and patch surfaces produce artifacts
   const runtime = JSON.parse(run(
     'node',
     [
-      path.join(targetRepo, 'bin', 'cwf.js'),
+      path.join(targetRepo, 'bin', 'rai.js'),
       'team',
       'run',
       '--adapter',
@@ -222,7 +222,7 @@ test('hybrid team runtime, browser adapter, and patch surfaces produce artifacts
     ],
     targetRepo,
   ));
-  const dispatched = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'dispatch', '--json'], targetRepo));
+  const dispatched = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'dispatch', '--json'], targetRepo));
   const workspaceEntry = Object.entries(dispatched.workspaces)[0];
   assert.ok(workspaceEntry);
   const [taskId, workspace] = workspaceEntry;
@@ -245,17 +245,17 @@ test('hybrid team runtime, browser adapter, and patch surfaces produce artifacts
 `,
   );
 
-  const collected = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'collect', '--json'], targetRepo));
-  const mailbox = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'mailbox', '--json'], targetRepo));
-  const timeline = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'timeline', '--json'], targetRepo));
-  const patches = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'patch-review', '--json'], targetRepo));
+  const collected = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'collect', '--json'], targetRepo));
+  const mailbox = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'mailbox', '--json'], targetRepo));
+  const timeline = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'timeline', '--json'], targetRepo));
+  const patches = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'patch-review', '--json'], targetRepo));
 
   const previewPath = path.join(targetRepo, 'preview.html');
   fs.writeFileSync(previewPath, '<!doctype html><html><body><main id="root">ready</main></body></html>');
   const browser = JSON.parse(run(
     'node',
     [
-      path.join(targetRepo, 'bin', 'cwf.js'),
+      path.join(targetRepo, 'bin', 'rai.js'),
       'verify-browser',
       '--adapter',
       'playwright',

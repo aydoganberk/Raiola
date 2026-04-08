@@ -8,10 +8,10 @@ const repoRoot = path.resolve(__dirname, '..');
 const ioFiles = require(path.join(repoRoot, 'scripts', 'workflow', 'io', 'files.js'));
 const sections = require(path.join(repoRoot, 'scripts', 'workflow', 'markdown', 'sections.js'));
 const packetCache = require(path.join(repoRoot, 'scripts', 'workflow', 'packet', 'cache.js'));
-const { CLI_COMMANDS } = require(path.join(repoRoot, 'scripts', 'cli', 'cwf.js'));
+const { CLI_COMMANDS } = require(path.join(repoRoot, 'scripts', 'cli', 'rai.js'));
 
 function makeTempDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase13-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase13-'));
 }
 
 test('io/files reads, writes, and caches text content', () => {
@@ -85,9 +85,9 @@ test('product docs and command references exist', () => {
 
   const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
   const architecture = fs.readFileSync(path.join(repoRoot, 'docs', 'architecture.md'), 'utf8');
-  assert.match(readme, /cwf quick/);
-  assert.match(readme, /cwf team/);
-  assert.match(readme, /cwf review/);
+  assert.match(readme, /rai quick/);
+  assert.match(readme, /rai team/);
+  assert.match(readme, /rai review/);
   assert.match(readme, /roadmap-audit\.md/);
   assert.match(architecture, /\.workflow\/VERSION\.md/);
 });
@@ -97,6 +97,6 @@ test('commands documentation tracks the full CLI surface', () => {
 
   for (const commandName of Object.keys(CLI_COMMANDS)) {
     const escaped = commandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    assert.match(commandsDoc, new RegExp(`cwf ${escaped}`), `Missing commands doc entry for ${commandName}`);
+    assert.match(commandsDoc, new RegExp(`rai ${escaped}`), `Missing commands doc entry for ${commandName}`);
   }
 });

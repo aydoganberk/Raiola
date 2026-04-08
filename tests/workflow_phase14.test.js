@@ -13,7 +13,7 @@ const setupScript = path.join(repoRoot, 'scripts', 'workflow', 'setup.js');
 const initScript = path.join(repoRoot, 'scripts', 'workflow', 'init.js');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase14-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase14-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }
@@ -38,14 +38,14 @@ test('launch, manager, next-prompt, explore, route, profile, and workspaces expo
   const targetRepo = makeTempRepo();
   run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
-  const launch = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'launch', '--json'], targetRepo));
-  const hud = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'hud', '--json'], targetRepo));
-  const manager = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'manager', '--json'], targetRepo));
-  const nextPrompt = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'next-prompt', '--json'], targetRepo));
-  const explore = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'explore', '--changed', '--json'], targetRepo));
-  const route = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'route', '--json'], targetRepo));
-  const profile = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'profile', '--json'], targetRepo));
-  const workspaces = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'workspaces', '--json'], targetRepo));
+  const launch = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'launch', '--json'], targetRepo));
+  const hud = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'hud', '--json'], targetRepo));
+  const manager = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'manager', '--json'], targetRepo));
+  const nextPrompt = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'next-prompt', '--json'], targetRepo));
+  const explore = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'explore', '--changed', '--json'], targetRepo));
+  const route = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'route', '--json'], targetRepo));
+  const profile = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'profile', '--json'], targetRepo));
+  const workspaces = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'workspaces', '--json'], targetRepo));
 
   assert.equal(launch.runtimeFile, '.workflow/runtime/launch.json');
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'runtime', 'launch.json')));
@@ -72,7 +72,7 @@ test('explore and daemon use persistent symbol and scale caches', () => {
   writeFile(targetRepo, 'src/api.ts', 'import { fetchData } from "./service"; export async function loadRoute(id) { return fetchData(id); }\n');
   writeFile(targetRepo, 'tests/service.test.js', 'const { test } = require("node:test"); test("service", () => {});\n');
 
-  const bin = path.join(targetRepo, 'bin', 'cwf.js');
+  const bin = path.join(targetRepo, 'bin', 'rai.js');
   const symbol = JSON.parse(run('node', [bin, 'explore', '--symbol', 'fetchData', '--json'], targetRepo));
   const callers = JSON.parse(run('node', [bin, 'explore', '--callers', 'fetchData', '--json'], targetRepo));
   const impact = JSON.parse(run('node', [bin, 'explore', '--impact', 'src/service.ts', '--json'], targetRepo));

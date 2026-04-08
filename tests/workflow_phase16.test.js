@@ -7,10 +7,10 @@ const childProcess = require('node:child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'cwf.js');
+const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase16-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase16-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }
@@ -31,7 +31,7 @@ test('intent engine, route replay/eval, and codex bootstrap surfaces are scripta
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const goal = 'review the frontend diff and capture browser evidence';
   const route = JSON.parse(run('node', [targetBin, 'route', '--goal', goal, '--json'], targetRepo));
   const replay = JSON.parse(run('node', [targetBin, 'route', 'replay', '--json'], targetRepo));
@@ -103,7 +103,7 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
     '<!doctype html><html><head><title>Preview</title></head><body><main><h1>Preview</h1><button>Ship</button></main></body></html>\n',
   );
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const uiSpec = JSON.parse(run('node', [targetBin, 'ui-spec', '--json'], targetRepo));
   const designDna = JSON.parse(run('node', [targetBin, 'design-dna', '--json'], targetRepo));
   const stateAtlas = JSON.parse(run('node', [targetBin, 'state-atlas', '--json'], targetRepo));

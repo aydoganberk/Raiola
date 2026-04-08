@@ -3,7 +3,9 @@ const path = require('node:path');
 const childProcess = require('node:child_process');
 const {
   embeddedProductMeta,
+  isKnownProductName,
   productName,
+  productCommandName,
   productVersion,
 } = require('./product_version');
 const {
@@ -23,6 +25,7 @@ const {
   replaceOrAppendField,
   replaceSection,
   syncStablePacketSet,
+  tryExtractSection,
   syncWindowDocument,
   today,
   workflowPaths,
@@ -46,7 +49,11 @@ function layoutFromRoot(repoRoot) {
     templatesDir: path.join(repoRoot, 'templates', 'workflow'),
     scriptsDir: path.join(repoRoot, 'scripts', 'workflow'),
     cliDir: path.join(repoRoot, 'scripts', 'cli'),
-    binFile: path.join(repoRoot, 'bin', 'cwf.js'),
+    binFile: path.join(repoRoot, 'bin', 'rai.js'),
+    aliasBinFiles: [
+      path.join(repoRoot, 'bin', 'raiola.js'),
+      path.join(repoRoot, 'bin', 'cwf.js'),
+    ],
     compareScript: path.join(repoRoot, 'scripts', 'compare_golden_snapshots.ts'),
     skillFile: path.join(repoRoot, 'skill', 'SKILL.md'),
     packageJson: path.join(repoRoot, 'package.json'),
@@ -73,7 +80,7 @@ function isProductPackageRoot(repoRoot) {
   }
   try {
     const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    return pkg?.name === embeddedProductMeta().name;
+    return isKnownProductName(pkg?.name);
   } catch {
     return false;
   }
@@ -84,14 +91,17 @@ function resolveInstalledPackageRoot(targetRepo) {
     return null;
   }
 
-  try {
-    const packageJsonPath = require.resolve(`${embeddedProductMeta().name}/package.json`, {
-      paths: [targetRepo, process.cwd()],
-    });
-    return path.dirname(packageJsonPath);
-  } catch {
-    return null;
+  for (const packageName of [embeddedProductMeta().name, ...(embeddedProductMeta().legacyNames || [])]) {
+    try {
+      const packageJsonPath = require.resolve(`${packageName}/package.json`, {
+        paths: [targetRepo, process.cwd()],
+      });
+      return path.dirname(packageJsonPath);
+    } catch {
+      // Try the next known package name.
+    }
   }
+  return null;
 }
 
 function resolveProductSourceRoot(targetRepo = null) {
@@ -102,6 +112,7 @@ function resolveProductSourceRoot(targetRepo = null) {
 
   const manifest = targetRepo ? readProductManifest(targetRepo) : null;
   const candidates = [
+    process.env.RAIOLA_SOURCE_ROOT || null,
     process.env.CODEX_WORKFLOW_KIT_SOURCE_ROOT || null,
     manifest?.installerSourceRoot || null,
     resolveInstalledPackageRoot(targetRepo),
@@ -307,8 +318,8 @@ function writeVersionMarker(targetRepo, options = {}) {
 
 ## Update Guidance
 
-- \`Run cwf update after pulling a newer codex-workflow-kit release\`
-- \`Run cwf doctor --strict if package scripts, runtime files, or skill aliases look stale\`
+- \`Run rai update after pulling a newer raiola release\`
+- \`Run rai doctor --strict if package scripts, runtime files, or skill aliases look stale\`
 `;
 
   ensureDir(path.dirname(markerPath));
@@ -349,7 +360,7 @@ function writeProductManifest(targetRepo, options = {}) {
     sourcePackageVersion: sourcePackageVersion(),
     generatedAt: new Date().toISOString(),
     versionMarkerPath: '.workflow/VERSION.md',
-    skillPath: '.agents/skills/codex-workflow/SKILL.md',
+    skillPath: '.agents/skills/raiola/SKILL.md',
     installerSourceRoot: productSource.repoRoot !== targetRepo ? productSource.repoRoot : null,
     scriptProfile,
     runtimeScripts: loadTargetRuntimeScripts(scriptProfile, {
@@ -543,6 +554,7 @@ function runtimeFilesForScriptProfile(profile = 'full', options = {}) {
     ...workflowFiles,
     ...walkFiles(source.cliDir).map((filePath) => relativePath(source.repoRoot, filePath)),
     relativePath(source.repoRoot, source.binFile),
+    ...(source.aliasBinFiles || []).map((filePath) => relativePath(source.repoRoot, filePath)),
   ];
 
   if (normalizedProfile === 'full') {
@@ -636,9 +648,15 @@ function patchPackageJsonScripts(targetRepo, options = {}) {
   }
 
   packageJson.scripts = currentScripts;
-  if (!packageJson.scripts.cwf) {
-    packageJson.scripts.cwf = 'node bin/cwf.js';
-    report.added.push('cwf');
+  for (const [name, value] of [
+    ['rai', 'node bin/rai.js'],
+    ['raiola', 'node bin/raiola.js'],
+    ['cwf', 'node bin/cwf.js'],
+  ]) {
+    if (!packageJson.scripts[name]) {
+      packageJson.scripts[name] = value;
+      report.added.push(name);
+    }
   }
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
   return report;
@@ -754,8 +772,8 @@ function patchGitignore(targetRepo, options = {}) {
   if (current.trim()) {
     lines.push(current.replace(/\s+$/g, ''));
   }
-  if (!current.includes('# codex-workflow-kit runtime artifacts')) {
-    lines.push('# codex-workflow-kit runtime artifacts');
+  if (!current.includes('# raiola runtime artifacts')) {
+    lines.push('# raiola runtime artifacts');
   }
   for (const entry of missingEntries) {
     lines.push(entry);
@@ -835,7 +853,10 @@ function seedWorkflowRootGaps(rootDir, templatesDir) {
     }
 
     for (const heading of doc.sections) {
-      content = ensureSection(content, heading, extractSection(template, heading));
+      const fallbackSectionBody = heading === 'At-Risk Requirements'
+        ? '- `No active requirements are at risk while there is no active milestone`'
+        : '';
+      content = ensureSection(content, heading, tryExtractSection(template, heading, fallbackSectionBody));
     }
 
     if (content !== read(targetPath)) {
@@ -970,9 +991,14 @@ function installWorkflowSurface(targetRepo, options = {}) {
   const docsTarget = path.join(targetRepo, 'docs', 'workflow');
   const scriptsTarget = path.join(targetRepo, 'scripts', 'workflow');
   const cliTarget = path.join(targetRepo, 'scripts', 'cli');
-  const binTarget = path.join(targetRepo, 'bin', 'cwf.js');
+  const binTarget = path.join(targetRepo, 'bin', 'rai.js');
+  const aliasBinTargets = [
+    path.join(targetRepo, 'bin', 'raiola.js'),
+    path.join(targetRepo, 'bin', 'cwf.js'),
+  ];
   const compareTarget = path.join(targetRepo, 'scripts', 'compare_golden_snapshots.ts');
-  const skillTarget = path.join(targetRepo, '.agents', 'skills', 'codex-workflow', 'SKILL.md');
+  const skillTarget = path.join(targetRepo, '.agents', 'skills', 'raiola', 'SKILL.md');
+  const legacySkillTarget = path.join(targetRepo, '.agents', 'skills', 'codex-workflow', 'SKILL.md');
   const workflowIgnoreTarget = path.join(targetRepo, '.workflowignore');
   const selectedRuntimeFiles = runtimeFilesForScriptProfile(selectedScriptProfile, {
     targetRepo,
@@ -999,8 +1025,10 @@ function installWorkflowSurface(targetRepo, options = {}) {
     scripts: { created: [], updated: [], skipped: [] },
     cli: { created: [], updated: [], skipped: [] },
     bin: null,
+    binAliases: [],
     compareScript: null,
     skill: null,
+    legacySkill: null,
     workflowIgnore: null,
     gitignore: null,
     packageScripts: null,
@@ -1030,10 +1058,12 @@ function installWorkflowSurface(targetRepo, options = {}) {
   });
 
   report.bin = copyFileTracked(source.binFile, binTarget, { overwrite: true });
+  report.binAliases = aliasBinTargets.map((targetPath, index) => copyFileTracked(source.aliasBinFiles[index], targetPath, { overwrite: true }));
   report.compareScript = includeCompareScript
     ? copyFileTracked(source.compareScript, compareTarget, { overwrite: true })
     : 'skipped';
   report.skill = copyFileTracked(source.skillFile, skillTarget, { overwrite: true });
+  report.legacySkill = copyFileTracked(source.skillFile, legacySkillTarget, { overwrite: true });
   report.workflowIgnore = copyFileTracked(source.workflowIgnore, workflowIgnoreTarget, { overwrite: false });
   if (manageGitignore) {
     report.gitignore = patchGitignore(targetRepo);

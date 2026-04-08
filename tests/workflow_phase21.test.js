@@ -13,10 +13,10 @@ const {
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'cwf.js');
+const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase21-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase21-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }
@@ -105,7 +105,7 @@ test('ui-direction exports experience thesis, signature moments, and codex promp
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const direction = JSON.parse(run(
     'node',
     [targetBin, 'ui-direction', '--goal', 'premium minimal analytics dashboard', '--taste', 'premium-minimal', '--json'],
@@ -133,7 +133,7 @@ test('ui-direction accepts the semantic-minimal taste profile for native-first g
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const direction = JSON.parse(run(
     'node',
     [targetBin, 'ui-direction', '--goal', 'build a semantic lightweight settings surface', '--taste', 'semantic-minimal', '--json'],
@@ -161,7 +161,7 @@ test('review-mode produces a distinct execution spine, context pack, and artifac
     'export default function Page() { console.log("debug"); return <main><h1>After</h1><p>TODO tighten copy</p></main>; }\n',
   );
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const reviewMode = JSON.parse(run(
     'node',
     [targetBin, 'review-mode', '--goal', 'review the dashboard diff', '--json'],
@@ -182,7 +182,7 @@ test('monorepo intelligence discovers pnpm workspaces and builds agent waves', (
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedPnpmMonorepo(targetRepo);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const monorepo = JSON.parse(run('node', [targetBin, 'monorepo', '--json'], targetRepo));
 
   assert.equal(monorepo.repoShape, 'monorepo');
@@ -236,18 +236,18 @@ test('do payload includes a codex command plan for frontend lanes', () => {
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const payload = JSON.parse(run(
     'node',
     [targetBin, 'do', '--goal', 'design a premium frontend analytics dashboard with better taste', '--json'],
     targetRepo,
   ));
 
-  assert.ok(payload.commandPlan.primaryCommand.includes('cwf ui-plan') || payload.commandPlan.primaryCommand.includes('cwf do'));
-  assert.ok(payload.commandPlan.secondaryCommands.some((command) => command.includes('cwf ui-recipe')));
+  assert.ok(payload.commandPlan.primaryCommand.includes('rai ui-plan') || payload.commandPlan.primaryCommand.includes('rai do'));
+  assert.ok(payload.commandPlan.secondaryCommands.some((command) => command.includes('rai ui-recipe')));
   assert.ok(payload.commandPlan.codexAppFlow.length >= 1);
   assert.ok(payload.commandPlan.codexAppFlow.some((entry) => entry.includes('UI-RECIPE')));
-  assert.ok(payload.verificationPlan.includes('cwf ui-recipe'));
+  assert.ok(payload.verificationPlan.includes('rai ui-recipe'));
   assert.ok(payload.uiDirection);
   assert.ok(payload.uiSpec);
   assert.ok(payload.uiRecipe);

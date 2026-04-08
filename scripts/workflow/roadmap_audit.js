@@ -58,7 +58,7 @@ function makeTempRepo(prefix) {
 }
 
 function installWorkflow(targetRepo) {
-  run(process.execPath, [path.join(REPO_ROOT, 'bin', 'cwf.js'), 'setup', '--target', targetRepo, '--skip-verify'], REPO_ROOT);
+  run(process.execPath, [path.join(REPO_ROOT, 'bin', 'rai.js'), 'setup', '--target', targetRepo, '--skip-verify'], REPO_ROOT);
 }
 
 function openMilestone(targetRepo, goal) {
@@ -81,7 +81,7 @@ function ensureGitIdentity(targetRepo) {
 }
 
 function evaluateIntentCorpus() {
-  const repo = makeTempRepo('cwf-intent-audit');
+  const repo = makeTempRepo('rai-intent-audit');
   installWorkflow(repo);
   openMilestone(repo, 'Audit workflow routing coverage');
   const rootDir = path.join(repo, 'docs', 'workflow');
@@ -144,7 +144,7 @@ function evaluateIntentCorpus() {
 }
 
 async function evaluateReviewCorpus() {
-  const repo = makeTempRepo('cwf-review-audit');
+  const repo = makeTempRepo('rai-review-audit');
   installWorkflow(repo);
   openMilestone(repo, 'Review OS audit scenario');
   const rootDir = path.join(repo, 'docs', 'workflow');
@@ -198,7 +198,7 @@ async function evaluateFrontendCorpus() {
   let passed = 0;
 
   for (const scenario of corpus) {
-    const repo = makeTempRepo(`cwf-frontend-${scenario.id}`);
+    const repo = makeTempRepo(`rai-frontend-${scenario.id}`);
     installWorkflow(repo);
     openMilestone(repo, `Frontend audit ${scenario.title}`);
     ensureGitIdentity(repo);

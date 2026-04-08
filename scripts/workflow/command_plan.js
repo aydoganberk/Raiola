@@ -5,11 +5,11 @@ function quoteGoal(goal) {
 function reviewFlow(goal) {
   const qGoal = quoteGoal(goal);
   return {
-    primaryCommand: `cwf review-mode --goal ${qGoal}`,
+    primaryCommand: `rai review-mode --goal ${qGoal}`,
     secondaryCommands: [
-      'cwf review-tasks --json',
-      `cwf codex contextpack --goal ${qGoal}`,
-      'cwf monorepo --json',
+      'rai review-tasks --json',
+      `rai codex contextpack --goal ${qGoal}`,
+      'rai monorepo --json',
     ],
     cliFlow: [
       'Run the advanced review-mode pass first to establish blockers, lenses, and execution spine.',
@@ -38,19 +38,19 @@ function reviewFlow(goal) {
 function frontendFlow(goal) {
   const qGoal = quoteGoal(goal);
   return {
-    primaryCommand: `cwf ui-plan --goal ${qGoal}`,
+    primaryCommand: `rai ui-plan --goal ${qGoal}`,
     secondaryCommands: [
-      `cwf frontend-brief --goal ${qGoal} --json`,
-      `cwf ui-direction --goal ${qGoal} --json`,
-      `cwf design-dna --goal ${qGoal} --json`,
-      `cwf page-blueprint --goal ${qGoal} --json`,
-      `cwf design-md --goal ${qGoal} --json`,
-      `cwf component-strategy --goal ${qGoal} --json`,
-      `cwf design-benchmark --goal ${qGoal} --json`,
-      `cwf state-atlas --goal ${qGoal} --json`,
-      `cwf ui-spec --goal ${qGoal} --json`,
-      `cwf ui-recipe --goal ${qGoal} --json`,
-      'cwf ui-review',
+      `rai frontend-brief --goal ${qGoal} --json`,
+      `rai ui-direction --goal ${qGoal} --json`,
+      `rai design-dna --goal ${qGoal} --json`,
+      `rai page-blueprint --goal ${qGoal} --json`,
+      `rai design-md --goal ${qGoal} --json`,
+      `rai component-strategy --goal ${qGoal} --json`,
+      `rai design-benchmark --goal ${qGoal} --json`,
+      `rai state-atlas --goal ${qGoal} --json`,
+      `rai ui-spec --goal ${qGoal} --json`,
+      `rai ui-recipe --goal ${qGoal} --json`,
+      'rai ui-review',
     ],
     cliFlow: [
       'Use frontend-brief when you need the full external-site artifact pack in one pass.',
@@ -82,13 +82,13 @@ function frontendFlow(goal) {
 function defaultFlow(goal) {
   const qGoal = quoteGoal(goal);
   return {
-    primaryCommand: `cwf do --goal ${qGoal}`,
+    primaryCommand: `rai do --goal ${qGoal}`,
     secondaryCommands: [
-      `cwf codex promptpack --goal ${qGoal}`,
-      `cwf codex contextpack --goal ${qGoal}`,
+      `rai codex promptpack --goal ${qGoal}`,
+      `rai codex contextpack --goal ${qGoal}`,
     ],
     cliFlow: [
-      'Use cwf do to pick the right lane, then follow the suggested commands in order.',
+      'Use rai do to pick the right lane, then follow the suggested commands in order.',
     ],
     codexAppFlow: [
       'Pin the generated context pack and the active workflow docs before large edits.',

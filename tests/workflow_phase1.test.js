@@ -12,20 +12,21 @@ const migrateScript = path.join(repoRoot, 'scripts', 'workflow', 'migrate.js');
 const goldenCompactHud = path.join(repoRoot, 'tests', 'golden', 'workflow', 'hud-compact.txt');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }
 
 function makeEmptyTempRepo() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-empty-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-empty-'));
 }
 
-function run(command, args, cwd) {
+function run(command, args, cwd, options = {}) {
   return childProcess.execFileSync(command, args, {
     cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    ...options,
   });
 }
 
@@ -41,9 +42,9 @@ test('workflow:init installs the runtime surface and HUD state', () => {
   assert.ok(fs.existsSync(path.join(targetRepo, 'docs', 'workflow', 'WORKSTREAMS.md')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'hud.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'init.js')));
-  assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'cli', 'cwf.js')));
-  assert.ok(fs.existsSync(path.join(targetRepo, 'bin', 'cwf.js')));
-  assert.ok(fs.existsSync(path.join(targetRepo, '.agents', 'skills', 'codex-workflow', 'SKILL.md')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'cli', 'rai.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'bin', 'rai.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, '.agents', 'skills', 'raiola', 'SKILL.md')));
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'state.json')));
 
   const packageJson = JSON.parse(fs.readFileSync(path.join(targetRepo, 'package.json'), 'utf8'));
@@ -130,4 +131,29 @@ test('workflow:init bootstraps a minimal package.json for an empty repo', () => 
   run('npm', ['run', 'workflow:hud', '--', '--compact'], targetRepo);
   run('npm', ['run', 'workflow:doctor', '--', '--strict'], targetRepo);
   run('npm', ['run', 'workflow:next'], targetRepo);
+});
+
+test('workflow:init tolerates package templates that are missing a seeded status section', () => {
+  const targetRepo = makeTempRepo();
+  const sourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-source-'));
+  fs.cpSync(repoRoot, sourceRoot, {
+    recursive: true,
+    filter: (src) => !src.includes(`${path.sep}.git${path.sep}`) && !src.endsWith(`${path.sep}.git`),
+  });
+
+  const statusTemplatePath = path.join(sourceRoot, 'templates', 'workflow', 'STATUS.md');
+  const statusTemplate = fs.readFileSync(statusTemplatePath, 'utf8');
+  const trimmedTemplate = statusTemplate.replace(/\n## At-Risk Requirements[\s\S]*?\n## Broken Tests\n/, '\n## Broken Tests\n');
+  fs.writeFileSync(statusTemplatePath, trimmedTemplate);
+
+  run('node', [initScript, '--target', targetRepo], repoRoot, {
+    env: {
+      ...process.env,
+      RAIOLA_SOURCE_ROOT: sourceRoot,
+    },
+  });
+
+  const statusDoc = fs.readFileSync(path.join(targetRepo, 'docs', 'workflow', 'STATUS.md'), 'utf8');
+  assert.match(statusDoc, /## At-Risk Requirements/);
+  assert.match(statusDoc, /No active requirements are at risk while there is no active milestone/);
 });

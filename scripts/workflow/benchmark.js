@@ -147,7 +147,7 @@ function prepareFixtureRepo(fixtureName) {
   if (!sourceDir || !fs.existsSync(sourceDir)) {
     throw new Error(`Unknown benchmark fixture: ${fixtureName}`);
   }
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `cwf-benchmark-${fixtureName}-`));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `rai-benchmark-${fixtureName}-`));
   fs.cpSync(sourceDir, tempDir, { recursive: true });
   return tempDir;
 }

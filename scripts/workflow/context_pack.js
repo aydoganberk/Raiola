@@ -580,7 +580,7 @@ function renderMarkdown(payload) {
     '',
     '## Suggested Next Commands',
     '',
-    ...(payload.suggestedCommands.length > 0 ? payload.suggestedCommands.map((item) => `- \`${item}\``) : ['- `cwf next`']),
+    ...(payload.suggestedCommands.length > 0 ? payload.suggestedCommands.map((item) => `- \`${item}\``) : ['- `rai next`']),
   ];
   return `${lines.join('\n').trimEnd()}\n`;
 }
@@ -631,18 +631,18 @@ function buildCodexContextPack(cwd, rootDir, goal, analysis, profile, options = 
   const avoidPatterns = buildAvoidPatterns();
   const wantsFrontend = frontendRequested(analysis, frontend, { ...options, goal });
   const suggestedCommands = [
-    'cwf codex promptpack --goal "<goal>"',
-    analysis?.chosenCapability?.domain === 'review' ? 'cwf review-tasks --json' : '',
-    analysis?.repoSignals?.monorepo ? 'cwf monorepo --json' : '',
-    wantsFrontend ? 'cwf frontend-brief --json' : '',
-    wantsFrontend ? 'cwf ui-direction --json' : '',
-    wantsFrontend ? 'cwf design-dna --json' : '',
-    wantsFrontend ? 'cwf page-blueprint --json' : '',
-    wantsFrontend ? 'cwf design-md --json' : '',
-    wantsFrontend ? 'cwf component-strategy --json' : '',
-    wantsFrontend ? 'cwf design-benchmark --json' : '',
-    wantsFrontend ? 'cwf ui-spec --json' : '',
-    wantsFrontend ? 'cwf ui-recipe --json' : '',
+    'rai codex promptpack --goal "<goal>"',
+    analysis?.chosenCapability?.domain === 'review' ? 'rai review-tasks --json' : '',
+    analysis?.repoSignals?.monorepo ? 'rai monorepo --json' : '',
+    wantsFrontend ? 'rai frontend-brief --json' : '',
+    wantsFrontend ? 'rai ui-direction --json' : '',
+    wantsFrontend ? 'rai design-dna --json' : '',
+    wantsFrontend ? 'rai page-blueprint --json' : '',
+    wantsFrontend ? 'rai design-md --json' : '',
+    wantsFrontend ? 'rai component-strategy --json' : '',
+    wantsFrontend ? 'rai design-benchmark --json' : '',
+    wantsFrontend ? 'rai ui-spec --json' : '',
+    wantsFrontend ? 'rai ui-recipe --json' : '',
   ].filter(Boolean);
 
   const payload = {

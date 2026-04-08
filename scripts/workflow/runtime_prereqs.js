@@ -185,8 +185,8 @@ function buildRuntimePrerequisiteChecks(cwd, options = {}) {
     missingStatus: 'warn',
     advisoryMissingStatus: 'pass',
     presentLabel: 'Ripgrep',
-    missingSummary: 'rg is missing; cwf explore will fall back to slower built-in search',
-    advisoryMissingSummary: 'optional; rg is missing, so cwf explore will fall back to slower built-in search',
+    missingSummary: 'rg is missing; rai explore will fall back to slower built-in search',
+    advisoryMissingSummary: 'optional; rg is missing, so rai explore will fall back to slower built-in search',
     missingFix: 'Install ripgrep (rg) for faster repo search',
   }));
 
@@ -197,8 +197,8 @@ function buildRuntimePrerequisiteChecks(cwd, options = {}) {
       missingStatus: 'warn',
       advisoryMissingStatus: 'pass',
       presentLabel: 'Dashboard opener',
-      missingSummary: 'open is missing; cwf dashboard --open cannot auto-launch the browser',
-      advisoryMissingSummary: 'optional; open is missing, so cwf dashboard --open cannot auto-launch the browser',
+      missingSummary: 'open is missing; rai dashboard --open cannot auto-launch the browser',
+      advisoryMissingSummary: 'optional; open is missing, so rai dashboard --open cannot auto-launch the browser',
       missingFix: 'Restore the open command or open the generated HTML manually',
     }));
     checks.push(buildBinaryCheck('qlmanage', {
@@ -218,8 +218,8 @@ function buildRuntimePrerequisiteChecks(cwd, options = {}) {
       missingStatus: 'warn',
       advisoryMissingStatus: 'pass',
       presentLabel: 'Dashboard opener',
-      missingSummary: 'xdg-open is missing; cwf dashboard --open cannot auto-launch the browser',
-      advisoryMissingSummary: 'optional; xdg-open is missing, so cwf dashboard --open cannot auto-launch the browser',
+      missingSummary: 'xdg-open is missing; rai dashboard --open cannot auto-launch the browser',
+      advisoryMissingSummary: 'optional; xdg-open is missing, so rai dashboard --open cannot auto-launch the browser',
       missingFix: 'Install xdg-utils or open the generated HTML manually',
     }));
   } else if (platform === 'win32') {

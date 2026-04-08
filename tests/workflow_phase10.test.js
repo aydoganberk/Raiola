@@ -11,7 +11,7 @@ const initScript = path.join(repoRoot, 'scripts', 'workflow', 'init.js');
 const migrateScript = path.join(repoRoot, 'scripts', 'workflow', 'migrate.js');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase10-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase10-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }

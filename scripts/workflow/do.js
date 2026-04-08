@@ -37,9 +37,9 @@ function buildDoPayload(cwd, rootDir, goal) {
       : 'optional';
   const suggestedCommands = analysis.verificationPlan.length > 0
     ? [...analysis.verificationPlan]
-    : ['cwf next'];
-  if (packet !== 'optional' && !suggestedCommands.includes('cwf packet compile')) {
-    suggestedCommands.unshift('cwf packet compile');
+    : ['rai next'];
+  if (packet !== 'optional' && !suggestedCommands.includes('rai packet compile')) {
+    suggestedCommands.unshift('rai packet compile');
   }
   const payload = {
     generatedAt: new Date().toISOString(),

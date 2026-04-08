@@ -1,6 +1,6 @@
 # Codex Integration
 
-`cwf codex` is the safe control-plane layer for repo-local Codex usage.
+`rai codex` is the safe control-plane layer for repo-local Codex usage.
 
 ## What it manages
 
@@ -13,12 +13,12 @@
 
 ## Core flows
 
-- `cwf codex setup --repo`
-- `cwf codex diff-config --repo`
-- `cwf codex doctor --repo`
-- `cwf codex rollback --repo`
-- `cwf codex sync --repo`
-- `cwf codex scaffold-role --from repo-profile`
+- `rai codex setup --repo`
+- `rai codex diff-config --repo`
+- `rai codex doctor --repo`
+- `rai codex rollback --repo`
+- `rai codex sync --repo`
+- `rai codex scaffold-role --from repo-profile`
 
 ## Safety notes
 

@@ -8,11 +8,11 @@ const { buildReviewDiffCorpus } = require('./corpus/review_diff.corpus');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'cwf.js');
+const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
 const { buildPackageGraph } = require(path.join(repoRoot, 'scripts', 'workflow', 'package_graph.js'));
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase17-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase17-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }
@@ -48,7 +48,7 @@ test('roadmap audit corpus clears the roadmap quality thresholds', () => {
 test('doctor and health expose risk scores that react to workflow drift', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
 
   run(
     'node',
@@ -114,7 +114,7 @@ test('ui review exposes missing-state and token-drift audits', () => {
   fs.writeFileSync(path.join(targetRepo, 'app', 'page.tsx'), 'export default function Page() { return <main><h1>Audit</h1></main>; }\n');
   fs.writeFileSync(path.join(targetRepo, 'preview.html'), '<!doctype html><html><body><main><h1>Preview</h1><button>Ship</button></main></body></html>\n');
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const uiReview = JSON.parse(run('node', [targetBin, 'ui-review', '--url', './preview.html', '--json'], targetRepo));
   const uiSpec = JSON.parse(run('node', [targetBin, 'ui-spec', '--json'], targetRepo));
 
@@ -153,7 +153,7 @@ test('review engine detects API drift and data migration risks in diff mode', ()
   const diffPath = path.join(targetRepo, 'audit.diff');
   fs.writeFileSync(diffPath, scenario.diffText);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const review = JSON.parse(run('node', [targetBin, 'review', '--diff-file', diffPath, '--json'], targetRepo));
   const categories = review.findings.map((finding) => finding.category);
 
@@ -193,7 +193,7 @@ test('review engine semantic pass catches auth regressions and frontend accessib
     '',
   ].join('\n'));
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const review = JSON.parse(run('node', [targetBin, 'review', '--diff-file', diffPath, '--json'], targetRepo));
   const categories = review.findings.map((finding) => finding.category);
 
@@ -205,7 +205,7 @@ test('review engine semantic pass catches auth regressions and frontend accessib
 });
 
 test('package graph exposes changed and impacted packages for monorepo deltas', () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase17-graph-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase17-graph-'));
   const fixture = path.join(repoRoot, 'tests', 'fixtures', 'large-monorepo');
   fs.cpSync(fixture, tempDir, { recursive: true });
 

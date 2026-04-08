@@ -80,32 +80,32 @@ function buildQuickActions(payload) {
   }
   for (const item of payload.verifyWork?.fixPlan || []) {
     const command = item.lane === 'browser'
-      ? 'cwf ui-review'
+      ? 'rai ui-review'
       : item.lane === 'review'
-        ? 'cwf review --blockers'
+        ? 'rai review --blockers'
         : item.lane === 'claims'
-          ? 'cwf claims check'
+          ? 'rai claims check'
           : item.lane === 'requirements'
-            ? 'cwf packet explain --step plan'
+            ? 'rai packet explain --step plan'
             : item.lane === 'shell'
-              ? 'cwf verify-shell --cmd "npm test"'
-              : 'cwf verify-work';
+              ? 'rai verify-shell --cmd "npm test"'
+              : 'rai verify-work';
     pushAction('trust', item.action, command, item.evidence || 'Verify-work generated this fix-plan item.', item.priority === 'high' ? 'risk' : 'warn');
   }
   if (payload.frontendReview?.accessibilityAudit?.verdict && payload.frontendReview.accessibilityAudit.verdict !== 'pass') {
-    pushAction('frontend', 'Address accessibility audit', 'cwf ui-review', payload.frontendReview.accessibilityAudit.guidance, 'risk');
+    pushAction('frontend', 'Address accessibility audit', 'rai ui-review', payload.frontendReview.accessibilityAudit.guidance, 'risk');
   }
   if (payload.frontendReview?.journeyAudit?.coverage && payload.frontendReview.journeyAudit.coverage !== 'pass') {
-    pushAction('frontend', 'Tighten journey coverage', 'cwf verify-browser --smoke', payload.frontendReview.journeyAudit.guidance, 'warn');
+    pushAction('frontend', 'Tighten journey coverage', 'rai verify-browser --smoke', payload.frontendReview.journeyAudit.guidance, 'warn');
   }
   if (payload.packetContext?.packet?.budgetStatus && payload.packetContext.packet.budgetStatus !== 'ok') {
-    pushAction('context', 'Rebuild packet budget', `cwf packet explain --step ${payload.packetContext.packet.step || 'plan'}`, 'Packet budget is no longer in the safe zone.', 'warn');
+    pushAction('context', 'Rebuild packet budget', `rai packet explain --step ${payload.packetContext.packet.step || 'plan'}`, 'Packet budget is no longer in the safe zone.', 'warn');
   }
   if ((payload.review?.traceability?.unlinkedCount || 0) > 0) {
-    pushAction('review', 'Close traceability gaps', 'cwf validation-map', 'Changed scope is not fully linked to the validation contract.', 'warn');
+    pushAction('review', 'Close traceability gaps', 'rai validation-map', 'Changed scope is not fully linked to the validation contract.', 'warn');
   }
   if ((payload.review?.packageGraph?.impactedTests || []).length > 0) {
-    pushAction('scale', 'Exercise impacted tests', 'cwf verify-shell --cmd "npm test"', 'Package graph identified impacted test ownership.', 'neutral');
+    pushAction('scale', 'Exercise impacted tests', 'rai verify-shell --cmd "npm test"', 'Package graph identified impacted test ownership.', 'neutral');
   }
   return actions.slice(0, 12);
 }
@@ -570,7 +570,7 @@ function renderDashboardHtml(cwd, payload) {
         </ul>
         <div class="split-copy">
           <span>Rejected alternatives and ambiguity stay visible so manual override is easier.</span>
-          ${route.recommendedCapability ? `<button type="button" class="board-copy" data-copy-command="${escapeHtml(`cwf route --goal "${route.goal || ''}" --why`)}">copy route probe</button>` : ''}
+          ${route.recommendedCapability ? `<button type="button" class="board-copy" data-copy-command="${escapeHtml(`rai route --goal "${route.goal || ''}" --why`)}">copy route probe</button>` : ''}
         </div>
       </article>
 
@@ -665,7 +665,7 @@ function renderDashboardHtml(cwd, payload) {
         <div class="gallery">
           ${payload.browserArtifacts.length > 0
             ? payload.browserArtifacts.map((entry) => renderScreenshotCard(cwd, entry)).join('')
-            : '<div class="gallery-card"><div class="gallery-fallback">No browser screenshots yet</div><p>Run <span class="mono">cwf ui-review --url ...</span> or <span class="mono">cwf verify-browser</span> to populate the gallery.</p></div>'}
+            : '<div class="gallery-card"><div class="gallery-fallback">No browser screenshots yet</div><p>Run <span class="mono">rai ui-review --url ...</span> or <span class="mono">rai verify-browser</span> to populate the gallery.</p></div>'}
         </div>
       </article>
 

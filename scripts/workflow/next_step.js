@@ -373,7 +373,7 @@ function biggestGapRecommendation(cwd) {
   if (review.blockers.length > 0) {
     return {
       title: 'Close the review blockers first',
-      command: 'cwf review --blockers',
+      command: 'rai review --blockers',
       checklist: review.blockers.slice(0, 4).map((finding) => `Fix ${finding.title} in ${finding.file}`),
       note: `${review.blockers.length} blocker(s) remain before the next safe step.`,
     };
@@ -381,7 +381,7 @@ function biggestGapRecommendation(cwd) {
   if (verifyWork?.verdict === 'fail') {
     return {
       title: 'Recover the failing verification surface',
-      command: 'cwf verify-work',
+      command: 'rai verify-work',
       checklist: verifyWork.fixPlan.slice(0, 4).map((item) => item.action),
       note: 'verify-work is currently failing and should be stabilized before new scope is added.',
     };
@@ -389,7 +389,7 @@ function biggestGapRecommendation(cwd) {
   if (verifyWork?.verdict === 'warn') {
     return {
       title: 'Tighten trust gaps before expanding scope',
-      command: 'cwf verify-work',
+      command: 'rai verify-work',
       checklist: verifyWork.fixPlan.slice(0, 4).map((item) => item.action),
       note: 'verify-work still has follow-up gaps that are small enough to close now.',
     };

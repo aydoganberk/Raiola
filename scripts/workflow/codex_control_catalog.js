@@ -85,10 +85,10 @@ function desiredConfig(cwd) {
       roles,
     },
     routing: {
-      default_entry: 'cwf codex',
-      daily_entry: 'cwf do',
-      verify_entry: 'cwf verify-shell',
-      packet_entry: 'cwf packet compile',
+      default_entry: 'rai codex',
+      daily_entry: 'rai do',
+      verify_entry: 'rai verify-shell',
+      packet_entry: 'rai packet compile',
     },
     safety: {
       preview_first: true,
@@ -276,7 +276,7 @@ function doDoctor(cwd, args) {
     issues.push({
       status: 'fail',
       message: 'config.toml is missing',
-      fix: 'cwf codex setup --repo',
+      fix: 'rai codex setup --repo',
     });
   } else {
     try {
@@ -285,7 +285,7 @@ function doDoctor(cwd, args) {
       issues.push({
         status: 'fail',
         message: `config.toml is invalid -> ${error.message}`,
-        fix: 'cwf codex repair --repo',
+        fix: 'rai codex repair --repo',
       });
     }
   }
@@ -295,7 +295,7 @@ function doDoctor(cwd, args) {
     issues.push({
       status: 'warn',
       message: 'Generated config drift detected',
-      fix: 'cwf codex sync --repo',
+      fix: 'rai codex sync --repo',
     });
   }
 
@@ -304,7 +304,7 @@ function doDoctor(cwd, args) {
     issues.push({
       status: 'warn',
       message: 'Role catalog is missing or empty',
-      fix: 'cwf codex scaffold-role --from repo-profile',
+      fix: 'rai codex scaffold-role --from repo-profile',
     });
   }
   for (const role of catalog.roles || []) {
@@ -312,7 +312,7 @@ function doDoctor(cwd, args) {
       issues.push({
         status: 'warn',
         message: `Role file missing -> ${role.name}`,
-        fix: 'cwf codex sync --repo',
+        fix: 'rai codex sync --repo',
       });
     }
   }
@@ -322,7 +322,7 @@ function doDoctor(cwd, args) {
       issues.push({
         status: 'warn',
         message: `Prompt file missing -> ${name}`,
-        fix: 'cwf codex sync --repo',
+        fix: 'rai codex sync --repo',
       });
     }
   }
@@ -476,7 +476,7 @@ function doInstallSkill(cwd, args) {
   if (!role) {
     throw new Error('--role is required');
   }
-  const skillSource = path.join(cwd, '.agents', 'skills', 'codex-workflow', 'SKILL.md');
+  const skillSource = path.join(cwd, '.agents', 'skills', 'raiola', 'SKILL.md');
   ensureDir(path.join(rootDir, 'skills'));
   const targetPath = skillFilePath(rootDir, role);
   if (!copyFileIfExists(skillSource, targetPath)) {

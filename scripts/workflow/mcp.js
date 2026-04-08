@@ -71,7 +71,7 @@ function buildServerDescriptor(cwd, serverId) {
   const scriptPath = path.join(cwd, 'scripts', 'workflow', 'mcp_server.js');
   return {
     id: serverId,
-    name: `cwf-${repoSlug(cwd)}-${serverId}`,
+    name: `rai-${repoSlug(cwd)}-${serverId}`,
     title: serverId,
     transport: 'stdio',
     toolCount: toolCountFor(serverId),
@@ -284,7 +284,7 @@ function smokeDescriptor(descriptor) {
           protocolVersion: '2025-03-26',
           capabilities: {},
           clientInfo: {
-            name: 'codex-workflow-kit-doctor',
+            name: 'raiola-doctor',
             version: '1.0.0',
           },
         });
@@ -320,7 +320,7 @@ async function doctorMcp(cwd, args = {}) {
       verdict: 'warn',
       file: relativePath(cwd, manifestPath(cwd)),
       servers: [],
-      issues: ['Install the repo-local MCP surface first with `cwf mcp install`.'],
+      issues: ['Install the repo-local MCP surface first with `rai mcp install`.'],
       codexRegistry: codexRegistrySnapshot(String(args['codex-bin'] || 'codex')),
     };
   }

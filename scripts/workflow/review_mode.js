@@ -252,11 +252,11 @@ async function buildReviewMode(cwd, rootDir, options = {}) {
     topBlockers: buildTopBlockers(review),
     executionSpine: buildExecutionSpine(taskGraph, monorepo),
     commandPlan: {
-      primary: `cwf review-mode --goal ${JSON.stringify(goal)}`,
+      primary: `rai review-mode --goal ${JSON.stringify(goal)}`,
       followUps: [
-        'cwf review-tasks --json',
-        'cwf re-review',
-        'cwf ship-readiness',
+        'rai review-tasks --json',
+        'rai re-review',
+        'rai ship-readiness',
       ],
     },
   };

@@ -10,7 +10,7 @@ const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
 const initScript = path.join(repoRoot, 'scripts', 'workflow', 'init.js');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase9-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase9-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }

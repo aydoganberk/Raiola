@@ -396,13 +396,13 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   context = replaceSection(context, 'Clarifying Questions / Assumptions', `
 | Claim | Confidence | Evidence refs | Failure mode |
 | --- | --- | --- | --- |
-| Workflow will be used only when the user explicitly asks for it | Confident | AGENTS.md; .agents/skills/codex-workflow/SKILL.md | Scope drifts if workflow activates without request |
+| Workflow will be used only when the user explicitly asks for it | Confident | AGENTS.md; .agents/skills/raiola/SKILL.md | Scope drifts if workflow activates without request |
 | A single user request can still be modeled as one milestone when needed | Likely | AGENTS.md; ${milestonesRef} | Milestone granularity becomes inconsistent |
 `);
   context = replaceSection(context, 'Claim Ledger', `
 | Claim | Type | Evidence refs | Confidence | Failure if wrong |
 | --- | --- | --- | --- | --- |
-| The workflow surface is designed as explicit opt-in | source-backed | AGENTS.md; .agents/skills/codex-workflow/SKILL.md | Confident | Agents may open workflow unnecessarily |
+| The workflow surface is designed as explicit opt-in | source-backed | AGENTS.md; .agents/skills/raiola/SKILL.md | Confident | Agents may open workflow unnecessarily |
 | The current root has enough canonical files for idle state | source-backed | ${workstreamsRef}; ${execplanRef}; ${validationRef} | Likely | A new milestone may open with an incomplete packet |
 `);
   context = replaceSection(context, 'Unknowns', `

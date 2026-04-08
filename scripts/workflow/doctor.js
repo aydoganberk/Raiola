@@ -3,6 +3,7 @@ const path = require('node:path');
 const {
   detectRepoProductMeta,
   embeddedProductMeta,
+  productCommandName,
   productVersion,
 } = require('./product_version');
 const {
@@ -88,7 +89,7 @@ function buildDoctorReport(cwd, rootDir) {
     ...((productManifest?.runtimeFiles || []).filter(Boolean)),
   ])].sort();
   const packageJsonPath = path.join(cwd, 'package.json');
-  const skillPath = path.join(cwd, '.agents', 'skills', 'codex-workflow', 'SKILL.md');
+  const skillPath = path.join(cwd, '.agents', 'skills', 'raiola', 'SKILL.md');
   const versionMarker = readInstalledVersionMarker(cwd);
   const installedProductVersion = productManifest?.installedVersion || null;
   const expectedProductVersion = productVersion();
@@ -158,13 +159,13 @@ function buildDoctorReport(cwd, rootDir) {
     pushCheck(
       'warn',
       'Product manifest -> .workflow/product-manifest.json is missing, so install-surface parity cannot be fully checked',
-      'cwf update',
+      `${productCommandName()} update`,
     );
   } else if (!fs.existsSync(packageJsonPath)) {
     pushCheck(
       'fail',
       'Package scripts -> package.json is missing, so backward-compatible workflow:* commands are unavailable',
-      'cwf update --overwrite-scripts',
+      `${productCommandName()} update --overwrite-scripts`,
     );
   } else {
     try {
@@ -196,14 +197,14 @@ function buildDoctorReport(cwd, rootDir) {
         pushCheck(
           'fail',
           `Package scripts -> ${details.join(' | ')}`,
-          'cwf update --overwrite-scripts',
+          `${productCommandName()} update --overwrite-scripts`,
         );
       }
     } catch (error) {
       pushCheck(
         'fail',
         `Package scripts -> package.json is invalid JSON (${String(error.message || error)})`,
-        'Fix package.json JSON syntax, then rerun cwf doctor --repair',
+        `Fix package.json JSON syntax, then rerun ${productCommandName()} doctor --repair`,
       );
     }
   }
@@ -219,7 +220,7 @@ function buildDoctorReport(cwd, rootDir) {
       missingRuntimeFiles.length === 0
         ? `Runtime surface -> ${expectedRuntimeFiles.length} expected files are present`
         : `Runtime surface -> missing ${summarizeItems(missingRuntimeFiles.map((item) => `\`${item}\``))}`,
-      missingRuntimeFiles.length === 0 ? null : 'cwf update',
+      missingRuntimeFiles.length === 0 ? null : `${productCommandName()} update`,
     );
   }
 
@@ -230,34 +231,34 @@ function buildDoctorReport(cwd, rootDir) {
     missingIgnoreEntries.length === 0
       ? `Gitignore hygiene -> runtime artifacts are ignored (${recommendedGitignoreEntries.join(', ')})`
       : `Gitignore hygiene -> missing ${summarizeItems(missingIgnoreEntries)}`,
-    missingIgnoreEntries.length === 0 ? null : 'cwf update',
+    missingIgnoreEntries.length === 0 ? null : `${productCommandName()} update`,
   );
 
   pushCheck(
     fs.existsSync(skillPath) ? 'pass' : 'warn',
     fs.existsSync(skillPath)
-      ? 'Skill surface -> codex-workflow skill is installed for Codex'
-      : 'Skill surface -> .agents/skills/codex-workflow/SKILL.md is missing',
-    fs.existsSync(skillPath) ? null : 'cwf update',
+      ? 'Skill surface -> raiola skill is installed for Codex'
+      : 'Skill surface -> .agents/skills/raiola/SKILL.md is missing',
+    fs.existsSync(skillPath) ? null : `${productCommandName()} update`,
   );
 
   if (!versionMarker.exists) {
     pushCheck(
       versionDriftStatus,
       'Product version marker -> .workflow/VERSION.md is missing, so update drift cannot be proven',
-      'cwf update',
+      `${productCommandName()} update`,
     );
   } else if (installedProductVersion && versionMarker.installedVersion !== installedProductVersion) {
     pushCheck(
       versionDriftStatus,
       `Product version marker -> marker=${versionMarker.installedVersion || 'unknown'}, manifest=${installedProductVersion}`,
-      'cwf update',
+      `${productCommandName()} update`,
     );
   } else if (versionMarker.installedVersion && versionMarker.installedVersion !== expectedProductVersion) {
     pushCheck(
       versionDriftStatus,
       `Product version marker -> marker=${versionMarker.installedVersion}, expected=${expectedProductVersion}`,
-      'cwf update',
+      `${productCommandName()} update`,
     );
   } else {
     pushCheck('pass', `Product version marker -> ${versionMarker.installedVersion || installedProductVersion || 'present'}`);
@@ -267,7 +268,7 @@ function buildDoctorReport(cwd, rootDir) {
     pushCheck(
       versionDriftStatus,
       `Product manifest version -> manifest=${installedProductVersion}, expected=${expectedProductVersion}`,
-      'cwf update',
+      `${productCommandName()} update`,
     );
   }
 
@@ -275,7 +276,7 @@ function buildDoctorReport(cwd, rootDir) {
     pushCheck(
       versionDriftStatus,
       `Product manifest source package -> manifest=${productManifest.sourcePackageVersion}, expected=${expectedProductVersion}`,
-      'cwf update',
+      `${productCommandName()} update`,
     );
   }
 

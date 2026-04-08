@@ -72,11 +72,11 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile, options = {
   });
   const suggestedCommands = [
     ...analysis.verificationPlan,
-    'cwf codex contextpack --goal "<goal>"',
-    analysis.chosenCapability.domain === 'review' ? 'cwf review-tasks --json' : '',
-    analysis.chosenCapability.domain === 'review' ? 'cwf review-orchestrate --json' : '',
-    wantsFrontend ? 'cwf frontend-brief --json && cwf component-strategy --json && cwf ui-review' : '',
-    monorepo ? 'cwf monorepo --json' : '',
+    'rai codex contextpack --goal "<goal>"',
+    analysis.chosenCapability.domain === 'review' ? 'rai review-tasks --json' : '',
+    analysis.chosenCapability.domain === 'review' ? 'rai review-orchestrate --json' : '',
+    wantsFrontend ? 'rai frontend-brief --json && rai component-strategy --json && rai ui-review' : '',
+    monorepo ? 'rai monorepo --json' : '',
   ].filter(Boolean);
 
   const lines = [
@@ -102,7 +102,7 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile, options = {
     '',
     '## Suggested Commands',
     '',
-    ...(suggestedCommands.length > 0 ? suggestedCommands.map((item) => `- \`${item}\``) : ['- `cwf next`']),
+    ...(suggestedCommands.length > 0 ? suggestedCommands.map((item) => `- \`${item}\``) : ['- `rai next`']),
     '',
     '## Context Pack',
     '',

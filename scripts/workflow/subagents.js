@@ -9,7 +9,7 @@ Usage:
   node scripts/workflow/subagents.js plan --goal "review the current diff"
 
 Notes:
-  This is a roadmap-compatible wrapper over \`cwf codex plan-subagents\`.
+  This is a roadmap-compatible wrapper over \`rai codex plan-subagents\`.
   `);
 }
 

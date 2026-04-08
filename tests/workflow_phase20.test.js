@@ -7,10 +7,10 @@ const childProcess = require('node:child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'cwf.js');
+const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase20-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase20-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }
@@ -99,7 +99,7 @@ test('ui-direction accepts explicit taste profiles and exports richer design sig
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const direction = JSON.parse(run(
     'node',
     [targetBin, 'ui-direction', '--goal', 'premium minimal analytics dashboard', '--taste', 'premium-minimal', '--json'],
@@ -146,7 +146,7 @@ test('design-dna and state-atlas generate downstream site-building contracts', (
     'export default function Page() { return <main><h1>CLI for AI agents</h1><p>Ship faster with traceable workflows.</p><form><input aria-label="Email" /><button type="submit">Join</button></form></main>; }\n',
   );
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const designDna = JSON.parse(run(
     'node',
     [targetBin, 'design-dna', '--goal', 'build a developer tool landing page for AI agents', '--json'],
@@ -179,7 +179,7 @@ test('page-blueprint, design-md, component-strategy, design-benchmark, and front
     'export default function Page() { return <main><h1>AI agent platform</h1><p>Ship trusted workflows fast.</p><button type="button">Start building</button></main>; }\n',
   );
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const blueprint = JSON.parse(run(
     'node',
     [targetBin, 'page-blueprint', '--goal', 'build a developer tool landing page for AI agents', '--json'],
@@ -235,7 +235,7 @@ test('ui-recipe scaffolds a framework-aware semantic-first slice', () => {
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const recipe = JSON.parse(run(
     'node',
     [
@@ -267,7 +267,7 @@ test('component-map reports primitive opportunities for repeated frontend patter
   writeFile(targetRepo, 'components/Modal.tsx', 'export function Modal() { return <div className="modal-shell"><button>Close</button></div>; }\n');
   writeFile(targetRepo, 'components/DataGrid.tsx', 'export function DataGrid() { return <div className="grid"><div>Row</div></div>; }\n');
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const inventory = JSON.parse(run('node', [targetBin, 'component-map', '--json'], targetRepo));
 
   assert.ok(inventory.inventory.length >= 2);
@@ -305,7 +305,7 @@ test('review-tasks builds a blocker-first four-wave task graph for large review 
     'alter table users add column nickname text;\n',
   );
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const taskGraph = JSON.parse(run('node', [targetBin, 'review-tasks', '--json'], targetRepo));
 
   assert.equal(taskGraph.waves.length, 4);
@@ -348,7 +348,7 @@ test('codex contextpack wraps workflow, repo, frontend, and review context into 
     'alter table users add column nickname text;\n',
   );
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   run('node', [targetBin, 'review-tasks', '--json'], targetRepo);
   const wrapper = JSON.parse(run(
     'node',
@@ -385,11 +385,11 @@ test('codex contextpack wraps workflow, repo, frontend, and review context into 
   assert.ok(pack.attachments.some((item) => item.id === 'component-strategy'));
   assert.ok(pack.attachments.some((item) => item.id === 'design-benchmark'));
   assert.ok(pack.attachments.some((item) => item.id === 'ui-recipe'));
-  assert.ok(pack.suggestedCommands.includes('cwf frontend-brief --json'));
-  assert.ok(pack.suggestedCommands.includes('cwf design-md --json'));
-  assert.ok(pack.suggestedCommands.includes('cwf component-strategy --json'));
-  assert.ok(pack.suggestedCommands.includes('cwf design-benchmark --json'));
-  assert.ok(pack.suggestedCommands.includes('cwf ui-recipe --json'));
+  assert.ok(pack.suggestedCommands.includes('rai frontend-brief --json'));
+  assert.ok(pack.suggestedCommands.includes('rai design-md --json'));
+  assert.ok(pack.suggestedCommands.includes('rai component-strategy --json'));
+  assert.ok(pack.suggestedCommands.includes('rai design-benchmark --json'));
+  assert.ok(pack.suggestedCommands.includes('rai ui-recipe --json'));
   assert.ok(pack.review);
   assert.equal(pack.review.waveCount, 4);
 });
@@ -398,7 +398,7 @@ test('codex contextpack still infers focus files when no review graph or fronten
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const wrapper = JSON.parse(run(
     'node',
     [targetBin, 'codex', 'contextpack', '--goal', 'review the current diff', '--json'],
@@ -433,7 +433,7 @@ test('monorepo intelligence exposes hotspots and context budgets for broad packa
   writeFile(targetRepo, 'packages/app-one/src/index.ts', 'export const appone = false;\n');
   writeFile(targetRepo, 'packages/app-two/src/index.ts', 'export const apptwo = false;\n');
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const monorepo = JSON.parse(run('node', [targetBin, 'monorepo', '--json'], targetRepo));
 
   assert.equal(monorepo.repoShape, 'monorepo');

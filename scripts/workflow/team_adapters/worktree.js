@@ -25,7 +25,7 @@ function repoSlug(cwd) {
 function workspacePathFor(cwd, taskId) {
   return path.join(
     os.tmpdir(),
-    'cwf-worktrees',
+    'rai-worktrees',
     repoSlug(cwd),
     safeArtifactToken(taskId, { label: 'Task id', prefix: 'task' }),
   );

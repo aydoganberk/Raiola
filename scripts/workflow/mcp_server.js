@@ -489,7 +489,7 @@ function createServerRuntime(serverId, repoRoot) {
             tools: {},
           },
           serverInfo: {
-            name: `codex-workflow-kit-${serverId}`,
+            name: `raiola-${serverId}`,
             version: productVersion(),
           },
         };

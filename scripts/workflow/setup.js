@@ -89,9 +89,9 @@ function main() {
   }
   console.log('\n## First Five Minutes\n');
   console.log(`- \`cd ${targetRepo}\``);
-  console.log('- `cwf doctor --strict`');
-  console.log('- `cwf hud --compact`');
-  console.log('- `cwf next`');
+  console.log('- `rai doctor --strict`');
+  console.log('- `rai hud --compact`');
+  console.log('- `rai next`');
   if (report.hudState) {
     console.log(`- State surface refreshed at \`${relativePath(targetRepo, report.hudState.stateFile)}\``);
   }

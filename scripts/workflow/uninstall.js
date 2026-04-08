@@ -147,8 +147,11 @@ function main() {
     maybeRemove(targetPath, report, dryRun);
   }
 
+  maybeRemove(path.join(targetRepo, 'bin', 'rai.js'), report, dryRun);
+  maybeRemove(path.join(targetRepo, 'bin', 'raiola.js'), report, dryRun);
   maybeRemove(path.join(targetRepo, 'bin', 'cwf.js'), report, dryRun);
   maybeRemove(path.join(targetRepo, 'scripts', 'compare_golden_snapshots.ts'), report, dryRun);
+  maybeRemove(path.join(targetRepo, '.agents', 'skills', 'raiola'), report, dryRun);
   maybeRemove(path.join(targetRepo, '.agents', 'skills', 'codex-workflow'), report, dryRun);
 
   const runtimePaths = [
@@ -176,6 +179,7 @@ function main() {
   }
 
   report.packageScripts = removePackageScripts(targetRepo, dryRun);
+  cleanupEmptyParents(path.join(targetRepo, '.agents', 'skills', 'raiola'), targetRepo, dryRun);
   cleanupEmptyParents(path.join(targetRepo, '.agents', 'skills', 'codex-workflow'), targetRepo, dryRun);
   cleanupEmptyParents(path.join(targetRepo, 'scripts', 'workflow'), targetRepo, dryRun);
   cleanupEmptyParents(path.join(targetRepo, '.workflow', 'state.json'), targetRepo, dryRun);
@@ -195,7 +199,7 @@ function main() {
   }
   console.log('\n## Safety\n');
   console.log('- Canonical workflow markdown was preserved unless `--purge-docs` was explicitly requested.');
-  console.log('- Only runtime/product surfaces installed by codex-workflow-kit were targeted for removal.');
+  console.log('- Only runtime/product surfaces installed by raiola were targeted for removal.');
 }
 
 main();

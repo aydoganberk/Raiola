@@ -11,38 +11,38 @@ Supported runtime baseline:
 From a published package:
 
 ```bash
-npx codex-workflow-kit setup
+npx raiola setup
 ```
 
-Fresh setup defaults to the focused `pilot` workflow profile. This keeps package.json and the repo-local `cwf` shell leaner on first install. Use `--script-profile core` for the full shell with curated npm aliases, or `--script-profile full` for every legacy `workflow:*` alias on day one.
+Fresh setup defaults to the focused `pilot` workflow profile. This keeps package.json and the repo-local `rai` shell leaner on first install. Use `--script-profile core` for the full shell with curated npm aliases, or `--script-profile full` for every legacy `workflow:*` alias on day one.
 
 From this repository:
 
 ```bash
-node bin/cwf.js setup --target /path/to/target-repo
+node bin/rai.js setup --target /path/to/target-repo
 ```
 
-If `cwf` is not on your PATH yet, the installed repo still includes a local fallback:
+If `rai` is not on your PATH yet, the installed repo still includes a local fallback:
 
 ```bash
-node bin/cwf.js help
-node bin/cwf.js doctor --strict
+node bin/rai.js help
+node bin/rai.js doctor --strict
 ```
 
 ## Choose your starting path
 
-Use `cwf help` to start from the three golden flows. Pick the one that matches how your repo usually works.
+Use `rai help` to start from the three golden flows. Pick the one that matches how your repo usually works.
 
 ### Solo maintainer
 
 Best for a single operator moving one safe slice at a time.
 
 ```bash
-cwf help solo
-cwf doctor --strict
-cwf milestone --id M1 --name "Initial setup" --goal "Land the first workflow-backed slice"
-cwf do "land the next safe slice"
-cwf next
+rai help solo
+rai doctor --strict
+rai milestone --id M1 --name "Initial setup" --goal "Land the first workflow-backed slice"
+rai do "land the next safe slice"
+rai next
 ```
 
 ### Review-heavy team
@@ -50,11 +50,11 @@ cwf next
 Best when the repo already has changes and your main job is risk, regressions, and closeout quality.
 
 ```bash
-cwf help review
-cwf route --goal "review the current diff" --why
-cwf review --heatmap
-cwf ui-review --url ./preview.html
-cwf ship-readiness
+rai help review
+rai route --goal "review the current diff" --why
+rai review --heatmap
+rai ui-review --url ./preview.html
+rai ship-readiness
 ```
 
 ### Large monorepo
@@ -62,32 +62,32 @@ cwf ship-readiness
 Best when package scope, impacted tests, and safe parallelism matter more than a single-file patch loop.
 
 ```bash
-cwf help team
-cwf monorepo
-cwf team run --adapter hybrid --activation-text "parallel yap" --write-scope packages/app-one,packages/app-two
-cwf team collect --patch-first
-cwf sessions
+rai help team
+rai monorepo
+rai team run --adapter hybrid --activation-text "parallel yap" --write-scope packages/app-one,packages/app-two
+rai team collect --patch-first
+rai sessions
 ```
 
 ## First-day checklist
 
 ```bash
-cwf setup
-cwf doctor --strict
-cwf hud --compact
-cwf next
+rai setup
+rai doctor --strict
+rai hud --compact
+rai next
 ```
 
-`cwf doctor --strict` will also verify host prerequisites such as Git, ripgrep, and platform-specific browser opener helpers before you start depending on the runtime. `cwf health --strict` stays reserved for blocking workflow/runtime issues.
+`rai doctor --strict` will also verify host prerequisites such as Git, ripgrep, and platform-specific browser opener helpers before you start depending on the runtime. `rai health --strict` stays reserved for blocking workflow/runtime issues.
 
 By default the install flow also patches `.gitignore` with workflow runtime entries so `.workflow/` and `.agents/` stay out of normal diff review.
 
 ## Need the full shell?
 
 ```bash
-cwf update --script-profile core
-cwf help categories
-cwf help frontend
-cwf help trust
-cwf help all
+rai update --script-profile core
+rai help categories
+rai help frontend
+rai help trust
+rai help all
 ```

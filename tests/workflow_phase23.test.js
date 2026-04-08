@@ -13,7 +13,7 @@ const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
 const initScript = path.join(repoRoot, 'scripts', 'workflow', 'init.js');
 const setupScript = path.join(repoRoot, 'scripts', 'workflow', 'setup.js');
 
-function makeTempRepo(prefix = 'codex-workflow-kit-phase23-') {
+function makeTempRepo(prefix = 'raiola-phase23-') {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
@@ -116,7 +116,7 @@ EOF
 }
 
 test('task artifact ids are sanitized before patch bundles are written', () => {
-  const targetRepo = makeTempRepo('codex-workflow-kit-phase23-artifacts-');
+  const targetRepo = makeTempRepo('raiola-phase23-artifacts-');
   const unsafeTaskId = '../../../../escape/../../task';
   const safeTaskId = safeArtifactToken(unsafeTaskId, { label: 'Task id', prefix: 'task' });
   const bundle = createPatchBundle(
@@ -135,7 +135,7 @@ test('task artifact ids are sanitized before patch bundles are written', () => {
 });
 
 test('patch apply keeps task ids inside the patch directory', () => {
-  const targetRepo = makeTempRepo('codex-workflow-kit-phase23-patch-');
+  const targetRepo = makeTempRepo('raiola-phase23-patch-');
   const patchDir = path.join(targetRepo, '.workflow', 'orchestration', 'patches');
   fs.mkdirSync(patchDir, { recursive: true });
 
@@ -166,12 +166,12 @@ test('patch apply keeps task ids inside the patch directory', () => {
 });
 
 test('doctor fails on source-repo product version drift between package, marker, and manifest', () => {
-  const targetRepo = makeTempRepo('codex-workflow-kit-phase23-drift-');
+  const targetRepo = makeTempRepo('raiola-phase23-drift-');
   run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  packageJson.name = 'codex-workflow-kit';
+  packageJson.name = 'raiola';
   packageJson.version = '0.3.1';
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
@@ -181,7 +181,7 @@ test('doctor fails on source-repo product version drift between package, marker,
 - Previous version: \`none\`
 - Install mode: \`init\`
 - Last refreshed at: \`2026-04-04T14:20:32.078Z\`
-- Source package: \`codex-workflow-kit@0.2.0\`
+- Source package: \`raiola@0.2.0\`
 `);
 
   const manifestPath = path.join(targetRepo, '.workflow', 'product-manifest.json');
@@ -192,7 +192,7 @@ test('doctor fails on source-repo product version drift between package, marker,
 
   const result = spawn(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'doctor', '--strict', '--json'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'doctor', '--strict', '--json'],
     targetRepo,
   );
 
@@ -214,10 +214,10 @@ test('doctor fails on source-repo product version drift between package, marker,
 });
 
 test('repo-local MCP install, status, and doctor expose real server descriptors and smoke results', async () => {
-  const targetRepo = makeTempRepo('codex-workflow-kit-phase23-mcp-');
+  const targetRepo = makeTempRepo('raiola-phase23-mcp-');
   run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
-  const targetBin = path.join(targetRepo, 'bin', 'cwf.js');
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const installed = JSON.parse(run('node', [targetBin, 'mcp', 'install', '--json'], targetRepo));
   const status = JSON.parse(run('node', [targetBin, 'mcp', 'status', '--json'], targetRepo));
   const doctor = JSON.parse(run('node', [targetBin, 'mcp', 'doctor', '--json'], targetRepo));
@@ -236,7 +236,7 @@ test('repo-local MCP install, status, and doctor expose real server descriptors 
 });
 
 test('team runtime codex-exec driver launches live workers and keeps indexed mailbox/timeline counts', () => {
-  const targetRepo = makeTempRepo('codex-workflow-kit-phase23-team-');
+  const targetRepo = makeTempRepo('raiola-phase23-team-');
   run('node', [initScript, '--target', targetRepo, '--skip-verify'], repoRoot);
   run('git', ['init'], targetRepo);
   run('git', ['config', 'user.email', 'test@example.com'], targetRepo);
@@ -294,8 +294,8 @@ test('team runtime codex-exec driver launches live workers and keeps indexed mai
   const runtimeState = JSON.parse(readFile(targetRepo, '.workflow/orchestration/runtime/state.json'));
   assert.equal(runtimeState.collectedResults[taskId].summary, 'Fake Codex worker completed');
 
-  const mailbox = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'mailbox', '--json'], targetRepo));
-  const timeline = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'timeline', '--json'], targetRepo));
+  const mailbox = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'mailbox', '--json'], targetRepo));
+  const timeline = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'timeline', '--json'], targetRepo));
   assert.ok(mailbox.count >= 1);
   assert.ok(timeline.count >= 4);
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'orchestration', 'runtime', 'log-index.json')));

@@ -6,4 +6,4 @@
 |  |  |  |  |
 
 ## Graph Notes
-- `Run cwf evidence to refresh the local evidence graph.`
+- `Run rai evidence to refresh the local evidence graph.`

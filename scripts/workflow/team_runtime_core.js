@@ -93,7 +93,7 @@ async function loadRuntimeBundle(cwd, rootDir, options = {}) {
   const orchestrationState = delegation.loadRuntimeState(cwd);
   let runtimeState = readRuntimeState(cwd);
   if (!runtimeState) {
-    throw new Error('No team runtime exists yet. Run `cwf team run` first.');
+    throw new Error('No team runtime exists yet. Run `rai team run` first.');
   }
 
   runtimeState = syncRuntimeMetadata(runtimeState, orchestrationState);
@@ -154,7 +154,7 @@ async function dispatchRuntime(cwd, rootDir) {
   let orchestrationState = delegation.loadRuntimeState(cwd);
   let runtimeState = readRuntimeState(cwd);
   if (!runtimeState) {
-    throw new Error('No team runtime exists yet. Run `cwf team run` first.');
+    throw new Error('No team runtime exists yet. Run `rai team run` first.');
   }
 
   const adapter = ensureAdapter(runtimeState.adapter);
@@ -181,7 +181,7 @@ async function monitorRuntime(cwd, rootDir) {
   const orchestrationState = delegation.loadRuntimeState(cwd);
   let runtimeState = readRuntimeState(cwd);
   if (!runtimeState) {
-    throw new Error('No team runtime exists yet. Run `cwf team run` first.');
+    throw new Error('No team runtime exists yet. Run `rai team run` first.');
   }
   const adapter = ensureAdapter(runtimeState.adapter);
   runtimeState = syncRuntimeMetadata(runtimeState, orchestrationState);
@@ -203,7 +203,7 @@ async function collectRuntime(cwd, rootDir) {
   let orchestrationState = delegation.loadRuntimeState(cwd);
   let runtimeState = readRuntimeState(cwd);
   if (!runtimeState) {
-    throw new Error('No team runtime exists yet. Run `cwf team run` first.');
+    throw new Error('No team runtime exists yet. Run `rai team run` first.');
   }
   const adapter = ensureAdapter(runtimeState.adapter);
   runtimeState = syncRuntimeMetadata(runtimeState, orchestrationState);

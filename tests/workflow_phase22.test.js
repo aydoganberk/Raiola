@@ -8,10 +8,10 @@ const childProcess = require('node:child_process');
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
 const initScript = path.join(repoRoot, 'scripts', 'workflow', 'init.js');
-const cwfBin = path.join(repoRoot, 'bin', 'cwf.js');
+const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-workflow-kit-phase22-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase22-'));
   fs.cpSync(fixtureRoot, tempDir, { recursive: true });
   return tempDir;
 }
@@ -78,7 +78,7 @@ test('team supervisor, merge queue, and PR feedback runtime stay merge-aware', (
   JSON.parse(run(
     'node',
     [
-      path.join(targetRepo, 'bin', 'cwf.js'),
+      path.join(targetRepo, 'bin', 'rai.js'),
       'team',
       'run',
       '--adapter',
@@ -93,7 +93,7 @@ test('team supervisor, merge queue, and PR feedback runtime stay merge-aware', (
   ));
   const dispatched = JSON.parse(run(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'dispatch', '--json'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'dispatch', '--json'],
     targetRepo,
   ));
 
@@ -114,7 +114,7 @@ test('team supervisor, merge queue, and PR feedback runtime stay merge-aware', (
 
   const supervisor = JSON.parse(run(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'supervise', '--cycles', '1', '--json'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'supervise', '--cycles', '1', '--json'],
     targetRepo,
   ));
   assert.ok(supervisor.cycleCount >= 1);
@@ -135,7 +135,7 @@ test('team supervisor, merge queue, and PR feedback runtime stay merge-aware', (
 
   const importedFeedback = JSON.parse(run(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'pr-feedback', 'import', '--file', 'review-comments.json', '--json'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'pr-feedback', 'import', '--file', 'review-comments.json', '--json'],
     targetRepo,
   ));
   assert.equal(importedFeedback.openCount, 1);
@@ -143,14 +143,14 @@ test('team supervisor, merge queue, and PR feedback runtime stay merge-aware', (
 
   const mergeQueueBlocked = JSON.parse(run(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'merge-queue', '--json'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'merge-queue', '--json'],
     targetRepo,
   ));
   assert.ok((mergeQueueBlocked.counts.blocked_feedback || 0) >= 1);
 
   const quality = JSON.parse(run(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'quality', '--json'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'quality', '--json'],
     targetRepo,
   ));
   assert.ok(quality.averageScore >= 0);
@@ -158,14 +158,14 @@ test('team supervisor, merge queue, and PR feedback runtime stay merge-aware', (
 
   const resolvedFeedback = JSON.parse(run(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'pr-feedback', 'resolve', '--id', 'comment-1', '--json'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'pr-feedback', 'resolve', '--id', 'comment-1', '--json'],
     targetRepo,
   ));
   assert.equal(resolvedFeedback.openCount, 0);
 
   const mergeQueueApplied = JSON.parse(run(
     'node',
-    [path.join(targetRepo, 'bin', 'cwf.js'), 'team', 'merge-queue', '--apply-next', '--json'],
+    [path.join(targetRepo, 'bin', 'rai.js'), 'team', 'merge-queue', '--apply-next', '--json'],
     targetRepo,
   ));
   assert.ok((mergeQueueApplied.lastApply?.applied || []).length >= 1);

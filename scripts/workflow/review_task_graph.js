@@ -134,7 +134,7 @@ function buildFixTasks(packageGroups, monorepo, review) {
       ],
       verifyCommands: [
         ...(group.verifyCommands || []).slice(0, 4),
-        ...(uiRelated ? ['cwf ui-review'] : []),
+        ...(uiRelated ? ['rai ui-review'] : []),
         ...((rootVerify || []).slice(0, 2)),
       ],
     });
@@ -158,7 +158,7 @@ function buildFixTasks(packageGroups, monorepo, review) {
       acceptance: [
         'Every blocker finding is addressed or consciously downgraded with evidence.',
       ],
-      verifyCommands: ['cwf re-review'],
+      verifyCommands: ['rai re-review'],
     });
   }
   return fixTasks;
@@ -226,7 +226,7 @@ function buildVerifyWave(review, fixTasks, monorepo) {
       acceptance: [
         'Target changed packages or files first.',
       ],
-      verifyCommands: monorepo?.verify?.rootSmoke?.slice(0, 4) || ['cwf review --heatmap'],
+      verifyCommands: monorepo?.verify?.rootSmoke?.slice(0, 4) || ['rai review --heatmap'],
     });
   }
   if ((review.blockers || []).length > 0) {
@@ -242,7 +242,7 @@ function buildVerifyWave(review, fixTasks, monorepo) {
         'All must-fix findings are resolved or downgraded with evidence.',
         'Any remaining should-fix or follow-up items are captured explicitly.',
       ],
-      verifyCommands: ['cwf re-review', 'cwf ship-readiness'],
+      verifyCommands: ['rai re-review', 'rai ship-readiness'],
     });
   }
   return wave;

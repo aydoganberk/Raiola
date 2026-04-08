@@ -310,16 +310,16 @@ function buildExplorePayload(cwd, rootDir, args) {
   }
   payload.relatedFiles = [...new Set(topFiles)].slice(0, 10);
   payload.recommendedNextCommand = frontend
-    ? 'cwf verify-browser --smoke'
+    ? 'rai verify-browser --smoke'
     : payload.impact?.impactedTests?.length > 0
-      ? 'cwf verify-shell --cmd "npm test"'
+      ? 'rai verify-shell --cmd "npm test"'
       : payload.impact?.impactedPackages?.length > 1
-      ? 'cwf review --heatmap'
+      ? 'rai review --heatmap'
     : changed
-      ? 'cwf verify-shell --cmd "npm test"'
+      ? 'rai verify-shell --cmd "npm test"'
       : workflow
-        ? 'cwf manager'
-        : 'cwf next';
+        ? 'rai manager'
+        : 'rai next';
   return payload;
 }
 

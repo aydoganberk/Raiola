@@ -281,7 +281,7 @@ function buildApprovalPlan(cwd, options = {}) {
       categories: [...new Set(group.findings.map((finding) => finding.category))],
       alreadyGranted,
       reason: approvalReasonForGroup(group),
-      suggestedCommand: `cwf approvals grant --target ${group.target} --reason "${approvalReasonForGroup(group).replace(/"/g, "'")}"`,
+      suggestedCommand: `rai approvals grant --target ${group.target} --reason "${approvalReasonForGroup(group).replace(/"/g, "'")}"`,
     };
   }).filter((item) => !item.alreadyGranted);
 

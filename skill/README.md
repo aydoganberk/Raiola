@@ -1,6 +1,6 @@
-# codex-workflow skill
+# raiola skill
 
-`codex-workflow` is the Codex-facing skill surface for the workflow product.
+`raiola` is the Codex-facing skill surface for the workflow product.
 
 It stays opt-in. If the user did not explicitly ask for workflow, milestone, handoff, closeout, quick mode, or team orchestration, normal task execution should continue without activating this skill.
 
@@ -23,13 +23,13 @@ It stays opt-in. If the user did not explicitly ask for workflow, milestone, han
 
 ## CLI mapping
 
-- `$workflow-help` -> `cwf help`
-- `$workflow-next` -> `cwf next`
-- `$workflow-quick` -> `cwf quick`
-- `$workflow-checkpoint` -> `cwf checkpoint`
-- `$workflow-team` -> `cwf team`
-- `$workflow-review` -> `cwf review`
-- `$workflow-ship` -> `cwf ship`
+- `$workflow-help` -> `rai help`
+- `$workflow-next` -> `rai next`
+- `$workflow-quick` -> `rai quick`
+- `$workflow-checkpoint` -> `rai checkpoint`
+- `$workflow-team` -> `rai team`
+- `$workflow-review` -> `rai review`
+- `$workflow-ship` -> `rai ship`
 
 ## Full contract
 
@@ -79,7 +79,7 @@ npm run workflow:complete-milestone -- --agents-review unchanged --summary "Auth
 ## Most-used commands
 
 ```bash
-cwf milestone --id Mx --name "..." --goal "..." --profile standard --automation manual
+rai milestone --id Mx --name "..." --goal "..." --profile standard --automation manual
 npm run workflow:automation -- --mode phase
 npm run workflow:next
 npm run workflow:hud
