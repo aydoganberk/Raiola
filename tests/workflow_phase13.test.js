@@ -46,6 +46,30 @@ test('markdown/sections reads and updates fields and sections', () => {
   assert.equal(sections.extractSection(next, 'Summary'), '- `finished`');
 });
 
+test('markdown/sections supports CRLF documents', () => {
+  const doc = '# WINDOW\r\n'
+    + '\r\n'
+    + '- Status: `draft`\r\n'
+    + '\r\n'
+    + '## Current Packet Summary\r\n'
+    + '\r\n'
+    + '- `first packet`\r\n'
+    + '\r\n'
+    + '## Notes\r\n'
+    + '\r\n'
+    + '- `keep line endings stable`\r\n';
+
+  assert.equal(sections.extractSection(doc, 'Current Packet Summary'), '- `first packet`');
+
+  const replaced = sections.replaceSection(doc, 'Current Packet Summary', '- `second packet`');
+  assert.equal(sections.extractSection(replaced, 'Current Packet Summary'), '- `second packet`');
+  assert.match(replaced, /\r\n## Notes\r\n/);
+
+  const appended = sections.replaceOrAppendSection(replaced, 'Summary', '- `done`');
+  assert.equal(sections.extractSection(appended, 'Summary'), '- `done`');
+  assert.match(appended, /\r\n## Summary\r\n\r\n- `done`\r\n$/);
+});
+
 test('packet/cache stores runtime entries and snapshot cache on disk', () => {
   const tempDir = makeTempDir();
   const rootDir = path.join(tempDir, 'docs', 'workflow');

@@ -12,6 +12,14 @@ function contentKey(content, label) {
   return crypto.createHash('sha1').update(`${label}\n${String(content || '')}`, 'utf8').digest('hex');
 }
 
+function detectLineEnding(content) {
+  return String(content || '').includes('\r\n') ? '\r\n' : '\n';
+}
+
+function normalizeLineEndings(content, eol) {
+  return String(content || '').replace(/\r?\n/g, eol);
+}
+
 function replaceField(content, label, value) {
   const pattern = new RegExp(`^- ${escapeRegex(label)}: .*?$`, 'm');
   if (!pattern.test(content)) {
@@ -26,13 +34,16 @@ function replaceOrAppendField(content, label, value) {
     return content.replace(pattern, `- ${label}: \`${value}\``);
   }
 
+  const eol = detectLineEnding(content);
   if (!content.startsWith('# ')) {
-    return `- ${label}: \`${value}\`\n${content}`;
+    return content
+      ? `- ${label}: \`${value}\`${eol}${normalizeLineEndings(content, eol)}`
+      : `- ${label}: \`${value}\`${eol}`;
   }
 
-  const lines = content.split('\n');
+  const lines = String(content).split(/\r?\n/);
   lines.splice(1, 0, '', `- ${label}: \`${value}\``);
-  return lines.join('\n');
+  return lines.join(eol);
 }
 
 function ensureField(content, label, value) {
@@ -60,19 +71,25 @@ function getSectionField(sectionBody, label) {
 }
 
 function replaceSection(content, heading, body) {
-  const pattern = new RegExp(`(^## ${escapeRegex(heading)}\\n)([\\s\\S]*?)(?=^## [^\\n]+\\n|(?![\\s\\S]))`, 'm');
-  const replacement = `$1${body.trimEnd()}\n\n`;
+  const eol = detectLineEnding(content);
+  const normalizedBody = normalizeLineEndings(body, eol).trimEnd();
+  const pattern = new RegExp(`(^## ${escapeRegex(heading)}\\r?\\n)([\\s\\S]*?)(?=^## [^\\r\\n]+\\r?\\n|(?![\\s\\S]))`, 'm');
   if (!pattern.test(content)) {
     throw new Error(`Missing section: ${heading}`);
   }
-  return content.replace(pattern, replacement);
+  return content.replace(pattern, (_, prefix) => `${prefix}${normalizedBody}${eol}${eol}`);
 }
 
 function replaceOrAppendSection(content, heading, body) {
   try {
     return replaceSection(content, heading, body);
   } catch {
-    return `${content.trimEnd()}\n\n## ${heading}\n\n${body.trimEnd()}\n`;
+    const eol = detectLineEnding(content);
+    const normalizedBody = normalizeLineEndings(body, eol).trimEnd();
+    const prefix = String(content || '').trimEnd();
+    return prefix
+      ? `${prefix}${eol}${eol}## ${heading}${eol}${eol}${normalizedBody}${eol}`
+      : `## ${heading}${eol}${eol}${normalizedBody}${eol}`;
   }
 }
 
@@ -83,7 +100,7 @@ function extractSection(content, heading) {
     return sectionCache.get(key);
   }
   markCache('markdown_section_cache', false);
-  const pattern = new RegExp(`^## ${escapeRegex(heading)}\\n([\\s\\S]*?)(?=^## [^\\n]+\\n|(?![\\s\\S]))`, 'm');
+  const pattern = new RegExp(`^## ${escapeRegex(heading)}\\r?\\n([\\s\\S]*?)(?=^## [^\\r\\n]+\\r?\\n|(?![\\s\\S]))`, 'm');
   const match = String(content || '').match(pattern);
   if (!match) {
     throw new Error(`Missing section: ${heading}`);
