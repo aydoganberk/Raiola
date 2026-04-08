@@ -89,7 +89,7 @@ function seedPlanReadyDocs(targetRepo) {
   contextDoc = replaceSection(contextDoc, 'Success Rubric', `
 | Outcome | Observable signal | Why it matters |
 | --- | --- | --- |
-| \`Condensed plan still passes the gate\` | \`workflow:plan-check returns planReady=true\` | \`Execute must stay blocked until the checked plan exists\` |
+| \`Condensed plan still passes the gate\` | \`raiola:plan-check returns planReady=true\` | \`Execute must stay blocked until the checked plan exists\` |
 | \`Coverage stays explicit\` | \`EXECPLAN.md maps every requirement to a chunk and acceptance target\` | \`Open requirements should stay visible even in condensed mode\` |
 `);
   contextDoc = replaceSection(contextDoc, 'Requirement List', `
@@ -140,7 +140,7 @@ function seedPlanReadyDocs(targetRepo) {
 | Acceptance ID | Criterion | How to observe | Status |
 | --- | --- | --- | --- |
 | \`AC1\` | \`The condensed plan keeps the capability slice explicit\` | \`Open EXECPLAN.md and inspect the chosen strategy and chunk table\` | \`planned\` |
-| \`AC2\` | \`Execute remains blocked until the checked plan passes\` | \`Run workflow:plan-check and confirm planReady=true only for the complete packet\` | \`planned\` |
+| \`AC2\` | \`Execute remains blocked until the checked plan passes\` | \`Run raiola:plan-check and confirm planReady=true only for the complete packet\` | \`planned\` |
 `);
   validationDoc = replaceSection(validationDoc, 'User-visible Outcomes', `
 | Outcome | How to observe | Status |
@@ -151,7 +151,7 @@ function seedPlanReadyDocs(targetRepo) {
   validationDoc = replaceSection(validationDoc, 'Regression Focus', `
 | Area | Risk | Check |
 | --- | --- | --- |
-| \`Workflow control commands\` | \`Natural-language routing could drift\` | \`Run workflow:control for condensed plan, tempo, and parallel phrases\` |
+| \`Workflow control commands\` | \`Natural-language routing could drift\` | \`Run raiola:control for condensed plan, tempo, and parallel phrases\` |
 | \`Plan gating\` | \`Execute could bypass the gate\` | \`Run step_fulfillment -> execute on an unready milestone and expect a block\` |
 `);
   validationDoc = replaceSection(validationDoc, 'Validation Contract', `
@@ -262,7 +262,7 @@ test('phase 6 done criteria lets "hızlı geç" lower ritual without losing open
 
   assert.equal(controlPayload.intent.family, 'tempo_control');
   assert.equal(controlPayload.intent.mode, 'lite');
-  assert.match(controlPayload.suggestedCommand, /workflow:tempo/);
+  assert.match(controlPayload.suggestedCommand, /raiola:tempo/);
   assert.equal(tempoPayload.scope, 'milestone');
   assert.equal(tempoPayload.workflowProfile, 'lite');
   assert.equal(tempoPayload.packetLoadingMode, 'delta');
@@ -341,7 +341,7 @@ test('phase 6 done criteria blocks execute from starting before the plan gate pa
   assert.equal(payload.state, 'blocked_by_plan_gate');
   assert.equal(payload.fulfilled, false);
   assert.equal(payload.gate.planGate, 'pending');
-  assert.match(payload.message, /Execute step cannot start before workflow:plan-check passes/);
+  assert.match(payload.message, /Execute step cannot start before raiola:plan-check passes/);
   assert.match(statusAfter, /- Current milestone step: `research`/);
   assert.doesNotMatch(statusAfter, /- Current milestone step: `execute`/);
 });
@@ -378,11 +378,11 @@ test('phase 6 done criteria keeps existing parallel natural-language activation 
 
   assert.equal(parallelPayload.intent.family, 'parallel_control');
   assert.equal(parallelPayload.intent.state, 'on');
-  assert.match(parallelPayload.suggestedCommand, /workflow:delegation-plan/);
+  assert.match(parallelPayload.suggestedCommand, /raiola:delegation-plan/);
   assert.ok(
     nextPayload.recommendation.checklist.some(
-      (item) => item.includes('workflow:control -- --utterance "<user request>"')
-        && item.includes('workflow:delegation-plan'),
+      (item) => item.includes('raiola:control -- --utterance "<user request>"')
+        && item.includes('raiola:delegation-plan'),
     ),
   );
 });

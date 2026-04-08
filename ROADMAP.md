@@ -5,7 +5,7 @@
 > Kapsam: mevcut repo incelemesi + `oh-my-codex` ve `get-shit-done` karşılaştırması + uygulanabilir step-by-step ürün rotası  
 > Hedef: `raiola`'yı güçlü bir repo-native workflow companion seviyesinden, **Codex-native Development OS** seviyesine taşımak
 
-Not: Bu roadmap tarihsel plan metni olduğu için aşağıdaki örneklerin bir kısmı eski `cwf` alias'ını kullanır. Güncel birincil shell `rai`, paket adı ise `raiola`dır.
+Not: Bu roadmap içindeki komut örnekleri de rebrand sonrası güncel yüzeye hizalandı; birincil shell `rai`, paket adı ise `raiola`dır.
 
 ---
 
@@ -41,7 +41,7 @@ Aşağıdaki değerlendirme, gönderdiğiniz zip içindeki yerel kod ve doküman
 
 Yerelde şu kontrolleri çalıştırdım:
 
-- `node bin/cwf.js doctor --strict` → temiz geçti (`0 fail / 0 warn`)
+- `node bin/rai.js doctor --strict` → temiz geçti (`0 fail / 0 warn`)
 - `node scripts/workflow/benchmark.js --runs 3 --json` → küçük repo baseline’ında SLO altında sonuçlar verdi
 - `node --test tests/workflow_phase1.test.js` → geçti
 
@@ -101,14 +101,14 @@ Yani mevcut repo kendi kendine “tamamlandı” dese de, benim ürün/mimari de
 
 ### Bizim ürüne taşınacak karşılıkları
 
-- `cwf codex profile`
-- `cwf codex bootstrap`
-- `cwf codex resume-card`
-- `cwf team api`
-- `cwf team watch`
-- `cwf team collect --patch-first`
-- `cwf hud --intent --cost --risk`
-- `cwf subagents plan`
+- `rai codex profile`
+- `rai codex bootstrap`
+- `rai codex resume-card`
+- `rai team api`
+- `rai team watch`
+- `rai team collect --patch-first`
+- `rai hud --intent --cost --risk`
+- `rai subagents plan`
 
 ## 3.2 `get-shit-done`'dan alınacaklar
 
@@ -123,14 +123,14 @@ Yani mevcut repo kendi kendine “tamamlandı” dese de, benim ürün/mimari de
 
 ### Bizim ürüne taşınacak karşılıkları
 
-- `cwf discuss`
-- `cwf assumptions`
-- `cwf verify-work`
-- `cwf ui-spec`
-- `cwf ui-review`
-- `cwf validation-map`
-- `cwf backlog park`
-- `cwf next --from-gap`
+- `rai discuss`
+- `rai assumptions`
+- `rai verify-work`
+- `rai ui-spec`
+- `rai ui-review`
+- `rai validation-map`
+- `rai backlog park`
+- `rai next --from-gap`
 
 ## 3.3 İkisini de aşmamız gereken alanlar
 
@@ -338,10 +338,10 @@ Yeni intent katmanı şu pipeline ile çalışmalı:
 
 ### Minimum çıktılar
 
-- `cwf do --explain`
-- `cwf do --dry-run`
-- `cwf route --why`
-- `cwf route --json`
+- `rai do --explain`
+- `rai do --dry-run`
+- `rai route --why`
+- `rai route --json`
 - route confidence score
 - ambiguity classes
 - user steering memory
@@ -591,10 +591,10 @@ Burada amaç “her şeyi aynı anda” yapmak değil; **ürünün DNA’sını 
 
 ### Yeni komutlar
 
-- `cwf do --explain`
-- `cwf route --why`
-- `cwf route replay`
-- `cwf route eval`
+- `rai do --explain`
+- `rai route --why`
+- `rai route replay`
+- `rai route eval`
 
 ### Acceptance criteria
 
@@ -647,10 +647,10 @@ Burada amaç “her şeyi aynı anda” yapmak değil; **ürünün DNA’sını 
 
 ### Yeni komutlar
 
-- `cwf codex profile suggest`
-- `cwf codex bootstrap`
-- `cwf codex resume-card`
-- `cwf codex plan-subagents`
+- `rai codex profile suggest`
+- `rai codex bootstrap`
+- `rai codex resume-card`
+- `rai codex plan-subagents`
 
 ### Acceptance criteria
 
@@ -708,12 +708,12 @@ Burada amaç “her şeyi aynı anda” yapmak değil; **ürünün DNA’sını 
 
 ### Yeni komutlar
 
-- `cwf review-mode`
-- `cwf pr-review`
-- `cwf re-review`
-- `cwf review --heatmap`
-- `cwf review --blockers`
-- `cwf review --patch-suggestions`
+- `rai review-mode`
+- `rai pr-review`
+- `rai re-review`
+- `rai review --heatmap`
+- `rai review --blockers`
+- `rai review --patch-suggestions`
 
 ### Acceptance criteria
 
@@ -771,13 +771,13 @@ Burada amaç “her şeyi aynı anda” yapmak değil; **ürünün DNA’sını 
 
 ### Yeni komutlar
 
-- `cwf ui-spec`
-- `cwf ui-plan`
-- `cwf ui-review`
-- `cwf preview`
-- `cwf component-map`
-- `cwf responsive-matrix`
-- `cwf design-debt`
+- `rai ui-spec`
+- `rai ui-plan`
+- `rai ui-review`
+- `rai preview`
+- `rai component-map`
+- `rai responsive-matrix`
+- `rai design-debt`
 
 ### Acceptance criteria
 
@@ -944,11 +944,11 @@ Bu iyi ama yeterli değil. “Rakiplerden çok daha iyi frontend” talebini kar
 
 ### Yeni komutlar
 
-- `cwf subagents plan`
-- `cwf team collect --patch-first`
-- `cwf team conflicts`
-- `cwf team merge-queue`
-- `cwf team quality`
+- `rai subagents plan`
+- `rai team collect --patch-first`
+- `rai team conflicts`
+- `rai team merge-queue`
+- `rai team quality`
 
 ### Acceptance criteria
 
@@ -982,10 +982,10 @@ Bu iyi ama yeterli değil. “Rakiplerden çok daha iyi frontend” talebini kar
 
 ### Yeni komutlar
 
-- `cwf verify-work`
-- `cwf evidence graph`
-- `cwf approval plan`
-- `cwf ship-readiness`
+- `rai verify-work`
+- `rai evidence graph`
+- `rai approval plan`
+- `rai ship-readiness`
 
 ### Acceptance criteria
 

@@ -61,20 +61,20 @@ function deriveRecommendation(state) {
   };
   const controlCommand = formatWorkflowControlCommand('<user request>');
   const parallelExamples = workflowControlExamplesForFamily('parallel_control', 4);
-  const teamLiteHint = `If the user explicitly asks for parallel/subagent/delegate/team mode${parallelExamples.length > 0 ? ` (${parallelExamples.join(', ')})` : ''}, normalize it with ${controlCommand} and then route it with workflow:delegation-plan -- --activation-text "<user request>"`;
+  const teamLiteHint = `If the user explicitly asks for parallel/subagent/delegate/team mode${parallelExamples.length > 0 ? ` (${parallelExamples.join(', ')})` : ''}, normalize it with ${controlCommand} and then route it with raiola:delegation-plan -- --activation-text "<user request>"`;
   const frontendHint = frontendProfile.frontendMode.active
     ? `Frontend mode is active; adapter route=${frontendProfile.adapters.selected.join(', ') || 'none'}`
     : frontendProfile.signals.hits.length > 0
-      ? 'Frontend signals are present; run workflow:map-frontend to refresh adapter routing and visual verdict expectations'
+      ? 'Frontend signals are present; run raiola:map-frontend to refresh adapter routing and visual verdict expectations'
       : null;
 
   if (handoffStatus === 'ready_to_resume' && handoffNext) {
     recommendation.title = 'Resume from handoff';
-    recommendation.command = 'npm run workflow:resume-work';
+    recommendation.command = 'npm run raiola:resume-work';
     recommendation.checklist = [
       'Read the Execution Cursor and Packet Snapshot sections in HANDOFF.md',
-      'Run workflow:health -- --strict after resuming',
-      'If health is clean, run workflow:next for a fresh step check',
+      'Run raiola:health -- --strict after resuming',
+      'If health is clean, run raiola:next for a fresh step check',
     ];
     recommendation.note = handoffNext;
     return recommendation;
@@ -82,36 +82,36 @@ function deriveRecommendation(state) {
 
   if (windowStatus.decision !== 'continue' && milestone !== 'NONE' && ['execute', 'audit', 'complete'].includes(step)) {
     recommendation.title = 'Do not start the next step in this window';
-    recommendation.command = 'npm run workflow:pause-work -- --summary "Window budget threshold reached"';
+    recommendation.command = 'npm run raiola:pause-work -- --summary "Window budget threshold reached"';
     recommendation.checklist = [
       `WINDOW decision -> ${windowStatus.decision}`,
       'Compact the current window or capture a handoff snapshot',
-      'In the next window follow workflow:resume-work -> workflow:health -- --strict -> workflow:next',
+      'In the next window follow raiola:resume-work -> raiola:health -- --strict -> raiola:next',
     ];
     recommendation.note = `Remaining budget: ${windowStatus.estimatedRemainingTokens}`;
     return recommendation;
   }
 
   if (milestone === 'NONE') {
-    recommendation.title = 'Open or switch a milestone';
-    recommendation.command = 'npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual';
+    recommendation.title = 'Open Raiola onboarding';
+    recommendation.command = 'rai on next';
     recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
       lite: [
-        'If needed, check the active root first with workflow:workstreams status',
+        'If needed, check the active root first with `npm run raiola:workstreams -- status`',
         'Choose the lite|standard|full profile based on task size',
-        'Start with the discuss step when the new milestone opens',
+        'Use the onboarding surface to generate a milestone proposal before opening the discuss step',
       ],
       standard: [
-        'If needed, check the active root first with workflow:workstreams status',
+        'If needed, check the active root first with `npm run raiola:workstreams -- status`',
         'Pull in any open seeds that match the new milestone scope',
         'Choose the lite|standard|full profile based on task size',
-        'Start with the discuss step when the new milestone opens',
+        'Use the onboarding surface to generate a milestone proposal before opening the discuss step',
       ],
       full: [
-        'If needed, check the active root first with workflow:workstreams status',
+        'If needed, check the active root first with `npm run raiola:workstreams -- status`',
         'Pull open seeds and carryforward items into milestone scope when relevant',
         'Choose the full profile if handoff/closeout is likely',
-        'Start with the discuss step when the new milestone opens',
+        'Use the onboarding surface to generate a milestone proposal before opening the discuss step',
         'Quickly scan RETRO.md for any one-time process gaps',
       ],
     });
@@ -187,20 +187,20 @@ function deriveRecommendation(state) {
     recommendation.command = 'Update CONTEXT.md and VALIDATION.md when research is complete';
     recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
       lite: [
-        'Run workflow:map-codebase if stack or repo-shape assumptions are still fuzzy',
+        'Run raiola:map-codebase if stack or repo-shape assumptions are still fuzzy',
         'Fill the touched files section',
         'Write the risks and verification surface sections',
         'Narrow Acceptance Criteria, User-visible Outcomes, and the VALIDATION.md contract table to milestone scope',
       ],
       standard: [
-        'Run workflow:map-codebase to refresh stack, architecture, quality, and risk lanes',
+        'Run raiola:map-codebase to refresh stack, architecture, quality, and risk lanes',
         'Write touched files, dependency map, and risks into CONTEXT.md',
         'Update verification surface and research target files',
         'Narrow Acceptance Criteria, User-visible Outcomes, Regression Focus, and the VALIDATION.md contract table to milestone scope',
         'Update plan readiness only if it is truly ready',
       ],
       full: [
-        'Run workflow:map-codebase to refresh stack, architecture, quality, and risk lanes',
+        'Run raiola:map-codebase to refresh stack, architecture, quality, and risk lanes',
         'Write touched files, dependency map, and risks into CONTEXT.md',
         'Update verification surface, research targets, and falsifier fields',
         'Narrow Acceptance Criteria, User-visible Outcomes, Regression Focus, and the VALIDATION.md contract table to milestone scope',
@@ -215,7 +215,7 @@ function deriveRecommendation(state) {
       recommendation.checklist.push(frontendHint);
     }
     if (frontendProfile.frontendMode.active || frontendProfile.signals.hits.length > 0) {
-      recommendation.checklist.push('Run workflow:map-frontend to fingerprint the stack and sync frontend audit fields in VALIDATION.md');
+      recommendation.checklist.push('Run raiola:map-frontend to fingerprint the stack and sync frontend audit fields in VALIDATION.md');
       recommendation.checklist.push('If frontend mode is active, narrow Validation around responsive, interaction, visual consistency, component reuse, accessibility smoke, and screenshot evidence');
     }
     recommendation.note = planGate === 'pass'
@@ -231,38 +231,38 @@ function deriveRecommendation(state) {
       lite: [
         'Read CARRYFORWARD.md and the relevant seeds',
         'Write Chosen Strategy, Rollback / Fallback, Wave Structure, Coverage Matrix, and Plan Chunk Table',
-        'Run workflow:plan-check -- --sync --strict before execute starts',
+        'Run raiola:plan-check -- --sync --strict before execute starts',
       ],
       standard: [
         'Read CARRYFORWARD.md and the relevant seeds',
-        'Use workflow:delegation-plan only if the user explicitly wants a parallel route',
+        'Use raiola:delegation-plan only if the user explicitly wants a parallel route',
         'Write Chosen Strategy, Rejected Strategies, Rollback / Fallback, Dependency Blockers, Wave Structure, Coverage Matrix, and Plan Chunk Table',
         'Keep chunk slices vertical and capability-oriented rather than UI/API/model splits',
-        'Run workflow:plan-check -- --sync --strict before execute starts',
+        'Run raiola:plan-check -- --sync --strict before execute starts',
       ],
       full: [
         'Read CARRYFORWARD.md and the relevant seeds',
-        'Use workflow:delegation-plan only if the user explicitly wants a parallel route',
+        'Use raiola:delegation-plan only if the user explicitly wants a parallel route',
         'Write Chosen Strategy, Rejected Strategies, Rollback / Fallback, Dependency Blockers, Wave Structure, Coverage Matrix, and Plan Chunk Table',
         'Keep chunk slices vertical and capability-oriented rather than UI/API/model splits',
-        'Run workflow:plan-check -- --sync --strict before execute starts',
+        'Run raiola:plan-check -- --sync --strict before execute starts',
         'Only continue if the new chunk leaves minimum next-step budget; otherwise split it',
       ],
     });
     if (frontendProfile.frontendMode.active) {
-      recommendation.checklist.push('Run workflow:map-frontend if the current profile is stale before locking the plan');
+      recommendation.checklist.push('Run raiola:map-frontend if the current profile is stale before locking the plan');
       recommendation.checklist.push(`Choose the frontend adapter route explicitly -> ${frontendProfile.adapters.selected.join(', ') || 'none'}`);
       recommendation.checklist.push('Make design-system-aware execution and visual verdict requirements explicit in VALIDATION.md');
     }
     recommendation.note = planGate === 'pass'
       ? `Plan gate is clean; execute can start within the checked plan | frontend=${frontendProfile.frontendMode.status} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`
-      : `The source of truth is the Plan of Record section in EXECPLAN.md, but execute must wait for workflow:plan-check | gate=${planGate} | frontend=${frontendProfile.frontendMode.status} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
+      : `The source of truth is the Plan of Record section in EXECPLAN.md, but execute must wait for raiola:plan-check | gate=${planGate} | frontend=${frontendProfile.frontendMode.status} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
     return recommendation;
   }
 
   if (['execute', 'audit'].includes(step) && planGate !== 'pass') {
     recommendation.title = 'Do not advance until plan-check passes';
-    recommendation.command = 'npm run workflow:plan-check -- --sync --strict';
+    recommendation.command = 'npm run raiola:plan-check -- --sync --strict';
     recommendation.checklist = [
       'Fill any remaining placeholders in CONTEXT.md, EXECPLAN.md, and VALIDATION.md',
       'Ensure every requirement maps exactly once into the coverage matrix',
@@ -284,14 +284,14 @@ function deriveRecommendation(state) {
       ],
       standard: [
         'Stay strictly inside the active milestone scope',
-        'Only use workflow:delegation-plan -- --start after write ownership is explicit and disjoint',
+        'Only use raiola:delegation-plan -- --start after write ownership is explicit and disjoint',
         'If work drifts beyond plan, update docs first',
         'Refresh STATUS.md Verified/Inferred/Unknown after meaningful changes',
         'Save intermediate reminders as Active Recall Items when needed',
       ],
       full: [
         'Stay strictly inside the active milestone scope',
-        'Only use workflow:delegation-plan -- --start after write ownership is explicit and disjoint',
+        'Only use raiola:delegation-plan -- --start after write ownership is explicit and disjoint',
         'If work drifts beyond plan, update docs first',
         'Refresh STATUS.md Verified/Inferred/Unknown after meaningful changes',
         'Save intermediate reminders as Active Recall Items when needed',
@@ -318,17 +318,17 @@ function deriveRecommendation(state) {
       ],
       standard: [
         'Run the verify command rows in the VALIDATION.md contract table',
-        'If audit work needs parallel read-only help, route it with workflow:delegation-plan -- --start',
+        'If audit work needs parallel read-only help, route it with raiola:delegation-plan -- --start',
         'Write manual checks and remaining risks into STATUS.md',
         'Update evidence and packet hash columns',
-        'Confirm workflow:health -- --strict is clean before complete',
+        'Confirm raiola:health -- --strict is clean before complete',
       ],
       full: [
         'Run the verify command rows in the VALIDATION.md contract table',
-        'If audit work needs parallel read-only help, route it with workflow:delegation-plan -- --start',
+        'If audit work needs parallel read-only help, route it with raiola:delegation-plan -- --start',
         'Write manual checks and remaining risks into STATUS.md',
         'Update evidence and packet hash columns',
-        'Confirm workflow:health -- --strict is clean before complete',
+        'Confirm raiola:health -- --strict is clean before complete',
         'If a process gap appeared, capture a one-line RETRO note',
       ],
     });
@@ -342,7 +342,7 @@ function deriveRecommendation(state) {
   }
 
   recommendation.title = 'Close out the milestone';
-  recommendation.command = 'npm run workflow:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths <paths>';
+  recommendation.command = 'npm run raiola:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths <paths>';
   recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
     lite: [
       'Select carryforward items',

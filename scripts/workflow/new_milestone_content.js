@@ -315,7 +315,7 @@ function renderMinimumDoneChecklist(profile) {
       plan: [
         'Chosen strategy, rollback/fallback, blockers, wave execution policy, and commit policy were written',
         'Coverage matrix had no orphan or duplicate requirements',
-        'workflow:plan-check passed before execute started',
+        'raiola:plan-check passed before execute started',
       ],
       execute: [
         'Only ready chunks from the active wave were executed',
@@ -352,7 +352,7 @@ function renderMinimumDoneChecklist(profile) {
         'Chosen strategy, rejected strategies, wave execution policy, and commit policy were written',
         'Carryforward and seed intake were reviewed',
         'Coverage matrix and plan chunk table were written as dependency-aware vertical capability slices with owner + write scope',
-        'workflow:plan-check passed before execute started',
+        'raiola:plan-check passed before execute started',
       ],
       execute: [
         'Only ready chunks from the active wave were executed',
@@ -394,7 +394,7 @@ function renderMinimumDoneChecklist(profile) {
         'Chosen strategy, rejected strategies, rollback/fallback, blockers, wave execution policy, and commit policy were written',
         'Carryforward and seed intake were reviewed',
         'Coverage matrix and plan chunk table were written as dependency-aware vertical capability slices with owner + write scope',
-        'workflow:plan-check passed before execute started',
+        'raiola:plan-check passed before execute started',
         'Resume anchor and out-of-scope guardrails were clarified',
       ],
       execute: [

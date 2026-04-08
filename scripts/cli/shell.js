@@ -6,6 +6,7 @@ const childProcess = require('node:child_process');
 const { readProductManifest } = require('../workflow/product_manifest');
 
 const CLI_COMMANDS = {
+  on: { script: 'onboarding.js', description: 'Open Raiola onboarding and propose the next milestone from a blank state.' },
   launch: { script: 'launch.js', description: 'Strong-start launcher for the current Codex session.' },
   codex: { script: 'codex_control.js', description: 'Operate the safe Codex control plane.' },
   do: { script: 'do.js', description: 'Route a natural-language intent into the right workflow lane.' },
@@ -91,6 +92,7 @@ const CLI_COMMANDS = {
 
 const CLI_COMMAND_PROFILES = Object.freeze({
   pilot: [
+    'on',
     'launch',
     'codex',
     'do',
@@ -126,7 +128,7 @@ const COMMAND_GROUPS = Object.freeze([
     title: 'Solo Daily Loop',
     description: 'Single-operator setup, routing, continuity, and daily execution surfaces.',
     commands: [
-      'setup', 'init', 'doctor', 'health', 'launch', 'do', 'note', 'thread', 'backlog',
+      'setup', 'init', 'doctor', 'health', 'on', 'launch', 'do', 'note', 'thread', 'backlog',
       'hud', 'manager', 'next', 'explore', 'checkpoint', 'next-prompt', 'quick', 'milestone',
     ],
   },
@@ -187,9 +189,10 @@ const GOLDEN_FLOWS = Object.freeze([
     id: 'solo',
     title: 'Solo Daily Loop',
     summary: 'Best default for a single operator moving one safe slice at a time.',
-    commands: ['do', 'next', 'verify-shell', 'checkpoint', 'next-prompt', 'quick', 'milestone'],
+    commands: ['on', 'do', 'next', 'verify-shell', 'checkpoint', 'next-prompt', 'quick', 'milestone'],
     sequence: [
       'rai setup',
+      'rai on next',
       'rai doctor --strict',
       'rai milestone --id M1 --name "Initial slice" --goal "Land the next safe slice"',
       'rai do "land the next safe slice"',
@@ -229,57 +232,58 @@ const GOLDEN_FLOWS = Object.freeze([
   },
 ]);
 
-const CORE_COMMANDS = ['setup', 'doctor', 'do', 'next', 'review', 'team', 'dashboard'];
+const CORE_COMMANDS = ['setup', 'on', 'doctor', 'do', 'next', 'review', 'team'];
 
 const LEGACY_EQUIVALENTS = [
-  ['rai milestone', 'npm run workflow:new-milestone -- --id Mx --name "..." --goal "..."'],
-  ['rai doctor', 'npm run workflow:doctor -- --strict'],
-  ['rai health', 'npm run workflow:health -- --strict'],
-  ['rai discuss', 'npm run workflow:discuss'],
-  ['rai assumptions', 'npm run workflow:assumptions'],
-  ['rai hud', 'npm run workflow:hud -- --compact'],
-  ['rai next', 'npm run workflow:next'],
-  ['rai launch', 'npm run workflow:launch'],
-  ['rai manager', 'npm run workflow:manager'],
-  ['rai dashboard', 'npm run workflow:dashboard'],
-  ['rai do', 'npm run workflow:do -- "..."'],
-  ['rai note', 'npm run workflow:note -- "..."'],
-  ['rai packet', 'npm run workflow:packet -- --step plan'],
-  ['rai explore', 'npm run workflow:explore -- "query"'],
-  ['rai verify-shell', 'npm run workflow:verify-shell -- --cmd "npm test"'],
-  ['rai verify-browser', 'npm run workflow:verify-browser -- --url http://localhost:3000'],
-  ['rai verify-work', 'npm run workflow:verify-work'],
-  ['rai next-prompt', 'npm run workflow:next-prompt'],
-  ['rai checkpoint', 'npm run workflow:checkpoint -- --next "Resume here"'],
-  ['rai quick', 'npm run workflow:quick'],
-  ['rai team', 'npm run workflow:team'],
-  ['rai subagents', 'npm run workflow:subagents -- plan'],
-  ['rai approval', 'npm run workflow:approval -- plan'],
-  ['rai review', 'npm run workflow:review'],
-  ['rai review-mode', 'npm run workflow:review-mode'],
-  ['rai review-tasks', 'npm run workflow:review-tasks'],
-  ['rai pr-review', 'npm run workflow:pr-review'],
-  ['rai re-review', 'npm run workflow:re-review'],
-  ['rai ui-spec', 'npm run workflow:ui-spec'],
-  ['rai design-dna', 'npm run workflow:design-dna'],
-  ['rai page-blueprint', 'npm run workflow:page-blueprint'],
-  ['rai design-md', 'npm run workflow:design-md'],
-  ['rai component-strategy', 'npm run workflow:component-strategy'],
-  ['rai design-benchmark', 'npm run workflow:design-benchmark'],
-  ['rai state-atlas', 'npm run workflow:state-atlas'],
-  ['rai frontend-brief', 'npm run workflow:frontend-brief'],
-  ['rai ui-recipe', 'npm run workflow:ui-recipe'],
-  ['rai ui-plan', 'npm run workflow:ui-plan'],
-  ['rai ui-review', 'npm run workflow:ui-review'],
-  ['rai preview', 'npm run workflow:preview'],
-  ['rai component-map', 'npm run workflow:component-map'],
-  ['rai responsive-matrix', 'npm run workflow:responsive-matrix'],
-  ['rai design-debt', 'npm run workflow:design-debt'],
-  ['rai ship-readiness', 'npm run workflow:ship-readiness'],
-  ['rai ship', 'npm run workflow:ship'],
-  ['rai pr-brief', 'npm run workflow:pr-brief'],
-  ['rai release-notes', 'npm run workflow:release-notes'],
-  ['rai session-report', 'npm run workflow:session-report'],
+  ['rai on', 'npm run raiola:on -- next'],
+  ['rai milestone', 'npm run raiola:milestone -- --id Mx --name "..." --goal "..."'],
+  ['rai doctor', 'npm run raiola:doctor -- --strict'],
+  ['rai health', 'npm run raiola:health -- --strict'],
+  ['rai discuss', 'npm run raiola:discuss'],
+  ['rai assumptions', 'npm run raiola:assumptions'],
+  ['rai hud', 'npm run raiola:hud -- --compact'],
+  ['rai next', 'npm run raiola:next'],
+  ['rai launch', 'npm run raiola:launch'],
+  ['rai manager', 'npm run raiola:manager'],
+  ['rai dashboard', 'npm run raiola:dashboard'],
+  ['rai do', 'npm run raiola:do -- "..."'],
+  ['rai note', 'npm run raiola:note -- "..."'],
+  ['rai packet', 'npm run raiola:packet -- --step plan'],
+  ['rai explore', 'npm run raiola:explore -- "query"'],
+  ['rai verify-shell', 'npm run raiola:verify-shell -- --cmd "npm test"'],
+  ['rai verify-browser', 'npm run raiola:verify-browser -- --url http://localhost:3000'],
+  ['rai verify-work', 'npm run raiola:verify-work'],
+  ['rai next-prompt', 'npm run raiola:next-prompt'],
+  ['rai checkpoint', 'npm run raiola:checkpoint -- --next "Resume here"'],
+  ['rai quick', 'npm run raiola:quick'],
+  ['rai team', 'npm run raiola:team'],
+  ['rai subagents', 'npm run raiola:subagents -- plan'],
+  ['rai approval', 'npm run raiola:approval -- plan'],
+  ['rai review', 'npm run raiola:review'],
+  ['rai review-mode', 'npm run raiola:review-mode'],
+  ['rai review-tasks', 'npm run raiola:review-tasks'],
+  ['rai pr-review', 'npm run raiola:pr-review'],
+  ['rai re-review', 'npm run raiola:re-review'],
+  ['rai ui-spec', 'npm run raiola:ui-spec'],
+  ['rai design-dna', 'npm run raiola:design-dna'],
+  ['rai page-blueprint', 'npm run raiola:page-blueprint'],
+  ['rai design-md', 'npm run raiola:design-md'],
+  ['rai component-strategy', 'npm run raiola:component-strategy'],
+  ['rai design-benchmark', 'npm run raiola:design-benchmark'],
+  ['rai state-atlas', 'npm run raiola:state-atlas'],
+  ['rai frontend-brief', 'npm run raiola:frontend-brief'],
+  ['rai ui-recipe', 'npm run raiola:ui-recipe'],
+  ['rai ui-plan', 'npm run raiola:ui-plan'],
+  ['rai ui-review', 'npm run raiola:ui-review'],
+  ['rai preview', 'npm run raiola:preview'],
+  ['rai component-map', 'npm run raiola:component-map'],
+  ['rai responsive-matrix', 'npm run raiola:responsive-matrix'],
+  ['rai design-debt', 'npm run raiola:design-debt'],
+  ['rai ship-readiness', 'npm run raiola:ship-readiness'],
+  ['rai ship', 'npm run raiola:ship'],
+  ['rai pr-brief', 'npm run raiola:pr-brief'],
+  ['rai release-notes', 'npm run raiola:release-notes'],
+  ['rai session-report', 'npm run raiola:session-report'],
 ];
 
 function validateCommandGroups() {
@@ -353,7 +357,7 @@ function visibleAdvancedGroupsForSurface(surface) {
 
 function upgradeHintForSurface(surface) {
   if (surface.scriptProfile === 'pilot') {
-    return 'Run `rai update --script-profile core` for the full shell with curated npm aliases, or `rai update --script-profile full` for every legacy alias.';
+    return 'Run `rai update --script-profile core` for the full shell with curated npm aliases, or `rai update --script-profile full` for every repo-local fallback alias.';
   }
   return 'Run `rai doctor --strict` or `rai update` to repair the local shell.';
 }
@@ -380,6 +384,7 @@ Usage:
   rai help <topic>
 
 Start here:
+  rai on next        First-run onboarding that proposes a milestone to start
   rai help solo      Single-operator daily loop for most repos
   rai help review    Deep review, risk triage, and closeout
   rai help team      Parallel Team Lite flow with bounded scopes
@@ -388,7 +393,7 @@ Core commands:
 ${formatCommandRows(CORE_COMMANDS)}
 
 Golden flows:
-  solo    -> rai do, rai next, rai verify-shell, rai checkpoint, rai next-prompt
+  solo    -> rai on, rai do, rai next, rai verify-shell, rai checkpoint, rai next-prompt
   review  -> rai route, rai review, rai ui-review, rai verify-work, rai ship-readiness
   team    -> rai monorepo, rai team run, rai team collect, rai patch-review, rai sessions
 
@@ -402,6 +407,7 @@ More help:
 
 Examples:
   rai setup
+  rai on next
   rai help solo
   rai help review
   rai help team
@@ -442,6 +448,7 @@ More help:
   }
   console.log(`
 Examples:
+  rai on next
   rai help solo
   rai do "land the next safe slice"
   rai next
@@ -518,7 +525,7 @@ function printAllHelp(surface) {
       console.log(`${group.description}\n`);
       console.log(`${formatCommandRows(group.commands)}\n`);
     }
-    console.log('## Legacy command equivalence\n');
+    console.log('## Npm Fallback Commands\n');
     for (const [current, legacy] of LEGACY_EQUIVALENTS) {
       console.log(`- \`${current}\` -> \`${legacy}\``);
     }
@@ -532,7 +539,7 @@ function printAllHelp(surface) {
     console.log(`${group.description}\n`);
     console.log(`${formatCommandRows(group.commands)}\n`);
   }
-  console.log('## Installed legacy command equivalence\n');
+  console.log('## Installed Npm Fallback Commands\n');
   for (const [current, legacy] of LEGACY_EQUIVALENTS.filter(([current]) => surface.availableCommands.has(current.replace(/^rai\s+/, '')))) {
     console.log(`- \`${current}\` -> \`${legacy}\``);
   }
@@ -623,7 +630,7 @@ function main(argv = process.argv.slice(2)) {
   const entry = CLI_COMMANDS[command];
   if (!entry) {
     console.error(`Unknown command: ${command}`);
-    console.error('Run `rai help` for the golden flows or `rai help all` for the full shell.');
+    console.error('Run `rai help` for the starter flows or `rai help all` for the full shell.');
     process.exitCode = 1;
     return;
   }

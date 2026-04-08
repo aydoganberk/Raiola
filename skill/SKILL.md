@@ -16,30 +16,33 @@ It is not the default path; if the user did not explicitly ask for workflow, con
 
 ## Quick Command Surface
 
-- `$workflow-help`
+- `$raiola-help`
   - `Show the short command surface and when to use quick/full/team.`
-- `$workflow-next`
+- `$raiola-on`
+  - `Open the blank-state onboarding entry and propose a milestone to start.`
+- `$raiola-next`
   - `Surface the single safest next move from current state.`
-- `$workflow-quick`
+- `$raiola-quick`
   - `Start or continue quick mode for a narrow 15-60 minute task.`
-- `$workflow-checkpoint`
+- `$raiola-checkpoint`
   - `Write a continuity checkpoint before compaction or handoff.`
-- `$workflow-team`
+- `$raiola-team`
   - `Open Team Lite orchestration when the user explicitly asks for delegation or parallelism.`
-- `$workflow-review`
+- `$raiola-review`
   - `Generate a review-ready closeout package.`
-- `$workflow-ship`
+- `$raiola-ship`
   - `Generate a ship-ready package.`
 
 ## Alias Mapping
 
-- `$workflow-help` -> `rai help`
-- `$workflow-next` -> `rai next`
-- `$workflow-quick` -> `rai quick`
-- `$workflow-checkpoint` -> `rai checkpoint`
-- `$workflow-team` -> `rai team`
-- `$workflow-review` -> `rai review`
-- `$workflow-ship` -> `rai ship`
+- `$raiola-help` -> `rai help`
+- `$raiola-on` -> `rai on next` or `raiola-on next`
+- `$raiola-next` -> `rai next`
+- `$raiola-quick` -> `rai quick`
+- `$raiola-checkpoint` -> `rai checkpoint`
+- `$raiola-team` -> `rai team`
+- `$raiola-review` -> `rai review`
+- `$raiola-ship` -> `rai ship`
 
 ## Granularity
 
@@ -71,15 +74,15 @@ It is not the default path; if the user did not explicitly ask for workflow, con
   - `Codex may continue phase-to-phase until blocked, complete, or window-managed`
 - Read `Automation mode` and `Automation status` from `STATUS.md`, `CONTEXT.md`, and `HANDOFF.md` as the active behavior contract.
 - Users may set or change this with:
-- `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation phase`
+- `npm run raiola:milestone -- --id Mx --name "..." --goal "..." --profile standard --automation phase`
 - `rai milestone --id Mx --name "..." --goal "..." --profile standard --automation phase`
-  - `npm run workflow:automation -- --mode full`
+  - `npm run raiola:automation -- --mode full`
 - When automation is active, Codex should own:
   - `discussion flow`
   - `CONTEXT.md updates`
   - `plan sequencing`
   - `phase transitions allowed by the current mode`
-- `workflow:plan-check` may legitimately report `pending` during `discuss` or `research`; treat that as incomplete work, not as a hard failure.
+- `raiola:plan-check` may legitimately report `pending` during `discuss` or `research`; treat that as incomplete work, not as a hard failure.
 - If `WINDOW.md` recommends `handoff-required` or `new-window-recommended` and the client can open a new window/thread, prefer that handoff path.
 - If the client cannot open a new window/thread, compact the current context, refresh packet state, and continue from the remaining plan.
 
@@ -87,10 +90,11 @@ It is not the default path; if the user did not explicitly ask for workflow, con
 
 Before reopening the full contract, prefer the short layer:
 
-1. Use `$workflow-help` if the user needs orientation.
-2. Use `$workflow-next` to see the safest next operator action.
-3. If the task is narrow and short-lived, consider `$workflow-quick` before opening a full milestone.
-4. If the user explicitly requests delegation or parallelism, route through `$workflow-team`.
+1. Use `$raiola-help` if the user needs orientation.
+2. Use `$raiola-on` when the repo is at a blank state and needs a milestone proposal.
+3. Use `$raiola-next` to see the safest next operator action.
+4. If the task is narrow and short-lived, consider `$raiola-quick` before opening a full milestone.
+5. If the user explicitly requests delegation or parallelism, route through `$raiola-team`.
 
 Then follow the full startup sequence below when the milestone contract is active.
 
@@ -118,7 +122,7 @@ An active milestone always follows this loop:
    - Identify touched files, dependencies, risks, and verification surface.
    - Update `CONTEXT.md` with research findings.
    - Narrow acceptance criteria, user-visible outcomes, regression focus, success contract, verify commands, and manual check fields in `VALIDATION.md` to the active milestone scope.
-   - If workflow is active and frontend/UI signals are present, run `workflow:map-frontend` and treat the generated profile as the routing input for adapters and audit expectations.
+   - If workflow is active and frontend/UI signals are present, run `raiola:map-frontend` and treat the generated profile as the routing input for adapters and audit expectations.
 3. `plan`
    - Continue only if `CONTEXT.md` is current after research.
    - Read `CARRYFORWARD.md` and relevant seeds.
@@ -126,7 +130,7 @@ An active milestone always follows this loop:
    - Split execute into dependency-aware chunks across `wave 1 -> wave 2 -> wave 3`.
    - Keep each chunk run-sized, keep same-wave parallelism minimal, and mark unused waves as `not needed` rather than silently skipping them.
    - If frontend mode is active, choose the adapter route, make design-system-aware behavior explicit, and expand `VALIDATION.md` with the visual verdict protocol before execute.
-   - Run `workflow:plan-check -- --sync --strict` before execute begins.
+   - Run `raiola:plan-check -- --sync --strict` before execute begins.
    - Treat `pending` as "finish the planning packet first" and `fail` as "the plan shape is wrong and must be revised".
    - If `WINDOW.md` and packet budget are insufficient for a new chunk, do not start a new step.
 4. `execute`
@@ -137,7 +141,7 @@ An active milestone always follows this loop:
    - Same-wave write-capable workers need explicit ownership and disjoint write scope before fan-out.
    - The main agent acts as orchestrator: delegate -> wait -> integrate -> update docs -> decide the next wave.
    - If `Atomic commit mode` is enabled in `EXECPLAN.md`, commit only at the declared `wave` or `chunk` boundary.
-   - Leave active recall notes with `workflow:save-memory` if needed.
+   - Leave active recall notes with `raiola:save-memory` if needed.
 5. `audit`
    - Use the `VALIDATION.md` contract table for test, diff, review, or smoke checks.
    - If frontend mode is active, visual verdict checks become part of the audit contract instead of optional nice-to-have review.
@@ -148,7 +152,7 @@ An active milestone always follows this loop:
    - Archive milestone summary, final context, and validation snapshot under `completed_milestones/`.
    - Remove milestone-linked `Active Recall Items` from `MEMORY.md`.
    - Check whether `AGENTS.md` needs an update.
-   - If audit is closed, apply commit and push protocol only while `workflow:health -- --strict` is clean.
+   - If audit is closed, apply commit and push protocol only while `raiola:health -- --strict` is clean.
 
 ## Minimum Done Checklists
 
@@ -163,7 +167,7 @@ An active milestone always follows this loop:
 - `plan`
   - `Chosen strategy, rejected strategies, rollback/fallback, blockers, wave execution policy, chunks, and commit policy are written`
   - `Coverage matrix has no orphan or duplicate requirements`
-  - `workflow:plan-check passes before execute begins`
+  - `raiola:plan-check passes before execute begins`
 - `execute`
   - `Only ready chunks from the active wave were implemented`
   - `Same-wave work was dependency-free and had disjoint write scopes`
@@ -181,28 +185,28 @@ An active milestone always follows this loop:
 
 ## Operational Helpers
 
-- `npm run workflow:hud`
-- `npm run workflow:map-codebase`
-- `npm run workflow:map-frontend`
-- `npm run workflow:control -- --utterance "plan kismini gecelim"`
-- `npm run workflow:step-fulfillment -- --utterance "plan kismini gecelim"`
-- `npm run workflow:delegation-plan`
-- `npm run workflow:plan-check -- --sync --strict`
+- `npm run raiola:hud`
+- `npm run raiola:map-codebase`
+- `npm run raiola:map-frontend`
+- `npm run raiola:control -- --utterance "plan kismini gecelim"`
+- `npm run raiola:step-fulfillment -- --utterance "plan kismini gecelim"`
+- `npm run raiola:delegation-plan`
+- `npm run raiola:plan-check -- --sync --strict`
 - `rai milestone --id Mx --name "..." --goal "..." --profile standard --automation manual`
-- `npm run workflow:automation -- --mode phase`
-- `npm run workflow:checkpoint -- --next "..."`
-- `npm run workflow:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths src/foo,tests/foo`
-- `npm run workflow:save-memory -- --title "..." --note "..."`
-- `npm run workflow:packet -- --step plan --json`
-- `npm run workflow:next`
-- `npm run workflow:tempo -- --utterance "hızlı geç"`
-- `npm run workflow:pause-work -- --summary "..."`
-- `npm run workflow:resume-work`
-- `npm run workflow:plant-seed -- --title "..." --trigger "..."`
-- `npm run workflow:switch-workstream -- --name "<slug>" --create`
-- `npm run workflow:doctor`
-- `npm run workflow:health -- --strict`
-- `npm run workflow:forensics`
+- `npm run raiola:automation -- --mode phase`
+- `npm run raiola:checkpoint -- --next "..."`
+- `npm run raiola:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths src/foo,tests/foo`
+- `npm run raiola:save-memory -- --title "..." --note "..."`
+- `npm run raiola:packet -- --step plan --json`
+- `npm run raiola:next`
+- `npm run raiola:tempo -- --utterance "hızlı geç"`
+- `npm run raiola:pause-work -- --summary "..."`
+- `npm run raiola:resume-work`
+- `npm run raiola:plant-seed -- --title "..." --trigger "..."`
+- `npm run raiola:switch-workstream -- --name "<slug>" --create`
+- `npm run raiola:doctor`
+- `npm run raiola:health -- --strict`
+- `npm run raiola:forensics`
 
 ## Packet v5 Rules
 
@@ -218,11 +222,11 @@ An active milestone always follows this loop:
 - Do not prefer full-doc reads when a section-level packet ref is available.
 - `execute` should minimize the read set to the current chunk, open requirements, acceptance rows, and touched files.
 - If `WINDOW.md` recommends `compact-now` or `do-not-start-next-step`, first check `Checkpoint freshness`.
-- If `Checkpoint freshness = no`, run `workflow:checkpoint` before compacting or handing off.
+- If `Checkpoint freshness = no`, run `raiola:checkpoint` before compacting or handing off.
 
 ## Frontend Auto Mode
 
-- `workflow:map-frontend` fingerprints:
+- `raiola:map-frontend` fingerprints:
   - `framework: Next, Vite, Astro, Remix`
   - `styling: Tailwind, CSS Modules, styled-components, custom`
   - `UI system: shadcn, Radix, MUI, Chakra, custom`
@@ -305,11 +309,11 @@ An active milestone always follows this loop:
 ## Failure Playbook
 
 - `Hash drift`
-  - `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
+  - `raiola:packet -- --all --sync -> raiola:window -- --sync -> raiola:health -- --strict`
 - `Active root mismatch`
-  - `workflow:workstreams status -> workflow:switch-workstream or use --root to return to the correct root`
+  - `raiola:workstreams status -> raiola:switch-workstream or use --root to return to the correct root`
 - `Resume ambiguity`
-  - `Read HANDOFF.md + WINDOW.md -> workflow:resume-work -> workflow:next`
+  - `Read HANDOFF.md + WINDOW.md -> raiola:resume-work -> raiola:next`
 - `Dirty worktree closeout`
   - `Use explicit --stage-paths or --allow-workflow-only when it is truly docs-only`
 
@@ -338,11 +342,11 @@ An active milestone always follows this loop:
   - `delegate et`
   - `team mode`
 - When Team Lite is active:
-  - run `workflow:map-codebase`
-  - run `workflow:delegation-plan -- --start --activation-text "<user request>"`
+  - run `raiola:map-codebase`
+  - run `raiola:delegation-plan -- --start --activation-text "<user request>"`
   - use `.workflow/orchestration/packets/` as child-task packets
-  - ingest results with `workflow:delegation-plan -- --complete-task ...`
-  - use `workflow:delegation-plan -- --status` to decide the next route
+  - ingest results with `raiola:delegation-plan -- --complete-task ...`
+  - use `raiola:delegation-plan -- --status` to decide the next route
   - only start workers from the active execute wave and only after owner + write scope + dependency assumptions are written in `EXECPLAN.md`
   - integrate the whole active wave before advancing to the next one
 
@@ -396,7 +400,7 @@ I am running targeted checks and closing remaining risks; if the result is clean
 
 ```text
 WORKFLOW: handoff | milestone=M2 | root=docs/workflow
-I am not starting a new step in this window; I am preparing HANDOFF.md and the workflow:resume-work command for resume.
+I am not starting a new step in this window; I am preparing HANDOFF.md and the raiola:resume-work command for resume.
 ```
 
 ## Golden Snapshot Rule
@@ -413,7 +417,7 @@ node scripts/compare_golden_snapshots.ts <baseline> <candidate>
 
 - The skill does not store state; the canonical source of state is always the workflow files inside the repository.
 - `.workflow/state.json` is a generated convenience surface only and must never replace the markdown control plane.
-- `workflow:hud`, `workflow:doctor`, and `workflow:next` may all refresh that generated state surface.
+- `raiola:hud`, `raiola:doctor`, and `raiola:next` may all refresh that generated state surface.
 - The skill is not a backlog document; it exists to stabilize active state and closeout discipline.
 
 ## Retro Surface

@@ -650,11 +650,11 @@ function printResume(row) {
   console.log('# WORKSTREAM RESUME\n');
   console.log(`- Workstream: \`${row.name}\``);
   console.log(`- Root: \`${row.root}\``);
-  console.log(`- Resume command: \`npm run workflow:resume-work -- --root ${row.root}\``);
-  console.log(`- Next command: \`npm run workflow:next -- --root ${row.root}\``);
-  console.log(`- Health command: \`npm run workflow:health -- ${strictFlag}--root ${row.root}\``);
+  console.log(`- Resume command: \`npm run raiola:resume-work -- --root ${row.root}\``);
+  console.log(`- Next command: \`npm run raiola:next -- --root ${row.root}\``);
+  console.log(`- Health command: \`npm run raiola:health -- ${strictFlag}--root ${row.root}\``);
   if (row.gitIsolation !== 'none') {
-    console.log(`- Isolation command: \`npm run workflow:ensure-isolation -- --root ${row.root}\``);
+    console.log(`- Isolation command: \`npm run raiola:ensure-isolation -- --root ${row.root}\``);
   }
 }
 
@@ -663,8 +663,8 @@ function printComplete(row) {
   console.log('# WORKSTREAM COMPLETE\n');
   console.log(`- Workstream: \`${row.name}\``);
   console.log(`- Root: \`${row.root}\``);
-  console.log(`- Closeout command: \`npm run workflow:complete-milestone -- --root ${row.root} --agents-review unchanged --summary "..."\``);
-  console.log(`- Preflight: \`npm run workflow:health -- ${strictFlag}--root ${row.root}\``);
+  console.log(`- Closeout command: \`npm run raiola:complete-milestone -- --root ${row.root} --agents-review unchanged --summary "..."\``);
+  console.log(`- Preflight: \`npm run raiola:health -- ${strictFlag}--root ${row.root}\``);
 }
 
 function main() {

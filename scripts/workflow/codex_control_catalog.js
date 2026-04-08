@@ -77,7 +77,7 @@ function backupsDir(cwd) {
 function desiredConfig(cwd) {
   const roles = deriveRepoRoles(cwd).map((entry) => entry.name);
   return {
-    workflow: {
+    raiola: {
       repo_root: cwd,
       workflow_root: path.join(cwd, 'docs', 'workflow'),
       runtime_root: path.join(cwd, '.workflow', 'runtime'),

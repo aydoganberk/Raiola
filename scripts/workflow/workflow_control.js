@@ -340,7 +340,7 @@ function workflowControlExamplesForFamily(family, limit = 3) {
 
 function formatWorkflowControlCommand(utterance = '<user request>') {
   const escaped = String(utterance).replace(/"/g, '\\"');
-  return `npm run workflow:control -- --utterance "${escaped}"`;
+  return `npm run raiola:control -- --utterance "${escaped}"`;
 }
 
 function workflowControlRecommendedCommand(intent, utterance = '<user request>') {
@@ -350,29 +350,29 @@ function workflowControlRecommendedCommand(intent, utterance = '<user request>')
 
   if (intent.family === 'step_control') {
     const escaped = String(utterance).replace(/"/g, '\\"');
-    return `npm run workflow:step-fulfillment -- --utterance "${escaped}"`;
+    return `npm run raiola:step-fulfillment -- --utterance "${escaped}"`;
   }
 
   if (intent.family === 'automation_control' && intent.mode) {
-    return `npm run workflow:automation -- --mode ${intent.mode}`;
+    return `npm run raiola:automation -- --mode ${intent.mode}`;
   }
 
   if (intent.family === 'tempo_control' && intent.mode) {
     const escaped = String(utterance).replace(/"/g, '\\"');
-    return `npm run workflow:tempo -- --utterance "${escaped}"`;
+    return `npm run raiola:tempo -- --utterance "${escaped}"`;
   }
 
   if (intent.family === 'parallel_control') {
     const escaped = String(utterance).replace(/"/g, '\\"');
-    return `npm run workflow:delegation-plan -- --activation-text "${escaped}"`;
+    return `npm run raiola:delegation-plan -- --activation-text "${escaped}"`;
   }
 
   if (intent.family === 'pause_resume_control' && intent.state === 'resume') {
-    return 'npm run workflow:resume-work';
+    return 'npm run raiola:resume-work';
   }
 
   if (intent.family === 'context_control' && intent.action === 'checkpoint') {
-    return 'npm run workflow:checkpoint -- --next "Resume here"';
+    return 'npm run raiola:checkpoint -- --next "Resume here"';
   }
 
   return null;

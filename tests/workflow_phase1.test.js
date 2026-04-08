@@ -34,7 +34,7 @@ function normalizeCompactHud(value) {
   return String(value).replace(/remaining=`\d+`/g, 'remaining=`<remaining>`');
 }
 
-test('workflow:init installs the runtime surface and HUD state', () => {
+test('raiola:init installs the runtime surface and HUD state', () => {
   const targetRepo = makeTempRepo();
 
   run('node', [initScript, '--target', targetRepo], repoRoot);
@@ -48,9 +48,9 @@ test('workflow:init installs the runtime surface and HUD state', () => {
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'state.json')));
 
   const packageJson = JSON.parse(fs.readFileSync(path.join(targetRepo, 'package.json'), 'utf8'));
-  assert.equal(packageJson.scripts['workflow:hud'], 'node scripts/workflow/hud.js');
-  assert.equal(packageJson.scripts['workflow:doctor'], 'node scripts/workflow/doctor.js');
-  assert.equal(packageJson.scripts['workflow:init'], 'node scripts/workflow/init.js');
+  assert.equal(packageJson.scripts['raiola:hud'], 'node scripts/workflow/hud.js');
+  assert.equal(packageJson.scripts['raiola:doctor'], 'node scripts/workflow/doctor.js');
+  assert.equal(packageJson.scripts['raiola:init'], 'node scripts/workflow/init.js');
 
   const compactHud = run('node', [path.join(targetRepo, 'scripts', 'workflow', 'hud.js'), '--compact'], targetRepo);
   const hudJson = JSON.parse(run('node', [path.join(targetRepo, 'scripts', 'workflow', 'hud.js'), '--json'], targetRepo));
@@ -66,13 +66,13 @@ test('workflow:init installs the runtime surface and HUD state', () => {
   assert.equal(hudJson.counts.seeds, 0);
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'runtime', 'hud.json')));
 
-  run('npm', ['run', 'workflow:doctor', '--', '--strict'], targetRepo);
-  run('npm', ['run', 'workflow:health', '--', '--strict'], targetRepo);
-  run('npm', ['run', 'workflow:next'], targetRepo);
-  run('npm', ['run', 'workflow:hud', '--', '--compact'], targetRepo);
+  run('npm', ['run', 'raiola:doctor', '--', '--strict'], targetRepo);
+  run('npm', ['run', 'raiola:health', '--', '--strict'], targetRepo);
+  run('npm', ['run', 'raiola:next'], targetRepo);
+  run('npm', ['run', 'raiola:hud', '--', '--compact'], targetRepo);
 });
 
-test('workflow:migrate refreshes runtime files without overwriting workflow docs by default', () => {
+test('raiola:migrate refreshes runtime files without overwriting workflow docs by default', () => {
   const targetRepo = makeTempRepo();
 
   run('node', [initScript, '--target', targetRepo], repoRoot);
@@ -94,20 +94,20 @@ test('workflow:migrate refreshes runtime files without overwriting workflow docs
   assert.equal(hudJson.health.status, 'pass');
 });
 
-test('workflow:doctor and workflow:next both refresh .workflow/state.json', () => {
+test('raiola:doctor and raiola:next both refresh .workflow/state.json', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
 
   const statePath = path.join(targetRepo, '.workflow', 'state.json');
   fs.rmSync(statePath);
 
-  run('npm', ['run', 'workflow:doctor', '--', '--strict'], targetRepo);
+  run('npm', ['run', 'raiola:doctor', '--', '--strict'], targetRepo);
   let state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
   assert.equal(state.updatedBy, 'doctor');
   assert.ok(state.doctor);
   assert.equal(state.workflowRootRelative, 'docs/workflow');
 
-  run('npm', ['run', 'workflow:next'], targetRepo);
+  run('npm', ['run', 'raiola:next'], targetRepo);
   state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
   assert.equal(state.updatedBy, 'next');
   assert.ok(state.next);
@@ -115,7 +115,7 @@ test('workflow:doctor and workflow:next both refresh .workflow/state.json', () =
   assert.equal(state.workflow.step, 'complete');
 });
 
-test('workflow:init bootstraps a minimal package.json for an empty repo', () => {
+test('raiola:init bootstraps a minimal package.json for an empty repo', () => {
   const targetRepo = makeEmptyTempRepo();
 
   run('node', [initScript, '--target', targetRepo], repoRoot);
@@ -125,15 +125,15 @@ test('workflow:init bootstraps a minimal package.json for an empty repo', () => 
 
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   assert.equal(packageJson.private, true);
-  assert.equal(packageJson.scripts['workflow:hud'], 'node scripts/workflow/hud.js');
-  assert.equal(packageJson.scripts['workflow:doctor'], 'node scripts/workflow/doctor.js');
+  assert.equal(packageJson.scripts['raiola:hud'], 'node scripts/workflow/hud.js');
+  assert.equal(packageJson.scripts['raiola:doctor'], 'node scripts/workflow/doctor.js');
 
-  run('npm', ['run', 'workflow:hud', '--', '--compact'], targetRepo);
-  run('npm', ['run', 'workflow:doctor', '--', '--strict'], targetRepo);
-  run('npm', ['run', 'workflow:next'], targetRepo);
+  run('npm', ['run', 'raiola:hud', '--', '--compact'], targetRepo);
+  run('npm', ['run', 'raiola:doctor', '--', '--strict'], targetRepo);
+  run('npm', ['run', 'raiola:next'], targetRepo);
 });
 
-test('workflow:init tolerates package templates that are missing a seeded status section', () => {
+test('raiola:init tolerates package templates that are missing a seeded status section', () => {
   const targetRepo = makeTempRepo();
   const sourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-source-'));
   fs.cpSync(repoRoot, sourceRoot, {

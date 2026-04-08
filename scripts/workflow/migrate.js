@@ -68,8 +68,8 @@ function main() {
 
   console.log('\n## Next\n');
   console.log(`- \`cd ${targetRepo}\``);
-  console.log('- `npm run workflow:hud`');
-  console.log('- `npm run workflow:health -- --strict`');
+  console.log('- `npm run raiola:hud`');
+  console.log('- `npm run raiola:health -- --strict`');
   if (report.hudState) {
     console.log(`- HUD state file refreshed at \`${relativePath(targetRepo, report.hudState.stateFile)}\``);
   }

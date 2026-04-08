@@ -167,7 +167,7 @@ Use this template when opening a new milestone so the same lifecycle can be recr
 - `plan`
   - `Chosen strategy, rollback, blockers, wave execution policy, chunks, and commit policy are written`
   - `Coverage matrix has no orphan or duplicate requirements`
-  - `workflow:plan-check passes before execute begins`
+  - `raiola:plan-check passes before execute begins`
 - `execute`
   - `Only ready chunks from the active wave were implemented`
   - `Same-wave work was dependency-free and had disjoint write scopes`
@@ -186,11 +186,11 @@ Use this template when opening a new milestone so the same lifecycle can be recr
 ## Failure Playbook
 
 - `Hash drift`
-  - `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
+  - `raiola:packet -- --all --sync -> raiola:window -- --sync -> raiola:health -- --strict`
 - `Active root mismatch`
-  - `workflow:workstreams status -> workflow:switch-workstream or use --root`
+  - `raiola:workstreams status -> raiola:switch-workstream or use --root`
 - `Resume ambiguity`
-  - `Read HANDOFF.md + WINDOW.md -> workflow:resume-work -> workflow:next`
+  - `Read HANDOFF.md + WINDOW.md -> raiola:resume-work -> raiola:next`
 - `Dirty worktree closeout`
   - `Use explicit --stage-paths or --allow-workflow-only when appropriate`
 

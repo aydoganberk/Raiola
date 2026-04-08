@@ -73,7 +73,7 @@
 ## Tests Run
 
 - `No command output log was recorded with the starter template state`
-- `Recommended first checks after installation: npm run workflow:doctor -- --strict and npm run workflow:health -- --strict`
+- `Recommended first checks after installation: npm run raiola:doctor -- --strict and npm run raiola:health -- --strict`
 
 ## Suggested Next Step
 

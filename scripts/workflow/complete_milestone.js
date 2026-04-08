@@ -174,7 +174,7 @@ function main() {
     try {
       runHealthStrict(rootDir);
     } catch (error) {
-      throw new Error(`workflow:health --strict failed before complete: ${String(error.stderr || error.stdout || error.message).trim()}`);
+      throw new Error(`raiola:health --strict failed before complete: ${String(error.stderr || error.stdout || error.message).trim()}`);
     }
   }
 
@@ -326,7 +326,7 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   status = replaceSection(status, 'Unknown', '- `The next milestone scope is not known yet`');
   status = replaceSection(status, 'Next', [
     '- `Open a new milestone if the user explicitly wants workflow`',
-    '- `Use workflow:next to get the idle recommendation`',
+    '- `Use raiola:next to get the idle recommendation`',
   ].join('\n'));
   status = replaceSection(status, 'Risks', '- `There is no active milestone`');
   status = replaceSection(status, 'Suggested Next Step', '- `Open the next milestone if the user explicitly wants workflow`');
@@ -576,7 +576,7 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   handoff = replaceField(handoff, 'Resume anchor', 'Milestone open');
   handoff = replaceField(handoff, 'Packet hash', 'pending_sync');
   handoff = replaceField(handoff, 'Current chunk cursor', '0/0');
-  handoff = replaceField(handoff, 'Expected first command', 'npm run workflow:health -- --strict');
+  handoff = replaceField(handoff, 'Expected first command', 'npm run raiola:health -- --strict');
   handoff = replaceSection(handoff, 'Snapshot', `- \`${activeRow.milestone} was completed\``);
   handoff = replaceSection(handoff, 'Immediate Next Action', '- `Plan the next milestone or switch workstreams`');
   handoff = replaceSection(handoff, 'Execution Cursor', `
@@ -745,7 +745,7 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   }
 
   runGit(process.cwd(), ['add', ...stagePaths], false);
-  const commitMessage = String(args['commit-message'] || `workflow: complete ${activeRow.milestone}`).trim();
+  const commitMessage = String(args['commit-message'] || `raiola: complete ${activeRow.milestone}`).trim();
   runGit(process.cwd(), ['commit', '-m', commitMessage], false);
   if (!noPush) {
     runGit(process.cwd(), ['push', '--set-upstream', 'origin', currentBranch(process.cwd())], false);

@@ -247,7 +247,7 @@ function main() {
 - Plan checklist:
   - \`Do not move to planning until CONTEXT.md is current after research\`
   - \`Fill chosen strategy, wave execution policy, coverage matrix, plan chunks, and commit policy in EXECPLAN.md\`
-  - \`Run workflow:plan-check -- --sync --strict before execute begins\`
+  - \`Run raiola:plan-check -- --sync --strict before execute begins\`
 - Execute notes:
   - \`None yet\`
 - Audit checklist:
@@ -277,7 +277,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   status = replaceSection(status, 'Unknown', '- `Full file scope is not known until discuss completes`');
   status = replaceSection(status, 'Next', [
     '- `Start intent capture, then move through constraint extraction and execution shaping`',
-    '- `Use workflow:packet and workflow:next to inspect packet/budget state`',
+    '- `Use raiola:packet and raiola:next to inspect packet/budget state`',
     automationMode === 'manual'
       ? '- `Move phase boundaries only when the user asks for the next workflow step`'
       : `- \`Automation mode is ${automationMode}; Codex may continue until the next boundary or blocker\``,
@@ -523,7 +523,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   handoff = replaceField(handoff, 'Resume anchor', 'Discuss start');
   handoff = replaceField(handoff, 'Packet hash', 'pending_sync');
   handoff = replaceField(handoff, 'Current chunk cursor', '0/0');
-  handoff = replaceField(handoff, 'Expected first command', 'npm run workflow:health -- --strict');
+  handoff = replaceField(handoff, 'Expected first command', 'npm run raiola:health -- --strict');
   handoff = replaceSection(handoff, 'Snapshot', '- `Milestone opened; ready to begin the discuss step`');
   handoff = replaceSection(handoff, 'Immediate Next Action', `
 - \`${preferences.discussMode === 'assumptions' ? 'Start the codebase-first assumptions discuss flow' : 'Start the discuss questions'}\`
@@ -549,9 +549,9 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
 - Active validation IDs: \`AC1\`
 `);
   handoff = replaceSection(handoff, 'Suggested Resume Commands', `
-- \`npm run workflow:resume-work -- --root ${path.relative(process.cwd(), rootDir)}\`
-- \`npm run workflow:health -- --strict --root ${path.relative(process.cwd(), rootDir)}\`
-- \`npm run workflow:next -- --root ${path.relative(process.cwd(), rootDir)}\`
+- \`npm run raiola:resume-work -- --root ${path.relative(process.cwd(), rootDir)}\`
+- \`npm run raiola:health -- --strict --root ${path.relative(process.cwd(), rootDir)}\`
+- \`npm run raiola:next -- --root ${path.relative(process.cwd(), rootDir)}\`
 `);
   handoff = replaceSection(handoff, 'Files To Reopen', `
 - \`${path.relative(process.cwd(), paths.context)}\`

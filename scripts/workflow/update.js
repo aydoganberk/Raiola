@@ -62,7 +62,7 @@ function main() {
       console.log(JSON.stringify(payload, null, 2));
       return;
     }
-    console.log('# WORKFLOW UPDATE (DRY RUN)\n');
+    console.log('# RAIOLA UPDATE (DRY RUN)\n');
     console.log(`- Target: \`${targetRepo}\``);
     console.log(`- Mode: \`${mode}\``);
     console.log(`- Installed version: \`${installedVersion || 'unknown'}\``);
@@ -88,7 +88,7 @@ function main() {
     return;
   }
 
-  console.log('# WORKFLOW UPDATE\n');
+  console.log('# RAIOLA UPDATE\n');
   for (const line of formatInstallSummary(report)) {
     console.log(line);
   }

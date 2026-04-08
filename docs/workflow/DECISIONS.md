@@ -122,7 +122,7 @@ Rule:
 ## 2026-04-01 - `save_memory` standardizes memory entry format
 
 - Decision:
-  - Use the `workflow:save-memory` helper for `MEMORY.md` entries.
+  - Use the `raiola:save-memory` helper for `MEMORY.md` entries.
 - Why:
   - It keeps durable note formatting consistent.
   - It reduces manual edits.
@@ -161,7 +161,7 @@ Rule:
   - Temporary notes should not disappear when the context window changes.
   - Milestone-local notes should stay separate from durable preferences.
 - Consequence:
-  - `workflow:save-memory` defaults to `active` mode while a milestone is active.
+  - `raiola:save-memory` defaults to `active` mode while a milestone is active.
   - Session startup automatically reads active recall entries.
 
 ## 2026-04-01 - Completing a milestone clears its active recall notes
@@ -203,12 +203,12 @@ Rule:
 - Why:
   - Some codebases benefit from scanning first; some tasks benefit from clarifying the target first.
 - Consequence:
-  - `CONTEXT.md`, `MILESTONES.md`, and `workflow:next` explain discuss behavior based on this preference.
+  - `CONTEXT.md`, `MILESTONES.md`, and `raiola:next` explain discuss behavior based on this preference.
 
-## 2026-04-01 - `workflow:next` becomes the operational navigator for the active step
+## 2026-04-01 - `raiola:next` becomes the operational navigator for the active step
 
 - Decision:
-  - `workflow:next` produces one recommended next move based on the active milestone step.
+  - `raiola:next` produces one recommended next move based on the active milestone step.
 - Why:
   - It answers "what should I do now?" quickly even as the workflow artifact set grows.
 - Consequence:
@@ -221,7 +221,7 @@ Rule:
 - Why:
   - Resume should stay lightweight and current.
 - Consequence:
-  - `workflow:pause-work` and `workflow:resume-work` revolve around this file.
+  - `raiola:pause-work` and `raiola:resume-work` revolve around this file.
 
 ## 2026-04-01 - `SEEDS.md` stays distinct from carryforward
 
@@ -239,12 +239,12 @@ Rule:
 - Why:
   - It improves ergonomics between the generic `docs/workflow` root and named `docs/<workstream>` roots.
 - Consequence:
-  - `workflow:switch-workstream` takes responsibility for scaffolding named roots and switching active root.
+  - `raiola:switch-workstream` takes responsibility for scaffolding named roots and switching active root.
 
-## 2026-04-01 - `workflow:doctor` and `workflow:forensics` add an observability layer
+## 2026-04-01 - `raiola:doctor` and `raiola:forensics` add an observability layer
 
 - Decision:
-  - Add `workflow:doctor` to check workflow state health and `workflow:forensics` to snapshot current state.
+  - Add `raiola:doctor` to check workflow state health and `raiola:forensics` to snapshot current state.
 - Why:
   - The workflow needs fast sync checks and a durable debugging surface.
 - Consequence:

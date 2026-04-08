@@ -65,7 +65,7 @@
   - `Suggested defaults: Budget profile=deep, Discuss=8000, Plan=16000, Audit=12000, Max refs=14`
   - `Health strict and retro expectations are assumed to be higher`
   - `Token efficiency auto-default resolves to continuity_first unless explicitly overridden`
-  - `A milestone may still override the repo default via workflow:new-milestone --profile`
+  - `A milestone may still override the repo default via raiola:milestone --profile`
 
 ## Profile Notes
 

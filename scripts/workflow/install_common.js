@@ -52,7 +52,7 @@ function layoutFromRoot(repoRoot) {
     binFile: path.join(repoRoot, 'bin', 'rai.js'),
     aliasBinFiles: [
       path.join(repoRoot, 'bin', 'raiola.js'),
-      path.join(repoRoot, 'bin', 'cwf.js'),
+      path.join(repoRoot, 'bin', 'raiola-on.js'),
     ],
     compareScript: path.join(repoRoot, 'scripts', 'compare_golden_snapshots.ts'),
     skillFile: path.join(repoRoot, 'skill', 'SKILL.md'),
@@ -143,6 +143,24 @@ function sourcePackageName() {
   return productName();
 }
 
+function legacyWorkflowScriptName(scriptName) {
+  const normalized = String(scriptName || '').trim();
+  if (!normalized.startsWith('raiola:')) {
+    return null;
+  }
+
+  const suffix = normalized.slice('raiola:'.length);
+  if (!suffix || suffix === 'on') {
+    return null;
+  }
+
+  if (suffix === 'milestone') {
+    return 'workflow:new-milestone';
+  }
+
+  return `workflow:${suffix}`;
+}
+
 const WORKFLOW_GITIGNORE_ENTRIES = Object.freeze([
   '.workflow/',
   '.agents/',
@@ -150,98 +168,100 @@ const WORKFLOW_GITIGNORE_ENTRIES = Object.freeze([
 
 const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
   pilot: [
-    'workflow:backlog',
-    'workflow:checkpoint',
-    'workflow:codex',
-    'workflow:contextpack',
-    'workflow:dashboard',
-    'workflow:do',
-    'workflow:doctor',
-    'workflow:health',
-    'workflow:hud',
-    'workflow:init',
-    'workflow:launch',
-    'workflow:manager',
-    'workflow:migrate',
-    'workflow:monorepo',
-    'workflow:new-milestone',
-    'workflow:next',
-    'workflow:next-prompt',
-    'workflow:note',
-    'workflow:quick',
-    'workflow:review',
-    'workflow:setup',
-    'workflow:ship-readiness',
-    'workflow:team',
-    'workflow:thread',
-    'workflow:uninstall',
-    'workflow:update',
-    'workflow:verify-shell',
-    'workflow:verify-work',
+    'raiola:on',
+    'raiola:backlog',
+    'raiola:checkpoint',
+    'raiola:codex',
+    'raiola:contextpack',
+    'raiola:dashboard',
+    'raiola:do',
+    'raiola:doctor',
+    'raiola:health',
+    'raiola:hud',
+    'raiola:init',
+    'raiola:launch',
+    'raiola:manager',
+    'raiola:migrate',
+    'raiola:monorepo',
+    'raiola:milestone',
+    'raiola:next',
+    'raiola:next-prompt',
+    'raiola:note',
+    'raiola:quick',
+    'raiola:review',
+    'raiola:setup',
+    'raiola:ship-readiness',
+    'raiola:team',
+    'raiola:thread',
+    'raiola:uninstall',
+    'raiola:update',
+    'raiola:verify-shell',
+    'raiola:verify-work',
   ],
   core: [
-    'workflow:approval',
-    'workflow:approvals',
-    'workflow:assumptions',
-    'workflow:automation',
-    'workflow:backlog',
-    'workflow:benchmark',
-    'workflow:checkpoint',
-    'workflow:claims',
-    'workflow:codex',
-    'workflow:complete-milestone',
-    'workflow:contextpack',
-    'workflow:control',
-    'workflow:dashboard',
-    'workflow:delegation-plan',
-    'workflow:discuss',
-    'workflow:do',
-    'workflow:doctor',
-    'workflow:ensure-isolation',
-    'workflow:evidence',
-    'workflow:explore',
-    'workflow:health',
-    'workflow:hud',
-    'workflow:init',
-    'workflow:launch',
-    'workflow:manager',
-    'workflow:map-codebase',
-    'workflow:map-frontend',
-    'workflow:migrate',
-    'workflow:monorepo',
-    'workflow:new-milestone',
-    'workflow:next',
-    'workflow:next-prompt',
-    'workflow:note',
-    'workflow:packet',
-    'workflow:plan-check',
-    'workflow:profile',
-    'workflow:quick',
-    'workflow:review',
-    'workflow:review-mode',
-    'workflow:review-orchestrate',
-    'workflow:review-tasks',
-    'workflow:route',
-    'workflow:secure',
-    'workflow:setup',
-    'workflow:ship',
-    'workflow:ship-readiness',
-    'workflow:stats',
-    'workflow:step-fulfillment',
-    'workflow:team',
-    'workflow:thread',
-    'workflow:ui-direction',
-    'workflow:ui-plan',
-    'workflow:ui-review',
-    'workflow:ui-spec',
-    'workflow:uninstall',
-    'workflow:update',
-    'workflow:verify-browser',
-    'workflow:verify-shell',
-    'workflow:verify-work',
-    'workflow:window',
-    'workflow:workspaces',
-    'workflow:workstreams',
+    'raiola:on',
+    'raiola:approval',
+    'raiola:approvals',
+    'raiola:assumptions',
+    'raiola:automation',
+    'raiola:backlog',
+    'raiola:benchmark',
+    'raiola:checkpoint',
+    'raiola:claims',
+    'raiola:codex',
+    'raiola:complete-milestone',
+    'raiola:contextpack',
+    'raiola:control',
+    'raiola:dashboard',
+    'raiola:delegation-plan',
+    'raiola:discuss',
+    'raiola:do',
+    'raiola:doctor',
+    'raiola:ensure-isolation',
+    'raiola:evidence',
+    'raiola:explore',
+    'raiola:health',
+    'raiola:hud',
+    'raiola:init',
+    'raiola:launch',
+    'raiola:manager',
+    'raiola:map-codebase',
+    'raiola:map-frontend',
+    'raiola:migrate',
+    'raiola:monorepo',
+    'raiola:milestone',
+    'raiola:next',
+    'raiola:next-prompt',
+    'raiola:note',
+    'raiola:packet',
+    'raiola:plan-check',
+    'raiola:profile',
+    'raiola:quick',
+    'raiola:review',
+    'raiola:review-mode',
+    'raiola:review-orchestrate',
+    'raiola:review-tasks',
+    'raiola:route',
+    'raiola:secure',
+    'raiola:setup',
+    'raiola:ship',
+    'raiola:ship-readiness',
+    'raiola:stats',
+    'raiola:step-fulfillment',
+    'raiola:team',
+    'raiola:thread',
+    'raiola:ui-direction',
+    'raiola:ui-plan',
+    'raiola:ui-review',
+    'raiola:ui-spec',
+    'raiola:uninstall',
+    'raiola:update',
+    'raiola:verify-browser',
+    'raiola:verify-shell',
+    'raiola:verify-work',
+    'raiola:window',
+    'raiola:workspaces',
+    'raiola:workstreams',
   ],
   full: null,
 });
@@ -308,7 +328,7 @@ function writeVersionMarker(targetRepo, options = {}) {
   const previousVersion = existing.exists && existing.installedVersion
     ? existing.installedVersion
     : 'none';
-  const content = `# WORKFLOW PRODUCT VERSION
+  const content = `# RAIOLA PRODUCT VERSION
 
 - Installed version: \`${installedVersion}\`
 - Previous version: \`${previousVersion}\`
@@ -319,7 +339,7 @@ function writeVersionMarker(targetRepo, options = {}) {
 ## Update Guidance
 
 - \`Run rai update after pulling a newer raiola release\`
-- \`Run rai doctor --strict if package scripts, runtime files, or skill aliases look stale\`
+- \`Run rai doctor --strict if package scripts or runtime files look stale\`
 `;
 
   ensureDir(path.dirname(markerPath));
@@ -443,7 +463,7 @@ function loadTargetRuntimeScripts(profile = 'full', options = {}) {
   const source = options.sourceLayout || productSourceLayout(options.targetRepo || null);
   const sourcePackage = readJson(source.packageJson);
   const normalizedProfile = normalizeScriptProfile(profile, 'full');
-  const allScripts = Object.entries(sourcePackage.scripts || {}).filter(([name]) => name.startsWith('workflow:'));
+  const allScripts = Object.entries(sourcePackage.scripts || {}).filter(([name]) => name.startsWith('raiola:'));
   if (normalizedProfile === 'full') {
     return Object.fromEntries(allScripts);
   }
@@ -630,6 +650,24 @@ function patchPackageJsonScripts(targetRepo, options = {}) {
     });
   }
 
+  for (const [name, expected] of Object.entries(loadTargetRuntimeScripts('full', {
+    targetRepo,
+    sourceLayout: productSource,
+  }))) {
+    const legacyName = legacyWorkflowScriptName(name);
+    if (!legacyName || !(legacyName in currentScripts)) {
+      continue;
+    }
+
+    if (currentScripts[legacyName] === expected) {
+      delete currentScripts[legacyName];
+      report.removed.push(legacyName);
+      continue;
+    }
+
+    report.retainedExtra.push(legacyName);
+  }
+
   if (normalizedProfile !== 'full') {
     for (const [name, expected] of Object.entries(loadTargetRuntimeScripts('full', {
       targetRepo,
@@ -651,12 +689,16 @@ function patchPackageJsonScripts(targetRepo, options = {}) {
   for (const [name, value] of [
     ['rai', 'node bin/rai.js'],
     ['raiola', 'node bin/raiola.js'],
-    ['cwf', 'node bin/cwf.js'],
+    ['raiola-on', 'node bin/raiola-on.js'],
   ]) {
     if (!packageJson.scripts[name]) {
       packageJson.scripts[name] = value;
       report.added.push(name);
     }
+  }
+  if (packageJson.scripts.cwf === 'node bin/cwf.js') {
+    delete packageJson.scripts.cwf;
+    report.removed.push('cwf');
   }
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
   return report;
@@ -712,7 +754,7 @@ Add or adapt a short workflow section like this inside your repo's \`AGENTS.md\`
 - Activate the workflow control plane only when the user explicitly asks for workflow, milestone, handoff, or closeout discipline.
 - Resolve the active root from \`docs/workflow/WORKSTREAMS.md\` before reading workflow docs.
 - Treat \`EXECPLAN.md\` as the only canonical plan source during plan and execute.
-- Use \`npm run workflow:hud\`, \`npm run workflow:next\`, and \`npm run workflow:health -- --strict\` to orient, route, and verify.
+- Use \`rai hud\`, \`rai next\`, and \`rai health --strict\` to orient, route, and verify.
 - Keep \`.workflow/state.json\` generated and non-canonical; markdown files remain the source of truth.
 `;
 
@@ -994,11 +1036,10 @@ function installWorkflowSurface(targetRepo, options = {}) {
   const binTarget = path.join(targetRepo, 'bin', 'rai.js');
   const aliasBinTargets = [
     path.join(targetRepo, 'bin', 'raiola.js'),
-    path.join(targetRepo, 'bin', 'cwf.js'),
+    path.join(targetRepo, 'bin', 'raiola-on.js'),
   ];
   const compareTarget = path.join(targetRepo, 'scripts', 'compare_golden_snapshots.ts');
   const skillTarget = path.join(targetRepo, '.agents', 'skills', 'raiola', 'SKILL.md');
-  const legacySkillTarget = path.join(targetRepo, '.agents', 'skills', 'codex-workflow', 'SKILL.md');
   const workflowIgnoreTarget = path.join(targetRepo, '.workflowignore');
   const selectedRuntimeFiles = runtimeFilesForScriptProfile(selectedScriptProfile, {
     targetRepo,
@@ -1015,7 +1056,7 @@ function installWorkflowSurface(targetRepo, options = {}) {
 
   const docsExists = fs.existsSync(docsTarget);
   if (mode === 'init' && docsExists && !forceDocs) {
-    throw new Error(`Workflow root already exists at ${docsTarget}. Run workflow:migrate or pass --force-docs.`);
+    throw new Error(`Workflow root already exists at ${docsTarget}. Run rai migrate or pass --force-docs.`);
   }
 
   const report = {
@@ -1028,13 +1069,13 @@ function installWorkflowSurface(targetRepo, options = {}) {
     binAliases: [],
     compareScript: null,
     skill: null,
-    legacySkill: null,
     workflowIgnore: null,
     gitignore: null,
     packageScripts: null,
     agentsTemplate: null,
     productManifest: null,
     versionMarker: null,
+    legacyArtifactsRemoved: [],
     runtimeSurfaceProfile: runtimeSurfaceProfileForScriptProfile(selectedScriptProfile),
     runtimeFileCount: selectedRuntimeFiles.length,
     prunedRuntimeFiles: [],
@@ -1063,7 +1104,6 @@ function installWorkflowSurface(targetRepo, options = {}) {
     ? copyFileTracked(source.compareScript, compareTarget, { overwrite: true })
     : 'skipped';
   report.skill = copyFileTracked(source.skillFile, skillTarget, { overwrite: true });
-  report.legacySkill = copyFileTracked(source.skillFile, legacySkillTarget, { overwrite: true });
   report.workflowIgnore = copyFileTracked(source.workflowIgnore, workflowIgnoreTarget, { overwrite: false });
   if (manageGitignore) {
     report.gitignore = patchGitignore(targetRepo);
@@ -1084,6 +1124,16 @@ function installWorkflowSurface(targetRepo, options = {}) {
     sourceLayout: source,
   });
   report.versionMarker = writeVersionMarker(targetRepo, { mode });
+  for (const legacyPath of [
+    path.join(targetRepo, 'bin', 'cwf.js'),
+    path.join(targetRepo, '.agents', 'skills', 'codex-workflow'),
+  ]) {
+    if (!fs.existsSync(legacyPath)) {
+      continue;
+    }
+    fs.rmSync(legacyPath, { recursive: true, force: true });
+    report.legacyArtifactsRemoved.push(legacyPath);
+  }
   report.sync = syncDefaultWorkflowSurface(targetRepo, { setAsActive: mode === 'init' });
   if (verify) {
     report.hudState = verifyInstalledSurface(targetRepo);

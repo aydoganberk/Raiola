@@ -103,7 +103,7 @@ function buildBaseState(cwd, rootDir) {
     handoff: {
       status: String(getFieldValue(handoffDoc, 'Handoff status') || 'idle').trim(),
       resumeAnchor: String(getFieldValue(handoffDoc, 'Resume anchor') || 'start').trim(),
-      expectedFirstCommand: String(getFieldValue(handoffDoc, 'Expected first command') || 'npm run workflow:health -- --strict').trim(),
+      expectedFirstCommand: String(getFieldValue(handoffDoc, 'Expected first command') || 'npm run raiola:health -- --strict').trim(),
       nextAction: safeExtract(handoffDoc, 'Immediate Next Action', '- `No immediate handoff action recorded`'),
     },
     counts: {

@@ -74,7 +74,6 @@ function expectedRuntimeFiles() {
   }
   files.push({ source: source.compareScript, relative: relativePath(source.repoRoot, source.compareScript) });
   files.push({ source: source.skillFile, relative: '.agents/skills/raiola/SKILL.md' });
-  files.push({ source: source.skillFile, relative: '.agents/skills/codex-workflow/SKILL.md' });
   return files;
 }
 

@@ -51,7 +51,7 @@ Usage:
   node scripts/workflow/team.js packet --task-packet wave1-worker-1
 
 Notes:
-  This command is a product-friendly wrapper over workflow:delegation-plan plus team_runtime.
+  This command is a product-friendly wrapper over raiola:delegation-plan plus team_runtime.
   \`team plan\` keeps planning on paper; \`team run/dispatch/monitor/collect\` operate the adapter runtime.
   `);
 }

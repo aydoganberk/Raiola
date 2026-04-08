@@ -61,7 +61,7 @@ Usage rules:
   - validation contract state is known
   - AGENTS review plan is known
   - git closeout scope is known
-  - `workflow:health -- --strict` is clean
+  - `raiola:health -- --strict` is clean
 - Do not start planning the next milestone before the current one is `complete`
 - Default granularity:
   - `One user request is usually modeled as one milestone`
@@ -118,11 +118,11 @@ Usage rules:
 
 ## Milestone Notes
 
-- `workflow:packet` produces a step packet with a deterministic hash.
-- `workflow:next` produces the recommended next move for the active step.
-- `workflow:pause-work` and `workflow:resume-work` carry the execution cursor and packet snapshot.
-- `workflow:health --strict` is the main gate.
-- `workflow:workstreams create -- --name <slug>` scaffolds an inactive named root.
-- `workflow:workstreams switch -- --name <slug> --create` creates and activates a named root in one move.
-- `workflow:workstreams progress` shows which stream is stale or budget-out without opening each root manually.
+- `raiola:packet` produces a step packet with a deterministic hash.
+- `raiola:next` produces the recommended next move for the active step.
+- `raiola:pause-work` and `raiola:resume-work` carry the execution cursor and packet snapshot.
+- `raiola:health --strict` is the main gate.
+- `raiola:workstreams create -- --name <slug>` scaffolds an inactive named root.
+- `raiola:workstreams switch -- --name <slug> --create` creates and activates a named root in one move.
+- `raiola:workstreams progress` shows which stream is stale or budget-out without opening each root manually.
 - `Do not prefill active or pending milestones unless the user explicitly wants that`

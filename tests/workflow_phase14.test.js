@@ -129,7 +129,7 @@ test('doctor and health repair flows detect and apply safe runtime fixes', () =>
 
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(readFile(targetRepo, 'package.json'));
-  delete packageJson.scripts['workflow:launch'];
+  delete packageJson.scripts['raiola:launch'];
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
   fs.writeFileSync(path.join(targetRepo, '.gitignore'), '# intentionally incomplete\n');
   fs.rmSync(path.join(targetRepo, '.workflow', 'VERSION.md'));
@@ -148,7 +148,7 @@ test('doctor and health repair flows detect and apply safe runtime fixes', () =>
   ));
 
   assert.ok(doctorRepair.repair.safeActionCount >= 2);
-  assert.equal(JSON.parse(readFile(targetRepo, 'package.json')).scripts['workflow:launch'], 'node scripts/workflow/launch.js');
+  assert.equal(JSON.parse(readFile(targetRepo, 'package.json')).scripts['raiola:launch'], 'node scripts/workflow/launch.js');
   assert.match(readFile(targetRepo, '.gitignore'), /\.workflow\//);
   assert.match(readFile(targetRepo, '.gitignore'), /\.agents\//);
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'VERSION.md')));

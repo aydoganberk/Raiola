@@ -6,9 +6,9 @@ const EMBEDDED_PRODUCT = Object.freeze({
   legacyNames: Object.freeze(['codex-workflow-kit']),
   version: '0.3.1',
   primaryCommand: 'rai',
-  commandAliases: Object.freeze(['raiola', 'cwf', 'codex-workflow']),
+  commandAliases: Object.freeze(['raiola', 'raiola-on']),
   primarySkillName: 'raiola',
-  legacySkillNames: Object.freeze(['codex-workflow']),
+  legacySkillNames: Object.freeze([]),
 });
 
 function repoPackagePath() {

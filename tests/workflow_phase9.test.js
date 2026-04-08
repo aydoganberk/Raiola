@@ -27,12 +27,12 @@ function readFile(targetRepo, relativePath) {
   return fs.readFileSync(path.join(targetRepo, relativePath), 'utf8');
 }
 
-test('workflow:init installs workflow:checkpoint and new milestone seeds continuity sections', () => {
+test('raiola:init installs raiola:checkpoint and new milestone seeds continuity sections', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
 
   const packageJson = JSON.parse(readFile(targetRepo, 'package.json'));
-  assert.equal(packageJson.scripts['workflow:checkpoint'], 'node scripts/workflow/checkpoint.js');
+  assert.equal(packageJson.scripts['raiola:checkpoint'], 'node scripts/workflow/checkpoint.js');
 
   run(
     'node',
@@ -64,7 +64,7 @@ test('workflow:init installs workflow:checkpoint and new milestone seeds continu
   assert.match(windowDoc, /## Checkpoint Guard/);
 });
 
-test('workflow:checkpoint writes continuity checkpoint and refreshes window freshness', () => {
+test('raiola:checkpoint writes continuity checkpoint and refreshes window freshness', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run(
@@ -100,7 +100,7 @@ test('workflow:checkpoint writes continuity checkpoint and refreshes window fres
   assert.match(windowDoc, /- Checkpoint freshness: `yes`/);
 });
 
-test('workflow:pause-work creates a checkpoint first and resume-work surfaces checkpoint plus open requirements', () => {
+test('raiola:pause-work creates a checkpoint first and resume-work surfaces checkpoint plus open requirements', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run(
@@ -142,7 +142,7 @@ test('workflow:pause-work creates a checkpoint first and resume-work surfaces ch
   assert.match(windowDoc, /- Checkpoint freshness: `yes`/);
 });
 
-test('workflow:window becomes checkpoint-aware and asks for a checkpoint before compacting when stale', () => {
+test('raiola:window becomes checkpoint-aware and asks for a checkpoint before compacting when stale', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run(

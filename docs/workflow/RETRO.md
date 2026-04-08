@@ -53,9 +53,9 @@
 
 ## Failure Signals
 
-- `Hash drift` -> `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
-- `Active root mismatch` -> `workflow:workstreams status -> workflow:switch-workstream or use --root to return to the correct root`
-- `Resume ambiguity` -> `Read HANDOFF.md + WINDOW.md -> workflow:resume-work -> workflow:next`
+- `Hash drift` -> `raiola:packet -- --all --sync -> raiola:window -- --sync -> raiola:health -- --strict`
+- `Active root mismatch` -> `raiola:workstreams status -> raiola:switch-workstream or use --root to return to the correct root`
+- `Resume ambiguity` -> `Read HANDOFF.md + WINDOW.md -> raiola:resume-work -> raiola:next`
 - `Dirty worktree closeout` -> `Use explicit --stage-paths or --allow-workflow-only when it is truly docs-only`
 
 ## Recent Retro Entries

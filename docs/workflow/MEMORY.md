@@ -11,7 +11,7 @@
 - `Active Recall Items` are cleared when the milestone completes and copied into the milestone archive snapshot.
 - `Durable Notes` are longer-lived notes that should survive milestone closeout.
 - Keep this file short.
-- Use `npm run workflow:save-memory -- --title "..." --note "..."` for standard entries.
+- Use `npm run raiola:save-memory -- --title "..." --note "..."` for standard entries.
 - When a milestone is active, the helper defaults to `active` mode; use `--mode durable` for long-lived notes.
 
 ## Active Recall Items

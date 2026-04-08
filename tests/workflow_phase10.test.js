@@ -141,7 +141,7 @@ function seedExecutePacketSurface(targetRepo) {
   validationDoc = replaceSection(validationDoc, 'Acceptance Criteria', `
 | Acceptance ID | Criterion | How to observe | Status |
 | --- | --- | --- | --- |
-| \`AC1\` | \`Execute reads only the current chunk, open requirements, acceptance rows, and touched files\` | \`workflow:packet -- --step execute --json contains only the focused refs\` | \`planned\` |
+| \`AC1\` | \`Execute reads only the current chunk, open requirements, acceptance rows, and touched files\` | \`raiola:packet -- --step execute --json contains only the focused refs\` | \`planned\` |
 `);
   writeFile(targetRepo, 'docs/workflow/VALIDATION.md', validationDoc);
 
@@ -150,7 +150,7 @@ function seedExecutePacketSurface(targetRepo) {
   run('node', [path.join(targetRepo, 'scripts', 'workflow', 'build_packet.js'), '--doc', 'validation', '--step', 'audit', '--sync'], targetRepo);
 }
 
-test('workflow:packet produces Packet v5 tiered read sets and omits cold refs on stable reruns', () => {
+test('raiola:packet produces Packet v5 tiered read sets and omits cold refs on stable reruns', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
 
@@ -180,7 +180,7 @@ test('workflow:packet produces Packet v5 tiered read sets and omits cold refs on
   assert.ok(packet.readSetTiers.tierAOmitted.every((ref) => ref.includes('#')));
 });
 
-test('workflow:packet keeps execute read sets focused on current chunk, acceptance rows, and touched files', () => {
+test('raiola:packet keeps execute read sets focused on current chunk, acceptance rows, and touched files', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   seedExecutePacketSurface(targetRepo);
@@ -204,7 +204,7 @@ test('workflow:packet keeps execute read sets focused on current chunk, acceptan
   assert.ok(!packet.recommendedReadSet.includes('docs/workflow/RUNTIME.md'));
 });
 
-test('workflow:migrate seeds Packet v5 sections into older docs without overwriting custom content', () => {
+test('raiola:migrate seeds Packet v5 sections into older docs without overwriting custom content', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
 
@@ -262,7 +262,7 @@ test('workflow:migrate seeds Packet v5 sections into older docs without overwrit
   assert.match(windowAfter, /## Checkpoint Guard/);
 });
 
-test('workflow:packet can disable token efficiency measures and force continuity-first loading', () => {
+test('raiola:packet can disable token efficiency measures and force continuity-first loading', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
 

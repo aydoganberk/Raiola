@@ -10,7 +10,7 @@
 - Resume anchor: `Milestone open`
 - Packet hash: `pending_sync`
 - Current chunk cursor: `0/0`
-- Expected first command: `npm run workflow:health -- --strict`
+- Expected first command: `npm run raiola:health -- --strict`
 
 ## Snapshot
 
@@ -52,9 +52,9 @@
 
 ## Suggested Resume Commands
 
-- `npm run workflow:resume-work`
-- `npm run workflow:health -- --strict`
-- `npm run workflow:next`
+- `npm run raiola:resume-work`
+- `npm run raiola:health -- --strict`
+- `npm run raiola:next`
 
 ## Files To Reopen
 

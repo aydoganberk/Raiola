@@ -109,6 +109,25 @@ function removePackageScripts(targetRepo, dryRun) {
     report.removed.push(name);
   }
 
+  for (const [name, expected] of [
+    ['rai', 'node bin/rai.js'],
+    ['raiola', 'node bin/raiola.js'],
+    ['raiola-on', 'node bin/raiola-on.js'],
+    ['cwf', 'node bin/cwf.js'],
+  ]) {
+    if (!(name in scripts)) {
+      continue;
+    }
+
+    if (scripts[name] !== expected) {
+      report.conflicts.push({ name, existing: scripts[name], expected });
+      continue;
+    }
+
+    delete scripts[name];
+    report.removed.push(name);
+  }
+
   if (!dryRun) {
     pkg.scripts = scripts;
     fs.writeFileSync(packageJsonPath, `${JSON.stringify(pkg, null, 2)}\n`);
@@ -149,6 +168,7 @@ function main() {
 
   maybeRemove(path.join(targetRepo, 'bin', 'rai.js'), report, dryRun);
   maybeRemove(path.join(targetRepo, 'bin', 'raiola.js'), report, dryRun);
+  maybeRemove(path.join(targetRepo, 'bin', 'raiola-on.js'), report, dryRun);
   maybeRemove(path.join(targetRepo, 'bin', 'cwf.js'), report, dryRun);
   maybeRemove(path.join(targetRepo, 'scripts', 'compare_golden_snapshots.ts'), report, dryRun);
   maybeRemove(path.join(targetRepo, '.agents', 'skills', 'raiola'), report, dryRun);

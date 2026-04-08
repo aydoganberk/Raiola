@@ -441,10 +441,10 @@ function main() {
       lastControlIntent: intentLabel,
       gate: {
         planGate,
-        command: 'npm run workflow:plan-check -- --sync --strict',
+        command: 'npm run raiola:plan-check -- --sync --strict',
       },
-      missingFields: ['workflow:plan-check must pass before execute can start'],
-      message: 'Execute step cannot start before workflow:plan-check passes.',
+      missingFields: ['raiola:plan-check must pass before execute can start'],
+      message: 'Execute step cannot start before raiola:plan-check passes.',
     };
 
     if (args.json) {
@@ -550,14 +550,14 @@ function main() {
       fulfilled: report.planReady,
       lastControlIntent: intentLabel,
       message: report.planReady
-        ? 'Condensed plan fulfilled and checked with workflow:plan-check.'
+        ? 'Condensed plan fulfilled and checked with raiola:plan-check.'
         : 'Condensed plan icin eksik alanlar bunlar.',
       missingFields,
       gate: {
         planReady: Boolean(report.planReady),
         planGate: report.planGate || 'pending',
         summary: report.summary || null,
-        command: 'npm run workflow:plan-check -- --sync --strict',
+        command: 'npm run raiola:plan-check -- --sync --strict',
       },
       intent: controlIntent
         ? {

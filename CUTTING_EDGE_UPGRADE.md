@@ -1,6 +1,6 @@
 # Cutting-Edge Upgrade Summary
 
-Primary shell note: the current public CLI is `rai`. Legacy examples that mention `cwf` refer to the compatibility alias.
+Primary shell note: the current public CLI is `rai`, and the package/runtime brand is `raiola`.
 
 ## What was added
 

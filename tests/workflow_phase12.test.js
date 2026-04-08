@@ -57,14 +57,15 @@ test('rai help and setup expose the product shell while uninstall keeps canonica
   const gitignore = readFile(targetRepo, '.gitignore');
   assert.equal(manifest.scriptProfile, 'pilot');
   assert.equal(manifest.runtimeSurfaceProfile, 'pilot');
-  assert.equal(packageJson.scripts['workflow:quick'], 'node scripts/workflow/quick.js');
-  assert.equal(packageJson.scripts['workflow:review'], 'node scripts/workflow/review.js');
-  assert.equal(packageJson.scripts['workflow:setup'], 'node scripts/workflow/setup.js');
-  assert.equal(packageJson.scripts['workflow:update'], 'node scripts/workflow/update.js');
-  assert.equal(packageJson.scripts['workflow:uninstall'], 'node scripts/workflow/uninstall.js');
-  assert.equal(packageJson.scripts['workflow:notify'], undefined);
-  assert.equal(packageJson.scripts['workflow:assumptions'], undefined);
+  assert.equal(packageJson.scripts['raiola:quick'], 'node scripts/workflow/quick.js');
+  assert.equal(packageJson.scripts['raiola:review'], 'node scripts/workflow/review.js');
+  assert.equal(packageJson.scripts['raiola:setup'], 'node scripts/workflow/setup.js');
+  assert.equal(packageJson.scripts['raiola:update'], 'node scripts/workflow/update.js');
+  assert.equal(packageJson.scripts['raiola:uninstall'], 'node scripts/workflow/uninstall.js');
+  assert.equal(packageJson.scripts['raiola:notify'], undefined);
+  assert.equal(packageJson.scripts['raiola:assumptions'], undefined);
   assert.equal(packageJson.scripts.rai, 'node bin/rai.js');
+  assert.equal(packageJson.scripts['raiola-on'], 'node bin/raiola-on.js');
   assert.match(gitignore, /\.workflow\//);
   assert.match(gitignore, /\.agents\//);
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'quick.js')));
@@ -73,7 +74,11 @@ test('rai help and setup expose the product shell while uninstall keeps canonica
   assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'ui_direction.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'cli', 'rai.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'bin', 'rai.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'bin', 'raiola-on.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'VERSION.md')));
+  const onboardingPayload = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'raiola-on.js'), 'next', '--json'], targetRepo));
+  assert.equal(onboardingPayload.status, 'ready_for_milestone');
+  assert.match(onboardingPayload.command, /rai milestone --id M1/);
   const pilotHelp = run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'help'], targetRepo);
   assert.match(pilotHelp, /Focused install/i);
   assert.match(pilotHelp, /pilot/);
@@ -102,18 +107,19 @@ test('rai help and setup expose the product shell while uninstall keeps canonica
   assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'setup.js')));
   assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'cli', 'rai.js')));
   assert.ok(!fs.existsSync(path.join(targetRepo, 'bin', 'rai.js')));
+  assert.ok(!fs.existsSync(path.join(targetRepo, 'bin', 'raiola-on.js')));
   assert.ok(!fs.existsSync(path.join(targetRepo, '.workflow', 'product-manifest.json')));
   assert.ok(!fs.existsSync(path.join(targetRepo, '.workflow', 'VERSION.md')));
   assert.ok(uninstallPayload.removed.some((item) => item.endsWith('scripts/workflow/quick.js')));
 
   const packageJsonAfter = JSON.parse(readFile(targetRepo, 'package.json'));
-  assert.equal(packageJsonAfter.scripts['workflow:quick'], undefined);
-  assert.equal(packageJsonAfter.scripts['workflow:setup'], undefined);
+  assert.equal(packageJsonAfter.scripts['raiola:quick'], undefined);
+  assert.equal(packageJsonAfter.scripts['raiola:setup'], undefined);
 
   run('node', [cwfBin, 'uninstall', '--target', targetRepo], repoRoot);
 });
 
-test('workflow:update can contract a full install down to the pilot surface', () => {
+test('raiola:update can contract a full install down to the pilot surface', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo, '--script-profile', 'full', '--skip-verify'], repoRoot);
 
@@ -134,8 +140,8 @@ test('workflow:update can contract a full install down to the pilot surface', ()
   assert.equal(pilotManifest.runtimeSurfaceProfile, 'pilot');
   assert.ok(pilotManifest.runtimeFiles.length < fullManifest.runtimeFiles.length);
   assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'notify.js')));
-  assert.equal(packageJson.scripts['workflow:notify'], undefined);
-  assert.equal(packageJson.scripts['workflow:quick'], 'node scripts/workflow/quick.js');
+  assert.equal(packageJson.scripts['raiola:notify'], undefined);
+  assert.equal(packageJson.scripts['raiola:quick'], 'node scripts/workflow/quick.js');
 });
 
 test('rai milestone opens a full-workflow milestone without npm script indirection', () => {
@@ -155,13 +161,13 @@ test('rai milestone opens a full-workflow milestone without npm script indirecti
   assert.match(statusDoc, /- Current milestone: `M14 - CLI milestone`/);
 });
 
-test('workflow:doctor audits install-surface drift and suggests fix commands', () => {
+test('raiola:doctor audits install-surface drift and suggests fix commands', () => {
   const targetRepo = makeTempRepo();
   run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
 
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(readFile(targetRepo, 'package.json'));
-  delete packageJson.scripts['workflow:quick'];
+  delete packageJson.scripts['raiola:quick'];
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
   fs.writeFileSync(path.join(targetRepo, '.gitignore'), '# test-only gitignore\n');
   fs.rmSync(path.join(targetRepo, '.agents', 'skills', 'raiola', 'SKILL.md'));
@@ -178,7 +184,7 @@ test('workflow:doctor audits install-surface drift and suggests fix commands', (
   );
 
   assert.equal(result.status, 1);
-  assert.match(result.stdout, /Package scripts -> missing=workflow:quick/);
+  assert.match(result.stdout, /Package scripts -> missing=raiola:quick/);
   assert.match(result.stdout, /fix: `rai update --overwrite-scripts`/);
   assert.match(result.stdout, /Gitignore hygiene -> missing \.workflow\/, \.agents\//);
   assert.match(result.stdout, /Skill surface -> \.agents\/skills\/raiola\/SKILL\.md is missing/);
@@ -186,7 +192,7 @@ test('workflow:doctor audits install-surface drift and suggests fix commands', (
   assert.match(result.stdout, /fix: `rai update`/);
 });
 
-test('workflow:quick start and close keep markdown artifacts visible', () => {
+test('raiola:quick start and close keep markdown artifacts visible', () => {
   const targetRepo = makeTempRepo();
   run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
 
@@ -216,7 +222,7 @@ test('workflow:quick start and close keep markdown artifacts visible', () => {
   assert.match(handoffDoc, /Quick task completed/);
 });
 
-test('workflow:quick escalation can open a full milestone and sync intake into canonical docs', () => {
+test('raiola:quick escalation can open a full milestone and sync intake into canonical docs', () => {
   const targetRepo = makeTempRepo();
   run('node', [setupScript, '--target', targetRepo, '--skip-verify'], repoRoot);
   run(
@@ -249,7 +255,7 @@ test('workflow:quick escalation can open a full milestone and sync intake into c
   assert.match(milestonesDoc, /\| Q12 \|/);
 });
 
-test('workflow:team wrapper writes canonical orchestration files and supports pause/resume', () => {
+test('raiola:team wrapper writes canonical orchestration files and supports pause/resume', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo, '--skip-verify'], repoRoot);
   run(
@@ -334,7 +340,7 @@ test('review, ship, pr brief, release notes, and session report emit report file
   }
 });
 
-test('workflow:benchmark reports timings and cache counters', () => {
+test('raiola:benchmark reports timings and cache counters', () => {
   const targetRepo = makeTempRepo();
   run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
@@ -350,7 +356,7 @@ test('workflow:benchmark reports timings and cache counters', () => {
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'benchmarks', 'latest.json')));
 });
 
-test('workflow:benchmark can enforce SLO thresholds in machine-readable mode', () => {
+test('raiola:benchmark can enforce SLO thresholds in machine-readable mode', () => {
   const targetRepo = makeTempRepo();
   run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
@@ -395,7 +401,7 @@ test('workflow:benchmark can enforce SLO thresholds in machine-readable mode', (
   assert.equal(failingPayload.slo.failures[0].command, 'hud');
 });
 
-test('workflow:benchmark covers documented launch, manager, and next-prompt targets', () => {
+test('raiola:benchmark covers documented launch, manager, and next-prompt targets', () => {
   const targetRepo = makeTempRepo();
   run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
@@ -415,7 +421,7 @@ test('workflow:benchmark covers documented launch, manager, and next-prompt targ
   assert.ok(payload.results.every((item) => typeof item.warmMedianMs === 'number'));
 });
 
-test('workflow:benchmark covers codex-specific contextpack and promptpack hot paths', () => {
+test('raiola:benchmark covers codex-specific contextpack and promptpack hot paths', () => {
   const targetRepo = makeTempRepo();
   run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 

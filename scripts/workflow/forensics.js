@@ -145,11 +145,11 @@ ${validationIssues.length === 0
 
 ## Recommended Repair Order
 
-1. \`workflow:packet -- --all --sync\`
-2. \`workflow:window -- --sync\`
-3. \`workflow:evidence-check --strict\`
-4. \`workflow:validate-contract --strict\`
-5. \`workflow:health -- --strict\`
+1. \`raiola:packet -- --all --sync\`
+2. \`raiola:window -- --sync\`
+3. \`raiola:evidence-check --strict\`
+4. \`raiola:validate-contract --strict\`
+5. \`raiola:health -- --strict\`
 `;
 
   fs.writeFileSync(reportPath, report);

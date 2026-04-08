@@ -69,7 +69,7 @@ function initGitRepo(targetRepo) {
   run('git', ['commit', '-m', 'init'], targetRepo);
 }
 
-test('workflow:workstreams progress shows stale and budget-out streams in one command', () => {
+test('raiola:workstreams progress shows stale and budget-out streams in one command', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
 
@@ -161,10 +161,10 @@ test('team mode makes health strict by default and resume output reflects that',
   assert.equal(planCheckFailure.status, 1);
 
   const resumeOutput = run('node', [workstreamsScript, 'resume', '--name', 'team-stream'], targetRepo);
-  assert.ok(resumeOutput.includes('workflow:health -- --strict --root docs/team-stream'));
+  assert.ok(resumeOutput.includes('raiola:health -- --strict --root docs/team-stream'));
 
   const completeOutput = run('node', [workstreamsScript, 'complete', '--name', 'team-stream'], targetRepo);
-  assert.ok(completeOutput.includes('workflow:health -- --strict'));
+  assert.ok(completeOutput.includes('raiola:health -- --strict'));
 });
 
 test('team mode enforces unique milestone ids and branch isolation during workstream switch', () => {
@@ -205,7 +205,7 @@ test('team mode enforces unique milestone ids and branch isolation during workst
   assert.match(statusDoc, /^- Current milestone: `M6-[a-z0-9]{6} - Team stream`$/m);
 });
 
-test('workflow:ensure-isolation provisions a real worktree checkout', () => {
+test('raiola:ensure-isolation provisions a real worktree checkout', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   initGitRepo(targetRepo);

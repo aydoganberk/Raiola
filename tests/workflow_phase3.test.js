@@ -90,7 +90,7 @@ function seedPlanReadyDocs(targetRepo, options = {}) {
   contextDoc = replaceSection(contextDoc, 'Success Rubric', `
 | Outcome | Observable signal | Why it matters |
 | --- | --- | --- |
-| \`Planning packet is complete before execute\` | \`workflow:plan-check returns planReady=true and writes Plan readiness: yes\` | \`Execute should only start after the quality gate passes\` |
+| \`Planning packet is complete before execute\` | \`raiola:plan-check returns planReady=true and writes Plan readiness: yes\` | \`Execute should only start after the quality gate passes\` |
 | \`Validation intent is explicit\` | \`VALIDATION.md names acceptance criteria, user-visible outcomes, regression focus, and concrete verification rows\` | \`Audit should already know what it will prove\` |
 `);
   contextDoc = replaceSection(contextDoc, 'Requirement List', `
@@ -162,18 +162,18 @@ function seedPlanReadyDocs(targetRepo, options = {}) {
 | Acceptance ID | Criterion | How to observe | Status |
 | --- | --- | --- | --- |
 | \`AC1\` | \`The discuss packet names intent, constraints, alternatives, success rubric, and requirements\` | \`Open CONTEXT.md and see each section filled with milestone-specific content\` | \`planned\` |
-| \`AC2\` | \`The plan gate blocks execute until coverage and validation mapping are explicit\` | \`Run workflow:plan-check and verify that planReady becomes true only for the complete vertical-slice plan\` | \`planned\` |
+| \`AC2\` | \`The plan gate blocks execute until coverage and validation mapping are explicit\` | \`Run raiola:plan-check and verify that planReady becomes true only for the complete vertical-slice plan\` | \`planned\` |
 `);
   validationDoc = replaceSection(validationDoc, 'User-visible Outcomes', `
 | Outcome | How to observe | Status |
 | --- | --- | --- |
 | \`Planner sees one coherent packet before execute\` | \`CONTEXT.md, EXECPLAN.md, and VALIDATION.md answer what, why, and how we will validate it\` | \`planned\` |
-| \`Execute is blocked until the gate passes\` | \`Context readiness becomes plan_ready only after workflow:plan-check succeeds\` | \`planned\` |
+| \`Execute is blocked until the gate passes\` | \`Context readiness becomes plan_ready only after raiola:plan-check succeeds\` | \`planned\` |
 `);
   validationDoc = replaceSection(validationDoc, 'Regression Focus', `
 | Area | Risk | Check |
 | --- | --- | --- |
-| \`Existing workflow commands\` | \`New sections could break milestone seeding or closeout\` | \`Run workflow:new-milestone and workflow:plan-check on a fresh fixture repo\` |
+| \`Existing workflow commands\` | \`New sections could break milestone seeding or closeout\` | \`Run raiola:milestone and raiola:plan-check on a fresh fixture repo\` |
 | \`Planning ergonomics\` | \`The gate could accept horizontal slicing or orphan requirements\` | \`Use a negative fixture that maps requirements into UI/API layers and expect a fail\` |
 `);
   validationDoc = replaceSection(validationDoc, 'Validation Contract', `
@@ -185,12 +185,12 @@ function seedPlanReadyDocs(targetRepo, options = {}) {
   writeFile(targetRepo, 'docs/workflow/VALIDATION.md', validationDoc);
 }
 
-test('workflow:init installs workflow:plan-check and new_milestone seeds Phase 3 sections', () => {
+test('raiola:init installs raiola:plan-check and new_milestone seeds Phase 3 sections', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
 
   const packageJson = JSON.parse(readFile(targetRepo, 'package.json'));
-  assert.equal(packageJson.scripts['workflow:plan-check'], 'node scripts/workflow/plan_check.js');
+  assert.equal(packageJson.scripts['raiola:plan-check'], 'node scripts/workflow/plan_check.js');
 
   run('node', [path.join(targetRepo, 'scripts', 'workflow', 'new_milestone.js'), '--id', 'M3', '--name', 'Phase 3', '--goal', 'Implement coverage-driven planning'], targetRepo);
 
@@ -208,7 +208,7 @@ test('workflow:init installs workflow:plan-check and new_milestone seeds Phase 3
   assert.match(validationDoc, /## Regression Focus/);
 });
 
-test('workflow:plan-check keeps the seeded milestone pending until coverage and strategy are explicit', () => {
+test('raiola:plan-check keeps the seeded milestone pending until coverage and strategy are explicit', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run('node', [path.join(targetRepo, 'scripts', 'workflow', 'new_milestone.js'), '--id', 'M3', '--name', 'Phase 3', '--goal', 'Implement coverage-driven planning'], targetRepo);
@@ -224,7 +224,7 @@ test('workflow:plan-check keeps the seeded milestone pending until coverage and 
   assert.match(contextDoc, /- Plan readiness: `not_ready`/);
 });
 
-test('workflow:plan-check syncs plan-ready only after a vertical-slice plan passes', () => {
+test('raiola:plan-check syncs plan-ready only after a vertical-slice plan passes', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run('node', [path.join(targetRepo, 'scripts', 'workflow', 'new_milestone.js'), '--id', 'M3', '--name', 'Phase 3', '--goal', 'Implement coverage-driven planning'], targetRepo);
@@ -243,13 +243,13 @@ test('workflow:plan-check syncs plan-ready only after a vertical-slice plan pass
   const state = JSON.parse(readFile(targetRepo, '.workflow/state.json'));
 
   assert.match(contextDoc, /- Plan readiness: `yes`/);
-  assert.match(contextDoc, /workflow:plan-check passed/);
+  assert.match(contextDoc, /raiola:plan-check passed/);
   assert.match(statusDoc, /- Context readiness: `plan_ready`/);
   assert.match(execplanDoc, /- Plan-ready gate: `pass`/);
   assert.equal(state.planCheck.planReady, true);
 });
 
-test('workflow:plan-check fails anti-horizontal slicing for UI\/API chunk plans', () => {
+test('raiola:plan-check fails anti-horizontal slicing for UI\/API chunk plans', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run('node', [path.join(targetRepo, 'scripts', 'workflow', 'new_milestone.js'), '--id', 'M3', '--name', 'Phase 3', '--goal', 'Implement coverage-driven planning'], targetRepo);
@@ -262,7 +262,7 @@ test('workflow:plan-check fails anti-horizontal slicing for UI\/API chunk plans'
   assert.deepEqual(report.antiHorizontalSlicing.flaggedChunks, ['chunk-ui', 'chunk-api']);
 });
 
-test('workflow:new-milestone accepts milestone profile override and automation mode', () => {
+test('raiola:milestone accepts milestone profile override and automation mode', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run(
@@ -290,7 +290,7 @@ test('workflow:new-milestone accepts milestone profile override and automation m
   assert.match(handoffDoc, /- Automation mode: `full`/);
 });
 
-test('workflow:automation updates milestone-scoped automation state', () => {
+test('raiola:automation updates milestone-scoped automation state', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run('node', [path.join(targetRepo, 'scripts', 'workflow', 'new_milestone.js'), '--id', 'M5', '--name', 'Automation', '--goal', 'Toggle automation'], targetRepo);
@@ -313,7 +313,7 @@ test('workflow:automation updates milestone-scoped automation state', () => {
   assert.match(handoffDoc, /- Automation mode: `phase`/);
 });
 
-test('workflow:plan-check lite profile downgrades selected completeness gaps to warnings at plan time', () => {
+test('raiola:plan-check lite profile downgrades selected completeness gaps to warnings at plan time', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run(

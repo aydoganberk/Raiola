@@ -6,6 +6,6 @@
 - health=`pass` fail=`0` warn=`0` window=`continue` remaining=`125682` handoff=`idle` auto_window=`continue_in_current_window`
 - packets=`context:d61184b21a5b/ok execplan:108faec45da3/ok validation:e68105ec6f4f/ok`
 - counts=`carryforward:0 seeds:0 recall:0`
-- next=`Open or switch a milestone` command=`npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual`
+- next=`Open Raiola onboarding` command=`rai on next`
 - team=`idle` verify_shell=`none` verify_browser=`none`
 - state=`.workflow/state.json`

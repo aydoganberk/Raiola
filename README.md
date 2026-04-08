@@ -4,7 +4,7 @@
 
 It installs a product shell, a markdown-canonical control plane, and repo-local runtime helpers so long-running engineering work stays resumable, reviewable, auditable, and safe to parallelize.
 
-`rai` is the primary CLI shell. The published package is `raiola`. Compatibility aliases such as `cwf` and `codex-workflow` still exist for older repos, but the product documentation now standardizes on `rai`.
+`rai` is the primary CLI shell. The published package is `raiola`. Repo-local npm fallbacks use the `raiola:*` namespace, and `raiola-on` is the first-run onboarding entry.
 
 ## Why raiola exists
 
@@ -95,10 +95,11 @@ node bin/rai.js doctor --strict
 
 ```bash
 npx raiola setup
-rai help
+rai on next
 rai doctor --strict
 rai hud --compact
-rai do "resume the current slice"
+rai milestone --id M1 --name "Initial slice" --goal "Land the next safe slice"
+rai do "land the next safe slice"
 rai next
 ```
 
@@ -117,6 +118,7 @@ rai dashboard --open
 Use this when one operator is moving one safe slice at a time.
 
 ```bash
+rai on next
 rai help solo
 rai do "resume the current slice"
 rai explore --changed
@@ -222,7 +224,7 @@ rai sessions
 
 ### Canonical workflow files
 
-- Full workflow: `docs/workflow/`
+- Full raiola: `docs/workflow/`
 - Quick mode: `.workflow/quick/`
 - Team Lite orchestration: `.workflow/orchestration/`
 
@@ -242,7 +244,7 @@ The design rule is simple: if it is markdown workflow state, it is canonical; if
 - `core`
   Broader day-to-day shell with curated npm aliases.
 - `full`
-  Maximum backward-compatible install surface, including the full legacy `workflow:*` alias layer.
+  Maximum install surface, including every repo-local `raiola:*` fallback.
 
 Move between them in-place:
 
@@ -255,8 +257,8 @@ rai update --script-profile full
 
 - `rai` is the public shell used in docs and examples.
 - `raiola` is the package name.
-- `workflow:*` npm scripts remain supported for installed repos.
-- `cwf` and `codex-workflow` remain compatibility aliases for older automation and historical setups.
+- `raiola-on` is the clean first-run entry for proposing a milestone from scratch.
+- `raiola:*` npm scripts remain supported for installed repos.
 
 ## Documentation map
 

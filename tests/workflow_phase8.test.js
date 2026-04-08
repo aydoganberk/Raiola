@@ -82,7 +82,7 @@ function seedPlanReadyDocs(targetRepo, options = {}) {
   contextDoc = replaceSection(contextDoc, 'Success Rubric', `
 | Outcome | Observable signal | Why it matters |
 | --- | --- | --- |
-| \`Planning packet is complete before execute\` | \`workflow:plan-check returns planReady=true and writes Plan readiness: yes\` | \`Execute should only start after the quality gate passes\` |
+| \`Planning packet is complete before execute\` | \`raiola:plan-check returns planReady=true and writes Plan readiness: yes\` | \`Execute should only start after the quality gate passes\` |
 | \`Validation intent is explicit\` | \`VALIDATION.md names acceptance criteria, user-visible outcomes, regression focus, and concrete verification rows\` | \`Audit should already know what it will prove\` |
 `);
   contextDoc = replaceSection(contextDoc, 'Requirement List', `
@@ -154,18 +154,18 @@ function seedPlanReadyDocs(targetRepo, options = {}) {
 | Acceptance ID | Criterion | How to observe | Status |
 | --- | --- | --- | --- |
 | \`AC1\` | \`The discuss packet names intent, constraints, alternatives, success rubric, and requirements\` | \`Open CONTEXT.md and see each section filled with milestone-specific content\` | \`planned\` |
-| \`AC2\` | \`The plan gate blocks execute until coverage and validation mapping are explicit\` | \`Run workflow:plan-check and verify that planReady becomes true only for the complete vertical-slice plan\` | \`planned\` |
+| \`AC2\` | \`The plan gate blocks execute until coverage and validation mapping are explicit\` | \`Run raiola:plan-check and verify that planReady becomes true only for the complete vertical-slice plan\` | \`planned\` |
 `);
   validationDoc = replaceSection(validationDoc, 'User-visible Outcomes', `
 | Outcome | How to observe | Status |
 | --- | --- | --- |
 | \`Planner sees one coherent packet before execute\` | \`CONTEXT.md, EXECPLAN.md, and VALIDATION.md answer what, why, and how we will validate it\` | \`planned\` |
-| \`Execute is blocked until the gate passes\` | \`Context readiness becomes plan_ready only after workflow:plan-check succeeds\` | \`planned\` |
+| \`Execute is blocked until the gate passes\` | \`Context readiness becomes plan_ready only after raiola:plan-check succeeds\` | \`planned\` |
 `);
   validationDoc = replaceSection(validationDoc, 'Regression Focus', `
 | Area | Risk | Check |
 | --- | --- | --- |
-| \`Existing workflow commands\` | \`New sections could break milestone seeding or closeout\` | \`Run workflow:new-milestone and workflow:plan-check on a fresh fixture repo\` |
+| \`Existing workflow commands\` | \`New sections could break milestone seeding or closeout\` | \`Run raiola:milestone and raiola:plan-check on a fresh fixture repo\` |
 | \`Planning ergonomics\` | \`The gate could accept horizontal slicing or orphan requirements\` | \`Use a negative fixture that maps requirements into UI/API layers and expect a fail\` |
 `);
   validationDoc = replaceSection(validationDoc, 'Validation Contract', `
@@ -208,10 +208,10 @@ test('workflow control covers the remaining phase 1 natural-language examples', 
   assert.equal(workflowOffPayload.intent.state, 'off');
   assert.equal(pausePayload.intent.family, 'pause_resume_control');
   assert.equal(pausePayload.intent.state, 'pause');
-  assert.match(planPayload.suggestedCommand, /workflow:step-fulfillment/);
+  assert.match(planPayload.suggestedCommand, /raiola:step-fulfillment/);
 });
 
-test('workflow:new-milestone seeds step fulfillment fields across status surfaces', () => {
+test('raiola:milestone seeds step fulfillment fields across status surfaces', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run(
@@ -240,7 +240,7 @@ test('workflow:new-milestone seeds step fulfillment fields across status surface
   assert.match(execplanDoc, /- Last control intent: `none`/);
 });
 
-test('workflow:step-fulfillment supports condensed, smoke, and fast closeout modes and blocks execute skip', () => {
+test('raiola:step-fulfillment supports condensed, smoke, and fast closeout modes and blocks execute skip', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run(
@@ -293,7 +293,7 @@ test('workflow:step-fulfillment supports condensed, smoke, and fast closeout mod
   assert.match(statusDoc, /- Step fulfillment state: `fulfilled_fast_closeout`/);
 });
 
-test('workflow:step-fulfillment turns plan skip into a checked condensed plan when the packet is ready', () => {
+test('raiola:step-fulfillment turns plan skip into a checked condensed plan when the packet is ready', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run(
@@ -331,7 +331,7 @@ test('workflow:step-fulfillment turns plan skip into a checked condensed plan wh
   assert.match(execplanDoc, /Condensed plan mode translates skip language into a minimum checked plan/);
 });
 
-test('workflow:step-fulfillment reports missing fields for condensed plan failure instead of a generic refusal', () => {
+test('raiola:step-fulfillment reports missing fields for condensed plan failure instead of a generic refusal', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run(

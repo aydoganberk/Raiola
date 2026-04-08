@@ -40,7 +40,7 @@ node scripts/workflow/setup.js --target /tmp/raiola-smoke --skip-verify
 
 ### CLI and workflow behavior
 
-- Preserve `workflow:*` compatibility unless the change intentionally includes a migration path.
+- Preserve `raiola:*` compatibility unless the change intentionally includes a migration path.
 - Prefer editing the product shell and wrappers in ways that keep installed repos stable.
 - Keep `doctor`, `health`, and setup/update flows safe-by-default.
 

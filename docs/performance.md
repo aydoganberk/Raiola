@@ -51,7 +51,7 @@ The benchmark surface covers every documented hot-path target, including `launch
 Or:
 
 ```bash
-npm run workflow:benchmark -- --commands hud,doctor,map-codebase --runs 3 --assert-slo
+npm run raiola:benchmark -- --commands hud,doctor,map-codebase --runs 3 --assert-slo
 ```
 
 Or focus on operator-facing runtime commands directly:

@@ -2,10 +2,12 @@
 
 Use `rai help` for the three golden flows, `rai help <topic>` for focused categories, and `rai help all` for the full shell.
 
-`rai` is the primary shell. `cwf` and `codex-workflow` remain available as backward-compatible aliases.
+`rai` is the primary shell. `raiola-on` is the first-run onboarding entry, and `raiola:*` is the repo-local npm fallback namespace.
 
 ## Primary verbs
 
+- `rai on`
+  Open Raiola onboarding. `rai on next` is the clean blank-state entry and proposes a milestone to start.
 - `rai launch`
   Strong-start launcher that recommends the lane, first command, and minimal resume prompt.
 - `rai codex`
@@ -247,118 +249,118 @@ Use `rai help` for the three golden flows, `rai help <topic>` for focused catego
 
 ## Backward-compatible scripts
 
-Fresh `rai setup` installs the focused `pilot` profile by default so package.json and the repo-local shell stay smaller on day one. Use `rai update --script-profile core` for the full shell with curated npm aliases, or `rai update --script-profile full` when you want the full legacy `workflow:*` alias surface restored.
+Fresh `rai setup` installs the focused `pilot` profile by default so package.json and the repo-local shell stay smaller on day one. Use `rai update --script-profile core` for the full shell with curated npm aliases, or `rai update --script-profile full` when you want the full `raiola:*` fallback surface restored.
 
-- `npm run workflow:launch`
-- `npm run workflow:codex`
-- `npm run workflow:do`
-- `npm run workflow:note`
-- `npm run workflow:thread`
-- `npm run workflow:backlog`
-- `npm run workflow:manager`
-- `npm run workflow:dashboard`
-- `npm run workflow:setup`
-- `npm run workflow:init`
-- `npm run workflow:hud`
-- `npm run workflow:next`
-- `npm run workflow:doctor`
-- `npm run workflow:health`
-- `npm run workflow:discuss`
-- `npm run workflow:repair`
-- `npm run workflow:questions`
-- `npm run workflow:assumptions`
-- `npm run workflow:claims`
-- `npm run workflow:secure`
-- `npm run workflow:explore`
-- `npm run workflow:verify-shell`
-- `npm run workflow:verify-browser`
-- `npm run workflow:verify-work`
-- `npm run workflow:packet-os`
-- `npm run workflow:evidence`
-- `npm run workflow:validation-map`
-- `npm run workflow:next-prompt`
-- `npm run workflow:route`
-- `npm run workflow:stats`
-- `npm run workflow:profile`
-- `npm run workflow:workspaces`
-- `npm run workflow:checkpoint`
-- `npm run workflow:quick`
-- `npm run workflow:team`
-- `npm run workflow:team-runtime`
-- `npm run workflow:subagents`
-- `npm run workflow:policy`
-- `npm run workflow:approval`
-- `npm run workflow:approvals`
-- `npm run workflow:hooks`
-- `npm run workflow:mcp`
-- `npm run workflow:notify`
-- `npm run workflow:daemon`
-- `npm run workflow:gc`
-- `npm run workflow:incident`
-- `npm run workflow:fleet`
-- `npm run workflow:sessions`
-- `npm run workflow:patch-review`
-- `npm run workflow:patch-apply`
-- `npm run workflow:patch-rollback`
-- `npm run workflow:review`
-- `npm run workflow:review-mode`
-- `npm run workflow:review-orchestrate`
-- `npm run workflow:pr-review`
-- `npm run workflow:re-review`
-- `npm run workflow:ui-direction`
-- `npm run workflow:design-dna`
-- `npm run workflow:page-blueprint`
-- `npm run workflow:design-md`
-- `npm run workflow:component-strategy`
-- `npm run workflow:design-benchmark`
-- `npm run workflow:state-atlas`
-- `npm run workflow:frontend-brief`
-- `npm run workflow:ui-recipe`
-- `npm run workflow:ui-spec`
-- `npm run workflow:ui-plan`
-- `npm run workflow:ui-review`
-- `npm run workflow:preview`
-- `npm run workflow:component-map`
-- `npm run workflow:responsive-matrix`
-- `npm run workflow:design-debt`
-- `npm run workflow:monorepo`
-- `npm run workflow:ship-readiness`
-- `npm run workflow:ship`
-- `npm run workflow:pr-brief`
-- `npm run workflow:release-notes`
-- `npm run workflow:session-report`
-- `npm run workflow:update`
-- `npm run workflow:uninstall`
-- `npm run workflow:benchmark`
+- `npm run raiola:launch`
+- `npm run raiola:codex`
+- `npm run raiola:do`
+- `npm run raiola:note`
+- `npm run raiola:thread`
+- `npm run raiola:backlog`
+- `npm run raiola:manager`
+- `npm run raiola:dashboard`
+- `npm run raiola:setup`
+- `npm run raiola:init`
+- `npm run raiola:hud`
+- `npm run raiola:next`
+- `npm run raiola:doctor`
+- `npm run raiola:health`
+- `npm run raiola:discuss`
+- `npm run raiola:repair`
+- `npm run raiola:questions`
+- `npm run raiola:assumptions`
+- `npm run raiola:claims`
+- `npm run raiola:secure`
+- `npm run raiola:explore`
+- `npm run raiola:verify-shell`
+- `npm run raiola:verify-browser`
+- `npm run raiola:verify-work`
+- `npm run raiola:packet-os`
+- `npm run raiola:evidence`
+- `npm run raiola:validation-map`
+- `npm run raiola:next-prompt`
+- `npm run raiola:route`
+- `npm run raiola:stats`
+- `npm run raiola:profile`
+- `npm run raiola:workspaces`
+- `npm run raiola:checkpoint`
+- `npm run raiola:quick`
+- `npm run raiola:team`
+- `npm run raiola:team-runtime`
+- `npm run raiola:subagents`
+- `npm run raiola:policy`
+- `npm run raiola:approval`
+- `npm run raiola:approvals`
+- `npm run raiola:hooks`
+- `npm run raiola:mcp`
+- `npm run raiola:notify`
+- `npm run raiola:daemon`
+- `npm run raiola:gc`
+- `npm run raiola:incident`
+- `npm run raiola:fleet`
+- `npm run raiola:sessions`
+- `npm run raiola:patch-review`
+- `npm run raiola:patch-apply`
+- `npm run raiola:patch-rollback`
+- `npm run raiola:review`
+- `npm run raiola:review-mode`
+- `npm run raiola:review-orchestrate`
+- `npm run raiola:pr-review`
+- `npm run raiola:re-review`
+- `npm run raiola:ui-direction`
+- `npm run raiola:design-dna`
+- `npm run raiola:page-blueprint`
+- `npm run raiola:design-md`
+- `npm run raiola:component-strategy`
+- `npm run raiola:design-benchmark`
+- `npm run raiola:state-atlas`
+- `npm run raiola:frontend-brief`
+- `npm run raiola:ui-recipe`
+- `npm run raiola:ui-spec`
+- `npm run raiola:ui-plan`
+- `npm run raiola:ui-review`
+- `npm run raiola:preview`
+- `npm run raiola:component-map`
+- `npm run raiola:responsive-matrix`
+- `npm run raiola:design-debt`
+- `npm run raiola:monorepo`
+- `npm run raiola:ship-readiness`
+- `npm run raiola:ship`
+- `npm run raiola:pr-brief`
+- `npm run raiola:release-notes`
+- `npm run raiola:session-report`
+- `npm run raiola:update`
+- `npm run raiola:uninstall`
+- `npm run raiola:benchmark`
 
 ## Command mapping examples
 
-- `rai launch` -> `npm run workflow:launch`
-- `rai codex` -> `npm run workflow:codex`
-- `rai do` -> `npm run workflow:do -- "..." `
-- `rai note` -> `npm run workflow:note -- "..." `
-- `rai manager` -> `npm run workflow:manager`
-- `rai doctor` -> `npm run workflow:doctor -- --strict`
-- `rai health` -> `npm run workflow:health -- --strict`
-- `rai hud` -> `npm run workflow:hud -- --compact`
-- `rai next` -> `npm run workflow:next`
-- `rai explore` -> `npm run workflow:explore -- "query"`
-- `rai verify-shell` -> `npm run workflow:verify-shell -- --cmd "npm test"`
-- `rai verify-browser` -> `npm run workflow:verify-browser -- --url http://localhost:3000`
-- `rai packet` -> `npm run workflow:packet-os -- compile --step plan`
-- `rai checkpoint` -> `npm run workflow:checkpoint -- --next "Resume here"`
-- `rai review-orchestrate` -> `npm run workflow:review-orchestrate`
-- `rai ui-direction` -> `npm run workflow:ui-direction`
-- `rai design-dna` -> `npm run workflow:design-dna`
-- `rai page-blueprint` -> `npm run workflow:page-blueprint`
-- `rai design-md` -> `npm run workflow:design-md`
-- `rai component-strategy` -> `npm run workflow:component-strategy`
-- `rai design-benchmark` -> `npm run workflow:design-benchmark`
-- `rai state-atlas` -> `npm run workflow:state-atlas`
-- `rai frontend-brief` -> `npm run workflow:frontend-brief`
-- `rai ui-recipe` -> `npm run workflow:ui-recipe`
-- `rai ui-spec` -> `npm run workflow:ui-spec`
-- `rai ui-review` -> `npm run workflow:ui-review -- --url ./preview.html`
-- `rai monorepo` -> `npm run workflow:monorepo`
-- `rai codex promptpack` -> `npm run workflow:codex -- promptpack --goal "review the diff"`
-- `rai ship-readiness` -> `npm run workflow:ship-readiness`
+- `rai launch` -> `npm run raiola:launch`
+- `rai codex` -> `npm run raiola:codex`
+- `rai do` -> `npm run raiola:do -- "..." `
+- `rai note` -> `npm run raiola:note -- "..." `
+- `rai manager` -> `npm run raiola:manager`
+- `rai doctor` -> `npm run raiola:doctor -- --strict`
+- `rai health` -> `npm run raiola:health -- --strict`
+- `rai hud` -> `npm run raiola:hud -- --compact`
+- `rai next` -> `npm run raiola:next`
+- `rai explore` -> `npm run raiola:explore -- "query"`
+- `rai verify-shell` -> `npm run raiola:verify-shell -- --cmd "npm test"`
+- `rai verify-browser` -> `npm run raiola:verify-browser -- --url http://localhost:3000`
+- `rai packet` -> `npm run raiola:packet-os -- compile --step plan`
+- `rai checkpoint` -> `npm run raiola:checkpoint -- --next "Resume here"`
+- `rai review-orchestrate` -> `npm run raiola:review-orchestrate`
+- `rai ui-direction` -> `npm run raiola:ui-direction`
+- `rai design-dna` -> `npm run raiola:design-dna`
+- `rai page-blueprint` -> `npm run raiola:page-blueprint`
+- `rai design-md` -> `npm run raiola:design-md`
+- `rai component-strategy` -> `npm run raiola:component-strategy`
+- `rai design-benchmark` -> `npm run raiola:design-benchmark`
+- `rai state-atlas` -> `npm run raiola:state-atlas`
+- `rai frontend-brief` -> `npm run raiola:frontend-brief`
+- `rai ui-recipe` -> `npm run raiola:ui-recipe`
+- `rai ui-spec` -> `npm run raiola:ui-spec`
+- `rai ui-review` -> `npm run raiola:ui-review -- --url ./preview.html`
+- `rai monorepo` -> `npm run raiola:monorepo`
+- `rai codex promptpack` -> `npm run raiola:codex -- promptpack --goal "review the diff"`
+- `rai ship-readiness` -> `npm run raiola:ship-readiness`

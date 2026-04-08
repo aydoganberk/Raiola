@@ -27,7 +27,7 @@ Her step için yeni kavram `skip` değil, `fulfillment mode` olacak.
 
 - `discuss`: `explicit` veya `condensed`
 - `research`: `explicit` veya `condensed`
-- `plan`: `explicit` veya `condensed`, ama her durumda minimum plan artifact'ı üretilecek ve `workflow:plan-check` geçilecek
+- `plan`: `explicit` veya `condensed`, ama her durumda minimum plan artifact'ı üretilecek ve `raiola:plan-check` geçilecek
 - `execute`: sadece `explicit`
 - `audit`: `explicit` veya `smoke`
 - `complete`: `explicit` veya `fast_closeout`
@@ -51,7 +51,7 @@ Minimum şu alanlar doldurulur:
 
 Sonrasında:
 
-- `workflow:plan-check --sync --strict` çalışır
+- `raiola:plan-check --sync --strict` çalışır
 - Gate geçerse step `fulfilled_condensed`
 - Gate geçmezse sistem "geçemedim" demez
 - Bunun yerine "condensed plan için eksik alanlar bunlar" şeklinde geri döner
@@ -67,7 +67,7 @@ Bu sayede user ritüeli atlar, ama sistem plan omurgasını silmez.
 Yeni komut:
 
 ```bash
-workflow:control --utterance "<user text>"
+raiola:control --utterance "<user text>"
 ```
 
 Bu komut ya da eşdeğer helper, user cümlesini kontrollü intent'lere map eder.
@@ -205,7 +205,7 @@ Buradaki amaç token kısmak değil, yanlış kısmayı önlemek.
 ### 3. Continuity Core Alanlarını Ekle
 
 - Template dosyalarını güncelle: `EXECPLAN.md`, `HANDOFF.md`, `WINDOW.md`, `STATUS.md`
-- `workflow:checkpoint` komutunu ekle
+- `raiola:checkpoint` komutunu ekle
 - `pause_work`, `resume_work`, `window_monitor` checkpoint aware olsun
 - Test: compact sonrası resume yalnızca checkpoint ile doğru next action'a dönebiliyor mu
 

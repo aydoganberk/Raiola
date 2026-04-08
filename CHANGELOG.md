@@ -1,6 +1,6 @@
 # Changelog
 
-Primary shell note: `rai` is the current public CLI. Historical entries may mention legacy aliases such as `cwf` or `codex-workflow` because those were the public shells at the time.
+Primary shell note: changelog command references are normalized to the current `rai` shell and `raiola` package surface to avoid naming drift after the rebrand.
 
 ## Unreleased
 
@@ -19,7 +19,7 @@ Primary shell note: `rai` is the current public CLI. Historical entries may ment
 
 ## 0.3.1 - 2026-04-07
 
-- Fixed command-reference drift so the documented `cwf` surface matches the shipped CLI, including `cwf review-tasks`.
+- Fixed command-reference drift so the documented `rai` surface matches the shipped CLI, including `rai review-tasks`.
 - Added an explicit publish whitelist, `.npmignore`, and a tarball smoke-install script to keep the npm package focused on runtime assets.
 - Declared the then-current supported Node.js baseline (`>=20`) and added repo-local `.nvmrc`.
 - Expanded runtime prerequisite diagnostics in `doctor` and `health`, and reduced child-process `node` PATH coupling by using `process.execPath`.
@@ -29,16 +29,16 @@ Primary shell note: `rai` is the current public CLI. Historical entries may ment
 ## 0.3.0 - 2026-04-06
 
 - Added multilingual intent grounding and deterministic capability matching for major non-English prompt surfaces.
-- Added `cwf ui-direction` plus `design_intelligence.js` to generate taste-aware frontend direction packs before implementation.
-- Added `cwf review-orchestrate` and review wave planning for package/persona-based deep review on large repos.
-- Added `cwf monorepo` to generate package-aware write scopes, review shards, verify plans, and performance risk notes.
-- Added Codex prompt packs under `cwf codex promptpack` so CLI and app sessions can inherit route, verify, UI, and monorepo/review context instantly.
+- Added `rai ui-direction` plus `design_intelligence.js` to generate taste-aware frontend direction packs before implementation.
+- Added `rai review-orchestrate` and review wave planning for package/persona-based deep review on large repos.
+- Added `rai monorepo` to generate package-aware write scopes, review shards, verify plans, and performance risk notes.
+- Added Codex prompt packs under `rai codex promptpack` so CLI and app sessions can inherit route, verify, UI, and monorepo/review context instantly.
 - Hardened `verify-shell` with shell fallback so CI and agent hosts no longer require `/bin/zsh`.
 - Refreshed product docs to cover the new commands and runtime artifacts.
 
 ## 0.2.0 - 2026-04-04
 
-- Added the `cwf` product shell with install, daily-ops, lifecycle, quick-mode, and benchmark commands.
+- Added the `rai` product shell with install, daily-ops, lifecycle, quick-mode, and benchmark commands.
 - Added quick mode canonical artifacts under `.workflow/quick/`.
 - Added Team Lite orchestration canonical artifacts under `.workflow/orchestration/`.
 - Added review-ready, ship-ready, PR brief, release notes, and session report outputs.

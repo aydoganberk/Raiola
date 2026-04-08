@@ -53,13 +53,13 @@ Every new Codex session should start in this order:
 3. In that root, read `HANDOFF.md -> Continuity Checkpoint`, `EXECPLAN.md -> Open Requirements`, `EXECPLAN.md -> Current Capability Slice`, and the current chunk row from `EXECPLAN.md -> Plan of Record`.
 4. Only if the checkpoint is stale, missing, or obviously insufficient, reopen the broader canonical docs (`PROJECT.md`, `RUNTIME.md`, `PREFERENCES.md`, `STATUS.md`, `CONTEXT.md`, `VALIDATION.md`, `WINDOW.md`, `SEEDS.md`).
 5. If `MEMORY.md` contains `Active Recall Items` for the active milestone, read them automatically.
-6. Use `workflow:next` to check the recommended next move for the active step.
+6. Use `raiola:next` to check the recommended next move for the active step.
 7. Summarize the current state in `8-12` bullets.
 8. Operate only within the active phase, active milestone, and active milestone step.
 
 Additional rules:
 
-- The first check after `resume-work` should be `workflow:health -- --strict`.
+- The first check after `resume-work` should be `raiola:health -- --strict`.
 - This protocol is fully applied only when the user explicitly wants workflow or when resuming an already-open workflow milestone.
 - If workflow is not active, this file stays as a reference surface and normal task flow can continue without opening a milestone.
 - `Workflow profile` in `PREFERENCES.md` (`lite|standard|full`) controls ritual intensity.
@@ -81,7 +81,7 @@ Additional rules:
    - Write the source-of-truth plan into the `Plan of Record`, `Chosen Strategy`, `Wave Execution Policy`, `Wave Structure`, `Coverage Matrix`, `Plan Chunk Table`, and `Commit Policy` sections of `EXECPLAN.md`.
    - Split execute into `wave 1 -> wave 2 -> wave 3`, keep each chunk run-sized, and avoid more same-wave parallelism than the dependency graph can justify.
    - Unused waves should be marked `not needed` instead of silently removed so execute stays resumable and inspectable.
-   - Keep the plan small enough to fit the current window and pass `workflow:plan-check` before execute begins.
+   - Keep the plan small enough to fit the current window and pass `raiola:plan-check` before execute begins.
 4. `execute`
    - Apply only the work in the active milestone plan.
    - Execute `wave 1`, then `wave 2`, then `wave 3`; do not start a later wave while an earlier wave is still open.
@@ -90,7 +90,7 @@ Additional rules:
    - Same-wave write-capable workers must have explicit ownership and disjoint write scopes.
    - The orchestrator delegates, waits, integrates, updates `EXECPLAN.md` and `STATUS.md`, then decides whether the next wave can start.
    - If `Atomic commit mode` is enabled for the milestone, commit only at the declared `wave` or `chunk` boundary.
-   - If needed, leave an active recall note with `workflow:save-memory`.
+   - If needed, leave an active recall note with `raiola:save-memory`.
 5. `audit`
    - Use the contract table in `VALIDATION.md` to run tests, diff review, or smoke checks.
    - Write the outcome and remaining risks into `STATUS.md`.
@@ -100,7 +100,7 @@ Additional rules:
    - Archive the milestone summary under `completed_milestones/`.
    - Remove `Active Recall Items` tied to the milestone from `MEMORY.md`.
    - Check whether `AGENTS.md` needs an update.
-   - Do not close out while `workflow:health -- --strict` is not clean.
+   - Do not close out while `raiola:health -- --strict` is not clean.
 
 ## Minimum Done Checklists
 
@@ -115,7 +115,7 @@ Additional rules:
 - `plan`
   - `Chosen strategy, rejected strategies, rollback/fallback, blockers, wave execution policy, chunks, and commit policy are written`
   - `Coverage matrix has no orphan or duplicate requirements`
-  - `workflow:plan-check passes before execute begins`
+  - `raiola:plan-check passes before execute begins`
 - `execute`
   - `Only ready chunks from the active wave were implemented`
   - `Same-wave work was dependency-free and had disjoint write scopes`
@@ -324,5 +324,5 @@ Additional rules:
 
 - `This file is not a backlog; it is only the canonical plan for the active stream`
 - `Wave Structure and Plan Chunk Table are execution-control artifacts, not just descriptive notes`
-- `workflow:packet`, `workflow:next`, `workflow:pause-work`, `workflow:resume-work`, `workflow:doctor`, `workflow:health`, and `workflow:forensics` support the operational layer`
+- `raiola:packet`, `raiola:next`, `raiola:pause-work`, `raiola:resume-work`, `raiola:doctor`, `raiola:health`, and `raiola:forensics` support the operational layer`
 - `complete_milestone` does not auto-commit outside workflow-only changes without explicit scope`

@@ -8,7 +8,7 @@ Supported runtime baseline:
 - Full support on macOS and Linux
 - Smoke-tested install/help flows on Windows
 
-The primary shell is `rai`, the published package is `raiola`, and legacy aliases such as `cwf` still exist for compatibility.
+The primary shell is `rai`, the published package is `raiola`, and repo-local npm fallbacks use the `raiola:*` namespace.
 
 From a published package:
 
@@ -16,7 +16,14 @@ From a published package:
 npx raiola setup
 ```
 
-Fresh setup defaults to the focused `pilot` workflow profile. This keeps package.json and the repo-local `rai` shell leaner on first install. Use `--script-profile core` for the full shell with curated npm aliases, or `--script-profile full` for every legacy `workflow:*` alias on day one.
+Fresh setup defaults to the focused `pilot` workflow profile. This keeps package.json and the repo-local `rai` shell leaner on first install. Use `--script-profile core` for the full shell with curated npm aliases, or `--script-profile full` for every repo-local `raiola:*` fallback on day one.
+
+The best blank-state entry after setup is:
+
+```bash
+rai on next
+raiola-on next
+```
 
 From this repository:
 

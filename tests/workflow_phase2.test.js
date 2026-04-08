@@ -64,7 +64,7 @@ function seedFrontendLikeRepo(targetRepo) {
   writeFile(targetRepo, '.github/workflows/ci.yml', 'name: ci\non: [push]\njobs:\n  test:\n    runs-on: ubuntu-latest\n');
 }
 
-test('workflow:map-codebase writes incremental lane metadata and detects repo signals', () => {
+test('raiola:map-codebase writes incremental lane metadata and detects repo signals', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   seedFrontendLikeRepo(targetRepo);
@@ -93,7 +93,7 @@ test('workflow:map-codebase writes incremental lane metadata and detects repo si
   assert.equal(secondMap.lanes.stack.refreshStatus, 'reused');
 });
 
-test('workflow:delegation-plan routes research and execute work predictably', () => {
+test('raiola:delegation-plan routes research and execute work predictably', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   seedFrontendLikeRepo(targetRepo);
@@ -116,7 +116,7 @@ test('workflow:delegation-plan routes research and execute work predictably', ()
   assert.ok(executePlan.waves[0].roles.some((role) => role.role === 'worker-2'));
 });
 
-test('workflow:delegation-plan orchestration runtime coordinates waves and next routes', () => {
+test('raiola:delegation-plan orchestration runtime coordinates waves and next routes', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   seedFrontendLikeRepo(targetRepo);

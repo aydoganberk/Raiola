@@ -227,16 +227,16 @@ function syncPlanState(paths, docs, planGate, summary) {
     planReady
       ? [
         '- `Yes`',
-        `- \`workflow:plan-check passed on ${today()}\``,
+        `- \`raiola:plan-check passed on ${today()}\``,
       ].join('\n')
       : planGate === 'pending'
         ? [
           '- `Pending`',
-          `- \`workflow:plan-check is incomplete (${summary.pendingCount} pending, ${summary.warnCount} warn)\``,
+          `- \`raiola:plan-check is incomplete (${summary.pendingCount} pending, ${summary.warnCount} warn)\``,
         ].join('\n')
       : [
         '- `No`',
-        `- \`workflow:plan-check is failing (${summary.failCount} fail, ${summary.pendingCount} pending, ${summary.warnCount} warn)\``,
+        `- \`raiola:plan-check is failing (${summary.failCount} fail, ${summary.pendingCount} pending, ${summary.warnCount} warn)\``,
       ].join('\n'),
   );
 
@@ -245,10 +245,10 @@ function syncPlanState(paths, docs, planGate, summary) {
     statusDoc,
     'Suggested Next Step',
     planReady
-      ? '- `Execute only within the checked plan; if the plan changes, rerun workflow:plan-check`'
+      ? '- `Execute only within the checked plan; if the plan changes, rerun raiola:plan-check`'
       : planGate === 'pending'
-        ? '- `Finish CONTEXT.md, EXECPLAN.md, and VALIDATION.md until workflow:plan-check moves from pending to pass`'
-        : '- `Revise CONTEXT.md, EXECPLAN.md, and VALIDATION.md until workflow:plan-check passes`',
+        ? '- `Finish CONTEXT.md, EXECPLAN.md, and VALIDATION.md until raiola:plan-check moves from pending to pass`'
+        : '- `Revise CONTEXT.md, EXECPLAN.md, and VALIDATION.md until raiola:plan-check passes`',
   );
 
   execplanDoc = replaceField(execplanDoc, 'Plan-ready gate', planGate);

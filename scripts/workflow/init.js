@@ -57,9 +57,9 @@ function main() {
 
   console.log('\n## Next\n');
   console.log(`- \`cd ${targetRepo}\``);
-  console.log('- `npm run workflow:hud -- --compact`');
-  console.log('- `npm run workflow:doctor -- --strict`');
-  console.log('- `npm run workflow:next`');
+  console.log('- `npm run raiola:hud -- --compact`');
+  console.log('- `npm run raiola:doctor -- --strict`');
+  console.log('- `npm run raiola:next`');
   if (report.hudState) {
     console.log(`- HUD state file written to \`${relativePath(targetRepo, report.hudState.stateFile)}\``);
   }

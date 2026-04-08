@@ -240,7 +240,7 @@ function listTestFiles(files) {
 }
 
 function workflowScriptNames(pkg) {
-  return Object.keys(pkg?.scripts || {}).filter((name) => name.startsWith('workflow:')).sort();
+  return Object.keys(pkg?.scripts || {}).filter((name) => name.startsWith('raiola:')).sort();
 }
 
 function dependencyVersionMap(pkg) {

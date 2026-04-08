@@ -43,12 +43,12 @@ function writeFile(targetRepo, relativePath, content) {
   fs.writeFileSync(path.join(targetRepo, relativePath), content);
 }
 
-test('workflow:init installs workflow:control and plan skip resolves to condensed plan intent', () => {
+test('raiola:init installs raiola:control and plan skip resolves to condensed plan intent', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
 
   const packageJson = JSON.parse(readFile(targetRepo, 'package.json'));
-  assert.equal(packageJson.scripts['workflow:control'], 'node scripts/workflow/control.js');
+  assert.equal(packageJson.scripts['raiola:control'], 'node scripts/workflow/control.js');
 
   const payload = JSON.parse(run(
     'node',
@@ -62,7 +62,7 @@ test('workflow:init installs workflow:control and plan skip resolves to condense
   assert.equal(payload.intent.resolution, 'safe_fallback');
 });
 
-test('workflow:automation accepts natural-language automation control intents', () => {
+test('raiola:automation accepts natural-language automation control intents', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run(
@@ -91,7 +91,7 @@ test('workflow:automation accepts natural-language automation control intents', 
   assert.match(statusDoc, /- Automation mode: `phase`/);
 });
 
-test('workflow:control keeps parallel phrasing available and workflow:next routes through the control plane hint', () => {
+test('raiola:control keeps parallel phrasing available and raiola:next routes through the control plane hint', () => {
   const targetRepo = makeTempRepo();
   run('node', [initScript, '--target', targetRepo], repoRoot);
   run(
@@ -125,8 +125,8 @@ test('workflow:control keeps parallel phrasing available and workflow:next route
   assert.equal(parallelPayload.intent.state, 'on');
   assert.ok(
     nextPayload.recommendation.checklist.some(
-      (item) => item.includes('workflow:control -- --utterance "<user request>"')
-        && item.includes('workflow:delegation-plan'),
+      (item) => item.includes('raiola:control -- --utterance "<user request>"')
+        && item.includes('raiola:delegation-plan'),
     ),
   );
 });

@@ -107,10 +107,10 @@ function computeRoute(state) {
     return {
       action: 'orchestration_complete',
       recommendation: state.intent === 'research'
-        ? 'Integrate the research output into workflow docs and continue with workflow:next.'
+        ? 'Integrate the research output into workflow docs and continue with raiola:next.'
         : state.intent === 'execute'
-          ? 'Run the audit route next or return to workflow:next for the next routed step.'
-          : 'Return to workflow:next to continue the milestone.',
+          ? 'Run the audit route next or return to raiola:next for the next routed step.'
+          : 'Return to raiola:next to continue the milestone.',
       canAdvance: false,
     };
   }
@@ -486,7 +486,7 @@ function startOrchestration(plan) {
 function loadRuntimeState(cwd) {
   const runtime = orchestrationPaths(cwd);
   if (!fs.existsSync(runtime.stateFile)) {
-    throw new Error('No orchestration runtime exists yet. Run workflow:delegation-plan -- --start first.');
+    throw new Error('No orchestration runtime exists yet. Run raiola:delegation-plan -- --start first.');
   }
   const state = JSON.parse(fs.readFileSync(runtime.stateFile, 'utf8'));
   state.files = {

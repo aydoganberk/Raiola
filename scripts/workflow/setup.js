@@ -58,7 +58,7 @@ function main() {
       console.log(JSON.stringify(payload, null, 2));
       return;
     }
-    console.log('# WORKFLOW SETUP (DRY RUN)\n');
+    console.log('# RAIOLA SETUP (DRY RUN)\n');
     console.log(`- Target: \`${targetRepo}\``);
     console.log(`- Mode: \`${mode}\``);
     console.log(`- Docs already exist: \`${mode === 'migrate' ? 'yes' : 'no'}\``);
@@ -82,7 +82,7 @@ function main() {
     return;
   }
 
-  console.log('# WORKFLOW SETUP\n');
+  console.log('# RAIOLA SETUP\n');
   console.log(`- Mode: \`${mode}\``);
   for (const line of formatInstallSummary(report)) {
     console.log(line);
@@ -90,6 +90,7 @@ function main() {
   console.log('\n## First Five Minutes\n');
   console.log(`- \`cd ${targetRepo}\``);
   console.log('- `rai doctor --strict`');
+  console.log('- `rai on next`');
   console.log('- `rai hud --compact`');
   console.log('- `rai next`');
   if (report.hudState) {

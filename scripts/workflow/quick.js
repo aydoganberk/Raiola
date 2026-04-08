@@ -117,7 +117,7 @@ function ensureQuickSurface(cwd, session, options = {}) {
 
 - Session id: \`${session.id}\`
 - Status: \`${session.status}\`
-- Escalate to full workflow: \`no\`
+- Escalate to full raiola: \`no\`
 - Plan readiness: \`ready\`
 
 ## Plan
@@ -165,7 +165,7 @@ function ensureQuickSurface(cwd, session, options = {}) {
 
 ## Resume
 
-- \`Run workflow:quick to inspect the current quick session\`
+- \`Run raiola:quick to inspect the current quick session\`
 `);
   }
 }
@@ -315,7 +315,7 @@ function main() {
   if (!existing) {
     const payload = {
       session: null,
-      recommendation: 'No quick session exists yet. Run `workflow:quick start --goal "..."` to open one.',
+      recommendation: 'No quick session exists yet. Run `raiola:quick start --goal "..."` to open one.',
     };
     if (args.json) {
       console.log(JSON.stringify(payload, null, 2));

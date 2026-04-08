@@ -76,7 +76,7 @@ function main() {
   const remaining = toList(args.remaining);
   const refs = toList(args.refs);
   const resumeAnchor = String(args['resume-anchor'] || getSectionField(planSection, 'Resume from item') || windowStatus.resumeAnchor).trim();
-  const expectedFirstCommand = String(args.expected || 'npm run workflow:health -- --strict').trim();
+  const expectedFirstCommand = String(args.expected || 'npm run raiola:health -- --strict').trim();
   const checkpoint = dryRun ? buildContinuityCheckpoint(paths, {
     nextOneAction: nextAction,
     files,
@@ -113,7 +113,7 @@ function main() {
   ].join('\n'));
   handoff = replaceSection(handoff, 'Continuity Checkpoint', checkpoint.body);
   handoff = replaceSection(handoff, 'Suggested Resume Commands', renderList(
-    commands.length > 0 ? commands : ['npm run workflow:resume-work', 'npm run workflow:health -- --strict', 'npm run workflow:next'],
+    commands.length > 0 ? commands : ['npm run raiola:resume-work', 'npm run raiola:health -- --strict', 'npm run raiola:next'],
     'No resume commands provided',
   ));
   handoff = replaceSection(handoff, 'Files To Reopen', renderList(

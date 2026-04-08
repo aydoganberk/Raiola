@@ -7,31 +7,31 @@
 
 ## Core Commands
 
-- `npm run workflow:hud`
-- `npm run workflow:map-codebase`
-- `npm run workflow:map-frontend`
-- `npm run workflow:control -- --utterance "plan kismini gecelim"`
-- `npm run workflow:step-fulfillment -- --utterance "plan kismini gecelim"`
-- `npm run workflow:delegation-plan`
-- `npm run workflow:plan-check -- --strict`
-- `npm run workflow:new-milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual`
-- `npm run workflow:automation -- --mode phase`
-- `npm run workflow:checkpoint -- --next "..."`
-- `npm run workflow:complete-milestone -- --agents-review unchanged --summary "..."`
-- `npm run workflow:save-memory -- --title "..." --note "..."`
-- `npm run workflow:packet -- --step plan --json`
-- `npm run workflow:next`
-- `npm run workflow:pause-work -- --summary "..."`
-- `npm run workflow:resume-work`
-- `npm run workflow:doctor`
-- `npm run workflow:health -- --strict`
-- `npm run workflow:forensics`
-- `npm run workflow:workstreams status`
-- `npm run workflow:workstreams progress`
-- `npm run workflow:workstreams create -- --name "<slug>"`
-- `npm run workflow:workstreams switch -- --name "<slug>"`
-- `npm run workflow:ensure-isolation -- --root docs/workflow`
-- `npm run workflow:plant-seed -- --title "..." --trigger "..."`
+- `npm run raiola:hud`
+- `npm run raiola:map-codebase`
+- `npm run raiola:map-frontend`
+- `npm run raiola:control -- --utterance "plan kismini gecelim"`
+- `npm run raiola:step-fulfillment -- --utterance "plan kismini gecelim"`
+- `npm run raiola:delegation-plan`
+- `npm run raiola:plan-check -- --strict`
+- `npm run raiola:milestone -- --id Mx --name "..." --goal "..." --profile standard --automation manual`
+- `npm run raiola:automation -- --mode phase`
+- `npm run raiola:checkpoint -- --next "..."`
+- `npm run raiola:complete-milestone -- --agents-review unchanged --summary "..."`
+- `npm run raiola:save-memory -- --title "..." --note "..."`
+- `npm run raiola:packet -- --step plan --json`
+- `npm run raiola:next`
+- `npm run raiola:pause-work -- --summary "..."`
+- `npm run raiola:resume-work`
+- `npm run raiola:doctor`
+- `npm run raiola:health -- --strict`
+- `npm run raiola:forensics`
+- `npm run raiola:workstreams status`
+- `npm run raiola:workstreams progress`
+- `npm run raiola:workstreams create -- --name "<slug>"`
+- `npm run raiola:workstreams switch -- --name "<slug>"`
+- `npm run raiola:ensure-isolation -- --root docs/workflow`
+- `npm run raiola:plant-seed -- --title "..." --trigger "..."`
 
 ## Activation Notes
 
@@ -64,16 +64,16 @@
   - `Codex may finish the current phase and stop at the next phase boundary`
 - `full`
   - `Codex may keep moving phase-to-phase until blocked, complete, or window-managed`
-- `workflow:automation` updates the canonical automation state so this behavior is visible in the Codex app as well as the CLI
+- `raiola:automation` updates the canonical automation state so this behavior is visible in the Codex app as well as the CLI
 
 ## Git Runtime Notes
 
 - `complete_milestone` defaults toward commit + push closeout behavior
 - If the worktree is dirty, the script requires explicit `--stage-paths` or a deliberate `--allow-workflow-only`
 - `PREFERENCES.md` records the workflow's branch/worktree isolation expectation
-- `workflow:workstreams switch` automatically runs `workflow:ensure-isolation` unless you pass `--no-isolation`
+- `raiola:workstreams switch` automatically runs `raiola:ensure-isolation` unless you pass `--no-isolation`
 - `ensure_isolation.js` sets or validates `none|branch|worktree` behavior and can provision a real branch/worktree
-- `team` mode forces branch isolation and keeps `workflow:health -- --strict` as the pre-closeout gate
+- `team` mode forces branch isolation and keeps `raiola:health -- --strict` as the pre-closeout gate
 
 ## Validation Runtime Notes
 
@@ -84,7 +84,7 @@
 
 ## Plan Check Runtime Notes
 
-- `workflow:plan-check` is the quality gate between planning and execute
+- `raiola:plan-check` is the quality gate between planning and execute
 - It checks:
   - `plan-ready`
   - `coverage pass/fail`
@@ -106,8 +106,8 @@
   - `auto` -> mode-aware default
   - `on` -> delta loading stays active
   - `off` -> continuity_first keeps the broader packet loaded to reduce context-loss risk
-- `workflow:tempo -- --utterance "hızlı geç"` or `--mode lite|standard|full` lets the user change ritual depth without hiding `Open Requirements`; `workflow:window` keeps the active token-efficiency state visible.
-- `workflow:packet` and `workflow:window` surface:
+- `raiola:tempo -- --utterance "hızlı geç"` or `--mode lite|standard|full` lets the user change ritual depth without hiding `Open Requirements`; `raiola:window` keeps the active token-efficiency state visible.
+- `raiola:packet` and `raiola:window` surface:
   - `Checkpoint freshness`
   - `Core packet size`
   - `Loaded packet size`
@@ -122,7 +122,7 @@
 
 ## Mapping Runtime Notes
 
-- `workflow:map-codebase` writes:
+- `raiola:map-codebase` writes:
   - `.workflow/codebase-map.json`
   - `.workflow/codebase-map.md`
   - `.workflow/codebase/STACK.md`
@@ -132,7 +132,7 @@
   - `.workflow/codebase/TESTING.md`
   - `.workflow/codebase/CONCERNS.md`
 - These are generated summaries with freshness metadata, not canonical state.
-- `workflow:map-frontend` writes:
+- `raiola:map-frontend` writes:
   - `<active workflow root>/FRONTEND_PROFILE.md`
   - `.workflow/frontend-profile.json`
 - The frontend profile records active workstream scope, fingerprint inputs, refresh status, adapter routing, and visual verdict expectations.
@@ -150,14 +150,14 @@
   - `preview/browser/screenshot validation need`
   - `user intent such as landing page, frontend, UI, screen, component, design, responsive`
 - When frontend mode is active:
-  - `run workflow:map-frontend to refresh the profile and sync VALIDATION.md`
+  - `run raiola:map-frontend to refresh the profile and sync VALIDATION.md`
   - `prefer design-system-aware implementation choices`
   - `select adapters from the frontend registry`
   - `expand audit expectations to the visual verdict protocol`
 
 ## Team Lite Runtime Notes
 
-- `workflow:delegation-plan` can do more than print a plan:
+- `raiola:delegation-plan` can do more than print a plan:
   - `--start` creates orchestration state and task packets
   - `--status` shows wave progress and the next route
   - `--task-packet <task-id>` prints the packet for a role task
@@ -178,7 +178,7 @@
 - `plan`
   - `Chosen strategy, rejected strategies, rollback/fallback, wave structure, and frontend routing when relevant are written`
   - `Coverage matrix has no orphan or duplicate requirements`
-  - `workflow:plan-check passes before execute starts`
+  - `raiola:plan-check passes before execute starts`
 - `execute`
   - `Only ready chunks from the active wave were implemented`
   - `Status fields were updated`
@@ -196,29 +196,29 @@
 ## Failure Playbook
 
 - `Hash drift`
-- `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
+- `raiola:packet -- --all --sync -> raiola:window -- --sync -> raiola:health -- --strict`
 - `Active root mismatch`
-  - `workflow:workstreams status -> workflow:switch-workstream or use --root to return to the correct root`
+  - `raiola:workstreams status -> raiola:switch-workstream or use --root to return to the correct root`
 - `Parallel routing uncertainty`
-  - `workflow:map-codebase -> workflow:delegation-plan -- --activation-text "<user request>" -> workflow:delegation-plan -- --start only after write scopes are explicit`
+  - `raiola:map-codebase -> raiola:delegation-plan -- --activation-text "<user request>" -> raiola:delegation-plan -- --start only after write scopes are explicit`
 - `Resume ambiguity`
-  - `Read HANDOFF.md + WINDOW.md -> workflow:resume-work -> workflow:next`
+  - `Read HANDOFF.md + WINDOW.md -> raiola:resume-work -> raiola:next`
 - `Dirty worktree closeout`
-  - `Use explicit --stage-paths in workflow:complete-milestone or --allow-workflow-only when it is truly docs-only`
+  - `Use explicit --stage-paths in raiola:complete-milestone or --allow-workflow-only when it is truly docs-only`
 
 ## Resume Runtime Notes
 
 - `HANDOFF.md` is the session-level pause/resume layer
 - `WINDOW.md` stores the budget/orchestrator snapshot
-- `workflow:checkpoint` refreshes the continuity checkpoint before handoff or compaction
+- `raiola:checkpoint` refreshes the continuity checkpoint before handoff or compaction
 - When automation is active and window pressure appears, prefer handoff/new-window recovery first when the client supports it; otherwise compact and continue from the remaining plan
 - If `WINDOW.md` says `Checkpoint freshness = no`, checkpoint first and only then compact or hand off
 - `MEMORY.md` stores active recall and durable memory
 - `SEEDS.md` stores ideas to carry into a later milestone or workstream
 - `.workflow/state.json` stores generated HUD/runtime state and should not be treated as canonical
 - `.workflow/packet-state.json` stores the last synced section hashes used by Packet v5 delta loading and is also non-canonical
-- `workflow:hud`, `workflow:doctor`, and `workflow:next` refresh `.workflow/state.json`
-- The first command after `resume-work` should be `workflow:health -- --strict`
+- `raiola:hud`, `raiola:doctor`, and `raiola:next` refresh `.workflow/state.json`
+- The first command after `resume-work` should be `raiola:health -- --strict`
 
 ## Retro Runtime Notes
 

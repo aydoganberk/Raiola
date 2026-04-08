@@ -5,21 +5,22 @@ Usage:
   rai help <topic>
 
 Start here:
+  rai on next        First-run onboarding that proposes a milestone to start
   rai help solo      Single-operator daily loop for most repos
   rai help review    Deep review, risk triage, and closeout
   rai help team      Parallel Team Lite flow with bounded scopes
 
 Core commands:
   setup            Install or refresh the workflow product in the current repo.
+  on               Open Raiola onboarding and propose the next milestone from a blank state.
   doctor           Check install health and workflow contract integrity.
   do               Route a natural-language intent into the right workflow lane.
   next             Recommend the next safe workflow action.
   review           Generate a review-ready closeout package.
   team             Plan or operate Team Lite orchestration.
-  dashboard        Generate the local operator dashboard HTML surface.
 
 Golden flows:
-  solo    -> rai do, rai next, rai verify-shell, rai checkpoint, rai next-prompt
+  solo    -> rai on, rai do, rai next, rai verify-shell, rai checkpoint, rai next-prompt
   review  -> rai route, rai review, rai ui-review, rai verify-work, rai ship-readiness
   team    -> rai monorepo, rai team run, rai team collect, rai patch-review, rai sessions
 
@@ -33,7 +34,7 @@ More help:
 
 Examples:
   rai setup
+  rai on next
   rai help solo
   rai help review
   rai help team
-

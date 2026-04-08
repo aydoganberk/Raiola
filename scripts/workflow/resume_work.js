@@ -68,7 +68,7 @@ function main() {
     resumeAnchor: String(getFieldValue(handoff, 'Resume anchor') || 'start'),
     packetHash: String(getFieldValue(handoff, 'Packet hash') || 'missing'),
     chunkCursor: String(getFieldValue(handoff, 'Current chunk cursor') || '0/0'),
-    expectedFirstCommand: String(getFieldValue(handoff, 'Expected first command') || 'npm run workflow:health -- --strict'),
+    expectedFirstCommand: String(getFieldValue(handoff, 'Expected first command') || 'npm run raiola:health -- --strict'),
     snapshot: extractSection(handoff, 'Snapshot'),
     nextAction: immediateNextAction,
     nextOneAction: String(

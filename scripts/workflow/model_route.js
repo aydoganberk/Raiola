@@ -138,7 +138,7 @@ function buildRoutePayload(cwd, rootDir, options = {}) {
     routeEvaluation: intentAnalysis.evaluation,
     personaSignals: intentAnalysis.personaSignals,
     profile: {
-      workflow: preferences.workflowProfile,
+      raiola: preferences.workflowProfile,
       budget: preferences.budgetProfile,
       automation: preferences.automationMode,
     },

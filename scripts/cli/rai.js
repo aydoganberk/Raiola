@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const cli = require('./cwf');
+const cli = require('./shell');
 const { main } = cli;
 
 if (require.main === module) {

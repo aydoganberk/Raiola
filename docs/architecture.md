@@ -40,7 +40,7 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 
 - `rai` is the product shell.
 - installed repos also get `bin/rai.js` and `scripts/cli/rai.js` as a repo-local CLI fallback.
-- `workflow:*` scripts remain backward-compatible.
+- `raiola:*` scripts remain backward-compatible.
 - `common.js` is still the facade for legacy callers.
 - newer modules in `scripts/workflow/io`, `markdown`, `packet`, and `perf` take over hot-path responsibilities incrementally.
 - `runtime_collector.js` is the shared in-process collector for `launch`, `hud`, `manager`, and the resume prompt surface.
@@ -63,7 +63,7 @@ Deleting them may reduce performance or resume convenience, but it must not brea
 
 ## Workflow lanes
 
-- Full workflow: milestone lifecycle with plan and audit gates.
+- Full raiola: milestone lifecycle with plan and audit gates.
 - Quick mode: lighter artifact set for narrow tasks.
 - Team Lite: explicit parallel routing with disjoint write-scope safety.
 - Lifecycle closeout: review, ship, PR brief, release notes, session report.

@@ -256,7 +256,7 @@ function buildExplorePayload(cwd, rootDir, args) {
     mode: symbol ? 'symbol' : callers ? 'callers' : impact ? 'impact' : changed ? 'changed' : workflow ? 'workflow' : frontend ? 'frontend' : repoLens ? 'repo' : 'search',
     query,
     changedFiles: changed ? listGitChanges(cwd) : [],
-    workflow: workflow ? exploreWorkflow(cwd, rootDir) : null,
+    raiola: workflow ? exploreWorkflow(cwd, rootDir) : null,
     frontend: frontend ? buildFrontendProfile(cwd, rootDir) : null,
     repo: repoLens ? buildCodebaseMap(cwd, rootDir, {
       refreshMode: 'incremental',

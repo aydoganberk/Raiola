@@ -2,36 +2,39 @@
 
 `raiola` is the Codex-facing skill surface for the workflow product.
 
-The primary CLI shell is `rai`. The published package is `raiola`. Legacy aliases `cwf` and `codex-workflow` remain available for compatibility.
+The primary CLI shell is `rai`. The published package is `raiola`. Repo-local npm fallbacks use the `raiola:*` namespace, and `raiola-on` is the blank-state onboarding entry.
 
 It stays opt-in. If the user did not explicitly ask for workflow, milestone, handoff, closeout, quick mode, or team orchestration, normal task execution should continue without activating this skill.
 
 ## Quick command layer
 
-- `$workflow-help`
+- `$raiola-help`
   Show the daily-use command surface and when to use quick/full/team.
-- `$workflow-next`
+- `$raiola-on`
+  Open the blank-state onboarding entry and propose a milestone to start.
+- `$raiola-next`
   Ask for the single safest next move.
-- `$workflow-quick`
+- `$raiola-quick`
   Start or continue quick mode for a narrow task.
-- `$workflow-checkpoint`
+- `$raiola-checkpoint`
   Write a continuity checkpoint before compacting or handing off.
-- `$workflow-team`
+- `$raiola-team`
   Open Team Lite orchestration when the user explicitly asks for delegation/parallelism.
-- `$workflow-review`
+- `$raiola-review`
   Generate a review-ready package.
-- `$workflow-ship`
+- `$raiola-ship`
   Generate a ship-ready package.
 
 ## CLI mapping
 
-- `$workflow-help` -> `rai help`
-- `$workflow-next` -> `rai next`
-- `$workflow-quick` -> `rai quick`
-- `$workflow-checkpoint` -> `rai checkpoint`
-- `$workflow-team` -> `rai team`
-- `$workflow-review` -> `rai review`
-- `$workflow-ship` -> `rai ship`
+- `$raiola-help` -> `rai help`
+- `$raiola-on` -> `rai on next` or `raiola-on next`
+- `$raiola-next` -> `rai next`
+- `$raiola-quick` -> `rai quick`
+- `$raiola-checkpoint` -> `rai checkpoint`
+- `$raiola-team` -> `rai team`
+- `$raiola-review` -> `rai review`
+- `$raiola-ship` -> `rai ship`
 
 ## Full contract
 
@@ -43,16 +46,16 @@ For repo-level install, docs, and CLI usage, read the root [`README.md`](../READ
 Run health checks:
 
 ```bash
-npm run workflow:doctor -- --strict
-npm run workflow:health -- --strict
-npm run workflow:plan-check -- --strict
-npm run workflow:automation -- --mode phase
+npm run raiola:doctor -- --strict
+npm run raiola:health -- --strict
+npm run raiola:plan-check -- --strict
+npm run raiola:automation -- --mode phase
 ```
 
 Close a milestone:
 
 ```bash
-npm run workflow:complete-milestone -- --agents-review unchanged --summary "Auth drift resolved" --stage-paths src/foo,tests/foo
+npm run raiola:complete-milestone -- --agents-review unchanged --summary "Auth drift resolved" --stage-paths src/foo,tests/foo
 ```
 
 ## Core files
@@ -82,24 +85,24 @@ npm run workflow:complete-milestone -- --agents-review unchanged --summary "Auth
 
 ```bash
 rai milestone --id Mx --name "..." --goal "..." --profile standard --automation manual
-npm run workflow:automation -- --mode phase
-npm run workflow:next
-npm run workflow:hud
-npm run workflow:map-codebase
-npm run workflow:map-frontend
-npm run workflow:delegation-plan
-npm run workflow:plan-check -- --sync --strict
-npm run workflow:packet -- --step plan --json
-npm run workflow:pause-work -- --summary "..."
-npm run workflow:resume-work
-npm run workflow:save-memory -- --title "..." --note "..."
-npm run workflow:plant-seed -- --title "..." --trigger "..."
-npm run workflow:switch-workstream -- --name "<slug>" --create
-npm run workflow:workstreams status
-npm run workflow:doctor -- --strict
-npm run workflow:health -- --strict
-npm run workflow:evidence-check -- --strict
-npm run workflow:forensics
+npm run raiola:automation -- --mode phase
+npm run raiola:next
+npm run raiola:hud
+npm run raiola:map-codebase
+npm run raiola:map-frontend
+npm run raiola:delegation-plan
+npm run raiola:plan-check -- --sync --strict
+npm run raiola:packet -- --step plan --json
+npm run raiola:pause-work -- --summary "..."
+npm run raiola:resume-work
+npm run raiola:save-memory -- --title "..." --note "..."
+npm run raiola:plant-seed -- --title "..." --trigger "..."
+npm run raiola:switch-workstream -- --name "<slug>" --create
+npm run raiola:workstreams status
+npm run raiola:doctor -- --strict
+npm run raiola:health -- --strict
+npm run raiola:evidence-check -- --strict
+npm run raiola:forensics
 ```
 
 ## Named workstreams
@@ -109,7 +112,7 @@ The default root is `docs/workflow`.
 If one repository needs an isolated workflow surface for a specific stream, create a named workstream:
 
 ```bash
-npm run workflow:switch-workstream -- --name yahoo-sync --create
+npm run raiola:switch-workstream -- --name yahoo-sync --create
 ```
 
 This creates a parallel surface such as `docs/yahoo-sync/` and makes it the active root.
@@ -118,17 +121,17 @@ This creates a parallel surface such as `docs/yahoo-sync/` and makes it the acti
 
 Use delegation planning when the task is explicitly parallelized and ownership is clear.
 
-- `workflow:map-codebase` builds stack, architecture, quality, and risk lanes with freshness metadata.
-- `workflow:map-codebase` also writes `STACK.md`, `INTEGRATIONS.md`, `ARCHITECTURE.md`, `STRUCTURE.md`, `TESTING.md`, and `CONCERNS.md` under `.workflow/codebase/`.
-- `workflow:delegation-plan -- --activation-text "<user request>"` can activate Team Lite from explicit user phrasing such as `parallel yap`, `subagent kullan`, `delegate et`, or `team mode`.
-- `workflow:delegation-plan -- --start` turns the plan into a real orchestration runtime with packets, results, and wave state.
+- `raiola:map-codebase` builds stack, architecture, quality, and risk lanes with freshness metadata.
+- `raiola:map-codebase` also writes `STACK.md`, `INTEGRATIONS.md`, `ARCHITECTURE.md`, `STRUCTURE.md`, `TESTING.md`, and `CONCERNS.md` under `.workflow/codebase/`.
+- `raiola:delegation-plan -- --activation-text "<user request>"` can activate Team Lite from explicit user phrasing such as `parallel yap`, `subagent kullan`, `delegate et`, or `team mode`.
+- `raiola:delegation-plan -- --start` turns the plan into a real orchestration runtime with packets, results, and wave state.
 - `execute` fan-out is only safe when worker write scopes are explicit and disjoint.
 
 ## Frontend specialization
 
 Use frontend specialization when workflow is active and frontend/UI signals appear.
 
-- `workflow:map-frontend` fingerprints framework, styling, UI system, forms/data/motion/test stack, and Storybook/Figma/Playwright surfaces.
+- `raiola:map-frontend` fingerprints framework, styling, UI system, forms/data/motion/test stack, and Storybook/Figma/Playwright surfaces.
 - It writes `FRONTEND_PROFILE.md` in the active workflow root and `.workflow/frontend-profile.json` in the repo runtime surface.
 - Frontend auto mode should turn on when the active milestone points at UI work such as React/TSX-heavy component scope, `components.json`, Tailwind, Storybook, Figma links, preview/browser validation, or user intent like `frontend`, `UI`, `screen`, `component`, `design`, or `responsive`.
 - Once frontend mode is active, route through the adapter registry:
@@ -158,7 +161,7 @@ Use frontend specialization when workflow is active and frontend/UI signals appe
 - `plan`
   Strategy, rollback/fallback, blockers, frontend routing when relevant, waves, and chunks are written down.
   Coverage has no orphan or duplicate requirements.
-  `workflow:plan-check -- --sync --strict` reaches `pass` before execute.
+  `raiola:plan-check -- --sync --strict` reaches `pass` before execute.
 - `execute`
   Only ready chunks from the active wave are implemented.
   Status fields are updated.
@@ -167,7 +170,7 @@ Use frontend specialization when workflow is active and frontend/UI signals appe
   Verify commands have been run.
   Manual checks and residual risks are documented.
   Frontend milestones close the visual verdict protocol, not just the functional contract.
-  `workflow:health -- --strict` is clean when required.
+  `raiola:health -- --strict` is clean when required.
 - `complete`
   Archive output is written.
   Carryforward is decided.
@@ -183,13 +186,13 @@ Use frontend specialization when workflow is active and frontend/UI signals appe
 Save an active memory item:
 
 ```bash
-npm run workflow:save-memory -- --title "UI preference" --note "Keep responses short"
+npm run raiola:save-memory -- --title "UI preference" --note "Keep responses short"
 ```
 
 Save a durable note:
 
 ```bash
-npm run workflow:save-memory -- --mode durable --title "Repo rule" --note "..."
+npm run raiola:save-memory -- --mode durable --title "Repo rule" --note "..."
 ```
 
 ## Visibility rule
@@ -226,22 +229,22 @@ I am not starting a new step in this window; I am leaving the resume command and
 ## Failure playbook
 
 - `Hash drift`
-  `workflow:packet -- --all --sync -> workflow:window -- --sync -> workflow:health -- --strict`
+  `raiola:packet -- --all --sync -> raiola:window -- --sync -> raiola:health -- --strict`
 - `Active root mismatch`
-  `workflow:workstreams status -> workflow:switch-workstream` or use `--root` to return to the correct root
+  `raiola:workstreams status -> raiola:switch-workstream` or use `--root` to return to the correct root
 
 ## Generated state
 
-`workflow:hud` also refreshes `.workflow/state.json`.
+`raiola:hud` also refreshes `.workflow/state.json`.
 
 - Treat it as a convenience summary for compact UX surfaces.
 - Do not treat it as canonical state; the markdown workflow files remain authoritative.
-- `workflow:doctor` and `workflow:next` also refresh it so the runtime summary stays current between HUD calls.
+- `raiola:doctor` and `raiola:next` also refresh it so the runtime summary stays current between HUD calls.
 - The same rule applies to `.workflow/codebase-map.json` and `.workflow/delegation-plan.json`.
 - The same rule also applies to `.workflow/frontend-profile.json`.
 - The same rule also applies to `.workflow/codebase/*` and `.workflow/orchestration/*`.
 - `Resume ambiguity`
-  Read `HANDOFF.md` and `WINDOW.md`, then run `workflow:resume-work -> workflow:next`
+  Read `HANDOFF.md` and `WINDOW.md`, then run `raiola:resume-work -> raiola:next`
 - `Dirty worktree closeout`
   Use explicit `--stage-paths`, or `--allow-workflow-only` when it is truly docs-only
 
@@ -267,5 +270,5 @@ I am not starting a new step in this window; I am leaving the resume command and
 - Is `CONTEXT.md` up to date after research?
 - Is `EXECPLAN.md` written as dependency-aware execution waves?
 - Is `VALIDATION.md` narrowed to milestone scope?
-- If frontend mode is active, did `workflow:map-frontend` run and did `VALIDATION.md` expand the visual verdict rows?
-- Is `workflow:health -- --strict` clean when it needs to be?
+- If frontend mode is active, did `raiola:map-frontend` run and did `VALIDATION.md` expand the visual verdict rows?
+- Is `raiola:health -- --strict` clean when it needs to be?

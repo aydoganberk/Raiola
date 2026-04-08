@@ -167,7 +167,7 @@ function buildDoctorReport(cwd, rootDir) {
   } else if (!fs.existsSync(packageJsonPath)) {
     pushCheck(
       'fail',
-      'Package scripts -> package.json is missing, so backward-compatible workflow:* commands are unavailable',
+      'Package scripts -> package.json is missing, so repo-local raiola:* commands are unavailable',
       `${productCommandName()} update --overwrite-scripts`,
     );
   } else {
@@ -188,7 +188,7 @@ function buildDoctorReport(cwd, rootDir) {
       }
 
       if (missingScripts.length === 0 && mismatchedScripts.length === 0) {
-        pushCheck('pass', `Package scripts -> ${expectedScriptEntries.length} expected workflow:* mappings are installed`);
+        pushCheck('pass', `Package scripts -> ${expectedScriptEntries.length} expected raiola:* mappings are installed`);
       } else {
         const details = [];
         if (missingScripts.length > 0) {
