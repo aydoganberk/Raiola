@@ -96,6 +96,7 @@ function buildDoctorReport(cwd, rootDir) {
   const embeddedMeta = embeddedProductMeta();
   const repoProductMeta = detectRepoProductMeta();
   const sourceRepoVersion = repoProductMeta?.version || null;
+  const isProductSourceRepo = Boolean(sourceRepoVersion);
   const versionDriftStatus = sourceRepoVersion ? 'fail' : 'warn';
   const packets = [
     buildPacketSnapshot(paths, { doc: 'context', step: 'discuss' }),
@@ -157,9 +158,11 @@ function buildDoctorReport(cwd, rootDir) {
   }
   if (!productManifest) {
     pushCheck(
-      'warn',
-      'Product manifest -> .workflow/product-manifest.json is missing, so install-surface parity cannot be fully checked',
-      `${productCommandName()} update`,
+      isProductSourceRepo ? 'pass' : 'warn',
+      isProductSourceRepo
+        ? 'Product manifest -> source package repo uses package.json as the canonical install surface'
+        : 'Product manifest -> .workflow/product-manifest.json is missing, so install-surface parity cannot be fully checked',
+      isProductSourceRepo ? null : `${productCommandName()} update`,
     );
   } else if (!fs.existsSync(packageJsonPath)) {
     pushCheck(
@@ -234,20 +237,30 @@ function buildDoctorReport(cwd, rootDir) {
     missingIgnoreEntries.length === 0 ? null : `${productCommandName()} update`,
   );
 
+  const skillSurfacePresent = fs.existsSync(skillPath);
   pushCheck(
-    fs.existsSync(skillPath) ? 'pass' : 'warn',
-    fs.existsSync(skillPath)
+    skillSurfacePresent || isProductSourceRepo ? 'pass' : 'warn',
+    skillSurfacePresent
       ? 'Skill surface -> raiola skill is installed for Codex'
-      : 'Skill surface -> .agents/skills/raiola/SKILL.md is missing',
-    fs.existsSync(skillPath) ? null : `${productCommandName()} update`,
+      : isProductSourceRepo
+        ? 'Skill surface -> source package repo ships skill/SKILL.md; installed alias copies are not required here'
+        : 'Skill surface -> .agents/skills/raiola/SKILL.md is missing',
+    skillSurfacePresent || isProductSourceRepo ? null : `${productCommandName()} update`,
   );
 
   if (!versionMarker.exists) {
-    pushCheck(
-      versionDriftStatus,
-      'Product version marker -> .workflow/VERSION.md is missing, so update drift cannot be proven',
-      `${productCommandName()} update`,
-    );
+    if (isProductSourceRepo) {
+      pushCheck(
+        'pass',
+        'Product version marker -> source package repo uses package.json as the canonical version source',
+      );
+    } else {
+      pushCheck(
+        versionDriftStatus,
+        'Product version marker -> .workflow/VERSION.md is missing, so update drift cannot be proven',
+        `${productCommandName()} update`,
+      );
+    }
   } else if (installedProductVersion && versionMarker.installedVersion !== installedProductVersion) {
     pushCheck(
       versionDriftStatus,

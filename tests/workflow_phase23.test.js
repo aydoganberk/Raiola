@@ -213,6 +213,49 @@ test('doctor fails on source-repo product version drift between package, marker,
   );
 });
 
+test('doctor treats missing install metadata as advisory in the source package repo', () => {
+  const targetRepo = makeTempRepo('raiola-phase23-source-repo-');
+  run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+
+  const packageJsonPath = path.join(targetRepo, 'package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  packageJson.name = 'raiola';
+  packageJson.version = '0.3.1';
+  fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+
+  fs.rmSync(path.join(targetRepo, '.workflow', 'VERSION.md'));
+  fs.rmSync(path.join(targetRepo, '.workflow', 'product-manifest.json'));
+  fs.rmSync(path.join(targetRepo, '.agents', 'skills', 'raiola', 'SKILL.md'));
+
+  const result = spawn(
+    'node',
+    [path.join(targetRepo, 'bin', 'rai.js'), 'doctor', '--strict', '--json'],
+    targetRepo,
+  );
+
+  assert.equal(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.failCount, 0);
+  assert.ok(
+    payload.checks.some(
+      (check) => check.status === 'pass'
+        && check.message.includes('Product manifest -> source package repo uses package.json as the canonical install surface'),
+    ),
+  );
+  assert.ok(
+    payload.checks.some(
+      (check) => check.status === 'pass'
+        && check.message.includes('Skill surface -> source package repo ships skill/SKILL.md'),
+    ),
+  );
+  assert.ok(
+    payload.checks.some(
+      (check) => check.status === 'pass'
+        && check.message.includes('Product version marker -> source package repo uses package.json as the canonical version source'),
+    ),
+  );
+});
+
 test('repo-local MCP install, status, and doctor expose real server descriptors and smoke results', async () => {
   const targetRepo = makeTempRepo('raiola-phase23-mcp-');
   run('node', [setupScript, '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
