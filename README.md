@@ -435,6 +435,14 @@ Raiola ships through a two-step automated release path:
 2. The workflow updates `package.json`, `scripts/workflow/product_version.js`, and `CHANGELOG.md`, commits the release, creates `vX.Y.Z`, and pushes both commit and tag.
 3. The tag triggers the `Release` workflow, which runs smoke checks, publishes to npm, and creates or updates the matching GitHub Release from the `CHANGELOG.md` section for that version.
 
+Bootstrap note: npm trusted publishing can only be attached after the package already exists on the registry. For a brand-new package name, do one initial authenticated publish first, then attach GitHub Actions trust for `aydoganberk/Raiola` and `.github/workflows/release.yml`.
+
+If you want to manage the trust relationship from the CLI, npm currently requires npm `11.10.0+`, package write access, account-level 2FA, and an existing package entry. The equivalent command is:
+
+```bash
+npm trust github raiola --repo aydoganberk/Raiola --file release.yml --yes
+```
+
 Until npm trusted publishing is configured for the package, the `Release` workflow can still publish by using the `NPM_TOKEN` repository secret. After trusted publishing is configured, the same workflow can publish without a long-lived token.
 
 ## Contributing, Security, License

@@ -70,10 +70,10 @@ jobs:
           node -e "const version=require('./package.json').version; const tag=process.env.GITHUB_REF_NAME; if (tag !== `v${version}`) { throw new Error(`Tag ${tag} does not match package.json version v${version}`); }"
       - name: Publish with trusted publishing
         if: ${{ env.NPM_TOKEN == '' }}
-        run: npm publish --provenance --access public
+        run: npm publish --access public
       - name: Publish with npm token fallback
         if: ${{ env.NPM_TOKEN != '' }}
-        run: npm publish --provenance --access public
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
 
