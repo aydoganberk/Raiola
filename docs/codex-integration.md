@@ -11,6 +11,14 @@
 - skill installs under `.workflow/runtime/codex-control/repo-codex/skills/`
 - backup journal under `.workflow/runtime/codex-control/journal.jsonl`
 
+The source repository also ships a portable agent pack with:
+
+- `skills/*`
+- `agents/*`
+- `references/*`
+- `.claude/commands/*`
+- `hooks/session-start.sh`
+
 ## Core flows
 
 - `rai codex setup --repo`
@@ -19,6 +27,8 @@
 - `rai codex rollback --repo`
 - `rai codex sync --repo`
 - `rai codex scaffold-role --from repo-profile`
+- `rai codex install-skill --role <name>`
+- `rai codex remove-skill --role <name>`
 
 ## Safety notes
 
@@ -26,3 +36,9 @@
 - rollback restores the latest backup journal entry
 - the repo sandbox may block a literal `.codex/` directory, so the generated mirror lives under `.workflow/runtime/codex-control/`
 - this keeps the flow deterministic for `setup`, `doctor`, `repair`, and test fixtures
+
+## Default Skill Story
+
+- Installed repos still get `.agents/skills/raiola/SKILL.md` as the compatibility entrypoint.
+- The expanded skill pack is also copied into `.agents/skills/*`.
+- The recommended discovery entrypoint is `using-raiola`.

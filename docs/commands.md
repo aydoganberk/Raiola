@@ -4,6 +4,23 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 
 `rai` is the primary shell. `raiola-on` is the first-run onboarding entry, and `raiola:*` is the repo-local npm fallback namespace.
 
+## Lifecycle facade
+
+- `rai spec`
+  Define the next slice before coding.
+- `rai plan`
+  Turn the active slice into chunks and validation gates.
+- `rai build`
+  Translate the active plan into the next safe execution step.
+- `rai test`
+  Show the verification path that proves the slice works.
+- `rai simplify`
+  Simplify code without changing behavior.
+- `rai review`
+  Generate a review-ready package.
+- `rai ship`
+  Generate a ship-ready package.
+
 ## Primary verbs
 
 - `rai on`
@@ -34,6 +51,16 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
   Verify install/runtime integrity and host prerequisites. Use `--repair` for a dry-run self-heal plan.
 - `rai health`
   Verify blocking workflow/runtime health. Host-tool advisories stay in `doctor`. Use `--repair` for a dry-run self-heal plan.
+- `rai spec`
+  Thin facade for the define/spec stage.
+- `rai plan`
+  Thin facade for the planning stage.
+- `rai build`
+  Thin facade for the execution stage.
+- `rai test`
+  Thin facade for the verification stage.
+- `rai simplify`
+  Thin facade for behavior-preserving cleanup.
 - `rai discuss`
   Generate a discuss brief from current workflow state, open questions, and active assumptions.
 - `rai questions`
@@ -205,6 +232,11 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 
 ## Runtime artifacts
 
+- `rai spec` -> `.workflow/reports/spec-guide.md`
+- `rai plan` -> `.workflow/reports/plan-guide.md`
+- `rai build` -> `.workflow/reports/build-guide.md`
+- `rai test` -> `.workflow/reports/test-guide.md`
+- `rai simplify` -> `.workflow/reports/simplify-guide.md`
 - `rai launch` -> `.workflow/runtime/launch.json`
 - `rai hud` -> `.workflow/runtime/hud.json`
 - `rai manager` -> `.workflow/runtime/manager.json`
@@ -305,6 +337,11 @@ Fresh `rai setup` installs the focused `pilot` profile by default so package.jso
 - `npm run raiola:patch-review`
 - `npm run raiola:patch-apply`
 - `npm run raiola:patch-rollback`
+- `npm run raiola:spec`
+- `npm run raiola:plan`
+- `npm run raiola:build`
+- `npm run raiola:test`
+- `npm run raiola:simplify`
 - `npm run raiola:review`
 - `npm run raiola:review-mode`
 - `npm run raiola:monorepo-mode`

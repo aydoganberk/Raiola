@@ -56,6 +56,7 @@ function layoutFromRoot(repoRoot) {
     ],
     compareScript: path.join(repoRoot, 'scripts', 'compare_golden_snapshots.ts'),
     skillFile: path.join(repoRoot, 'skill', 'SKILL.md'),
+    skillsDir: path.join(repoRoot, 'skills'),
     packageJson: path.join(repoRoot, 'package.json'),
     workflowIgnore: path.join(repoRoot, '.workflowignore'),
   };
@@ -180,6 +181,7 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:hud',
     'raiola:init',
     'raiola:launch',
+    'raiola:build',
     'raiola:manager',
     'raiola:migrate',
     'raiola:monorepo',
@@ -187,11 +189,15 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:next',
     'raiola:next-prompt',
     'raiola:note',
+    'raiola:plan',
     'raiola:quick',
     'raiola:review',
+    'raiola:simplify',
     'raiola:setup',
+    'raiola:spec',
     'raiola:ship-readiness',
     'raiola:team',
+    'raiola:test',
     'raiola:thread',
     'raiola:uninstall',
     'raiola:update',
@@ -224,6 +230,7 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:hud',
     'raiola:init',
     'raiola:launch',
+    'raiola:build',
     'raiola:manager',
     'raiola:map-codebase',
     'raiola:map-frontend',
@@ -235,6 +242,7 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:next-prompt',
     'raiola:note',
     'raiola:packet',
+    'raiola:plan',
     'raiola:plan-check',
     'raiola:profile',
     'raiola:quick',
@@ -245,11 +253,14 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:route',
     'raiola:secure',
     'raiola:setup',
+    'raiola:simplify',
+    'raiola:spec',
     'raiola:ship',
     'raiola:ship-readiness',
     'raiola:stats',
     'raiola:step-fulfillment',
     'raiola:team',
+    'raiola:test',
     'raiola:thread',
     'raiola:ui-direction',
     'raiola:ui-plan',
@@ -382,6 +393,7 @@ function writeProductManifest(targetRepo, options = {}) {
     generatedAt: new Date().toISOString(),
     versionMarkerPath: '.workflow/VERSION.md',
     skillPath: '.agents/skills/raiola/SKILL.md',
+    skillPackPaths: runtimeFiles.filter((relativeFile) => relativeFile.startsWith('.agents/skills/')),
     installerSourceRoot: productSource.repoRoot !== targetRepo ? productSource.repoRoot : null,
     scriptProfile,
     runtimeScripts: loadTargetRuntimeScripts(scriptProfile, {
@@ -576,7 +588,17 @@ function runtimeFilesForScriptProfile(profile = 'full', options = {}) {
     ...walkFiles(source.cliDir).map((filePath) => relativePath(source.repoRoot, filePath)),
     relativePath(source.repoRoot, source.binFile),
     ...(source.aliasBinFiles || []).map((filePath) => relativePath(source.repoRoot, filePath)),
+    '.agents/skills/raiola/SKILL.md',
   ];
+
+  if (fs.existsSync(source.skillsDir)) {
+    runtimeFiles.push(
+      ...walkFiles(source.skillsDir).map((filePath) => {
+        const relativeSkillPath = relativePath(source.skillsDir, filePath);
+        return `.agents/skills/${relativeSkillPath}`;
+      }),
+    );
+  }
 
   if (normalizedProfile === 'full') {
     runtimeFiles.push(relativePath(source.repoRoot, source.compareScript));
@@ -1041,6 +1063,7 @@ function installWorkflowSurface(targetRepo, options = {}) {
   ];
   const compareTarget = path.join(targetRepo, 'scripts', 'compare_golden_snapshots.ts');
   const skillTarget = path.join(targetRepo, '.agents', 'skills', 'raiola', 'SKILL.md');
+  const skillsTarget = path.join(targetRepo, '.agents', 'skills');
   const workflowIgnoreTarget = path.join(targetRepo, '.workflowignore');
   const selectedRuntimeFiles = runtimeFilesForScriptProfile(selectedScriptProfile, {
     targetRepo,
@@ -1070,6 +1093,7 @@ function installWorkflowSurface(targetRepo, options = {}) {
     binAliases: [],
     compareScript: null,
     skill: null,
+    skillPack: { created: [], updated: [], skipped: [] },
     workflowIgnore: null,
     gitignore: null,
     packageScripts: null,
@@ -1104,6 +1128,12 @@ function installWorkflowSurface(targetRepo, options = {}) {
   report.compareScript = includeCompareScript
     ? copyFileTracked(source.compareScript, compareTarget, { overwrite: true })
     : 'skipped';
+  if (fs.existsSync(source.skillsDir)) {
+    copyDirectoryTracked(source.skillsDir, skillsTarget, {
+      overwrite: true,
+      bucket: report.skillPack,
+    });
+  }
   report.skill = copyFileTracked(source.skillFile, skillTarget, { overwrite: true });
   report.workflowIgnore = copyFileTracked(source.workflowIgnore, workflowIgnoreTarget, { overwrite: false });
   if (manageGitignore) {
@@ -1156,6 +1186,8 @@ function formatInstallSummary(report) {
     `- Bin: \`${report.bin}\``,
     `- Compare script: \`${report.compareScript}\``,
     `- Skill: \`${report.skill}\``,
+    `- Skill pack created: \`${report.skillPack.created.length}\``,
+    `- Skill pack updated: \`${report.skillPack.updated.length}\``,
   ];
 
   if (report.packageScripts.missingPackageJson) {

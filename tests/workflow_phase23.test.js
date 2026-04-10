@@ -9,6 +9,7 @@ const { createPatchBundle } = require('../scripts/workflow/team_runtime_artifact
 const { run: runPackSmoke } = require('../scripts/smoke_pack_install');
 
 const repoRoot = path.resolve(__dirname, '..');
+const currentProductVersion = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')).version;
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
 const initScript = path.join(repoRoot, 'scripts', 'workflow', 'init.js');
 const setupScript = path.join(repoRoot, 'scripts', 'workflow', 'setup.js');
@@ -172,7 +173,7 @@ test('doctor fails on source-repo product version drift between package, marker,
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   packageJson.name = 'raiola';
-  packageJson.version = '0.3.1';
+  packageJson.version = currentProductVersion;
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
   writeFile(targetRepo, '.workflow/VERSION.md', `# WORKFLOW PRODUCT VERSION
@@ -202,13 +203,13 @@ test('doctor fails on source-repo product version drift between package, marker,
   assert.ok(
     payload.checks.some(
       (check) => check.status === 'fail'
-        && check.message.includes('Product version marker -> marker=0.2.0, expected=0.3.1'),
+        && check.message.includes(`Product version marker -> marker=0.2.0, expected=${currentProductVersion}`),
     ),
   );
   assert.ok(
     payload.checks.some(
       (check) => check.status === 'fail'
-        && check.message.includes('Product manifest version -> manifest=0.2.0, expected=0.3.1'),
+        && check.message.includes(`Product manifest version -> manifest=0.2.0, expected=${currentProductVersion}`),
     ),
   );
 });
@@ -220,7 +221,7 @@ test('doctor treats missing install metadata as advisory in the source package r
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   packageJson.name = 'raiola';
-  packageJson.version = '0.3.1';
+  packageJson.version = currentProductVersion;
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
   fs.rmSync(path.join(targetRepo, '.workflow', 'VERSION.md'));
@@ -245,7 +246,7 @@ test('doctor treats missing install metadata as advisory in the source package r
   assert.ok(
     payload.checks.some(
       (check) => check.status === 'pass'
-        && check.message.includes('Skill surface -> source package repo ships skill/SKILL.md'),
+        && check.message.includes('Skill surface -> source package repo ships skill/SKILL.md and skills/*'),
     ),
   );
   assert.ok(

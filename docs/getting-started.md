@@ -25,6 +25,12 @@ rai on next
 raiola-on next
 ```
 
+The quickest way to learn the thin lifecycle surface is:
+
+```bash
+rai help lifecycle
+```
+
 From this repository:
 
 ```bash
@@ -41,6 +47,14 @@ node bin/rai.js doctor --strict
 ## Choose your starting path
 
 Use `rai help` to start from the three golden flows. Pick the one that matches how your repo usually works.
+
+If you want the smallest command surface first, begin with:
+
+```bash
+rai help lifecycle
+rai spec --goal "..."
+rai plan --goal "..."
+```
 
 ### Solo maintainer
 
@@ -82,6 +96,7 @@ rai sessions
 
 ```bash
 rai setup
+rai help lifecycle
 rai doctor --strict
 rai hud --compact
 rai next
@@ -100,3 +115,14 @@ rai help frontend
 rai help trust
 rai help all
 ```
+
+## Plugin-Style Usage
+
+This source repository also ships a portable agent pack:
+
+- `AGENTS.md`
+- `skills/*`
+- `.claude/commands/*`
+- `agents/*`
+- `references/*`
+- `hooks/session-start.sh`

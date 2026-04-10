@@ -20,6 +20,15 @@ Core commands:
   review           Generate a review-ready closeout package.
   team             Plan or operate Team Lite orchestration.
 
+Lifecycle facade:
+  spec             Define the next slice before coding through the lifecycle facade.
+  plan             Break the current slice into explicit plan chunks and gates.
+  build            Translate the active plan into the next safe execution slice.
+  test             Show the verification path that proves the slice works.
+  simplify         Simplify code without changing behavior.
+  review           Generate a review-ready closeout package.
+  ship             Generate a ship-ready package.
+
 Golden flows:
   solo    -> rai on, rai do, rai next, rai verify-shell, rai checkpoint, rai next-prompt
   review  -> rai route, rai review, rai ui-review, rai verify-work, rai ship-readiness
@@ -27,6 +36,7 @@ Golden flows:
   team    -> rai monorepo, rai team run, rai team collect, rai patch-review, rai sessions
 
 More help:
+  rai help lifecycle    Thin spec -> ship facade over the deeper workflow engine
   rai help categories   Browse command groups
   rai help frontend     UI direction, spec, review, and preview surfaces
   rai help trust        Discuss, claims, approvals, and policy surfaces

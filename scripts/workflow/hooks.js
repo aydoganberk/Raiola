@@ -18,6 +18,23 @@ function hooksPath(cwd) {
   return path.join(cwd, '.workflow', 'runtime', 'hooks', 'config.json');
 }
 
+function shippedHookAssets(cwd) {
+  const root = process.cwd() === cwd ? cwd : path.resolve(cwd);
+  const hookConfig = path.join(root, 'hooks', 'hooks.json');
+  const sessionStart = path.join(root, 'hooks', 'session-start.sh');
+  const metaSkill = path.join(root, 'skills', 'using-raiola', 'SKILL.md');
+  return {
+    hookConfig,
+    sessionStart,
+    metaSkill,
+    present: [
+      hookConfig,
+      sessionStart,
+      metaSkill,
+    ].every((filePath) => require('node:fs').existsSync(filePath)),
+  };
+}
+
 function loadHooks(cwd) {
   const hooks = readJsonFile(hooksPath(cwd), null);
   if (hooks) {
@@ -40,6 +57,7 @@ function main() {
   }
   const cwd = process.cwd();
   const hooks = loadHooks(cwd);
+  const shipped = shippedHookAssets(cwd);
   const payload = action === 'validate'
     ? {
       action,
@@ -47,11 +65,23 @@ function main() {
       verdict: hooks.enabled ? 'pass' : 'pass',
       eventCount: hooks.events.length,
       enabled: hooks.enabled,
+      shippedHookAssets: {
+        present: shipped.present,
+        hookConfig: relativePath(cwd, shipped.hookConfig),
+        sessionStart: relativePath(cwd, shipped.sessionStart),
+        metaSkill: relativePath(cwd, shipped.metaSkill),
+      },
     }
     : {
       action: action === 'init' ? 'init' : 'list',
       file: relativePath(cwd, hooksPath(cwd)),
       hooks,
+      shippedHookAssets: {
+        present: shipped.present,
+        hookConfig: relativePath(cwd, shipped.hookConfig),
+        sessionStart: relativePath(cwd, shipped.sessionStart),
+        metaSkill: relativePath(cwd, shipped.metaSkill),
+      },
     };
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -60,6 +90,7 @@ function main() {
   console.log('# HOOKS\n');
   console.log(`- File: \`${payload.file}\``);
   console.log(`- Enabled: \`${hooks.enabled ? 'yes' : 'no'}\``);
+  console.log(`- Shipped session-start assets: \`${shipped.present ? 'present' : 'missing'}\``);
 }
 
 if (require.main === module) {

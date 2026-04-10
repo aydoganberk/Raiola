@@ -74,6 +74,14 @@ function expectedRuntimeFiles() {
   }
   files.push({ source: source.compareScript, relative: relativePath(source.repoRoot, source.compareScript) });
   files.push({ source: source.skillFile, relative: '.agents/skills/raiola/SKILL.md' });
+  if (fs.existsSync(source.skillsDir)) {
+    for (const fullPath of walkFiles(source.skillsDir)) {
+      files.push({
+        source: fullPath,
+        relative: `.agents/skills/${relativePath(source.skillsDir, fullPath)}`,
+      });
+    }
+  }
   return files;
 }
 
@@ -260,6 +268,8 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
               || relativeFile === '.agents/skills/codex-workflow/SKILL.md'
             ) {
               sourcePath = source.skillFile;
+            } else if (relativeFile.startsWith('.agents/skills/')) {
+              sourcePath = path.join(source.skillsDir, relativeFile.slice('.agents/skills/'.length));
             }
             const targetPath = path.join(cwd, relativeFile);
             ensureDir(path.dirname(targetPath));

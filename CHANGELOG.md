@@ -4,6 +4,13 @@ Primary shell note: changelog command references are normalized to the current `
 
 ## Unreleased
 
+_No unreleased changes yet._
+
+## 0.4.0 - 2026-04-10
+
+- Added a portable agent pack with root `AGENTS.md`, `.claude-plugin` metadata, real session-start hook assets, role personas, and reusable review/testing/security/accessibility reference checklists.
+- Added a split Raiola skill pack so agents can discover focused entrypoints such as `using-raiola`, lifecycle, quick-lane, closeout, frontend, monorepo, team orchestration, and code simplification instead of loading one oversized skill.
+- Added a lightweight workflow lifecycle facade across the CLI and Claude command surface with `rai spec`, `rai plan`, `rai build`, `rai test`, `rai review`, `rai code-simplify`, and `rai ship`, plus profile-aware install/doctor/repair/uninstall support for the new runtime surface.
 - Updated GitHub Actions workflows to Node 24-ready action majors and moved the supported repo runtime baseline to Node 22, with CI coverage on Node 22 and 24.
 - Refreshed GitHub-facing docs and package metadata around the `raiola` brand, the primary `rai` shell, and the current product surface.
 - Added a lighter `core` workflow script profile and made `rai setup` default to it on fresh installs to reduce package.json churn during pilot adoption.
@@ -48,3 +55,4 @@ Primary shell note: changelog command references are normalized to the current `
 ## 0.1.0
 
 - Initial workflow kernel and markdown-canonical control plane.
+

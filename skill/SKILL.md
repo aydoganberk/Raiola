@@ -1,263 +1,67 @@
 ---
 name: raiola
-description: "Repo workstream continuity protocol. Use only when the user explicitly asks for workflow/milestone/handoff/closeout discipline, or when resuming a workflow milestone they explicitly started."
+description: "Portable Raiola meta-skill. Use when deciding whether to activate Raiola workflow, when choosing the lifecycle facade command, or when routing into a targeted Raiola skill pack."
 ---
 
 # raiola
 
-This skill is used to run multi-session work inside a repository through one durable workflow protocol.
-It is not the default path; if the user did not explicitly ask for workflow, continue with the normal task flow.
+This is the compatibility entrypoint for the Raiola skill pack.
+It should behave like a meta-skill: choose the right Raiola lane, keep workflow explicit opt-in, and route to the smaller targeted skills instead of loading the entire workflow contract by default.
 
 ## When To Use
 
-- When the user explicitly wants workflow, milestone, handoff, or closeout discipline
-- When the user wants to continue a previously opened workflow milestone
-- When named workstreams, validation contracts, or pause/resume snapshots are explicitly needed
+- When starting a session in a repo that ships Raiola
+- When deciding whether a request needs workflow at all
+- When choosing between quick mode, full milestones, review, frontend, monorepo, team, or simplify lanes
 
-## Quick Command Surface
+Do not activate full workflow just because Raiola is present.
 
-- `$raiola-help`
-  - `Show the short command surface and when to use quick/full/team.`
-- `$raiola-on`
-  - `Open the blank-state onboarding entry and propose a milestone to start.`
-- `$raiola-next`
-  - `Surface the single safest next move from current state.`
-- `$raiola-quick`
-  - `Start or continue quick mode for a narrow 15-60 minute task.`
-- `$raiola-checkpoint`
-  - `Write a continuity checkpoint before compaction or handoff.`
-- `$raiola-team`
-  - `Open Team Lite orchestration when the user explicitly asks for delegation or parallelism.`
-- `$raiola-review`
-  - `Generate a review-ready closeout package.`
-- `$raiola-monorepo`
-  - `Open the staged large-monorepo repo-map, risk, patch-plan, and verify flow, and sync the root AGENTS.md monorepo section.`
-- `$raiola-ship`
-  - `Generate a ship-ready package.`
+## Lifecycle Facade
 
-## Alias Mapping
+Prefer the thin lifecycle facade first:
 
-- `$raiola-help` -> `rai help`
-- `$raiola-on` -> `rai on next` or `raiola-on next`
-- `$raiola-next` -> `rai next`
-- `$raiola-quick` -> `rai quick`
-- `$raiola-checkpoint` -> `rai checkpoint`
-- `$raiola-team` -> `rai team`
-- `$raiola-review` -> `rai review`
-- `$raiola-monorepo` -> `rai monorepo-mode`
-- `$raiola-ship` -> `rai ship`
+- `rai spec`
+- `rai plan`
+- `rai build`
+- `rai test`
+- `rai simplify`
+- `rai review`
+- `rai ship`
 
-## Granularity
+Use the full workflow shell only when the task explicitly benefits from canonical docs, checkpoints, or bounded orchestration.
 
-- The default planning unit is a single milestone.
-- One user request usually maps to one milestone.
-- `discuss -> research -> plan -> execute -> audit -> complete` are steps within that milestone, not separate milestones.
-- `execute` is wave-based inside the milestone: `wave 1 -> wave 2 -> wave 3`.
-- `frontend/UI` work may activate an automatic frontend-specialized lane while the milestone stays inside the same lifecycle.
+## Skill Routing
 
-## Workflow Profiles
+- Discovery and opt-in rules -> `using-raiola`
+- Full milestone contract -> `raiola-milestone-lifecycle`
+- Narrow tasks -> `raiola-quick-lane`
+- Review and closeout -> `raiola-review-closeout`
+- Delegation and bounded parallelism -> `raiola-team-orchestration`
+- Frontend specialization -> `raiola-frontend-lane`
+- Large repo staging -> `raiola-monorepo-mode`
+- Behavior-preserving cleanup -> `raiola-code-simplification`
 
-- `lite`
-  - `Small, short-lived, low-ritual tasks`
-- `standard`
-  - `Default general-purpose profile`
-- `full`
-  - `Real handoff/closeout, multi-session coordination, and process-quality tracking`
-- `Workflow mode` and `Workflow profile` are different:
-  - `mode` controls team/git isolation behavior
-  - `profile` controls ritual depth and minimum-done expectations
+## Non-Negotiables
 
-## Automation Modes
+1. Workflow remains explicit opt-in.
+2. Markdown is canonical once workflow is active.
+3. Verification must be explicit and evidence-backed.
+4. Delegation requires disjoint write scopes.
+5. `.workflow/state.json` and other runtime JSON files are derived, not authoritative.
 
-- `manual`
-  - `Pause at major workflow transitions unless the user explicitly asks to continue`
-- `phase`
-  - `Codex may complete the current phase end-to-end, update canonical docs, then stop at the next phase boundary`
-- `full`
-  - `Codex may continue phase-to-phase until blocked, complete, or window-managed`
-- Read `Automation mode` and `Automation status` from `STATUS.md`, `CONTEXT.md`, and `HANDOFF.md` as the active behavior contract.
-- Users may set or change this with:
-- `npm run raiola:milestone -- --id Mx --name "..." --goal "..." --profile standard --automation phase`
-- `rai milestone --id Mx --name "..." --goal "..." --profile standard --automation phase`
-  - `npm run raiola:automation -- --mode full`
-- When automation is active, Codex should own:
-  - `discussion flow`
-  - `CONTEXT.md updates`
-  - `plan sequencing`
-  - `phase transitions allowed by the current mode`
-- `raiola:plan-check` may legitimately report `pending` during `discuss` or `research`; treat that as incomplete work, not as a hard failure.
-- If `WINDOW.md` recommends `handoff-required` or `new-window-recommended` and the client can open a new window/thread, prefer that handoff path.
-- If the client cannot open a new window/thread, compact the current context, refresh packet state, and continue from the remaining plan.
+## Common Rationalizations
 
-## Startup Sequence
+| Rationalization | Reality |
+|---|---|
+| "Raiola is installed, so everything should use workflow." | Workflow overhead only makes sense when continuity, auditability, or orchestration are real needs. |
+| "I can skip the lifecycle facade because I know the right deep command." | The facade exists to make the safe entrypoint obvious and portable. |
+| "State can stay in chat because this is only one session." | Raiola exists because one session is not a trustworthy control plane. |
 
-Before reopening the full contract, prefer the short layer:
+## Verification
 
-1. Use `$raiola-help` if the user needs orientation.
-2. Use `$raiola-on` when the repo is at a blank state and needs a milestone proposal.
-3. Use `$raiola-next` to see the safest next operator action.
-4. If the task is narrow and short-lived, consider `$raiola-quick` before opening a full milestone.
-5. If the user explicitly requests delegation or parallelism, route through `$raiola-team`.
-
-Then follow the full startup sequence below when the milestone contract is active.
-
-1. Read `AGENTS.md`.
-2. Resolve the active workstream root from `docs/workflow/WORKSTREAMS.md`.
-3. In that root, read `HANDOFF.md -> Continuity Checkpoint`, `EXECPLAN.md -> Open Requirements`, `EXECPLAN.md -> Current Capability Slice`, and the current chunk row from `EXECPLAN.md -> Plan of Record`.
-4. Only if the checkpoint is stale, missing, or obviously insufficient, reopen the broader canonical docs (`PROJECT.md`, `RUNTIME.md`, `PREFERENCES.md`, `STATUS.md`, `CONTEXT.md`, `VALIDATION.md`, `WINDOW.md`, `SEEDS.md`).
-5. If `MEMORY.md` contains `Active Recall Items` tied to the active milestone, read them automatically.
-6. Read `Durable Notes` from `MEMORY.md` only if the user asked for durable memory or if it is genuinely necessary.
-7. Summarize current state in `8-12` bullets.
-8. Operate only within the active phase, active milestone, and active milestone step.
-
-## Milestone Loop
-
-An active milestone always follows this loop:
-
-1. `discuss`
-   - Scan the codebase first.
-   - Follow the value of `Discuss mode` in `PREFERENCES.md`:
-     - `assumptions`: read the codebase first, then write evidence-backed assumptions.
-     - `interview`: clarify the goal first, then ask only high-leverage questions.
-   - Complete `intent capture -> constraint extraction -> execution shaping`.
-   - Write user intent, explicit constraints, alternatives considered, success rubric, requirement list, problem frame, scan summary, canonical refs, claim ledger, unknowns, seed intake, and active recall intake into `CONTEXT.md`.
-2. `research`
-   - Identify touched files, dependencies, risks, and verification surface.
-   - Update `CONTEXT.md` with research findings.
-   - Narrow acceptance criteria, user-visible outcomes, regression focus, success contract, verify commands, and manual check fields in `VALIDATION.md` to the active milestone scope.
-   - If workflow is active and frontend/UI signals are present, run `raiola:map-frontend` and treat the generated profile as the routing input for adapters and audit expectations.
-3. `plan`
-   - Continue only if `CONTEXT.md` is current after research.
-   - Read `CARRYFORWARD.md` and relevant seeds.
-   - Write the source-of-truth plan into `Plan of Record`, `Chosen Strategy`, `Wave Execution Policy`, `Wave Structure`, `Coverage Matrix`, `Plan Chunk Table`, and `Commit Policy` in `EXECPLAN.md`.
-   - Split execute into dependency-aware chunks across `wave 1 -> wave 2 -> wave 3`.
-   - Keep each chunk run-sized, keep same-wave parallelism minimal, and mark unused waves as `not needed` rather than silently skipping them.
-   - If frontend mode is active, choose the adapter route, make design-system-aware behavior explicit, and expand `VALIDATION.md` with the visual verdict protocol before execute.
-   - Run `raiola:plan-check -- --sync --strict` before execute begins.
-   - Treat `pending` as "finish the planning packet first" and `fail` as "the plan shape is wrong and must be revised".
-   - If `WINDOW.md` and packet budget are insufficient for a new chunk, do not start a new step.
-4. `execute`
-   - Apply only the active milestone plan.
-   - Run `wave 1`, then `wave 2`, then `wave 3`; never open a later wave while an earlier wave is still incomplete.
-   - Only dependency-free chunks may share a wave.
-   - Parallel workers must come from the planned wave/chunk rows; do not open workers ad hoc just because spare parallelism exists.
-   - Same-wave write-capable workers need explicit ownership and disjoint write scope before fan-out.
-   - The main agent acts as orchestrator: delegate -> wait -> integrate -> update docs -> decide the next wave.
-   - If `Atomic commit mode` is enabled in `EXECPLAN.md`, commit only at the declared `wave` or `chunk` boundary.
-   - Leave active recall notes with `raiola:save-memory` if needed.
-5. `audit`
-   - Use the `VALIDATION.md` contract table for test, diff, review, or smoke checks.
-   - If frontend mode is active, visual verdict checks become part of the audit contract instead of optional nice-to-have review.
-   - Write the result and remaining risks into `STATUS.md`.
-6. `complete`
-   - Write evidence, remaining risks, and the recommended next milestone.
-   - Move unfinished items into `CARRYFORWARD.md` if needed.
-   - Archive milestone summary, final context, and validation snapshot under `completed_milestones/`.
-   - Remove milestone-linked `Active Recall Items` from `MEMORY.md`.
-   - Check whether `AGENTS.md` needs an update.
-   - If audit is closed, apply commit and push protocol only while `raiola:health -- --strict` is clean.
-
-## Minimum Done Checklists
-
-- `discuss`
-  - `Intent capture, constraint extraction, and execution shaping are complete`
-  - `User intent, explicit constraints, success rubric, and requirement list are filled in`
-  - `Scope is framed with evidence`
-- `research`
-  - `Touched files are known`
-  - `Dependency map and risks are filled in`
-  - `VALIDATION.md acceptance criteria, user-visible outcomes, regression focus, and contract are narrowed to milestone scope`
-- `plan`
-  - `Chosen strategy, rejected strategies, rollback/fallback, blockers, wave execution policy, chunks, and commit policy are written`
-  - `Coverage matrix has no orphan or duplicate requirements`
-  - `raiola:plan-check passes before execute begins`
-- `execute`
-  - `Only ready chunks from the active wave were implemented`
-  - `Same-wave work was dependency-free and had disjoint write scopes`
-  - `Status fields were updated`
-  - `Integration order and any atomic commit checkpoints were documented`
-  - `Off-plan drift was written back into docs`
-- `audit`
-  - `Verify commands were run`
-  - `Manual checks and residual risks were documented`
-  - `Strict health gate is clean`
-- `complete`
-  - `Archive output was written`
-  - `Carryforward was decided`
-  - `Git closeout scope was made explicit`
-
-## Operational Helpers
-
-- `npm run raiola:hud`
-- `npm run raiola:map-codebase`
-- `npm run raiola:map-frontend`
-- `npm run raiola:control -- --utterance "plan kismini gecelim"`
-- `npm run raiola:step-fulfillment -- --utterance "plan kismini gecelim"`
-- `npm run raiola:delegation-plan`
-- `npm run raiola:plan-check -- --sync --strict`
-- `rai milestone --id Mx --name "..." --goal "..." --profile standard --automation manual`
-- `npm run raiola:automation -- --mode phase`
-- `npm run raiola:checkpoint -- --next "..."`
-- `npm run raiola:complete-milestone -- --agents-review unchanged --summary "..." --stage-paths src/foo,tests/foo`
-- `npm run raiola:save-memory -- --title "..." --note "..."`
-- `npm run raiola:packet -- --step plan --json`
-- `npm run raiola:next`
-- `npm run raiola:tempo -- --utterance "hızlı geç"`
-- `npm run raiola:pause-work -- --summary "..."`
-- `npm run raiola:resume-work`
-- `npm run raiola:plant-seed -- --title "..." --trigger "..."`
-- `npm run raiola:switch-workstream -- --name "<slug>" --create`
-- `npm run raiola:doctor`
-- `npm run raiola:health -- --strict`
-- `npm run raiola:forensics`
-
-## Packet v5 Rules
-
-- `Packet v5` is section-aware by default.
-- `Tier A` keeps continuity core refs loaded.
-- `Tier B` keeps the active chunk or active step surface loaded.
-- `Tier C` is cold and should load only on hash drift or explicit need.
-- `PREFERENCES.md -> Token efficiency measures` controls whether unchanged Tier A/B refs may stay out of the next packet:
-  - `auto` is mode-aware
-  - `on` keeps delta loading active
-  - `off` switches to `continuity_first` so more context stays loaded
-- `WINDOW.md` should show both the active `Packet loading mode` and `Token efficiency measures` value so the current safety posture is visible before compacting.
-- Do not prefer full-doc reads when a section-level packet ref is available.
-- `execute` should minimize the read set to the current chunk, open requirements, acceptance rows, and touched files.
-- If `WINDOW.md` recommends `compact-now` or `do-not-start-next-step`, first check `Checkpoint freshness`.
-- If `Checkpoint freshness = no`, run `raiola:checkpoint` before compacting or handing off.
-
-## Frontend Auto Mode
-
-- `raiola:map-frontend` fingerprints:
-  - `framework: Next, Vite, Astro, Remix`
-  - `styling: Tailwind, CSS Modules, styled-components, custom`
-  - `UI system: shadcn, Radix, MUI, Chakra, custom`
-  - `forms/data/motion/test stack`
-  - `Storybook/Figma/Playwright presence`
-- It writes:
-  - `FRONTEND_PROFILE.md` in the active workflow root
-  - `.workflow/frontend-profile.json` in the runtime surface
-- Frontend auto mode activates only while workflow is active and at least one frontend signal is present.
-- Activation signals include:
-  - `React/TSX-heavy edit surface`
-  - `components.json`
-  - `Tailwind config`
-  - `Storybook`
-  - `Figma link`
-  - `dev server / preview validation need`
-  - `user intent such as landing page, frontend, UI, screen, component, design, responsive`
-- When frontend mode is active:
-  - `behave in a design-system-aware way rather than treating UI as isolated markup`
-  - `select the adapter route from the frontend registry`
-  - `expand audit expectations to include the visual verdict protocol`
-  - `make visual verdict required when the UI work needs visual or UX acceptance, not just functional proof`
-
-## Frontend Adapter Registry
-
-- `shadcn`
-  - `Use when components.json or shadcn-style routing is present`
-- `react-best-practices`
+ - [ ] Raiola was activated only when appropriate
+ - [ ] The lifecycle facade or a targeted skill was selected intentionally
+ - [ ] Verification expectations are visible before edits expand
   - `Use when React/TSX surfaces are active`
 - `web-design-guidelines`
   - `Use when frontend mode is active so visual, accessibility, and UX checks stay explicit`

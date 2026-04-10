@@ -1,0 +1,19 @@
+{
+  "name": "raiola",
+  "owner": {
+    "name": "Berk Aydogan"
+  },
+  "metadata": {
+    "description": "Repo-native workflow OS with a portable lifecycle facade, personas, checklists, and explicit workflow discipline."
+  },
+  "plugins": [
+    {
+      "name": "raiola",
+      "source": {
+        "source": "github",
+        "repo": "aydoganberk/Raiola"
+      },
+      "description": "Portable workflow skills plus lifecycle commands for spec, plan, build, test, simplify, review, and ship."
+    }
+  ]
+}

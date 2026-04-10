@@ -20,6 +20,11 @@ const CLI_COMMANDS = {
   milestone: { script: 'new_milestone.js', description: 'Open a new full-workflow milestone.' },
   doctor: { script: 'doctor.js', description: 'Check install health and workflow contract integrity.' },
   health: { script: 'health.js', description: 'Check runtime health and validation integrity.' },
+  spec: { script: 'spec.js', description: 'Define the next slice before coding through the lifecycle facade.' },
+  plan: { script: 'plan.js', description: 'Break the current slice into explicit plan chunks and gates.' },
+  build: { script: 'build.js', description: 'Translate the active plan into the next safe execution slice.' },
+  test: { script: 'test.js', description: 'Show the verification path that proves the slice works.' },
+  simplify: { script: 'simplify.js', description: 'Simplify code without changing behavior.' },
   discuss: { script: 'discuss.js', description: 'Generate the current discuss brief from workflow state.' },
   questions: { script: 'questions.js', description: 'List or capture open workflow questions.' },
   assumptions: { script: 'assumptions.js', description: 'Track active assumptions and their exit triggers.' },
@@ -107,6 +112,11 @@ const CLI_COMMAND_PROFILES = Object.freeze({
     'milestone',
     'doctor',
     'health',
+    'spec',
+    'plan',
+    'build',
+    'test',
+    'simplify',
     'hud',
     'next',
     'verify-shell',
@@ -249,6 +259,7 @@ const GOLDEN_FLOWS = Object.freeze([
 ]);
 
 const CORE_COMMANDS = ['setup', 'on', 'doctor', 'do', 'next', 'review', 'team'];
+const LIFECYCLE_COMMANDS = ['spec', 'plan', 'build', 'test', 'simplify', 'review', 'ship'];
 
 const LEGACY_EQUIVALENTS = [
   ['rai on', 'npm run raiola:on -- next'],
@@ -271,6 +282,11 @@ const LEGACY_EQUIVALENTS = [
   ['rai verify-work', 'npm run raiola:verify-work'],
   ['rai next-prompt', 'npm run raiola:next-prompt'],
   ['rai checkpoint', 'npm run raiola:checkpoint -- --next "Resume here"'],
+  ['rai spec', 'npm run raiola:spec -- --goal "..."'],
+  ['rai plan', 'npm run raiola:plan -- --goal "..."'],
+  ['rai build', 'npm run raiola:build -- --goal "..."'],
+  ['rai test', 'npm run raiola:test -- --cmd "npm test"'],
+  ['rai simplify', 'npm run raiola:simplify -- --scope "changed files"'],
   ['rai quick', 'npm run raiola:quick'],
   ['rai team', 'npm run raiola:team'],
   ['rai subagents', 'npm run raiola:subagents -- plan'],
@@ -318,7 +334,7 @@ function validateCommandGroups() {
     }
   }
 
-  const missing = [...knownCommands].filter((command) => !seen.has(command));
+  const missing = [...knownCommands].filter((command) => !seen.has(command) && !LIFECYCLE_COMMANDS.includes(command));
   if (missing.length > 0) {
     throw new Error(`COMMAND_GROUPS is missing commands: ${missing.join(', ')}`);
   }
@@ -410,6 +426,9 @@ Start here:
 Core commands:
 ${formatCommandRows(CORE_COMMANDS)}
 
+Lifecycle facade:
+${formatCommandRows(LIFECYCLE_COMMANDS)}
+
 Golden flows:
   solo    -> rai on, rai do, rai next, rai verify-shell, rai checkpoint, rai next-prompt
   review  -> rai route, rai review, rai ui-review, rai verify-work, rai ship-readiness
@@ -417,6 +436,7 @@ Golden flows:
   team    -> rai monorepo, rai team run, rai team collect, rai patch-review, rai sessions
 
 More help:
+  rai help lifecycle    Thin spec -> ship facade over the deeper workflow engine
   rai help categories   Browse command groups
   rai help frontend     UI direction, spec, review, and preview surfaces
   rai help trust        Discuss, claims, approvals, and policy surfaces
@@ -461,7 +481,11 @@ Start here:`);
 Core commands:
 ${formatCommandRows(visibleCoreCommands)}
 
+Lifecycle facade:
+${formatCommandRows(filterCommands(LIFECYCLE_COMMANDS, surface))}
+
 More help:
+  rai help lifecycle    Thin spec -> ship facade over the deeper workflow engine
   rai help categories   Browse command groups`);
   for (const group of visibleAdvancedGroups) {
     console.log(`  rai help ${group.id.padEnd(12)} ${group.description}`);
@@ -536,10 +560,29 @@ function printAdvancedHelp(surface) {
   console.log('\nOpen any of them with `rai help <topic>` or use `rai help all` for the full command reference.');
 }
 
+function printLifecycleHelp(surface) {
+  const commands = surface.isFiltered ? filterCommands(LIFECYCLE_COMMANDS, surface) : LIFECYCLE_COMMANDS;
+  console.log('# raiola Lifecycle\n');
+  console.log('- Thin spec -> ship facade that maps onto the deeper Raiola workflow engine.\n');
+  console.log('## Commands\n');
+  console.log(formatCommandRows(commands));
+  console.log('\n## Suggested Use\n');
+  console.log('- `rai spec` -> define scope, assumptions, and success criteria');
+  console.log('- `rai plan` -> chunk the slice and align validation');
+  console.log('- `rai build` -> execute the next safe slice');
+  console.log('- `rai test` -> prove the slice works with explicit evidence');
+  console.log('- `rai simplify` -> run a behavior-preserving cleanup pass');
+  console.log('- `rai review` -> generate the review-ready package');
+  console.log('- `rai ship` -> generate the ship-ready closeout package');
+}
+
 function printAllHelp(surface) {
   if (!surface.isFiltered) {
     console.log('# raiola Full Command Reference\n');
     console.log('Use `rai help solo`, `rai help review`, `rai help monorepo`, or `rai help team` for the starter flows.\n');
+    console.log('## Lifecycle\n');
+    console.log('Thin spec -> ship facade over the deeper workflow engine.\n');
+    console.log(`${formatCommandRows(LIFECYCLE_COMMANDS)}\n`);
     for (const group of COMMAND_GROUPS) {
       console.log(`## ${group.title}\n`);
       console.log(`${group.description}\n`);
@@ -554,6 +597,9 @@ function printAllHelp(surface) {
 
   console.log('# raiola Full Command Reference\n');
   console.log('Use `rai help solo` for the installed starter flow. Upgrade to `core` or `full` to unlock the broader shell.\n');
+  console.log('## Lifecycle\n');
+  console.log('Thin spec -> ship facade over the deeper workflow engine.\n');
+  console.log(`${formatCommandRows(filterCommands(LIFECYCLE_COMMANDS, surface))}\n`);
   for (const group of visibleGroupsForSurface(surface)) {
     console.log(`## ${group.title}\n`);
     console.log(`${group.description}\n`);
@@ -585,6 +631,10 @@ function printHelp(topic, surface) {
   }
   if (normalized === 'advanced') {
     printAdvancedHelp(surface);
+    return;
+  }
+  if (normalized === 'lifecycle') {
+    printLifecycleHelp(surface);
     return;
   }
 

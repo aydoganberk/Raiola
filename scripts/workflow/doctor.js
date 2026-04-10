@@ -90,6 +90,10 @@ function buildDoctorReport(cwd, rootDir) {
   ])].sort();
   const packageJsonPath = path.join(cwd, 'package.json');
   const skillPath = path.join(cwd, '.agents', 'skills', 'raiola', 'SKILL.md');
+  const expectedSkillFiles = [...new Set([
+    productManifest?.skillPath || '.agents/skills/raiola/SKILL.md',
+    ...((productManifest?.skillPackPaths || []).filter(Boolean)),
+  ])];
   const versionMarker = readInstalledVersionMarker(cwd);
   const installedProductVersion = productManifest?.installedVersion || null;
   const expectedProductVersion = productVersion();
@@ -238,12 +242,13 @@ function buildDoctorReport(cwd, rootDir) {
   );
 
   const skillSurfacePresent = fs.existsSync(skillPath);
+  const installedSkillFiles = expectedSkillFiles.filter((relativeFile) => fs.existsSync(path.join(cwd, relativeFile)));
   pushCheck(
     skillSurfacePresent || isProductSourceRepo ? 'pass' : 'warn',
     skillSurfacePresent
-      ? 'Skill surface -> raiola skill is installed for Codex'
+      ? `Skill surface -> primary raiola skill plus ${Math.max(installedSkillFiles.length - 1, 0)} packaged skill files are installed`
       : isProductSourceRepo
-        ? 'Skill surface -> source package repo ships skill/SKILL.md; installed alias copies are not required here'
+        ? 'Skill surface -> source package repo ships skill/SKILL.md and skills/*; installed alias copies are not required here'
         : 'Skill surface -> .agents/skills/raiola/SKILL.md is missing',
     skillSurfacePresent || isProductSourceRepo ? null : `${productCommandName()} update`,
   );

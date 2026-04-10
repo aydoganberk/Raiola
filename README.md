@@ -55,12 +55,48 @@ The design center is:
 - verification is stored, not implied
 - delegation requires explicit write scope
 
+## Lifecycle Facade
+
+Raiola now ships a thin lifecycle facade over the deeper workflow engine:
+
+- `rai spec`
+- `rai plan`
+- `rai build`
+- `rai test`
+- `rai simplify`
+- `rai review`
+- `rai ship`
+
+These commands are the preferred first layer when you want explicit workflow discipline without memorizing the whole shell.
+
+## Portable Agent Pack
+
+This repository also ships a portable agent-facing surface:
+
+- split skills under `skills/`
+- personas under `agents/`
+- quick references under `references/`
+- Claude commands under `.claude/commands/`
+- Claude plugin metadata under `.claude-plugin/`
+- a real session-start hook under `hooks/session-start.sh`
+- root repo instructions in `AGENTS.md`
+
 ## Product Surface At A Glance
 
 ### Onboarding and daily loop
 
 - `rai on next`
   Open the clean first-run entry and get a milestone proposal when nothing is active.
+- `rai spec`
+  Define the next slice before code by surfacing assumptions, scope, and success criteria.
+- `rai plan`
+  Turn the current slice into explicit chunks, validation gates, and fallback notes.
+- `rai build`
+  Translate the active plan into the next safe execution step.
+- `rai test`
+  Prove the slice works with explicit verification commands and evidence.
+- `rai simplify`
+  Run a dedicated behavior-preserving cleanup pass.
 - `rai do`
   Route a natural-language goal into the right lane.
 - `rai next`
@@ -201,6 +237,7 @@ node bin/rai.js setup --target /path/to/target-repo
 
 ```bash
 rai help
+rai help lifecycle
 rai doctor --strict
 rai hud --compact
 ```
@@ -239,6 +276,11 @@ raiola-on next
 Use this when one operator is moving one safe slice at a time.
 
 ```bash
+rai help lifecycle
+rai spec --goal "land the next safe slice"
+rai plan --goal "land the next safe slice"
+rai build --goal "land the next safe slice"
+rai test --cmd "npm test"
 rai help solo
 rai on next
 rai do "resume the current slice"
@@ -276,6 +318,15 @@ rai ship-readiness
 
 This flow refreshes `AGENTS.md`, `docs/workflow/REPO_MAP.md`, `docs/workflow/REVIEW_SCOPE.md`, `docs/workflow/PATCH_PLAN.md`, and `.workflow/reports/monorepo-mode.{md,json}`.
 
+## Agent-Friendly Packaging
+
+If you want to use Raiola as a plugin-style rules pack instead of only an npm-installed workflow OS, start from:
+
+- `AGENTS.md`
+- `skills/using-raiola/SKILL.md`
+- `.claude/commands/*`
+- `hooks/hooks.json`
+
 ### Team parallel loop
 
 Use this when the user explicitly wants delegation or the repository is broad enough that write scopes matter.
@@ -290,6 +341,8 @@ rai sessions
 ```
 
 ## What Gets Written Into The Repo
+
+Raiola keeps the on-disk state names repo-native on purpose: the product, CLI, plugin, and skill surface use the `rai` / `raiola` identity, while the written state stays under generic `docs/workflow` and `.workflow` paths so the repo reads like workflow data rather than a tool-private namespace.
 
 ### Canonical workflow state
 

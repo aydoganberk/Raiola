@@ -79,6 +79,21 @@ function runtimeCliFiles() {
     .map((filePath) => path.relative(cliDir, filePath));
 }
 
+function installedSkillDirectories() {
+  const source = sourceLayout();
+  const directories = new Set(['raiola', 'codex-workflow']);
+  if (!fs.existsSync(source.skillsDir)) {
+    return [...directories];
+  }
+
+  for (const entry of fs.readdirSync(source.skillsDir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      directories.add(entry.name);
+    }
+  }
+  return [...directories];
+}
+
 function removePackageScripts(targetRepo, dryRun) {
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const report = {
@@ -171,8 +186,9 @@ function main() {
   maybeRemove(path.join(targetRepo, 'bin', 'raiola-on.js'), report, dryRun);
   maybeRemove(path.join(targetRepo, 'bin', 'cwf.js'), report, dryRun);
   maybeRemove(path.join(targetRepo, 'scripts', 'compare_golden_snapshots.ts'), report, dryRun);
-  maybeRemove(path.join(targetRepo, '.agents', 'skills', 'raiola'), report, dryRun);
-  maybeRemove(path.join(targetRepo, '.agents', 'skills', 'codex-workflow'), report, dryRun);
+  for (const skillDir of installedSkillDirectories()) {
+    maybeRemove(path.join(targetRepo, '.agents', 'skills', skillDir), report, dryRun);
+  }
 
   const runtimePaths = [
     path.join(targetRepo, '.workflow', 'state.json'),

@@ -42,15 +42,21 @@ test('raiola:init installs the runtime surface and HUD state', () => {
   assert.ok(fs.existsSync(path.join(targetRepo, 'docs', 'workflow', 'WORKSTREAMS.md')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'hud.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'init.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'spec.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'plan.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'cli', 'rai.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'bin', 'rai.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, '.agents', 'skills', 'raiola', 'SKILL.md')));
+  assert.ok(fs.existsSync(path.join(targetRepo, '.agents', 'skills', 'using-raiola', 'SKILL.md')));
+  assert.ok(fs.existsSync(path.join(targetRepo, '.agents', 'skills', 'raiola-milestone-lifecycle', 'SKILL.md')));
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'state.json')));
 
   const packageJson = JSON.parse(fs.readFileSync(path.join(targetRepo, 'package.json'), 'utf8'));
   assert.equal(packageJson.scripts['raiola:hud'], 'node scripts/workflow/hud.js');
   assert.equal(packageJson.scripts['raiola:doctor'], 'node scripts/workflow/doctor.js');
   assert.equal(packageJson.scripts['raiola:init'], 'node scripts/workflow/init.js');
+  assert.equal(packageJson.scripts['raiola:spec'], 'node scripts/workflow/spec.js');
+  assert.equal(packageJson.scripts['raiola:plan'], 'node scripts/workflow/plan.js');
 
   const compactHud = run('node', [path.join(targetRepo, 'scripts', 'workflow', 'hud.js'), '--compact'], targetRepo);
   const hudJson = JSON.parse(run('node', [path.join(targetRepo, 'scripts', 'workflow', 'hud.js'), '--json'], targetRepo));

@@ -1,0 +1,12 @@
+{
+  "name": "raiola",
+  "description": "Repo-native workflow OS and portable skill pack for explicit spec, plan, build, verify, review, and ship flows.",
+  "version": "0.3.1",
+  "author": {
+    "name": "Berk Aydogan"
+  },
+  "homepage": "https://github.com/aydoganberk/Raiola",
+  "repository": "https://github.com/aydoganberk/Raiola",
+  "license": "MIT",
+  "commands": "./.claude/commands"
+}
