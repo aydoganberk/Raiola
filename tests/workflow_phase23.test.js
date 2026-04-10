@@ -77,6 +77,48 @@ test('pack smoke uses shell-backed process launch for Windows npm shims', () => 
 });
 
 function createFakeCodex(targetRepo) {
+  if (process.platform === 'win32') {
+    const fakeCodexPath = path.join(targetRepo, 'fake-codex.cmd');
+    fs.writeFileSync(
+      fakeCodexPath,
+      `@echo off
+setlocal EnableDelayedExpansion
+if "%~1"=="--version" (
+  echo fake-codex 1.0.0
+  exit /b 0
+)
+
+set "out="
+:parse
+if "%~1"=="" goto write
+if "%~1"=="-o" (
+  set "out=%~2"
+  shift
+)
+shift
+goto parse
+
+:write
+> "%out%" (
+  echo # TASK RESULT TEMPLATE
+  echo.
+  echo - Status: \`completed\`
+  echo - Summary: \`Fake Codex worker completed\`
+  echo - Evidence: \`fake-codex smoke\`
+  echo.
+  echo ## Details
+  echo.
+  echo - \`Structured result written by the fake Codex binary\`
+  echo.
+  echo ## Next
+  echo.
+  echo - \`No follow-up\`
+)
+`,
+    );
+    return fakeCodexPath;
+  }
+
   const fakeCodexPath = path.join(targetRepo, 'fake-codex');
   fs.writeFileSync(
     fakeCodexPath,

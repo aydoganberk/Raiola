@@ -22,7 +22,8 @@ function makeEmptyTempRepo() {
 }
 
 function run(command, args, cwd, options = {}) {
-  return childProcess.execFileSync(command, args, {
+  const resolvedCommand = process.platform === 'win32' && command === 'npm' ? 'npm.cmd' : command;
+  return childProcess.execFileSync(resolvedCommand, args, {
     cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -31,7 +32,14 @@ function run(command, args, cwd, options = {}) {
 }
 
 function normalizeCompactHud(value) {
-  return String(value).replace(/remaining=`\d+`/g, 'remaining=`<remaining>`');
+  return String(value)
+    .replace(/\r\n/g, '\n')
+    .replace(/remaining=`\d+`/g, 'remaining=`<remaining>`')
+    .replace(
+      /packets=`context:[a-f0-9]+\/ok execplan:[a-f0-9]+\/ok validation:[a-f0-9]+\/ok`/g,
+      'packets=`<packet-hashes>``',
+    )
+    .replace('packets=`<packet-hashes>``', 'packets=`<packet-hashes>`');
 }
 
 test('raiola:init installs the runtime surface and HUD state', () => {

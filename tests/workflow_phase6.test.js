@@ -53,7 +53,7 @@ function replaceSection(content, heading, body) {
 }
 
 function readFile(targetRepo, relativePath) {
-  return fs.readFileSync(path.join(targetRepo, relativePath), 'utf8');
+  return fs.readFileSync(path.join(targetRepo, relativePath), 'utf8').replace(/\r\n/g, '\n');
 }
 
 function writeFile(targetRepo, relativePath, content) {

@@ -26,6 +26,10 @@ function run(command, args, cwd) {
   });
 }
 
+function normalizeText(value) {
+  return String(value).replace(/\r\n/g, '\n');
+}
+
 function readFile(targetRepo, relativePath) {
   return fs.readFileSync(path.join(targetRepo, relativePath), 'utf8');
 }
@@ -43,7 +47,7 @@ test('rai help and setup expose the product shell while uninstall keeps canonica
   const fullHelp = run('node', [cwfBin, 'help', 'all'], repoRoot);
   const expectedHelp = fs.readFileSync(helpGolden, 'utf8');
 
-  assert.equal(helpOutput.trim(), expectedHelp.trim());
+  assert.equal(normalizeText(helpOutput).trim(), normalizeText(expectedHelp).trim());
   assert.match(lifecycleHelp, /raiola Lifecycle/);
   assert.match(lifecycleHelp, /rai simplify/);
   assert.match(reviewHelp, /raiola Deep Review/);

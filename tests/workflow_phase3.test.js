@@ -44,7 +44,7 @@ function replaceField(content, label, value) {
 }
 
 function readFile(targetRepo, relativePath) {
-  return fs.readFileSync(path.join(targetRepo, relativePath), 'utf8');
+  return fs.readFileSync(path.join(targetRepo, relativePath), 'utf8').replace(/\r\n/g, '\n');
 }
 
 function writeFile(targetRepo, relativePath, content) {
@@ -73,7 +73,7 @@ function seedPlanReadyDocs(targetRepo, options = {}) {
   contextDoc = replaceSection(contextDoc, 'Explicit Constraints', `
 | Constraint | Type | Source | Impact |
 | --- | --- | --- | --- |
-| \`Keep the workflow markdown-first and auditable\` | \`product\` | \`ROADMAP.md\` | \`The gate must write back into canonical docs rather than hidden state\` |
+| \`Keep the workflow markdown-first and auditable\` | \`product\` | \`docs/workflow/DECISIONS.md\` | \`The gate must write back into canonical docs rather than hidden state\` |
 | \`Treat horizontal UI/API/model slicing as an anti-pattern\` | \`planning\` | \`user\` | \`Chunk design and coverage mapping must stay capability-oriented\` |
 `);
   contextDoc = replaceSection(contextDoc, 'Alternatives Considered', `
