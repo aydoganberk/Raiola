@@ -21,11 +21,22 @@ function loadManifest(cwd) {
   return readJsonFile(manifestPath(cwd), null);
 }
 
+function codexSpawnOptions() {
+  if (process.platform !== 'win32') {
+    return {};
+  }
+  return {
+    shell: true,
+    windowsHide: true,
+  };
+}
+
 function detectCodexBinary(command = 'codex') {
   try {
     const result = childProcess.spawnSync(command, ['--version'], {
       encoding: 'utf8',
       stdio: 'pipe',
+      ...codexSpawnOptions(),
     });
     return result.status === 0;
   } catch {
@@ -43,6 +54,7 @@ function codexRegistrySnapshot(command = 'codex') {
   const result = childProcess.spawnSync(command, ['mcp', 'list', '--json'], {
     encoding: 'utf8',
     stdio: 'pipe',
+    ...codexSpawnOptions(),
   });
   if (result.status !== 0) {
     return {
@@ -133,6 +145,7 @@ function installMcp(cwd, args = {}) {
           cwd,
           encoding: 'utf8',
           stdio: 'pipe',
+          ...codexSpawnOptions(),
         },
       );
       registrationResults.push({

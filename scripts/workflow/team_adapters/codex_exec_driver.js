@@ -15,11 +15,22 @@ function logFilePath(workspacePath) {
   return path.join(workspacePath, '.workflow-task-live.log');
 }
 
+function codexSpawnOptions() {
+  if (process.platform !== 'win32') {
+    return {};
+  }
+  return {
+    shell: true,
+    windowsHide: true,
+  };
+}
+
 function detectCodexBinary(command) {
   try {
     const result = childProcess.spawnSync(command, ['--version'], {
       encoding: 'utf8',
       stdio: 'pipe',
+      ...codexSpawnOptions(),
     });
     return result.status === 0;
   } catch {
@@ -140,6 +151,7 @@ function launchCodexWorker(state, task, workspace, runtimeState, options = {}) {
     cwd: workspaceExecCwd(state, workspace),
     detached: true,
     stdio: ['ignore', logFd, logFd],
+    ...codexSpawnOptions(),
   });
   child.unref();
 

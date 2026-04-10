@@ -30,6 +30,10 @@ function normalizeText(value) {
   return String(value).replace(/\r\n/g, '\n');
 }
 
+function normalizePath(value) {
+  return String(value).replace(/\\/g, '/');
+}
+
 function readFile(targetRepo, relativePath) {
   return fs.readFileSync(path.join(targetRepo, relativePath), 'utf8');
 }
@@ -138,7 +142,7 @@ test('rai help and setup expose the product shell while uninstall keeps canonica
   assert.ok(!fs.existsSync(path.join(targetRepo, 'bin', 'raiola-on.js')));
   assert.ok(!fs.existsSync(path.join(targetRepo, '.workflow', 'product-manifest.json')));
   assert.ok(!fs.existsSync(path.join(targetRepo, '.workflow', 'VERSION.md')));
-  assert.ok(uninstallPayload.removed.some((item) => item.endsWith('scripts/workflow/quick.js')));
+  assert.ok(uninstallPayload.removed.some((item) => normalizePath(item).endsWith('scripts/workflow/quick.js')));
 
   const packageJsonAfter = JSON.parse(readFile(targetRepo, 'package.json'));
   assert.equal(packageJsonAfter.scripts['raiola:quick'], undefined);

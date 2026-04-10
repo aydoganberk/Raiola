@@ -23,12 +23,17 @@ function makeEmptyTempRepo() {
 
 function run(command, args, cwd, options = {}) {
   const resolvedCommand = process.platform === 'win32' && command === 'npm' ? 'npm.cmd' : command;
-  return childProcess.execFileSync(resolvedCommand, args, {
+  const execOptions = {
     cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     ...options,
-  });
+  };
+  if (process.platform === 'win32' && resolvedCommand === 'npm.cmd') {
+    execOptions.shell = true;
+    execOptions.windowsHide = true;
+  }
+  return childProcess.execFileSync(resolvedCommand, args, execOptions);
 }
 
 function normalizeCompactHud(value) {

@@ -105,6 +105,14 @@ function parseWorktreeList(cwd) {
   return items;
 }
 
+function normalizeFsPath(targetPath) {
+  try {
+    return fs.realpathSync.native(targetPath);
+  } catch {
+    return path.resolve(targetPath);
+  }
+}
+
 function syncWorkflowFilesToWorktree(gitRoot, worktreePath, workflowRoot) {
   const syncTargets = [
     path.join(gitRoot, 'docs', 'workflow', 'WORKSTREAMS.md'),
@@ -118,6 +126,9 @@ function syncWorkflowFilesToWorktree(gitRoot, worktreePath, workflowRoot) {
 
     const relative = path.relative(gitRoot, sourcePath);
     const targetPath = path.join(worktreePath, relative);
+    if (normalizeFsPath(sourcePath) === normalizeFsPath(targetPath)) {
+      continue;
+    }
     ensureDir(path.dirname(targetPath));
 
     if (fs.statSync(sourcePath).isDirectory()) {
