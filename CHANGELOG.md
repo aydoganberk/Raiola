@@ -6,6 +6,12 @@ Primary shell note: changelog command references are normalized to the current `
 
 _No unreleased changes yet._
 
+## 0.4.2 - 2026-04-10
+
+- Fixed the remaining Windows-only release smoke failures by using shell-backed `npm.cmd` launches in the phase 1 install tests and by normalizing uninstall path assertions across path separators.
+- Hardened runtime Windows compatibility for repo-local Codex detection and live worker launch, plus MCP registry inspection, so `.cmd`-backed binaries work in smoke and team-runtime scenarios.
+- Guarded `ensure-isolation` against source/destination self-copy cases when syncing canonical workflow files into worktrees on Windows.
+
 ## 0.4.1 - 2026-04-10
 
 - Hardened cross-platform release smoke coverage so Windows CI now tolerates `npm.cmd`, CRLF line endings, and platform-specific fake worker binaries in the test suite.
@@ -61,4 +67,3 @@ _No unreleased changes yet._
 ## 0.1.0
 
 - Initial workflow kernel and markdown-canonical control plane.
-
