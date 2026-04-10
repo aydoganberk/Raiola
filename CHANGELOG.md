@@ -6,6 +6,12 @@ Primary shell note: changelog command references are normalized to the current `
 
 _No unreleased changes yet._
 
+## 0.4.1 - 2026-04-10
+
+- Hardened cross-platform release smoke coverage so Windows CI now tolerates `npm.cmd`, CRLF line endings, and platform-specific fake worker binaries in the test suite.
+- Trimmed root-level planning and redesign markdown so the shipped repo surface stays focused on product docs and runtime assets.
+- Refined the npm release bootstrap path for trusted publishing and documented the first-publish trust setup more clearly for maintainers.
+
 ## 0.4.0 - 2026-04-10
 
 - Added a portable agent pack with root `AGENTS.md`, `.claude-plugin` metadata, real session-start hook assets, role personas, and reusable review/testing/security/accessibility reference checklists.
