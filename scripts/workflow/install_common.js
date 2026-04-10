@@ -229,6 +229,7 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:map-frontend',
     'raiola:migrate',
     'raiola:monorepo',
+    'raiola:monorepo-mode',
     'raiola:milestone',
     'raiola:next',
     'raiola:next-prompt',

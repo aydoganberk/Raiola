@@ -2,8 +2,40 @@ function quoteGoal(goal) {
   return JSON.stringify(String(goal || '').trim());
 }
 
-function reviewFlow(goal) {
+function reviewFlow(goal, options = {}) {
   const qGoal = quoteGoal(goal);
+  if (options.monorepo) {
+    return {
+      primaryCommand: `rai monorepo-mode --goal ${qGoal}`,
+      secondaryCommands: [
+        `rai review-mode --goal ${qGoal}`,
+        'rai review-tasks --json',
+        `rai codex contextpack --goal ${qGoal}`,
+        'rai monorepo --json',
+      ],
+      cliFlow: [
+        'Start with monorepo-mode so the repo map, top risk areas, review scope, and patch plan are explicit before deep review.',
+        'Use review-mode after monorepo-mode isolates the first subsystem and narrows the read scope.',
+        'Verify package-local changes first, then re-review the wider surface before calling the work safe.',
+      ],
+      codexAppFlow: [
+        'Pin MONOREPO.md, REPO_MAP.md, REVIEW_SCOPE.md, PATCH_PLAN.md, and the context pack before broad repo work starts.',
+        'Keep write work bounded to the selected subsystem until contracts and dependents are enumerated.',
+        'Use the staged monorepo prompts instead of one-shot mega prompts.',
+      ],
+      parallelFlow: [
+        'Launch read-only scouts on the top tracks or hotspots first.',
+        'Keep write agents package-local and align them to the selected subsystem or patch group.',
+        'Finish with targeted verify lanes and one explicit residual-risk pass.',
+      ],
+      specialtyFlows: {
+        codeReview: [
+          'Treat the repo as phased analysis, not one undifferentiated review blob.',
+          'Separate facts from inference and keep the top-risk subsystem isolated before broad execution.',
+        ],
+      },
+    };
+  }
   return {
     primaryCommand: `rai review-mode --goal ${qGoal}`,
     secondaryCommands: [
@@ -107,7 +139,7 @@ function buildCommandPlan(payload = {}) {
 
   let flow = defaultFlow(goal);
   if (review) {
-    flow = reviewFlow(goal);
+    flow = reviewFlow(goal, { monorepo });
   } else if (frontend) {
     flow = frontendFlow(goal);
   }

@@ -106,6 +106,8 @@ The design center is:
   Generate a review-ready package.
 - `rai review-mode`
   Run the deeper multi-pass review engine.
+- `rai monorepo-mode`
+  Run the staged large-monorepo repo-map, risk, patch-plan, and verify flow, and sync the root `AGENTS.md` monorepo section.
 - `rai review-tasks`
   Turn findings into a blocker-first task graph.
 - `rai pr-review`
@@ -230,7 +232,7 @@ You can also call the onboarding binary directly:
 raiola-on next
 ```
 
-## The Three Golden Flows
+## The Four Starter Flows
 
 ### Solo daily loop
 
@@ -258,6 +260,21 @@ rai ui-review --url ./preview.html
 rai verify-work
 rai ship-readiness
 ```
+
+### Large monorepo loop
+
+Use this when the repository is broad enough that staged repo mapping, subsystem ranking, and bounded patch planning are more valuable than a one-shot review prompt.
+
+```bash
+rai help monorepo
+rai monorepo
+rai monorepo-mode --goal "review and patch the top-risk monorepo subsystem"
+rai review-mode --goal "deep review the selected subsystem"
+rai verify-work
+rai ship-readiness
+```
+
+This flow refreshes `AGENTS.md`, `docs/workflow/REPO_MAP.md`, `docs/workflow/REVIEW_SCOPE.md`, `docs/workflow/PATCH_PLAN.md`, and `.workflow/reports/monorepo-mode.{md,json}`.
 
 ### Team parallel loop
 
@@ -290,7 +307,7 @@ rai sessions
 - `.workflow/verifications/`
   Shell and browser verification artifacts.
 - `.workflow/reports/`
-  Review, ship, PR brief, release note, and closeout outputs.
+  Review, monorepo-mode, ship, PR brief, release note, and closeout outputs.
 - `.workflow/cache/`
   Caches, indexes, and hot-path data.
 - `.workflow/fs-index.json`

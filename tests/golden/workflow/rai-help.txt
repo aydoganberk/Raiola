@@ -8,6 +8,7 @@ Start here:
   rai on next        First-run onboarding that proposes a milestone to start
   rai help solo      Single-operator daily loop for most repos
   rai help review    Deep review, risk triage, and closeout
+  rai help monorepo  Large-repo staged analysis, patch planning, and verify flow
   rai help team      Parallel Team Lite flow with bounded scopes
 
 Core commands:
@@ -22,6 +23,7 @@ Core commands:
 Golden flows:
   solo    -> rai on, rai do, rai next, rai verify-shell, rai checkpoint, rai next-prompt
   review  -> rai route, rai review, rai ui-review, rai verify-work, rai ship-readiness
+  monorepo -> rai monorepo, rai monorepo-mode, rai review-mode, rai review-tasks, rai verify-work
   team    -> rai monorepo, rai team run, rai team collect, rai patch-review, rai sessions
 
 More help:
@@ -37,4 +39,5 @@ Examples:
   rai on next
   rai help solo
   rai help review
+  rai help monorepo
   rai help team

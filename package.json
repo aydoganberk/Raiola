@@ -98,6 +98,7 @@
     "raiola:mcp": "node scripts/workflow/mcp.js",
     "raiola:migrate": "node scripts/workflow/migrate.js",
     "raiola:monorepo": "node scripts/workflow/monorepo.js",
+    "raiola:monorepo-mode": "node scripts/workflow/monorepo_mode.js",
     "raiola:milestone": "node scripts/workflow/new_milestone.js",
     "raiola:next": "node scripts/workflow/next_step.js",
     "raiola:next-prompt": "node scripts/workflow/next_prompt.js",

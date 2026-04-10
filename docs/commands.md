@@ -1,6 +1,6 @@
 # Commands
 
-Use `rai help` for the three golden flows, `rai help <topic>` for focused categories, and `rai help all` for the full shell.
+Use `rai help` for the starter flows, `rai help <topic>` for focused categories, and `rai help all` for the full shell.
 
 `rai` is the primary shell. `raiola-on` is the first-run onboarding entry, and `raiola:*` is the repo-local npm fallback namespace.
 
@@ -154,6 +154,8 @@ Use `rai help` for the three golden flows, `rai help <topic>` for focused catego
   Generate `docs/workflow/DESIGN-DEBT.md`.
 - `rai monorepo`
   Generate package-aware monorepo execution, review shards, and verify guidance.
+- `rai monorepo-mode`
+  Run the staged large-monorepo analysis mode, sync the root `AGENTS.md` monorepo layer, and emit `REPO_MAP`, `REVIEW_SCOPE`, `PATCH_PLAN`, and a prompt-rich report.
 - `rai ship-readiness`
   Score ship readiness from review, evidence, approvals, and verify-work results.
 - `rai ship`
@@ -228,6 +230,7 @@ Use `rai help` for the three golden flows, `rai help <topic>` for focused catego
 - `rai do` / `rai route` -> `.workflow/cache/intent-route-history.json`
 - `rai dashboard` -> `.workflow/runtime/dashboard/{index.html,state.json}`
 - `rai monorepo` -> `.workflow/cache/monorepo-intelligence.json` plus `docs/workflow/MONOREPO.md`
+- `rai monorepo-mode` -> `.workflow/reports/monorepo-mode.{md,json}` plus `AGENTS.md`, `docs/workflow/REPO_MAP.md`, `docs/workflow/REVIEW_SCOPE.md`, and `docs/workflow/PATCH_PLAN.md`
 - `rai ui-direction` -> `.workflow/runtime/ui-direction.json` plus `docs/workflow/UI-DIRECTION.md`
 - `rai design-dna` -> `.workflow/runtime/design-dna.json` plus `docs/workflow/DESIGN-DNA.md`
 - `rai page-blueprint` -> `.workflow/runtime/page-blueprint.json` plus `docs/workflow/PAGE-BLUEPRINT.md`
@@ -304,6 +307,7 @@ Fresh `rai setup` installs the focused `pilot` profile by default so package.jso
 - `npm run raiola:patch-rollback`
 - `npm run raiola:review`
 - `npm run raiola:review-mode`
+- `npm run raiola:monorepo-mode`
 - `npm run raiola:review-orchestrate`
 - `npm run raiola:pr-review`
 - `npm run raiola:re-review`

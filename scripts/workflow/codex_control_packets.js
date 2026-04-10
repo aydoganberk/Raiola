@@ -76,6 +76,7 @@ function buildCodexPromptPack(cwd, rootDir, goal, analysis, profile, options = {
     analysis.chosenCapability.domain === 'review' ? 'rai review-tasks --json' : '',
     analysis.chosenCapability.domain === 'review' ? 'rai review-orchestrate --json' : '',
     wantsFrontend ? 'rai frontend-brief --json && rai component-strategy --json && rai ui-review' : '',
+    monorepo ? 'rai monorepo-mode --goal "<goal>"' : '',
     monorepo ? 'rai monorepo --json' : '',
   ].filter(Boolean);
 

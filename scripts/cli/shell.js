@@ -80,6 +80,7 @@ const CLI_COMMANDS = {
   'responsive-matrix': { script: 'responsive_matrix.js', description: 'Generate the responsive audit matrix.' },
   'design-debt': { script: 'design_debt.js', description: 'Generate the frontend design debt ledger.' },
   monorepo: { script: 'monorepo.js', description: 'Generate package-aware monorepo execution and verify guidance.' },
+  'monorepo-mode': { script: 'monorepo_mode.js', description: 'Run the staged large-monorepo analysis, review, patch-plan, and verify flow.' },
   'ship-readiness': { script: 'ship_readiness.js', description: 'Score ship readiness from review, evidence, approvals, and verify-work.' },
   ship: { script: 'ship.js', description: 'Generate a ship-ready package.' },
   'pr-brief': { script: 'pr_brief.js', description: 'Generate a PR brief draft.' },
@@ -137,7 +138,7 @@ const COMMAND_GROUPS = Object.freeze([
     title: 'Deep Review',
     description: 'Route risk, run review passes, collect evidence, and clear ship gates.',
     commands: [
-      'route', 'review', 'review-mode', 'review-orchestrate', 'review-tasks', 'pr-review', 're-review',
+      'route', 'review', 'review-mode', 'monorepo-mode', 'review-orchestrate', 'review-tasks', 'pr-review', 're-review',
       'verify-shell', 'verify-browser', 'verify-work', 'packet', 'evidence', 'validation-map',
       'ship-readiness',
     ],
@@ -217,6 +218,21 @@ const GOLDEN_FLOWS = Object.freeze([
     relatedGroup: 'review',
   },
   {
+    id: 'monorepo',
+    title: 'Large Monorepo',
+    summary: 'Use when a large repo needs staged repo mapping, risk ranking, subsystem review, patch planning, and verify discipline.',
+    commands: ['monorepo', 'monorepo-mode', 'review-mode', 'review-tasks', 'verify-work', 'ship-readiness'],
+    sequence: [
+      'rai monorepo',
+      'rai monorepo-mode --goal "review and patch the top-risk monorepo subsystem"',
+      'rai review-mode --goal "deep review the selected subsystem"',
+      'rai review-tasks --json',
+      'rai verify-work',
+      'rai ship-readiness',
+    ],
+    relatedGroup: 'review',
+  },
+  {
     id: 'team',
     title: 'Team Parallel',
     summary: 'Use when the user explicitly wants parallel work with bounded write scopes.',
@@ -261,6 +277,7 @@ const LEGACY_EQUIVALENTS = [
   ['rai approval', 'npm run raiola:approval -- plan'],
   ['rai review', 'npm run raiola:review'],
   ['rai review-mode', 'npm run raiola:review-mode'],
+  ['rai monorepo-mode', 'npm run raiola:monorepo-mode'],
   ['rai review-tasks', 'npm run raiola:review-tasks'],
   ['rai pr-review', 'npm run raiola:pr-review'],
   ['rai re-review', 'npm run raiola:re-review'],
@@ -387,6 +404,7 @@ Start here:
   rai on next        First-run onboarding that proposes a milestone to start
   rai help solo      Single-operator daily loop for most repos
   rai help review    Deep review, risk triage, and closeout
+  rai help monorepo  Large-repo staged analysis, patch planning, and verify flow
   rai help team      Parallel Team Lite flow with bounded scopes
 
 Core commands:
@@ -395,6 +413,7 @@ ${formatCommandRows(CORE_COMMANDS)}
 Golden flows:
   solo    -> rai on, rai do, rai next, rai verify-shell, rai checkpoint, rai next-prompt
   review  -> rai route, rai review, rai ui-review, rai verify-work, rai ship-readiness
+  monorepo -> rai monorepo, rai monorepo-mode, rai review-mode, rai review-tasks, rai verify-work
   team    -> rai monorepo, rai team run, rai team collect, rai patch-review, rai sessions
 
 More help:
@@ -410,6 +429,7 @@ Examples:
   rai on next
   rai help solo
   rai help review
+  rai help monorepo
   rai help team
 `);
 }
@@ -519,7 +539,7 @@ function printAdvancedHelp(surface) {
 function printAllHelp(surface) {
   if (!surface.isFiltered) {
     console.log('# raiola Full Command Reference\n');
-    console.log('Use `rai help solo`, `rai help review`, or `rai help team` for the three golden flows.\n');
+    console.log('Use `rai help solo`, `rai help review`, `rai help monorepo`, or `rai help team` for the starter flows.\n');
     for (const group of COMMAND_GROUPS) {
       console.log(`## ${group.title}\n`);
       console.log(`${group.description}\n`);

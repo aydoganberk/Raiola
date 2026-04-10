@@ -30,6 +30,8 @@ It is not the default path; if the user did not explicitly ask for workflow, con
   - `Open Team Lite orchestration when the user explicitly asks for delegation or parallelism.`
 - `$raiola-review`
   - `Generate a review-ready closeout package.`
+- `$raiola-monorepo`
+  - `Open the staged large-monorepo repo-map, risk, patch-plan, and verify flow, and sync the root AGENTS.md monorepo section.`
 - `$raiola-ship`
   - `Generate a ship-ready package.`
 
@@ -42,6 +44,7 @@ It is not the default path; if the user did not explicitly ask for workflow, con
 - `$raiola-checkpoint` -> `rai checkpoint`
 - `$raiola-team` -> `rai team`
 - `$raiola-review` -> `rai review`
+- `$raiola-monorepo` -> `rai monorepo-mode`
 - `$raiola-ship` -> `rai ship`
 
 ## Granularity
