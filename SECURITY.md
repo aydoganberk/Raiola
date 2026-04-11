@@ -6,7 +6,7 @@ Security fixes are applied to the latest published `raiola` release line.
 
 At the moment, the supported line is:
 
-- `0.3.x`
+- `0.4.x`
 
 The `main` branch may contain unreleased fixes or ongoing changes, but the supported public target is the latest published release line.
 
