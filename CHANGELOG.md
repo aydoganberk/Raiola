@@ -6,6 +6,11 @@ Primary shell note: changelog command references are normalized to the current `
 
 _No unreleased changes yet._
 
+## 0.4.5 - 2026-04-11
+
+- Fixed the release workflow's tag-to-version guard so shell interpolation no longer breaks the `v<version>` comparison before trusted publishing runs.
+- Moved the guard to a quoted Node heredoc, which keeps the release runner from mangling JavaScript template literals during the publish gate.
+
 ## 0.4.4 - 2026-04-11
 
 - Added the first post-bootstrap release cut after the manual `0.4.3` npm publish so GitHub Actions can resume versioned releases without colliding on an already-published package version.

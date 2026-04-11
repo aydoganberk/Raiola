@@ -66,7 +66,13 @@ jobs:
       - name: Verify tag matches package version
         if: github.event_name == 'push'
         run: |
-          node -e "const version=require('./package.json').version; const tag=process.env.GITHUB_REF_NAME; if (tag !== `v${version}`) { throw new Error(`Tag ${tag} does not match package.json version v${version}`); }"
+          node <<'EOF'
+          const version = require('./package.json').version;
+          const tag = process.env.GITHUB_REF_NAME;
+          if (tag !== `v${version}`) {
+            throw new Error(`Tag ${tag} does not match package.json version v${version}`);
+          }
+          EOF
       - name: Publish with trusted publishing
         if: ${{ env.NPM_TOKEN == '' }}
         run: npx --yes npm@11.5.1 publish --access public

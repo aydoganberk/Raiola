@@ -4,7 +4,7 @@ const path = require('node:path');
 const EMBEDDED_PRODUCT = Object.freeze({
   name: 'raiola',
   legacyNames: Object.freeze(['codex-workflow-kit']),
-  version: '0.4.4',
+  version: '0.4.5',
   primaryCommand: 'rai',
   commandAliases: Object.freeze(['raiola', 'raiola-on']),
   primarySkillName: 'raiola',
