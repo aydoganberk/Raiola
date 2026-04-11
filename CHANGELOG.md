@@ -6,6 +6,11 @@ Primary shell note: changelog command references are normalized to the current `
 
 _No unreleased changes yet._
 
+## 0.4.4 - 2026-04-11
+
+- Added the first post-bootstrap release cut after the manual `0.4.3` npm publish so GitHub Actions can resume versioned releases without colliding on an already-published package version.
+- Kept the trusted-publishing release path aligned with npm package settings by promoting the next automated release to `0.4.4`.
+
 ## 0.4.3 - 2026-04-11
 
 - Fixed the npm publish workflow so trusted-publishing releases no longer rely on a brittle global `npm install --global npm@11` upgrade step on GitHub runners.
