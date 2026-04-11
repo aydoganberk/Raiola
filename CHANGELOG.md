@@ -6,6 +6,11 @@ Primary shell note: changelog command references are normalized to the current `
 
 _No unreleased changes yet._
 
+## 0.4.3 - 2026-04-11
+
+- Fixed the npm publish workflow so trusted-publishing releases no longer rely on a brittle global `npm install --global npm@11` upgrade step on GitHub runners.
+- Switched the release job to invoke `npm@11.5.1` directly through `npx`, which matches npm's required publish CLI level while keeping the release runner environment stable.
+
 ## 0.4.2 - 2026-04-10
 
 - Fixed the remaining Windows-only release smoke failures by using shell-backed `npm.cmd` launches in the phase 1 install tests and by normalizing uninstall path assertions across path separators.
