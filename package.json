@@ -1,6 +1,6 @@
 {
   "name": "raiola",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "private": false,
   "description": "raiola is a repo-native workflow OS for Codex with natural-language routing, review orchestration, prompt packs, and closeout tooling.",
   "license": "MIT",
