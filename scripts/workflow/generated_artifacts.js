@@ -25,6 +25,7 @@ const GENERATED_ARTIFACT_FILES = Object.freeze([
   '.workflow/fs-index.json',
   '.workflow/repo-config.json',
   '.workflow/install-report.json',
+  '.workflow/doctor-report.json',
 ]);
 
 function generatedArtifactRoots() {

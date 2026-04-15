@@ -200,8 +200,8 @@ function recommendStartProfile(bundle, context = {}) {
   const routeCount = Number(frontendIntent.signals?.metrics?.routeCount || 0);
   const componentCount = Number(frontendIntent.signals?.metrics?.sharedComponentCount || 0) + Number(frontendIntent.signals?.metrics?.localComponentCount || 0);
 
-  let selected = findStartProfile('balanced');
-  let reason = 'balanced_default';
+  let selected = findStartProfile(context.defaultProfileId) || findStartProfile('balanced');
+  let reason = selected.id === 'balanced' ? 'balanced_default' : 'repo_config_default_profile';
 
   if (bundle?.id === 'ship-closeout' || bundle?.id === 'frontend-ship-readiness') {
     selected = findStartProfile('deep');

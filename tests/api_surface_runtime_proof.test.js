@@ -56,3 +56,16 @@ test('api-surface can attach runtime HTTP evidence to detected endpoints', async
     await close(server);
   }
 });
+
+test('api-surface rejects non-loopback runtime probes unless explicitly allowed', async () => {
+  const targetRepo = makeMezatLikeRepo('raiola-api-surface-guard-');
+
+  await assert.rejects(
+    () => buildApiSurfaceCommandPayload(targetRepo, {
+      refresh: 'full',
+      writeFiles: false,
+      baseUrl: 'https://example.com',
+    }),
+    /loopback/i,
+  );
+});

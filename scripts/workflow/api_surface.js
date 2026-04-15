@@ -27,6 +27,7 @@ Options:
   --repo <path>                  Inspect a local repo snapshot without changing directories
   --refresh <incremental|full>   Refresh policy. Defaults to incremental
   --base-url <http://...>        Probe detected endpoints against a live local service
+  --allow-external-base-url      Allow runtime probes against non-loopback http(s) services
   --probe-limit <n>              Max runtime endpoint probes. Defaults to 6
   --allow-unsafe-methods         Use declared methods instead of OPTIONS fallbacks for non-GET probes
   --json                         Print machine-readable JSON
@@ -849,6 +850,7 @@ async function buildApiSurfaceCommandPayload(cwd, options = {}) {
   if (options.baseUrl) {
     payload.runtimeVerification = await runApiSurfaceRuntimeEvidence(cwd, payload, {
       baseUrl: options.baseUrl,
+      allowExternalBaseUrl: Boolean(options.allowExternalBaseUrl),
       probeLimit: options.probeLimit,
       allowUnsafeMethods: Boolean(options.allowUnsafeMethods),
       writeArtifacts: options.writeFiles !== false,
@@ -925,6 +927,7 @@ async function main() {
     refresh: args.refresh,
     writeFiles: args.write !== false,
     baseUrl: args['base-url'],
+    allowExternalBaseUrl: Boolean(args['allow-external-base-url']),
     probeLimit: args['probe-limit'],
     allowUnsafeMethods: Boolean(args['allow-unsafe-methods']),
   });

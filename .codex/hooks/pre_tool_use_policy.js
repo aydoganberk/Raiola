@@ -9,6 +9,7 @@ const {
   pathWithinBoundary,
   classifyShellCommand,
   inspectScriptLaunch,
+  inspectWrappedCommand,
   commandMatchesPolicyList,
 } = require('./common');
 
@@ -65,20 +66,28 @@ function isRepoWideGitStage(command) {
     || /\bgit\s+add\b[^\n]*\s(--all|-A)(\s|$)/i.test(text);
 }
 
+function truncateInline(value, max = 200) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  return text.length > max ? `${text.slice(0, Math.max(0, max - 1))}…` : text;
+}
+
 module.exports.__handler = async function handle(input) {
   const repoRoot = findRepoRoot(input.cwd || process.cwd());
   const policy = loadPolicy(repoRoot);
   const command = String(input.tool_input?.command || '');
   const directAnalysis = classifyShellCommand(command);
+  const wrapperDetails = inspectWrappedCommand(command, repoRoot);
+  const wrapperAnalysis = wrapperDetails?.classification || {};
   const scriptDetails = policy.commandPolicy?.packageManagerIntrospection
     ? inspectScriptLaunch(command, repoRoot, {
       maxDepth: policy.commandPolicy?.nestedPackageManagerIntrospection ? 3 : 1,
     })
     : null;
   const scriptAnalysis = scriptDetails?.classification || {};
-  const analysis = combineAnalysis(directAnalysis, scriptAnalysis);
+  const analysis = combineAnalysis(combineAnalysis(directAnalysis, scriptAnalysis), wrapperAnalysis);
   const touchedPaths = uniqueStrings([
     ...extractRepoPaths(command, repoRoot),
+    ...((wrapperDetails?.touchedPaths) || []),
     ...((scriptDetails?.touchedPaths) || []),
   ]);
   const boundary = policy.writeBoundary || {};
@@ -101,6 +110,9 @@ module.exports.__handler = async function handle(input) {
   const notesBase = scriptDetails?.found
     ? [`Script trace: ${scriptTrace(scriptDetails).join(' -> ')}`]
     : [];
+  if (wrapperDetails?.wrapper) {
+    notesBase.push(`Wrapped command: ${wrapperDetails.wrapper}`);
+  }
 
   if (denylisted) {
     recordHookEvent(repoRoot, 'PreToolUse', {
@@ -132,6 +144,29 @@ module.exports.__handler = async function handle(input) {
       notes: [...notesBase, 'Write attempt denied while trust posture is locked.'],
     });
     noteMessage('deny', 'Trust Center is holding the repo in a locked posture, so write commands are blocked.');
+    return;
+  }
+
+  if (wrapperDetails?.classification?.writes && (policy.locked || policy.strict || boundaryRequired)) {
+    const decision = policy.locked || policy.strict ? 'deny' : 'warn';
+    recordHookEvent(repoRoot, 'PreToolUse', {
+      decision,
+      command,
+      reason: `${wrapperDetails.wrapper} hides inline file mutations, which Raiola requires to be expressed as explicit repo paths under the active policy.`,
+      notes: [...notesBase, truncateInline(wrapperDetails.body)],
+    });
+    noteMessage(decision, `${wrapperDetails.wrapper} hides inline file mutations. Express the write as explicit repo paths or widen the boundary intentionally.`);
+    return;
+  }
+
+  if (wrapperDetails?.classification?.network && !policy.networkAccess) {
+    recordHookEvent(repoRoot, 'PreToolUse', {
+      decision: allowlisted ? 'note' : 'warn',
+      command,
+      reason: `${wrapperDetails.wrapper} hides inline network activity while the active Raiola profile keeps network restricted.`,
+      notes: [...notesBase, truncateInline(wrapperDetails.body)],
+    });
+    noteMessage(allowlisted ? 'note' : 'warn', `${wrapperDetails.wrapper} hides inline network activity, but the active Raiola profile keeps network restricted. Switch profiles or request approval intentionally.`);
     return;
   }
 

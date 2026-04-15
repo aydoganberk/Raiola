@@ -15,6 +15,7 @@ Usage:
 
 Options:
   --target <path>        Target repository. Defaults to current working directory
+  --source-root <path>   Optional Raiola package root to materialize/update from
   --force-docs           Overwrite an existing docs/workflow surface
   --script-profile <id>  Package script profile. Defaults to full for direct init
   --write-agents-template
@@ -35,6 +36,7 @@ function main() {
   const targetRepo = resolveTargetRepoArg(args);
   const report = installWorkflowSurface(targetRepo, {
     mode: 'init',
+    sourceRoot: args['source-root'] || null,
     forceDocs: Boolean(args['force-docs']),
     scriptProfile: args['script-profile'] || 'full',
     overwriteScriptConflicts: Boolean(args['overwrite-scripts']),

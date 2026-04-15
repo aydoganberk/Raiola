@@ -6,6 +6,7 @@ const { buildPackageGraph } = require('./package_graph');
 const { buildReviewCorrectionControlPlane } = require('./review_correction_control_plane');
 const { relativePath, writeJsonFile } = require('./roadmap_os');
 const { buildFindingReplay, createAuditFinding } = require('./finding_model');
+const { readProductManifest } = require('./product_manifest');
 
 const SOURCE_FILE_RE = /\.(ts|tsx|js|jsx|mjs|cjs|dart|swift|kt|java|go|py|rb|php|rs)$/i;
 const TEST_FILE_RE = /(^|\/)(test|tests|__tests__|integration_test|e2e)\//i;
@@ -398,6 +399,15 @@ function listCiWorkflows(files) {
 
 function listLockfiles(files) {
   return files.filter((filePath) => /(^|\/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|bun\.lock)$/.test(filePath));
+}
+
+function filterInstalledRuntimeFiles(cwd, files = []) {
+  const productManifest = readProductManifest(cwd);
+  const runtimeFiles = new Set((productManifest?.runtimeFiles || []).filter(Boolean).map((entry) => String(entry).replace(/\\/g, '/')));
+  if (runtimeFiles.size === 0) {
+    return files;
+  }
+  return files.filter((filePath) => !runtimeFiles.has(String(filePath).replace(/\\/g, '/')));
 }
 
 function detectVerifyScripts(manifest) {
@@ -2249,7 +2259,7 @@ function runRepoAudit(cwd, options = {}) {
   const repoIndex = listIndexedRepoFiles(cwd, {
     refreshMode: options.refresh === 'full' ? 'full' : 'incremental',
   });
-  const files = repoIndex.files || [];
+  const files = filterInstalledRuntimeFiles(cwd, repoIndex.files || []);
   const graph = buildPackageGraph(cwd, {
     writeFiles: true,
     changedFiles: [],

@@ -62,3 +62,13 @@ test('verify-browser fails fast when a smoke HTTP response exceeds the configure
     await close(server);
   }
 });
+
+test('verify-browser blocks non-loopback URLs unless explicitly allowed', async () => {
+  const repo = makeTempRepo();
+  const payload = await runVerifyBrowser(repo, {
+    url: 'https://example.com',
+  });
+
+  assert.equal(payload.verdict, 'fail');
+  assert.match(payload.summary, /loopback/i);
+});

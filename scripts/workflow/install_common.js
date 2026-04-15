@@ -34,9 +34,19 @@ const {
   readText: read,
   writeText: write,
 } = require('./io/files');
+const {
+  cleanupEmptyManagedParents,
+  copyManagedFile,
+  copyManagedTree,
+  preflightManagedPaths,
+  removeManagedPath,
+  writeManagedText,
+} = require('./io/managed_fs');
 const { readRuntimeScriptCatalog } = require('./runtime_script_catalog');
 const { CLI_CONTRACT_VERSION, contractPayload, manifestSchemaMap } = require('./contract_versions');
 const { buildGeneratedArtifactsManifest } = require('./generated_artifacts');
+const { buildTrustedRuntimeCleanupInventory, uniqueNormalizedPaths } = require('./managed_inventory');
+const { normalizeProductManifest } = require('./product_manifest');
 
 function slugifyName(value) {
   return String(value || 'workflow-repo')
@@ -83,6 +93,40 @@ function layoutFromRoot(repoRoot) {
   };
 }
 
+function layoutFromInstalledRoot(repoRoot) {
+  return {
+    repoRoot,
+    templatesDir: path.join(repoRoot, 'templates', 'workflow'),
+    scriptsDir: path.join(repoRoot, 'scripts', 'workflow'),
+    cliDir: path.join(repoRoot, 'scripts', 'cli'),
+    binFile: path.join(repoRoot, 'bin', 'rai.js'),
+    aliasBinFiles: [
+      path.join(repoRoot, 'bin', 'raiola.js'),
+      path.join(repoRoot, 'bin', 'raiola-on.js'),
+      path.join(repoRoot, 'bin', 'raiola-mcp.js'),
+    ],
+    compareScript: path.join(repoRoot, 'scripts', 'compare_golden_snapshots.ts'),
+    skillFile: path.join(repoRoot, '.agents', 'skills', 'raiola', 'SKILL.md'),
+    skillsDir: path.join(repoRoot, '.agents', 'skills'),
+    codexDir: path.join(repoRoot, '.codex'),
+    agentsPluginsDir: path.join(repoRoot, '.agents', 'plugins'),
+    pluginsDir: path.join(repoRoot, 'plugins'),
+    githubCodexDir: path.join(repoRoot, '.github', 'codex'),
+    codexWorkflowFile: path.join(repoRoot, '.github', 'workflows', 'codex-review.yml'),
+    scriptsAgentsFile: path.join(repoRoot, 'scripts', 'AGENTS.md'),
+    workflowAgentsFile: path.join(repoRoot, 'scripts', 'workflow', 'AGENTS.md'),
+    githubAgentsFile: path.join(repoRoot, '.github', 'AGENTS.md'),
+    docsAgentsFile: path.join(repoRoot, 'docs', 'AGENTS.md'),
+    docsWorkflowAgentsFile: path.join(repoRoot, 'docs', 'workflow', 'AGENTS.md'),
+    skillsAgentsFile: path.join(repoRoot, 'skills', 'AGENTS.md'),
+    githubCodexAgentsFile: path.join(repoRoot, '.github', 'codex', 'AGENTS.md'),
+    pluginsAgentsFile: path.join(repoRoot, 'plugins', 'AGENTS.md'),
+    pluginPackageAgentsFile: path.join(repoRoot, 'plugins', 'raiola-codex-optimizer', 'AGENTS.md'),
+    packageJson: path.join(repoRoot, 'package.json'),
+    workflowIgnore: path.join(repoRoot, '.workflowignore'),
+  };
+}
+
 function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
 }
@@ -108,6 +152,15 @@ function isProductPackageRoot(repoRoot) {
   }
 }
 
+function isInstalledRuntimeSurfaceRoot(repoRoot) {
+  const absoluteRoot = path.resolve(repoRoot);
+  return [
+    path.join(absoluteRoot, 'scripts', 'workflow', 'install_common.js'),
+    path.join(absoluteRoot, 'scripts', 'cli', 'rai.js'),
+    path.join(absoluteRoot, 'bin', 'rai.js'),
+  ].every((filePath) => fs.existsSync(filePath));
+}
+
 function resolveInstalledPackageRoot(targetRepo) {
   if (!targetRepo) {
     return null;
@@ -126,35 +179,52 @@ function resolveInstalledPackageRoot(targetRepo) {
   return null;
 }
 
-function resolveProductSourceRoot(targetRepo = null) {
+function validateProductSourceRoot(candidate, label = 'Source root') {
+  if (!candidate) {
+    return null;
+  }
+  const absoluteCandidate = path.resolve(candidate);
+  if (!isProductPackageRoot(absoluteCandidate)) {
+    throw new Error(`${label} must point at a valid Raiola package root`);
+  }
+  return absoluteCandidate;
+}
+
+function resolveProductSourceRoot(targetRepo = null, options = {}) {
   const currentRoot = sourceRepoRoot();
+  if (options.sourceRoot) {
+    return validateProductSourceRoot(options.sourceRoot, 'Explicit source root');
+  }
+
   if (isProductPackageRoot(currentRoot)) {
     return currentRoot;
   }
 
-  const manifest = targetRepo ? readProductManifest(targetRepo) : null;
-  const candidates = [
-    process.env.RAIOLA_SOURCE_ROOT || null,
-    process.env.CODEX_WORKFLOW_KIT_SOURCE_ROOT || null,
-    manifest?.installerSourceRoot || null,
-    resolveInstalledPackageRoot(targetRepo),
-  ];
-
-  for (const candidate of candidates) {
-    if (!candidate) {
-      continue;
-    }
-    const absoluteCandidate = path.resolve(candidate);
-    if (isProductPackageRoot(absoluteCandidate)) {
-      return absoluteCandidate;
-    }
+  const installedPackageRoot = resolveInstalledPackageRoot(targetRepo);
+  if (installedPackageRoot) {
+    return validateProductSourceRoot(installedPackageRoot, 'Installed package root');
   }
 
-  return currentRoot;
+  if (targetRepo && isInstalledRuntimeSurfaceRoot(targetRepo)) {
+    return path.resolve(targetRepo);
+  }
+
+  if (isInstalledRuntimeSurfaceRoot(currentRoot)) {
+    return currentRoot;
+  }
+
+  return validateProductSourceRoot(currentRoot, 'Current package root');
 }
 
-function productSourceLayout(targetRepo = null) {
-  return layoutFromRoot(resolveProductSourceRoot(targetRepo));
+function productSourceLayout(targetRepo = null, options = {}) {
+  const resolvedRoot = resolveProductSourceRoot(targetRepo, options);
+  if (isProductPackageRoot(resolvedRoot)) {
+    return layoutFromRoot(resolvedRoot);
+  }
+  if (isInstalledRuntimeSurfaceRoot(resolvedRoot)) {
+    return layoutFromInstalledRoot(resolvedRoot);
+  }
+  return layoutFromRoot(resolvedRoot);
 }
 
 function sourcePackageVersion() {
@@ -410,8 +480,13 @@ function writeVersionMarker(targetRepo, options = {}) {
 - \`Run rai doctor --strict if package scripts or runtime files look stale\`
 `;
 
-  ensureDir(path.dirname(markerPath));
-  fs.writeFileSync(markerPath, content);
+  const writeResult = writeManagedText(targetRepo, '.workflow/VERSION.md', content, {
+    inventory: ['.workflow/VERSION.md'],
+    label: 'Product version marker',
+  });
+  if (!writeResult.ok) {
+    throw new Error(writeResult.blocked.map((entry) => `${entry.path}: ${entry.reason}`).join('; '));
+  }
   return {
     path: markerPath,
     installedVersion,
@@ -427,7 +502,7 @@ function readProductManifest(targetRepo) {
     return null;
   }
   try {
-    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    return normalizeProductManifest(JSON.parse(fs.readFileSync(manifestPath, 'utf8')));
   } catch {
     return null;
   }
@@ -436,7 +511,7 @@ function readProductManifest(targetRepo) {
 function writeProductManifest(targetRepo, options = {}) {
   const installedVersion = options.installedVersion || sourcePackageVersion();
   const scriptProfile = normalizeScriptProfile(options.scriptProfile, 'full');
-  const productSource = options.sourceLayout || productSourceLayout(targetRepo);
+  const productSource = options.sourceLayout || productSourceLayout(targetRepo, options);
   const manifestPath = productManifestPath(targetRepo);
   const runtimeFiles = runtimeFilesForScriptProfile(scriptProfile, {
     targetRepo,
@@ -451,7 +526,7 @@ function writeProductManifest(targetRepo, options = {}) {
     versionMarkerPath: '.workflow/VERSION.md',
     skillPath: '.agents/skills/raiola/SKILL.md',
     skillPackPaths: runtimeFiles.filter((relativeFile) => relativeFile.startsWith('.agents/skills/')),
-    installerSourceRoot: productSource.repoRoot !== targetRepo ? productSource.repoRoot : null,
+    installerSourceHint: productSource.repoRoot !== targetRepo ? productSource.repoRoot : null,
     scriptProfile,
     runtimeScripts: loadTargetRuntimeScripts(scriptProfile, {
       targetRepo,
@@ -466,8 +541,13 @@ function writeProductManifest(targetRepo, options = {}) {
     generatedArtifacts: buildGeneratedArtifactsManifest(),
   };
 
-  ensureDir(path.dirname(manifestPath));
-  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  const writeResult = writeManagedText(targetRepo, '.workflow/product-manifest.json', `${JSON.stringify(manifest, null, 2)}\n`, {
+    inventory: ['.workflow/product-manifest.json'],
+    label: 'Product manifest',
+  });
+  if (!writeResult.ok) {
+    throw new Error(writeResult.blocked.map((entry) => `${entry.path}: ${entry.reason}`).join('; '));
+  }
   return {
     path: manifestPath,
     manifest,
@@ -495,38 +575,42 @@ function walkFiles(dirPath, predicate = () => true) {
   return results;
 }
 
-function copyFileTracked(sourcePath, targetPath, options = {}) {
-  const { overwrite = false, bucket } = options;
-  ensureDir(path.dirname(targetPath));
-
-  const exists = fs.existsSync(targetPath);
-  if (exists && !overwrite) {
-    if (bucket) {
-      bucket.skipped.push(targetPath);
-    }
-    return 'skipped';
-  }
-
-  fs.copyFileSync(sourcePath, targetPath);
+function copyFileTracked(targetRepo, sourcePath, relativeTargetPath, options = {}) {
+  const { overwrite = false, bucket, inventory = [] } = options;
+  const result = copyManagedFile(targetRepo, sourcePath, relativeTargetPath, {
+    overwrite,
+    inventory,
+    label: 'Managed install target',
+  });
   if (bucket) {
-    bucket[exists ? 'updated' : 'created'].push(targetPath);
+    if (result.status === 'created') {
+      bucket.created.push(result.absolutePath);
+    } else if (result.status === 'updated') {
+      bucket.updated.push(result.absolutePath);
+    } else {
+      bucket.skipped.push(result.absolutePath || relativeTargetPath);
+    }
   }
-  return exists ? 'updated' : 'created';
+  if (!result.ok) {
+    throw new Error(result.blocked.map((entry) => `${entry.path}: ${entry.reason}`).join('; '));
+  }
+  return result.status;
 }
 
-function copyDirectoryTracked(sourceDir, targetDir, options = {}) {
+function copyDirectoryTracked(targetRepo, sourceDir, relativeTargetDir, options = {}) {
   const {
     overwrite = false,
     bucket = { created: [], updated: [], skipped: [] },
     filter = () => true,
+    inventory = [],
   } = options;
-
-  ensureDir(targetDir);
   const files = walkFiles(sourceDir, filter);
   for (const sourcePath of files) {
-    const relative = path.relative(sourceDir, sourcePath);
-    const targetPath = path.join(targetDir, relative);
-    copyFileTracked(sourcePath, targetPath, { overwrite, bucket });
+    const relative = path.posix.join(
+      relativeTargetDir.replace(/\\/g, '/'),
+      path.relative(sourceDir, sourcePath).replace(/\\/g, '/'),
+    );
+    copyFileTracked(targetRepo, sourcePath, relative, { overwrite, bucket, inventory });
   }
 
   return bucket;
@@ -606,7 +690,7 @@ function focusedWorkflowRootsForProfile(profile = 'pilot', options = {}) {
 }
 
 function focusedWorkflowRuntimeFiles(profile = 'pilot', options = {}) {
-  const productSource = options.sourceLayout || productSourceLayout(options.targetRepo || null);
+  const productSource = options.sourceLayout || productSourceLayout(options.targetRepo || null, options);
   const graph = buildWorkflowDependencyGraph(productSource);
   const visited = new Set();
 
@@ -634,7 +718,7 @@ function focusedWorkflowRuntimeFiles(profile = 'pilot', options = {}) {
 
 function runtimeFilesForScriptProfile(profile = 'full', options = {}) {
   const normalizedProfile = normalizeScriptProfile(profile, 'full');
-  const source = options.sourceLayout || productSourceLayout(options.targetRepo || null);
+  const source = options.sourceLayout || productSourceLayout(options.targetRepo || null, options);
   const workflowFiles = normalizedProfile === 'pilot'
     ? focusedWorkflowRuntimeFiles(normalizedProfile, {
       ...options,
@@ -705,7 +789,7 @@ function patchPackageJsonScripts(targetRepo, options = {}) {
   } = options;
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const normalizedProfile = normalizeScriptProfile(scriptProfile, 'full');
-  const productSource = options.sourceLayout || productSourceLayout(targetRepo);
+  const productSource = options.sourceLayout || productSourceLayout(targetRepo, options);
   const runtimeScripts = runtimeScriptsOverride || loadTargetRuntimeScripts(normalizedProfile, {
     targetRepo,
     sourceLayout: productSource,
@@ -817,42 +901,34 @@ function patchPackageJsonScripts(targetRepo, options = {}) {
   return report;
 }
 
-function cleanupEmptyParentDirs(startPath, stopPath) {
-  let current = path.dirname(startPath);
-  const absoluteStop = path.resolve(stopPath);
-  while (current.startsWith(absoluteStop) && current !== absoluteStop) {
-    if (!fs.existsSync(current)) {
-      current = path.dirname(current);
-      continue;
-    }
-    if (fs.readdirSync(current).length > 0) {
-      return;
-    }
-    fs.rmdirSync(current);
-    current = path.dirname(current);
-  }
-}
-
-function pruneManagedRuntimeFiles(targetRepo, desiredRuntimeFiles, previousManifest = null) {
+function pruneManagedRuntimeFiles(targetRepo, desiredRuntimeFiles, trustedInventory, previousManifest = null) {
   const desired = new Set(desiredRuntimeFiles);
-  const previouslyManaged = [...new Set((previousManifest?.runtimeFiles || []).filter(Boolean))];
+  const previouslyManaged = uniqueNormalizedPaths(previousManifest?.runtimeFiles || []);
   const removed = [];
+  const blocked = [];
 
   for (const relativeManagedPath of previouslyManaged) {
     if (desired.has(relativeManagedPath)) {
       continue;
     }
-    const absoluteManagedPath = path.join(targetRepo, relativeManagedPath);
-    if (!fs.existsSync(absoluteManagedPath)) {
+    const result = removeManagedPath(targetRepo, relativeManagedPath, {
+      inventory: trustedInventory,
+      label: 'Managed runtime cleanup path',
+    });
+    if (!result.ok) {
+      blocked.push(...result.blocked);
       continue;
     }
-    fs.rmSync(absoluteManagedPath, { recursive: true, force: true });
-    cleanupEmptyParentDirs(absoluteManagedPath, targetRepo);
-    removed.push(absoluteManagedPath);
+    if (result.status !== 'removed') {
+      continue;
+    }
+    cleanupEmptyManagedParents(targetRepo, relativeManagedPath);
+    removed.push(result.absolutePath);
   }
 
   return {
     removed,
+    blocked,
   };
 }
 
@@ -871,8 +947,13 @@ Add or adapt a short workflow section like this inside your repo's \`AGENTS.md\`
 - Keep \`.workflow/state.json\` generated and non-canonical; markdown files remain the source of truth.
 `;
 
-  ensureDir(path.dirname(templatePath));
-  fs.writeFileSync(templatePath, content);
+  const writeResult = writeManagedText(targetRepo, 'docs/workflow/AGENTS_PATCH_TEMPLATE.md', content, {
+    inventory: ['docs/workflow/AGENTS_PATCH_TEMPLATE.md'],
+    label: 'AGENTS patch template',
+  });
+  if (!writeResult.ok) {
+    throw new Error(writeResult.blocked.map((entry) => `${entry.path}: ${entry.reason}`).join('; '));
+  }
   return templatePath;
 }
 
@@ -933,7 +1014,13 @@ function patchGitignore(targetRepo, options = {}) {
   for (const entry of missingEntries) {
     lines.push(entry);
   }
-  fs.writeFileSync(gitignorePath, `${lines.join('\n')}\n`);
+  const writeResult = writeManagedText(targetRepo, '.gitignore', `${lines.join('\n')}\n`, {
+    inventory: ['.gitignore'],
+    label: 'Managed gitignore entry',
+  });
+  if (!writeResult.ok) {
+    throw new Error(writeResult.blocked.map((entry) => `${entry.path}: ${entry.reason}`).join('; '));
+  }
 
   return {
     path: gitignorePath,
@@ -1136,8 +1223,9 @@ function installWorkflowSurface(targetRepo, options = {}) {
     scriptProfile = null,
     manageGitignore = true,
     verify = true,
+    sourceRoot = null,
   } = options;
-  const source = productSourceLayout(targetRepo);
+  const source = productSourceLayout(targetRepo, { ...options, sourceRoot });
   const existingManifest = readProductManifest(targetRepo);
   const selectedScriptProfile = normalizeScriptProfile(
     scriptProfile || existingManifest?.scriptProfile,
@@ -1156,9 +1244,23 @@ function installWorkflowSurface(targetRepo, options = {}) {
   const skillTarget = path.join(targetRepo, '.agents', 'skills', 'raiola', 'SKILL.md');
   const skillsTarget = path.join(targetRepo, '.agents', 'skills');
   const workflowIgnoreTarget = path.join(targetRepo, '.workflowignore');
+  const docsTargetRelative = 'docs/workflow';
+  const scriptsTargetRelative = 'scripts/workflow';
+  const cliTargetRelative = 'scripts/cli';
+  const binTargetRelative = 'bin/rai.js';
+  const aliasBinTargetRelatives = [
+    'bin/raiola.js',
+    'bin/raiola-on.js',
+    'bin/raiola-mcp.js',
+  ];
+  const compareTargetRelative = 'scripts/compare_golden_snapshots.ts';
+  const skillTargetRelative = '.agents/skills/raiola/SKILL.md';
+  const skillsTargetRelative = '.agents/skills';
+  const workflowIgnoreRelative = '.workflowignore';
   const selectedRuntimeFiles = runtimeFilesForScriptProfile(selectedScriptProfile, {
     targetRepo,
     sourceLayout: source,
+    sourceRoot,
   });
   const selectedWorkflowFiles = new Set(
     selectedRuntimeFiles
@@ -1166,12 +1268,53 @@ function installWorkflowSurface(targetRepo, options = {}) {
       .map((relativeManagedPath) => relativeManagedPath.slice('scripts/workflow/'.length)),
   );
   const includeCompareScript = selectedRuntimeFiles.includes(relativePath(source.repoRoot, source.compareScript));
+  const sourceHasTemplates = fs.existsSync(source.templatesDir);
+  const templateTargets = sourceHasTemplates
+    ? walkFiles(source.templatesDir).map((filePath) => path.posix.join(
+      docsTargetRelative,
+      relativePath(source.templatesDir, filePath),
+    ))
+    : [];
+  const trustedRuntimeCleanupInventory = buildTrustedRuntimeCleanupInventory(runtimeFilesForScriptProfile('full', {
+    targetRepo,
+    sourceLayout: source,
+    sourceRoot,
+  }));
+  const installInventory = uniqueNormalizedPaths([
+    ...selectedRuntimeFiles,
+    ...trustedRuntimeCleanupInventory,
+    ...templateTargets,
+    '.workflow/product-manifest.json',
+    '.workflow/VERSION.md',
+    '.workflow/install-report.json',
+    '.gitignore',
+    ...(writeAgentsTemplate ? ['docs/workflow/AGENTS_PATCH_TEMPLATE.md'] : []),
+  ]);
+  const preflightTargets = uniqueNormalizedPaths([
+    ...selectedRuntimeFiles,
+    ...templateTargets,
+    '.workflow/product-manifest.json',
+    '.workflow/VERSION.md',
+    ...(manageGitignore ? ['.gitignore'] : []),
+    ...(writeAgentsTemplate ? ['docs/workflow/AGENTS_PATCH_TEMPLATE.md'] : []),
+  ]);
 
   ensureDir(targetRepo);
+
+  const preflight = preflightManagedPaths(targetRepo, preflightTargets, {
+    inventory: installInventory,
+    label: 'Managed install surface',
+  });
+  if (!preflight.ok) {
+    throw new Error(preflight.blocked.map((entry) => `${entry.path}: ${entry.reason}`).join('; '));
+  }
 
   const docsExists = fs.existsSync(docsTarget);
   if (mode === 'init' && docsExists && !forceDocs) {
     throw new Error(`Workflow root already exists at ${docsTarget}. Run rai migrate or pass --force-docs.`);
+  }
+  if (!sourceHasTemplates && (mode === 'init' || forceDocs || refreshDocs)) {
+    throw new Error('The selected source root does not include templates/workflow. Re-run with --source-root pointing at a Raiola package root.');
   }
 
   const report = {
@@ -1204,60 +1347,70 @@ function installWorkflowSurface(targetRepo, options = {}) {
     hudState: null,
   };
 
-  copyDirectoryTracked(source.templatesDir, docsTarget, {
-    overwrite: forceDocs || refreshDocs,
-    bucket: report.docs,
-  });
-
-  copyDirectoryTracked(source.scriptsDir, scriptsTarget, {
-    overwrite: true,
-    bucket: report.scripts,
-    filter: (filePath) => selectedWorkflowFiles.has(relativePath(source.scriptsDir, filePath)),
-  });
-  copyDirectoryTracked(source.cliDir, cliTarget, {
-    overwrite: true,
-    bucket: report.cli,
-  });
-
-  report.bin = copyFileTracked(source.binFile, binTarget, { overwrite: true });
-  report.binAliases = aliasBinTargets.map((targetPath, index) => copyFileTracked(source.aliasBinFiles[index], targetPath, { overwrite: true }));
-  report.compareScript = includeCompareScript
-    ? copyFileTracked(source.compareScript, compareTarget, { overwrite: true })
-    : 'skipped';
-  if (fs.existsSync(source.skillsDir)) {
-    copyDirectoryTracked(source.skillsDir, skillsTarget, {
-      overwrite: true,
-      bucket: report.skillPack,
+  if (sourceHasTemplates) {
+    copyDirectoryTracked(targetRepo, source.templatesDir, docsTargetRelative, {
+      overwrite: forceDocs || refreshDocs,
+      bucket: report.docs,
+      inventory: installInventory,
     });
   }
-  report.skill = copyFileTracked(source.skillFile, skillTarget, { overwrite: true });
+
+  copyDirectoryTracked(targetRepo, source.scriptsDir, scriptsTargetRelative, {
+    overwrite: true,
+    bucket: report.scripts,
+    inventory: installInventory,
+    filter: (filePath) => selectedWorkflowFiles.has(relativePath(source.scriptsDir, filePath)),
+  });
+  copyDirectoryTracked(targetRepo, source.cliDir, cliTargetRelative, {
+    overwrite: true,
+    bucket: report.cli,
+    inventory: installInventory,
+  });
+
+  report.bin = copyFileTracked(targetRepo, source.binFile, binTargetRelative, { overwrite: true, inventory: installInventory });
+  report.binAliases = aliasBinTargetRelatives.map((targetPath, index) => copyFileTracked(targetRepo, source.aliasBinFiles[index], targetPath, { overwrite: true, inventory: installInventory }));
+  report.compareScript = includeCompareScript
+    ? copyFileTracked(targetRepo, source.compareScript, compareTargetRelative, { overwrite: true, inventory: installInventory })
+    : 'skipped';
+  if (fs.existsSync(source.skillsDir)) {
+    copyDirectoryTracked(targetRepo, source.skillsDir, skillsTargetRelative, {
+      overwrite: true,
+      bucket: report.skillPack,
+      inventory: installInventory,
+    });
+  }
+  report.skill = copyFileTracked(targetRepo, source.skillFile, skillTargetRelative, { overwrite: true, inventory: installInventory });
   if (fs.existsSync(source.codexDir)) {
-    copyDirectoryTracked(source.codexDir, path.join(targetRepo, '.codex'), {
+    copyDirectoryTracked(targetRepo, source.codexDir, '.codex', {
       overwrite: true,
       bucket: report.nativeCodex,
+      inventory: installInventory,
       filter: (filePath) => relativePath(source.codexDir, filePath) !== 'hooks.json',
     });
   }
   if (fs.existsSync(source.agentsPluginsDir)) {
-    copyDirectoryTracked(source.agentsPluginsDir, path.join(targetRepo, '.agents', 'plugins'), {
+    copyDirectoryTracked(targetRepo, source.agentsPluginsDir, '.agents/plugins', {
       overwrite: true,
       bucket: report.nativePlugins,
+      inventory: installInventory,
     });
   }
   if (fs.existsSync(source.pluginsDir)) {
-    copyDirectoryTracked(source.pluginsDir, path.join(targetRepo, 'plugins'), {
+    copyDirectoryTracked(targetRepo, source.pluginsDir, 'plugins', {
       overwrite: true,
       bucket: report.nativePlugins,
+      inventory: installInventory,
     });
   }
   if (fs.existsSync(source.githubCodexDir)) {
-    copyDirectoryTracked(source.githubCodexDir, path.join(targetRepo, '.github', 'codex'), {
+    copyDirectoryTracked(targetRepo, source.githubCodexDir, '.github/codex', {
       overwrite: true,
       bucket: report.nativeGithub,
+      inventory: installInventory,
     });
   }
   if (fs.existsSync(source.codexWorkflowFile)) {
-    copyFileTracked(source.codexWorkflowFile, path.join(targetRepo, '.github', 'workflows', 'codex-review.yml'), { overwrite: true });
+    copyFileTracked(targetRepo, source.codexWorkflowFile, '.github/workflows/codex-review.yml', { overwrite: true, inventory: installInventory });
   }
   for (const [sourceFile, targetFile] of [
     [source.scriptsAgentsFile, path.join(targetRepo, 'scripts', 'AGENTS.md')],
@@ -1270,9 +1423,9 @@ function installWorkflowSurface(targetRepo, options = {}) {
     if (!sourceFile || !fs.existsSync(sourceFile)) {
       continue;
     }
-    report.layeredAgents.push(copyFileTracked(sourceFile, targetFile, { overwrite: true }));
+    report.layeredAgents.push(copyFileTracked(targetRepo, sourceFile, relativePath(targetRepo, targetFile), { overwrite: true, inventory: installInventory }));
   }
-  report.workflowIgnore = copyFileTracked(source.workflowIgnore, workflowIgnoreTarget, { overwrite: false });
+  report.workflowIgnore = copyFileTracked(targetRepo, source.workflowIgnore, workflowIgnoreRelative, { overwrite: false, inventory: installInventory });
   if (manageGitignore) {
     report.gitignore = patchGitignore(targetRepo);
   }
@@ -1286,21 +1439,27 @@ function installWorkflowSurface(targetRepo, options = {}) {
     report.agentsTemplate = writeAgentsPatchTemplate(targetRepo);
   }
 
-  report.prunedRuntimeFiles = pruneManagedRuntimeFiles(targetRepo, selectedRuntimeFiles, existingManifest).removed;
+  const pruneReport = pruneManagedRuntimeFiles(targetRepo, selectedRuntimeFiles, trustedRuntimeCleanupInventory, existingManifest);
+  report.prunedRuntimeFiles = pruneReport.removed;
+  report.blockedRuntimeFiles = pruneReport.blocked;
   report.productManifest = writeProductManifest(targetRepo, {
     scriptProfile: selectedScriptProfile,
     sourceLayout: source,
+    sourceRoot,
   });
   report.versionMarker = writeVersionMarker(targetRepo, { mode });
   for (const legacyPath of [
-    path.join(targetRepo, 'bin', 'cwf.js'),
-    path.join(targetRepo, '.agents', 'skills', 'codex-workflow'),
+    'bin/cwf.js',
+    '.agents/skills/codex-workflow',
   ]) {
-    if (!fs.existsSync(legacyPath)) {
-      continue;
+    const removal = removeManagedPath(targetRepo, legacyPath, {
+      inventory: trustedRuntimeCleanupInventory,
+      label: 'Legacy managed runtime path',
+    });
+    if (removal.ok && removal.status === 'removed') {
+      cleanupEmptyManagedParents(targetRepo, legacyPath);
+      report.legacyArtifactsRemoved.push(removal.absolutePath);
     }
-    fs.rmSync(legacyPath, { recursive: true, force: true });
-    report.legacyArtifactsRemoved.push(legacyPath);
   }
   report.sync = syncDefaultWorkflowSurface(targetRepo, { setAsActive: mode === 'init' });
   report.codexSetup = seedCodexControl(targetRepo, { repo: true, _: ['setup'] });

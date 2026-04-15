@@ -2,7 +2,7 @@ const CLI_CONTRACT_VERSION = '2026-04';
 
 const ARTIFACT_SCHEMA_REGISTRY = Object.freeze({
   productManifest: {
-    schema: 'raiola/product-manifest/v2',
+    schema: 'raiola/product-manifest/v3',
     summary: 'Installed surface manifest and artifact compatibility map.',
   },
   setupPlan: {

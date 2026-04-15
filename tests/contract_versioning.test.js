@@ -46,7 +46,7 @@ test('installed product manifest records artifact schemas and generated-artifact
   const manifest = JSON.parse(fs.readFileSync(path.join(targetRepo, '.workflow', 'product-manifest.json'), 'utf8'));
   const installReport = JSON.parse(fs.readFileSync(path.join(targetRepo, '.workflow', 'install-report.json'), 'utf8'));
 
-  assert.equal(manifest.schema, 'raiola/product-manifest/v2');
+  assert.equal(manifest.schema, 'raiola/product-manifest/v3');
   assert.equal(manifest.contractVersion, '2026-04');
   assert.equal(manifest.cliContractVersion, '2026-04');
   assert.equal(manifest.artifactSchemas.start, 'raiola/start-plan/v1');

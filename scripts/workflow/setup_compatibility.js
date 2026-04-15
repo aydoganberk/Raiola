@@ -40,6 +40,14 @@ function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
 }
 
+function symlinkedTargetRoot(targetRepo) {
+  try {
+    return path.resolve(targetRepo) !== fs.realpathSync(targetRepo);
+  } catch {
+    return false;
+  }
+}
+
 function summarizeTopRoots(runtimeFiles = []) {
   const roots = new Map();
   for (const relativeFile of runtimeFiles) {
@@ -171,7 +179,10 @@ function detectTooling(targetRepo) {
 }
 
 function buildCompatibilityRisks(targetRepo, scriptProfile, options = {}) {
-  const runtimeFiles = runtimeFilesForScriptProfile(scriptProfile, { targetRepo });
+  const runtimeFiles = runtimeFilesForScriptProfile(scriptProfile, {
+    targetRepo,
+    sourceRoot: options.sourceRoot || null,
+  });
   const scriptConflicts = detectScriptConflicts(targetRepo, scriptProfile);
   const overlayConflicts = detectOverlayConflicts(targetRepo, runtimeFiles);
   const tooling = detectTooling(targetRepo);
@@ -228,6 +239,14 @@ function buildCompatibilityRisks(targetRepo, scriptProfile, options = {}) {
       id: 'existing-hook-manager',
       summary: `Existing Git hook/tooling manager detected: ${tooling.hookManagers.join(', ')}.`,
       remedy: 'Raiola does not install Git hooks directly, but check hook order and side effects if your agent runner shells through commit/push flows.',
+    });
+  }
+  if (symlinkedTargetRoot(targetRepo)) {
+    risks.push({
+      severity: 'medium',
+      id: 'symlinked-target-root',
+      summary: 'The requested repo path resolves through a symlinked root.',
+      remedy: 'Prefer the canonical realpath when running setup/update so managed-path guards and audit output stay anchored to the same repository root.',
     });
   }
   if (tooling.ciWorkflows.length > 0) {

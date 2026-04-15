@@ -19,6 +19,18 @@ function productManifestPath(targetRepo) {
   return path.join(targetRepo, '.workflow', 'product-manifest.json');
 }
 
+function normalizeProductManifest(manifest) {
+  if (!manifest || typeof manifest !== 'object') {
+    return null;
+  }
+  const normalized = { ...manifest };
+  if (normalized.installerSourceRoot && !normalized.installerSourceHint) {
+    normalized.installerSourceHint = normalized.installerSourceRoot;
+  }
+  delete normalized.installerSourceRoot;
+  return normalized;
+}
+
 function readInstalledVersionMarker(targetRepo) {
   const markerPath = versionMarkerPath(targetRepo);
   if (!fs.existsSync(markerPath)) {
@@ -49,13 +61,14 @@ function readProductManifest(targetRepo) {
     return null;
   }
   try {
-    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    return normalizeProductManifest(JSON.parse(fs.readFileSync(manifestPath, 'utf8')));
   } catch {
     return null;
   }
 }
 
 module.exports = {
+  normalizeProductManifest,
   productManifestPath,
   readInstalledVersionMarker,
   readProductManifest,

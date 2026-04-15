@@ -9,6 +9,12 @@ const WRITE_COMMAND_PATTERN = /(^|\s)(rm\b|mv\b|cp\b|touch\b|mkdir\b|tee\b|trunc
 const REDIRECT_WRITE_PATTERN = /(^|[;&|])\s*(echo|printf|cat)\b[^\n>]*>\s*[^\s]+/i;
 const SCRIPT_LAUNCH_PATTERN = /\b(npm\s+run|pnpm\s+run|yarn\s+run|cargo\s+(test|check|run|publish)|go\s+(test|vet|build)|python\s+-m\s+pytest|pytest\b|mvn\b|gradle\b|bazel\b|nx\b|turbo\b)\b/i;
 const PATH_TOKEN_PATTERN = /(?:^|[\s'"=])(\.?\.?\/[A-Za-z0-9_./-]+|[A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+|README\.md|CHANGELOG\.md|package\.json|AGENTS\.md|docs|scripts|app|src|components|pages|public|\.github|\.workflow)(?=$|[\s'":])/g;
+const SHELL_WRAPPER_PATTERN = /\b(bash|sh|zsh)\s+-[lc]+\s+(["'`])([\s\S]*)\2/i;
+const NODE_INLINE_PATTERN = /\bnode\s+(?:--input-type=\w+\s+)?-e\s+(["'`])([\s\S]*)\1/i;
+const PYTHON_INLINE_PATTERN = /\bpython(?:3)?\s+-c\s+(["'`])([\s\S]*)\1/i;
+const INLINE_FILE_WRITE_SIGNAL_PATTERN = /\b(?:writeFileSync|appendFileSync|createWriteStream|truncateSync|renameSync|rmSync|unlinkSync|mkdirSync|copyFileSync|cpSync|fs\.promises\.(?:writeFile|appendFile|rm|mkdir|copyFile|rename))\s*\(/i;
+const INLINE_FILE_WRITE_PATH_PATTERN = /\b(?:writeFileSync|appendFileSync|createWriteStream|truncateSync|renameSync|rmSync|unlinkSync|mkdirSync|copyFileSync|cpSync|fs\.promises\.(?:writeFile|appendFile|rm|mkdir|copyFile|rename))\s*\(\s*(["'`])([^"'`]+)\1/g;
+const INLINE_NETWORK_SIGNAL_PATTERN = /\b(?:fetch|axios(?:\.\w+)?|got|request|https?\.(?:request|get)|net\.connect|tls\.connect)\s*\(/i;
 
 function readStdin(handler) {
   const chunks = [];
@@ -196,6 +202,23 @@ function extractRepoPaths(command, rootDir) {
   return paths;
 }
 
+function extractInlineRepoPaths(program, rootDir) {
+  const paths = [];
+  const text = String(program || '');
+  for (const match of text.matchAll(INLINE_FILE_WRITE_PATH_PATTERN)) {
+    const normalized = normalizeRepoRelative(rootDir, match[2]);
+    if (normalized && !paths.includes(normalized)) {
+      paths.push(normalized);
+    }
+  }
+  for (const normalized of extractRepoPaths(text, rootDir)) {
+    if (!paths.includes(normalized)) {
+      paths.push(normalized);
+    }
+  }
+  return paths;
+}
+
 function pathWithinBoundary(relativePath, roots = ['.']) {
   const normalizedPath = String(relativePath || '').replace(/^\.\//, '').replace(/\\/g, '/');
   return roots.some((root) => {
@@ -223,6 +246,54 @@ function classifyShellCommand(command) {
     writes: commandWritesToRepo(text),
     scriptLaunch: SCRIPT_LAUNCH_PATTERN.test(text),
   };
+}
+
+function classifyInlineProgram(program) {
+  const text = String(program || '');
+  return {
+    dangerous: dangerousCommand(text),
+    network: INLINE_NETWORK_SIGNAL_PATTERN.test(text) || NETWORK_COMMAND_PATTERN.test(text),
+    release: RELEASE_COMMAND_PATTERN.test(text),
+    ciWorkflow: CI_COMMAND_PATTERN.test(text),
+    repoWide: REPO_WIDE_COMMAND_PATTERN.test(text),
+    writes: INLINE_FILE_WRITE_SIGNAL_PATTERN.test(text) || commandWritesToRepo(text),
+    scriptLaunch: SCRIPT_LAUNCH_PATTERN.test(text),
+  };
+}
+
+function inspectWrappedCommand(command, rootDir) {
+  const text = String(command || '').trim();
+  const shellMatch = text.match(SHELL_WRAPPER_PATTERN);
+  if (shellMatch) {
+    return {
+      type: 'shell-wrapper',
+      wrapper: `${shellMatch[1]} -lc`,
+      body: shellMatch[3],
+      classification: classifyShellCommand(shellMatch[3]),
+      touchedPaths: extractRepoPaths(shellMatch[3], rootDir),
+    };
+  }
+  const nodeMatch = text.match(NODE_INLINE_PATTERN);
+  if (nodeMatch) {
+    return {
+      type: 'node-inline',
+      wrapper: 'node -e',
+      body: nodeMatch[2],
+      classification: classifyInlineProgram(nodeMatch[2]),
+      touchedPaths: extractInlineRepoPaths(nodeMatch[2], rootDir),
+    };
+  }
+  const pythonMatch = text.match(PYTHON_INLINE_PATTERN);
+  if (pythonMatch) {
+    return {
+      type: 'python-inline',
+      wrapper: 'python -c',
+      body: pythonMatch[2],
+      classification: classifyInlineProgram(pythonMatch[2]),
+      touchedPaths: extractInlineRepoPaths(pythonMatch[2], rootDir),
+    };
+  }
+  return null;
 }
 
 function readPackageScripts(rootDir, packageDir = '.') {
@@ -415,6 +486,8 @@ module.exports = {
   pathWithinBoundary,
   commandWritesToRepo,
   classifyShellCommand,
+  classifyInlineProgram,
   inspectScriptLaunch,
+  inspectWrappedCommand,
   commandMatchesPolicyList,
 };

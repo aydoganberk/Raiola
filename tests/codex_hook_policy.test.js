@@ -265,3 +265,63 @@ test('pre-tool hook explains network-restricted git push explicitly', () => {
   assert.equal(payload.hookSpecificOutput.permissionDecision, 'warn');
   assert.match(payload.systemMessage, /needs network access/i);
 });
+
+test('pre-tool hook detects inline node file writes hidden behind node -e', () => {
+  const targetRepo = makeTempRepo();
+  writeFile(targetRepo, '.codex/raiola-policy.json', `${JSON.stringify({
+    selectedProfile: 'raiola-strict',
+    strict: true,
+    locked: false,
+    networkAccess: false,
+    repoSignals: { monorepo: false },
+    selectionRationale: [],
+    writeBoundary: {
+      mode: 'explicit-write-boundary',
+      roots: ['docs'],
+      protectedRoots: ['.git', '.workflow', 'node_modules'],
+      allowGeneratedWorkflowWrites: false,
+      repoWideChangeThreshold: 3,
+    },
+    commandPolicy: {
+      protectedPaths: ['.git', '.workflow', 'node_modules'],
+      explicitWriteBoundaryRequired: true,
+      packageManagerIntrospection: true,
+      nestedPackageManagerIntrospection: true,
+    },
+  }, null, 2)}\n`);
+
+  const payload = runHook(targetRepo, 'node -e "require(\'node:fs\').writeFileSync(\'docs/plan.md\', \'x\')"');
+
+  assert.equal(payload.hookSpecificOutput.permissionDecision, 'deny');
+  assert.match(payload.systemMessage, /node -e hides inline file mutations/i);
+});
+
+test('pre-tool hook detects inline network activity hidden behind bash -lc', () => {
+  const targetRepo = makeTempRepo();
+  writeFile(targetRepo, '.codex/raiola-policy.json', `${JSON.stringify({
+    selectedProfile: 'raiola-balanced',
+    strict: false,
+    locked: false,
+    networkAccess: false,
+    repoSignals: { monorepo: false },
+    selectionRationale: [],
+    writeBoundary: {
+      mode: 'task-root',
+      roots: ['.'],
+      protectedRoots: ['.git', '.workflow', 'node_modules'],
+      allowGeneratedWorkflowWrites: false,
+      repoWideChangeThreshold: 3,
+    },
+    commandPolicy: {
+      protectedPaths: ['.git', '.workflow', 'node_modules'],
+      explicitWriteBoundaryRequired: false,
+      packageManagerIntrospection: true,
+      nestedPackageManagerIntrospection: true,
+    },
+  }, null, 2)}\n`);
+
+  const payload = runHook(targetRepo, 'bash -lc "curl https://example.com"');
+
+  assert.equal(payload.hookSpecificOutput.permissionDecision, 'warn');
+  assert.match(payload.systemMessage, /bash -lc hides inline network activity/i);
+});

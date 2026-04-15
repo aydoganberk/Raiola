@@ -3,13 +3,22 @@ const path = require('node:path');
 const { parseArgs, resolveTargetRepoArg } = require('./common');
 const {
   readProductManifest,
-  sourceLayout,
   loadTargetRuntimeScripts,
+  runtimeFilesForScriptProfile,
   productManifestPath,
   versionMarkerPath,
 } = require('./install_common');
 const { contractPayload } = require('./contract_versions');
-const { generatedArtifactPaths } = require('./generated_artifacts');
+const {
+  buildTrustedGeneratedArtifactInventory,
+  buildTrustedRuntimeCleanupInventory,
+} = require('./managed_inventory');
+const {
+  cleanupEmptyManagedParents,
+  removeManagedPath,
+  sanitizeManagedPathList,
+  writeManagedText,
+} = require('./io/managed_fs');
 
 function printHelp() {
   console.log(`
@@ -26,142 +35,45 @@ Options:
   `);
 }
 
-function walkFiles(dirPath, files = []) {
-  if (!fs.existsSync(dirPath)) {
-    return files;
-  }
-  for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
-    const fullPath = path.join(dirPath, entry.name);
-    if (entry.isDirectory()) {
-      walkFiles(fullPath, files);
-      continue;
-    }
-    if (entry.isFile()) {
-      files.push(fullPath);
-    }
-  }
-  return files;
-}
-
-function isPathInside(rootDir, candidatePath) {
-  const relative = path.relative(rootDir, candidatePath);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-}
-
-function resolveInstalledTargetPath(targetRepo, value) {
-  const raw = String(value || '').trim();
-  if (!raw) {
-    return null;
-  }
-  const repoRoot = path.resolve(targetRepo);
-  const candidate = path.isAbsolute(raw)
-    ? path.resolve(raw)
-    : path.resolve(repoRoot, raw);
-  if (!isPathInside(repoRoot, candidate)) {
-    return null;
-  }
-  return candidate;
-}
-
-function maybeRemove(targetPath, report, dryRun, options = {}) {
-  const rawPath = options.rawPath || targetPath;
-  const safe = options.safe !== false;
-  if (safe && !targetPath) {
-    report.blocked.push(String(rawPath || ''));
-    return false;
-  }
-
-  if (!fs.existsSync(targetPath)) {
-    report.skipped.push(targetPath);
-    return false;
-  }
-
-  if (!dryRun) {
-    fs.rmSync(targetPath, { recursive: true, force: true });
-  }
-  report.removed.push(targetPath);
-  return true;
-}
-
-function cleanupEmptyParents(startPath, stopPath, dryRun) {
-  let current = path.dirname(startPath);
-  const absoluteStop = path.resolve(stopPath);
-  while (current.startsWith(absoluteStop) && current !== absoluteStop) {
-    if (!fs.existsSync(current)) {
-      current = path.dirname(current);
-      continue;
-    }
-    if (fs.readdirSync(current).length > 0) {
-      break;
-    }
-    if (!dryRun) {
-      fs.rmdirSync(current);
-    }
-    current = path.dirname(current);
-  }
-}
-
-function runtimeScriptFiles() {
-  const scriptsDir = sourceLayout().scriptsDir;
-  return walkFiles(scriptsDir)
-    .map((filePath) => path.relative(scriptsDir, filePath));
-}
-
-function runtimeCliFiles() {
-  const cliDir = sourceLayout().cliDir;
-  return walkFiles(cliDir)
-    .map((filePath) => path.relative(cliDir, filePath));
-}
-
-function installedSkillDirectories() {
-  const source = sourceLayout();
-  const directories = new Set(['raiola', 'codex-workflow']);
-  if (!fs.existsSync(source.skillsDir)) {
-    return [...directories];
-  }
-
-  for (const entry of fs.readdirSync(source.skillsDir, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      directories.add(entry.name);
-    }
-  }
-  return [...directories];
-}
-
-function fallbackInstalledRuntimePaths() {
-  const paths = [];
-  for (const relativeScript of runtimeScriptFiles()) {
-    paths.push(path.join('scripts', 'workflow', relativeScript).replace(/\\/g, '/'));
-  }
-  for (const relativeScript of runtimeCliFiles()) {
-    paths.push(path.join('scripts', 'cli', relativeScript).replace(/\\/g, '/'));
-  }
-  for (const entry of [
-    'bin/rai.js',
-    'bin/raiola.js',
-    'bin/raiola-on.js',
-    'bin/raiola-mcp.js',
-    'bin/cwf.js',
-    'scripts/compare_golden_snapshots.ts',
-    '.workflowignore',
-    '.agents/plugins/marketplace.json',
-  ]) {
-    paths.push(entry);
-  }
-  for (const skillDir of installedSkillDirectories()) {
-    paths.push(`.agents/skills/${skillDir}`);
-  }
-  return [...new Set(paths)];
+function trustedRuntimeInventory(targetRepo, manifest) {
+  const scriptProfile = manifest?.scriptProfile || 'full';
+  return buildTrustedRuntimeCleanupInventory(
+    runtimeFilesForScriptProfile('full', {
+      targetRepo,
+      scriptProfile,
+    }),
+  );
 }
 
 function installedRuntimeCleanupPlan(targetRepo) {
   const manifest = readProductManifest(targetRepo);
-  const manifestRuntimeFiles = Array.isArray(manifest?.runtimeFiles)
-    ? manifest.runtimeFiles.filter(Boolean)
-    : [];
+  const runtimePaths = trustedRuntimeInventory(targetRepo, manifest);
+  const blocked = sanitizeManagedPathList(manifest?.runtimeFiles || [], runtimePaths, {
+    rootPath: targetRepo,
+    label: 'Manifest runtime path',
+  }).blocked;
   return {
     manifest,
-    runtimePaths: manifestRuntimeFiles.length > 0 ? [...new Set(manifestRuntimeFiles)] : fallbackInstalledRuntimePaths(),
+    runtimePaths,
+    blocked,
+  };
+}
+
+function generatedArtifactCleanupPlan(targetRepo) {
+  const manifest = readProductManifest(targetRepo);
+  const generatedPaths = buildTrustedGeneratedArtifactInventory();
+  const manifestGenerated = manifest?.generatedArtifacts || {};
+  const blocked = sanitizeManagedPathList([
+    ...(manifestGenerated.generatedArtifactRoots || []),
+    ...(manifestGenerated.generatedArtifactFiles || []),
+  ], generatedPaths, {
+    rootPath: targetRepo,
+    label: 'Manifest generated artifact path',
+  }).blocked;
+  return {
+    manifest,
+    generatedPaths,
+    blocked,
   };
 }
 
@@ -185,12 +97,10 @@ function removePackageScripts(targetRepo, dryRun) {
     if (!(name in scripts)) {
       continue;
     }
-
     if (scripts[name] !== expected) {
       report.conflicts.push({ name, existing: scripts[name], expected });
       continue;
     }
-
     delete scripts[name];
     report.removed.push(name);
   }
@@ -204,19 +114,23 @@ function removePackageScripts(targetRepo, dryRun) {
     if (!(name in scripts)) {
       continue;
     }
-
     if (scripts[name] !== expected) {
       report.conflicts.push({ name, existing: scripts[name], expected });
       continue;
     }
-
     delete scripts[name];
     report.removed.push(name);
   }
 
   if (!dryRun) {
     pkg.scripts = scripts;
-    fs.writeFileSync(packageJsonPath, `${JSON.stringify(pkg, null, 2)}\n`);
+    const writeResult = writeManagedText(targetRepo, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`, {
+      inventory: ['package.json'],
+      label: 'package.json',
+    });
+    if (!writeResult.ok) {
+      throw new Error(writeResult.blocked.map((entry) => `${entry.path}: ${entry.reason}`).join('; '));
+    }
   } else {
     report.kept = Object.keys(scripts);
   }
@@ -224,23 +138,7 @@ function removePackageScripts(targetRepo, dryRun) {
   return report;
 }
 
-function generatedArtifactCleanupPlan(targetRepo) {
-  const manifest = readProductManifest(targetRepo);
-  const manifestGenerated = manifest?.generatedArtifacts || null;
-  const generatedRoots = manifestGenerated?.generatedArtifactRoots || [];
-  const generatedFiles = manifestGenerated?.generatedArtifactFiles || [];
-  const manifestPaths = generatedRoots.length > 0 || generatedFiles.length > 0
-    ? [...generatedRoots, ...generatedFiles]
-    : generatedArtifactPaths();
-  return {
-    manifest,
-    generatedPaths: [...new Set(manifestPaths)],
-  };
-}
-
-function buildReport(targetRepo, purgeDocs) {
-  const cleanupPlan = generatedArtifactCleanupPlan(targetRepo);
-  const runtimePlan = installedRuntimeCleanupPlan(targetRepo);
+function buildReport(targetRepo, purgeDocs, runtimePlan, generatedPlan) {
   return {
     ...contractPayload('uninstallReport'),
     generatedAt: new Date().toISOString(),
@@ -248,22 +146,46 @@ function buildReport(targetRepo, purgeDocs) {
     purgeDocs,
     removed: [],
     skipped: [],
-    blocked: [],
+    blocked: [
+      ...runtimePlan.blocked.map((entry) => entry.path),
+      ...generatedPlan.blocked.map((entry) => entry.path),
+    ].filter(Boolean),
+    blockedDetails: [
+      ...runtimePlan.blocked,
+      ...generatedPlan.blocked,
+    ],
     preserved: [
       'docs/workflow unless --purge-docs is explicitly requested',
     ],
     packageScripts: null,
     installedRuntime: {
       cleanupCoverage: runtimePlan.runtimePaths,
-      source: runtimePlan.manifest ? 'product-manifest' : 'fallback-source-layout',
+      source: 'trusted-runtime-inventory',
       manifestPresent: Boolean(runtimePlan.manifest),
     },
     generatedArtifacts: {
-      cleanupCoverage: cleanupPlan.generatedPaths,
-      source: cleanupPlan.manifest?.generatedArtifacts?.schema || 'raiola/generated-artifacts/v1',
-      manifestPresent: Boolean(cleanupPlan.manifest),
+      cleanupCoverage: generatedPlan.generatedPaths,
+      source: 'trusted-generated-inventory',
+      manifestPresent: Boolean(generatedPlan.manifest),
     },
   };
+}
+
+function recordRemoval(report, result, relativeTarget) {
+  if (!result.ok) {
+    report.blocked.push(...result.blocked.map((entry) => entry.path).filter(Boolean));
+    report.blockedDetails.push(...result.blocked);
+    return false;
+  }
+  if (result.status === 'removed') {
+    report.removed.push(result.absolutePath);
+    cleanupEmptyManagedParents(report.targetRepo, relativeTarget);
+    return true;
+  }
+  if (result.status === 'skipped') {
+    report.skipped.push(result.absolutePath || relativeTarget);
+  }
+  return false;
 }
 
 function main() {
@@ -276,61 +198,70 @@ function main() {
   const targetRepo = resolveTargetRepoArg(args);
   const dryRun = Boolean(args['dry-run']);
   const purgeDocs = Boolean(args['purge-docs']);
-  const cleanupPlan = generatedArtifactCleanupPlan(targetRepo);
   const runtimePlan = installedRuntimeCleanupPlan(targetRepo);
-  const report = buildReport(targetRepo, purgeDocs);
-  const removedPaths = [];
+  const generatedPlan = generatedArtifactCleanupPlan(targetRepo);
+  const report = buildReport(targetRepo, purgeDocs, runtimePlan, generatedPlan);
 
-  for (const runtimePath of runtimePlan.runtimePaths) {
-    const resolvedPath = resolveInstalledTargetPath(targetRepo, runtimePath);
-    if (maybeRemove(resolvedPath, report, dryRun, { rawPath: runtimePath })) {
-      removedPaths.push(resolvedPath);
-    }
-  }
-
-  const runtimePaths = [
-    ...cleanupPlan.generatedPaths,
-    productManifestPath(targetRepo),
-    versionMarkerPath(targetRepo),
+  const removalTargets = [
+    ...runtimePlan.runtimePaths.map((relativePath) => ({
+      relativePath,
+      inventory: runtimePlan.runtimePaths,
+      label: 'Installed runtime path',
+    })),
+    ...generatedPlan.generatedPaths.map((relativePath) => ({
+      relativePath,
+      inventory: generatedPlan.generatedPaths,
+      label: 'Generated artifact path',
+    })),
+    {
+      relativePath: '.workflow/product-manifest.json',
+      inventory: ['.workflow/product-manifest.json'],
+      label: 'Product manifest',
+    },
+    {
+      relativePath: '.workflow/VERSION.md',
+      inventory: ['.workflow/VERSION.md'],
+      label: 'Version marker',
+    },
   ];
 
-  for (const runtimePath of runtimePaths) {
-    const resolvedPath = resolveInstalledTargetPath(targetRepo, runtimePath);
-    if (maybeRemove(resolvedPath, report, dryRun, { rawPath: runtimePath })) {
-      removedPaths.push(resolvedPath);
-    }
+  if (purgeDocs) {
+    removalTargets.push({
+      relativePath: 'docs/workflow',
+      inventory: ['docs/workflow'],
+      label: 'Workflow docs',
+    });
   }
 
-  if (purgeDocs) {
-    const docsPath = resolveInstalledTargetPath(targetRepo, path.join('docs', 'workflow'));
-    if (maybeRemove(docsPath, report, dryRun, { rawPath: 'docs/workflow' })) {
-      removedPaths.push(docsPath);
+  for (const target of removalTargets) {
+    if (dryRun) {
+      const exists = fs.existsSync(path.join(targetRepo, target.relativePath));
+      if (exists) {
+        report.removed.push(path.join(targetRepo, target.relativePath));
+      } else {
+        report.skipped.push(path.join(targetRepo, target.relativePath));
+      }
+      continue;
     }
+
+    const result = removeManagedPath(targetRepo, target.relativePath, {
+      inventory: target.inventory,
+      label: target.label,
+    });
+    recordRemoval(report, result, target.relativePath);
   }
 
   report.packageScripts = removePackageScripts(targetRepo, dryRun);
-  for (const removedPath of removedPaths) {
-    cleanupEmptyParents(removedPath, targetRepo, dryRun);
-  }
-  cleanupEmptyParents(path.join(targetRepo, 'package.json'), targetRepo, dryRun);
 
   if (args.json) {
     console.log(JSON.stringify(report, null, 2));
     return;
   }
 
-  console.log('# WORKFLOW UNINSTALL\n');
+  console.log('# RAIOLA UNINSTALL\n');
   console.log(`- Target: \`${targetRepo}\``);
-  console.log(`- Purge docs: \`${purgeDocs ? 'yes' : 'no'}\``);
-  console.log(`- Removed paths: \`${report.removed.length}\``);
-  console.log(`- Blocked paths: \`${report.blocked.length}\``);
-  console.log(`- Package scripts removed: \`${report.packageScripts.removed.length}\``);
-  if (report.packageScripts.conflicts.length > 0) {
-    console.log(`- Package script conflicts kept: \`${report.packageScripts.conflicts.length}\``);
-  }
-  if (report.blocked.length > 0) {
-    console.log(`- Blocked cleanup entries: \`${report.blocked.length}\``);
-  }
+  console.log(`- Removed: \`${report.removed.length}\``);
+  console.log(`- Blocked: \`${report.blocked.length}\``);
 }
 
 main();

@@ -7,7 +7,10 @@ const {
   productVersion,
   } = require('./product_version');
 const {
+  loadTargetRuntimeScripts,
   missingGitignoreEntries,
+  normalizeScriptProfile,
+  runtimeFilesForScriptProfile,
   WORKFLOW_GITIGNORE_ENTRIES,
   } = require('./install_common');
 const {
@@ -24,6 +27,7 @@ const {
   workflowPaths,
 } = require('./common');
 const { readText: read } = require('./io/files');
+const { sanitizeManagedPathList } = require('./io/managed_fs');
 const { readProductManifest, readInstalledVersionMarker } = require('./product_manifest');
 const { applyRepairPlan, buildRepairPlan } = require('./repair');
 const { buildRiskSummary } = require('./risk_score');
@@ -112,13 +116,26 @@ function buildDoctorReport(cwd, rootDir) {
   const activeRow = parseMilestoneTable(milestones).rows.find((row) => row.status === 'active');
   const workstreamRows = parseWorkstreamTable(workstreams).rows;
   const productManifest = readProductManifest(cwd);
-  const expectedRuntimeScripts = productManifest?.runtimeScripts || {};
+  const scriptProfile = normalizeScriptProfile(productManifest?.scriptProfile || 'full', 'full');
+  const expectedRuntimeScripts = productManifest
+    ? loadTargetRuntimeScripts(scriptProfile, { targetRepo: cwd })
+    : {};
   const expectedScriptEntries = Object.entries(expectedRuntimeScripts);
+  const trustedRuntimeFiles = productManifest
+    ? runtimeFilesForScriptProfile(scriptProfile, { targetRepo: cwd })
+    : [];
+  const manifestRuntimeAudit = productManifest
+    ? sanitizeManagedPathList(productManifest.runtimeFiles || [], trustedRuntimeFiles, {
+      rootPath: cwd,
+      allowMissing: true,
+      label: 'Manifest runtime file',
+    })
+    : { safe: [], blocked: [] };
   const expectedRuntimeFiles = [...new Set([
     ...expectedScriptEntries
       .map(([, scriptValue]) => extractNodeScriptPath(scriptValue))
       .filter(Boolean),
-    ...((productManifest?.runtimeFiles || []).filter(Boolean)),
+    ...trustedRuntimeFiles,
   ])].sort();
   const packageJsonPath = path.join(cwd, 'package.json');
   const packageJson = (() => {
@@ -265,6 +282,13 @@ function buildDoctorReport(cwd, rootDir) {
   }
 
   if (productManifest) {
+    if (manifestRuntimeAudit.blocked.length > 0) {
+      pushCheck(
+        'fail',
+        `Product manifest -> ignored ${manifestRuntimeAudit.blocked.length} runtime path${manifestRuntimeAudit.blocked.length === 1 ? '' : 's'} outside the trusted managed inventory`,
+        `${productCommandName()} update`,
+      );
+    }
     pushCheck(
       'pass',
       `Install surface -> profile=${productManifest.scriptProfile || 'full'}, runtime=${productManifest.runtimeSurfaceProfile || 'full'}, files=${productManifest.runtimeFiles?.length || 0}`,

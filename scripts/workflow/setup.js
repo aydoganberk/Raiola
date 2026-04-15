@@ -8,6 +8,7 @@ const {
 } = require('./install_common');
 const { contractPayload } = require('./contract_versions');
 const { buildSetupCompatibilityReport } = require('./setup_compatibility');
+const { writeManagedText } = require('./io/managed_fs');
 
 function printHelp() {
   console.log(`
@@ -18,6 +19,7 @@ Usage:
 
 Options:
   --target <path>        Target repository. Defaults to current working directory
+  --source-root <path>   Optional Raiola package root to materialize/update from
   --dry-run              Show the exact write plan, compatibility risks, and rollback story without writing files
   --script-profile <id>  Package script profile. Defaults to pilot on fresh setup and full on migrate
   --write-agents-template
@@ -36,6 +38,7 @@ function detectMode(targetRepo) {
 function buildSetupPayload(targetRepo, mode, scriptProfile, args, report = null, compatibilityOverride = null) {
   const compatibility = compatibilityOverride || buildSetupCompatibilityReport(targetRepo, {
     scriptProfile,
+    sourceRoot: args['source-root'] || null,
     manageGitignore: !args['skip-gitignore'],
   });
   return {
@@ -49,6 +52,7 @@ function buildSetupPayload(targetRepo, mode, scriptProfile, args, report = null,
     overwriteScripts: Boolean(args['overwrite-scripts']),
     manageGitignore: !args['skip-gitignore'],
     writeAgentsTemplate: Boolean(args['write-agents-template']),
+    sourceRoot: args['source-root'] || null,
     compatibility,
     rollback: compatibility.rollback,
     report,
@@ -56,9 +60,15 @@ function buildSetupPayload(targetRepo, mode, scriptProfile, args, report = null,
 }
 
 function persistInstallReport(targetRepo, payload) {
-  const filePath = path.join(targetRepo, '.workflow', 'install-report.json');
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+  const relativeFile = '.workflow/install-report.json';
+  const filePath = path.join(targetRepo, relativeFile);
+  const result = writeManagedText(targetRepo, relativeFile, `${JSON.stringify(payload, null, 2)}\n`, {
+    inventory: [relativeFile],
+    label: 'Install report',
+  });
+  if (!result.ok) {
+    throw new Error(result.blocked.map((entry) => `${entry.path}: ${entry.reason}`).join('; '));
+  }
   return filePath;
 }
 
@@ -73,6 +83,7 @@ function main() {
   const mode = detectMode(targetRepo);
   const dryRun = Boolean(args['dry-run']);
   const scriptProfile = String(args['script-profile'] || (mode === 'init' ? 'pilot' : 'full'));
+  const sourceRoot = args['source-root'] || null;
 
   if (dryRun) {
     const payload = buildSetupPayload(targetRepo, mode, scriptProfile, args);
@@ -98,11 +109,13 @@ function main() {
 
   const compatibilityBeforeInstall = buildSetupCompatibilityReport(targetRepo, {
     scriptProfile,
+    sourceRoot,
     manageGitignore: !args['skip-gitignore'],
   });
 
   const report = installWorkflowSurface(targetRepo, {
     mode,
+    sourceRoot,
     scriptProfile,
     overwriteScriptConflicts: Boolean(args['overwrite-scripts']),
     writeAgentsTemplate: Boolean(args['write-agents-template']),

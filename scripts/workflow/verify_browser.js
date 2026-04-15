@@ -6,6 +6,7 @@ const childProcess = require('node:child_process');
 const { fileURLToPath, pathToFileURL } = require('node:url');
 const { parseArgs } = require('./common');
 const { ensureDir } = require('./io/files');
+const { ensureLoopbackHttpUrl } = require('./io/net_guard');
 const { resolveExistingPathWithinRoot } = require('./io/path_guard');
 const { makeArtifactId, writeRuntimeMarkdown } = require('./runtime_helpers');
 const { captureWithPlaywright, runPlaywrightAdapter } = require('./browser_adapters/playwright');
@@ -42,6 +43,7 @@ Options:
   --timeout <ms>         Network/browser timeout. Defaults to 10000 for smoke, 15000 for Playwright
   --max-bytes <n>        Bound HTML/file payload size. Defaults to 2097152 bytes
   --allow-external-file-target  Allow verify-browser to read file targets outside the repo root
+  --allow-external-url-target   Allow non-loopback http(s) browser targets
   --json                 Print machine-readable output
   `);
 }
@@ -160,21 +162,25 @@ function readFileTarget(cwd, targetUrl, options = {}) {
 }
 
 function requestUrl(targetUrl, options = {}, redirectCount = 0) {
+  const normalizedUrl = ensureLoopbackHttpUrl(targetUrl, {
+    allowExternal: Boolean(options.allowExternalUrlTarget),
+    label: redirectCount > 0 ? 'Browser redirect target' : 'Browser URL',
+  });
   const timeoutMs = Math.max(1, Number(options.timeoutMs || 10000));
   const maxRedirects = Math.max(0, Number(options.maxRedirects || 4));
   const maxBytes = browserPayloadLimit(options);
   return new Promise((resolve, reject) => {
-    const client = targetUrl.startsWith('https:') ? https : http;
-    const request = client.get(targetUrl, { timeout: timeoutMs }, (response) => {
+    const client = normalizedUrl.startsWith('https:') ? https : http;
+    const request = client.get(normalizedUrl, { timeout: timeoutMs }, (response) => {
       const statusCode = Number(response.statusCode || 0);
       const location = response.headers?.location;
       if (location && [301, 302, 303, 307, 308].includes(statusCode)) {
         if (redirectCount >= maxRedirects) {
           response.resume();
-          reject(new Error(`Too many redirects while requesting ${targetUrl}`));
+          reject(new Error(`Too many redirects while requesting ${normalizedUrl}`));
           return;
         }
-        const redirectedUrl = new URL(location, targetUrl).toString();
+        const redirectedUrl = new URL(location, normalizedUrl).toString();
         response.resume();
         resolve(requestUrl(redirectedUrl, options, redirectCount + 1));
         return;
@@ -548,6 +554,7 @@ async function main() {
     timeoutMs: args.timeout,
     maxBytes: args['max-bytes'],
     allowExternalFileTarget: Boolean(args['allow-external-file-target']),
+    allowExternalUrlTarget: Boolean(args['allow-external-url-target']),
   };
   const payload = args.watch
     ? await runVerifyBrowserControlLoop(cwd, runOptions)

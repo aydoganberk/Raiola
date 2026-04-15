@@ -7,15 +7,18 @@ const {
 } = require('./common');
 const { ensureDir } = require('./io/files');
 const {
+  installWorkflowSurface,
   loadTargetRuntimeScripts,
   missingGitignoreEntries,
+  normalizeScriptProfile,
   patchGitignore,
   patchPackageJsonScripts,
-  sourceLayout,
+  runtimeFilesForScriptProfile,
   WORKFLOW_GITIGNORE_ENTRIES,
   writeProductManifest,
   writeVersionMarker,
 } = require('./install_common');
+const { sanitizeManagedPathList } = require('./io/managed_fs');
 const { readJsonIfExists } = require('./runtime_helpers');
 const { listIndexedRepoFiles } = require('./fs_index');
 
@@ -65,40 +68,9 @@ function readJsonValidity(filePath) {
   }
 }
 
-function expectedRuntimeFiles() {
-  const source = sourceLayout();
-  const files = [];
-  const visit = (currentDir) => {
-    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
-      const fullPath = path.join(currentDir, entry.name);
-      if (entry.isDirectory()) {
-        visit(fullPath);
-      } else if (entry.isFile()) {
-        files.push({
-          source: fullPath,
-          relative: relativePath(source.repoRoot, fullPath),
-        });
-      }
-    }
-  };
-
-  visit(source.scriptsDir);
-  visit(source.cliDir);
-  files.push({ source: source.binFile, relative: relativePath(source.repoRoot, source.binFile) });
-  for (const aliasBinFile of source.aliasBinFiles || []) {
-    files.push({ source: aliasBinFile, relative: relativePath(source.repoRoot, aliasBinFile) });
-  }
-  files.push({ source: source.compareScript, relative: relativePath(source.repoRoot, source.compareScript) });
-  files.push({ source: source.skillFile, relative: '.agents/skills/raiola/SKILL.md' });
-  if (fs.existsSync(source.skillsDir)) {
-    for (const fullPath of walkFiles(source.skillsDir)) {
-      files.push({
-        source: fullPath,
-        relative: `.agents/skills/${relativePath(source.skillsDir, fullPath)}`,
-      });
-    }
-  }
-  return files;
+function expectedRuntimeFiles(cwd, scriptProfile) {
+  return runtimeFilesForScriptProfile(scriptProfile, { targetRepo: cwd })
+    .map((relative) => ({ relative }));
 }
 
 function readProductManifest(cwd) {
@@ -187,8 +159,21 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
     });
   }
 
-  const scriptProfile = productManifest?.scriptProfile || 'full';
-  const expectedScripts = productManifest?.runtimeScripts || loadTargetRuntimeScripts(scriptProfile);
+  const scriptProfile = normalizeScriptProfile(productManifest?.scriptProfile || 'full', 'full');
+  const expectedScripts = loadTargetRuntimeScripts(scriptProfile, { targetRepo: cwd });
+  const trustedRuntimeFiles = expectedRuntimeFiles(cwd, scriptProfile);
+  const manifestRuntimeAudit = sanitizeManagedPathList(productManifest?.runtimeFiles || [], trustedRuntimeFiles.map((entry) => entry.relative), {
+    rootPath: cwd,
+    allowMissing: true,
+    label: 'Manifest runtime file',
+  });
+  if (manifestRuntimeAudit.blocked.length > 0) {
+    manualIssues.push({
+      type: 'manifest_runtime_paths_ignored',
+      command: 'rai update',
+      reason: `Ignored ${manifestRuntimeAudit.blocked.length} manifest runtime path(s) outside the trusted managed inventory.`,
+    });
+  }
   const packageScripts = readPackageScripts(cwd);
   if (!packageScripts.valid) {
     manualIssues.push({
@@ -206,9 +191,7 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
     }
   }
 
-  const missingRuntimeFiles = (productManifest?.runtimeFiles
-    ? productManifest.runtimeFiles.map((relativeFile) => ({ relative: relativeFile }))
-    : expectedRuntimeFiles())
+  const missingRuntimeFiles = trustedRuntimeFiles
     .filter((entry) => !fs.existsSync(path.join(cwd, entry.relative)))
     .map((entry) => entry.relative);
   if (missingRuntimeFiles.length > 0) {
@@ -291,6 +274,7 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
         apply() {
           patchPackageJsonScripts(cwd, {
             overwriteConflicts: true,
+            scriptProfile,
             runtimeScriptsOverride: expectedScripts,
           });
         },
@@ -301,21 +285,14 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
         safe: true,
         label: `Restore missing runtime files (${issue.files.length})`,
         apply() {
-          const source = sourceLayout();
-          for (const relativeFile of issue.files) {
-            let sourcePath = path.join(source.repoRoot, relativeFile);
-            if (
-              relativeFile === '.agents/skills/raiola/SKILL.md'
-              || relativeFile === '.agents/skills/codex-workflow/SKILL.md'
-            ) {
-              sourcePath = source.skillFile;
-            } else if (relativeFile.startsWith('.agents/skills/')) {
-              sourcePath = path.join(source.skillsDir, relativeFile.slice('.agents/skills/'.length));
-            }
-            const targetPath = path.join(cwd, relativeFile);
-            ensureDir(path.dirname(targetPath));
-            fs.copyFileSync(sourcePath, targetPath);
-          }
+          installWorkflowSurface(cwd, {
+            mode: fs.existsSync(path.join(cwd, 'docs', 'workflow')) ? 'migrate' : 'init',
+            sourceRoot: productManifest?.installerSourceHint || null,
+            scriptProfile,
+            overwriteScriptConflicts: true,
+            manageGitignore: true,
+            verify: false,
+          });
         },
       });
     }

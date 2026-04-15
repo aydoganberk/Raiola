@@ -1241,13 +1241,13 @@ function buildStartPlan(cwd, rootDir, options = {}) {
   }
   const frontendIntent = classifyFrontendIntent(goal, rawFrontendProfile);
   const relatedBundles = (bundle.relatedBundles || []).map((id) => findWorkflowBundle(id)).filter(Boolean);
-  const effectiveProfileId = options.profileId || repoConfigPayload.activeConfig?.defaultProfile || null;
   const profile = recommendStartProfile(bundle, {
     goal,
     route,
     packageGraph,
     frontendProfile: rawFrontendProfile,
-    explicitProfileId: effectiveProfileId,
+    explicitProfileId: options.profileId || null,
+    defaultProfileId: repoConfigPayload.activeConfig?.defaultProfile || null,
   });
   const recommendedAddOns = recommendStartAddOns(bundle, {
     goal,

@@ -3,6 +3,7 @@ const http = require('node:http');
 const https = require('node:https');
 const path = require('node:path');
 const { ensureDir } = require('./io/files');
+const { ensureLoopbackHttpUrl } = require('./io/net_guard');
 const { contractPayload } = require('./contract_versions');
 const { makeArtifactId } = require('./runtime_helpers');
 
@@ -40,12 +41,15 @@ function methodForProbe(endpoint, options = {}) {
   return 'OPTIONS';
 }
 
-function normalizeBaseUrl(baseUrl) {
+function normalizeBaseUrl(baseUrl, options = {}) {
   const trimmed = String(baseUrl || '').trim().replace(/\/$/, '');
   if (!trimmed) {
     throw new Error('A base URL is required for runtime API evidence.');
   }
-  return trimmed;
+  return ensureLoopbackHttpUrl(trimmed, {
+    allowExternal: Boolean(options.allowExternalBaseUrl),
+    label: 'API runtime base URL',
+  }).replace(/\/$/, '');
 }
 
 function summarizeBody(body) {
@@ -66,7 +70,7 @@ function verdictForResponse(response, method) {
 
 async function probeEndpoint(baseUrl, endpoint, options = {}) {
   const method = methodForProbe(endpoint, options);
-  const targetUrl = `${normalizeBaseUrl(baseUrl)}${endpoint.path}`;
+  const targetUrl = `${normalizeBaseUrl(baseUrl, options)}${endpoint.path}`;
   try {
     const response = await requestWithMethod(targetUrl, method, Number(options.timeoutMs || 10000));
     const verdict = verdictForResponse(response, method);
@@ -131,7 +135,7 @@ function proofStatusFromEntries(entries = []) {
 }
 
 async function runApiSurfaceRuntimeEvidence(cwd, apiSurface, options = {}) {
-  const baseUrl = normalizeBaseUrl(options.baseUrl);
+  const baseUrl = normalizeBaseUrl(options.baseUrl, options);
   const endpoints = selectRuntimeEndpoints(apiSurface, options);
   const entries = [];
   for (const endpoint of endpoints) {

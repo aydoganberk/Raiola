@@ -18,6 +18,7 @@ Usage:
 
 Options:
   --target <path>        Target repository. Defaults to current working directory
+  --source-root <path>   Optional Raiola package root to materialize/update from
   --refresh-docs         Refresh docs/workflow files from the latest templates
   --script-profile <id>  Package script profile. Defaults to the installed manifest profile
   --overwrite-scripts    Replace conflicting package.json workflow scripts
@@ -50,6 +51,7 @@ function main() {
     mode,
     installedVersion,
     targetVersion,
+    sourceRoot: args['source-root'] || null,
     scriptProfile: String(args['script-profile'] || installedManifest?.scriptProfile || 'full'),
     refreshDocs: Boolean(args['refresh-docs']),
     verify: !args['skip-verify'],
@@ -76,6 +78,7 @@ function main() {
 
   const report = installWorkflowSurface(targetRepo, {
     mode,
+    sourceRoot: args['source-root'] || null,
     refreshDocs: payload.refreshDocs,
     scriptProfile: payload.scriptProfile,
     overwriteScriptConflicts: payload.overwriteScripts,

@@ -6,7 +6,12 @@ const childProcess = require('node:child_process');
 const { readJsonIfExists } = require('./io/json');
 const { safeArtifactToken } = require('./common_identity');
 const { ensureDir } = require('./io/files');
-const { hasRelativePrefix, normalizeSafeRelativePath, resolveSafePath } = require('./io/path_guard');
+const {
+  hasRelativePrefix,
+  normalizeSafeRelativePath,
+  resolveExistingPathWithinRoot,
+  resolveSafePath,
+} = require('./io/path_guard');
 const { appendJsonl, relativePath, writeJsonFile } = require('./roadmap_os');
 const { runReviewEngine } = require('./review_engine');
 
@@ -411,7 +416,9 @@ function materializeWorkspaceState(cwd, workspace, taskId, changedFiles = []) {
       entry.sha256 = hashFile(workspaceFile);
       entry.size = stat?.size || 0;
       entry.permissions = stat ? (stat.mode & 0o777) : null;
-      entry.snapshotFile = relativePath(cwd, snapshotPath);
+      entry.snapshotFile = resolveExistingPathWithinRoot(cwd, snapshotPath, {
+        label: 'Materialization snapshot file',
+      }).relativePath;
     }
 
     return entry;

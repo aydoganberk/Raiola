@@ -171,7 +171,7 @@ test('raiola:update can contract a full install down to the pilot surface', () =
   const fullManifest = JSON.parse(readFile(targetRepo, '.workflow/product-manifest.json'));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'notify.js')));
   assert.equal(fullManifest.scriptProfile, 'full');
-  assert.equal(typeof fullManifest.installerSourceRoot, 'string');
+  assert.equal(typeof fullManifest.installerSourceHint, 'string');
 
   run(
     'node',

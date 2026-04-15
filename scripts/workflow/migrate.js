@@ -16,6 +16,7 @@ Usage:
 
 Options:
   --target <path>        Target repository. Defaults to current working directory
+  --source-root <path>   Optional Raiola package root to materialize/update from
   --refresh-docs         Refresh docs/workflow files from the latest starter templates
   --script-profile <id>  Package script profile. Defaults to existing manifest or full
   --write-agents-template
@@ -38,6 +39,7 @@ function main() {
   const mode = fs.existsSync(docsRoot) ? 'migrate' : 'init';
   const report = installWorkflowSurface(targetRepo, {
     mode,
+    sourceRoot: args['source-root'] || null,
     refreshDocs: Boolean(args['refresh-docs']),
     scriptProfile: args['script-profile'] || null,
     overwriteScriptConflicts: Boolean(args['overwrite-scripts']),

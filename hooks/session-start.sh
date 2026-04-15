@@ -15,9 +15,10 @@ else
   CONTENT="Raiola hook loaded, but no skill file was found. Use explicit workflow only when the user asks for it."
 fi
 
-cat <<EOF
-{
-  "priority": "IMPORTANT",
-  "message": "raiola loaded. Start with the lifecycle facade or the using-raiola meta-skill, and keep workflow explicit opt-in.\\n\\n$CONTENT"
-}
-EOF
+node - "$CONTENT" <<'NODE'
+const content = process.argv[2] || '';
+process.stdout.write(`${JSON.stringify({
+  priority: 'IMPORTANT',
+  message: `raiola loaded. Start with the lifecycle facade or the using-raiola meta-skill, and keep workflow explicit opt-in.\n\n${content}`,
+}, null, 2)}\n`);
+NODE

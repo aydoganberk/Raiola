@@ -45,3 +45,22 @@ test('setup compatibility report surfaces script collisions and existing tooling
   assert.ok(report.recommendedFlags.includes('--overwrite-scripts'));
   assert.match(report.rollback.command, /rai uninstall --target/);
 });
+
+test('setup compatibility report flags symlinked target roots', () => {
+  const realRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-setup-compat-real-'));
+  const linkRepo = path.join(os.tmpdir(), `raiola-setup-compat-link-${Date.now()}`);
+  fs.symlinkSync(realRepo, linkRepo, 'dir');
+
+  try {
+    const report = buildSetupCompatibilityReport(linkRepo, {
+      scriptProfile: 'pilot',
+      manageGitignore: true,
+    });
+
+    assert.equal(report.verdict, 'review');
+    assert.ok(report.risks.some((entry) => entry.id === 'symlinked-target-root'));
+  } finally {
+    fs.rmSync(linkRepo, { recursive: true, force: true });
+    fs.rmSync(realRepo, { recursive: true, force: true });
+  }
+});
