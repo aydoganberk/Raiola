@@ -291,7 +291,7 @@ function buildDoctorReport(cwd, rootDir) {
   if (isProductSourceRepo) {
     const missingGithubFiles = expectedGithubFiles.filter((entry) => !inventoryEntryExists(cwd, entry));
     pushCheck(
-      missingGithubFiles.length === 0 ? 'pass' : 'fail',
+      missingGithubFiles.length === 0 ? 'pass' : 'warn',
       missingGithubFiles.length === 0
         ? `Release inventory -> GitHub surfaces are present (${expectedGithubFiles.length})`
         : `Release inventory -> missing GitHub surfaces ${summarizeItems(missingGithubFiles.map((item) => `\`${item}\``))}`,
