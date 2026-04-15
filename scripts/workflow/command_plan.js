@@ -903,7 +903,13 @@ function buildCommandPlan(payload = {}) {
   const monorepo = payload.repoSignals?.monorepo || Boolean(payload.monorepo);
   const review = lane === 'review' || payload.capability?.includes('review');
   const frontend = lane === 'frontend' || payload.capability?.includes('ui_');
-  const correction = wantsCorrectionWave(goal) && (review || wantsRepoAudit(goal) || monorepo || /fix|patch|repair|execute\.quick_patch/.test(payload.capability || ''));
+  const explicitQuickPatch = /fix|patch|repair|execute\.quick_patch/.test(payload.capability || '');
+  const reviewCorrectionSignals = /\b(address findings|close blockers|cleanup findings|hardening|stabilize|re-review|highest risk|highest-risk)\b/i.test(goal);
+  const correction = wantsCorrectionWave(goal) && (
+    explicitQuickPatch
+    || wantsRepoAudit(goal)
+    || (review ? reviewCorrectionSignals : (review || monorepo))
+  );
   const repoAudit = review && wantsRepoAudit(goal) && !correction;
   const frontendReview = frontend && wantsFrontendReview(goal);
   const ship = lane === 'ship' || payload.capability?.includes('ship') || (wantsVerify(goal) && /\b(ship|release|readiness|launch|go live)\b/i.test(goal));

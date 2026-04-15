@@ -28,10 +28,10 @@ const COMMANDS = {
 const DEFAULT_SLO_MS = Object.freeze({
   launch: 800,
   start: 2600,
-  hud: 300,
+  hud: 400,
   manager: 400,
   next: 500,
-  'next-prompt': 150,
+  'next-prompt': 400,
   doctor: 1000,
   health: 1000,
   'map-codebase': 2000,

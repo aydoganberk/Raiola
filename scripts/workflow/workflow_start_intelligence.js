@@ -250,6 +250,14 @@ function recommendStartProfile(bundle, context = {}) {
     reason = 'small_frontend_surface';
   }
 
+  if (selected?.id === 'balanced') {
+    const repoDefault = findStartProfile(context.repoDefaultProfileId);
+    if (repoDefault) {
+      selected = repoDefault;
+      reason = 'repo_config_default_profile';
+    }
+  }
+
   return {
     ...selected,
     explicit: false,

@@ -1754,7 +1754,10 @@ function buildRepoFindings(cwd, files, graph, units, stackPack, rootManifest, ro
         0.73,
       ));
     }
-    if (unit.verifyScripts.length === 0 && unit.packagePath !== '.' && rootVerifyScripts.length > 0) {
+    if (graph.repoShape === 'monorepo'
+      && unit.verifyScripts.length === 0
+      && unit.packagePath !== '.'
+      && rootVerifyScripts.length > 0) {
       findings.probable.push(makeFinding(
         'probable',
         'medium',

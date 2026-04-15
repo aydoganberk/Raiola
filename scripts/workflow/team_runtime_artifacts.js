@@ -385,6 +385,7 @@ function materializeWorkspaceState(cwd, workspace, taskId, changedFiles = []) {
   ensureDir(materializationDir(cwd));
   const snapshotDir = materializationSnapshotDir(cwd, taskId);
   const manifestPath = materializationManifestPath(cwd, taskId);
+  const snapshotDirRelative = relativePath(cwd, snapshotDir);
   fs.rmSync(snapshotDir, { recursive: true, force: true });
   ensureDir(snapshotDir);
 
@@ -411,7 +412,7 @@ function materializeWorkspaceState(cwd, workspace, taskId, changedFiles = []) {
       entry.sha256 = hashFile(workspaceFile);
       entry.size = stat?.size || 0;
       entry.permissions = stat ? (stat.mode & 0o777) : null;
-      entry.snapshotFile = relativePath(cwd, snapshotPath);
+      entry.snapshotFile = path.posix.join(snapshotDirRelative, relativeFile);
     }
 
     return entry;
@@ -424,7 +425,7 @@ function materializeWorkspaceState(cwd, workspace, taskId, changedFiles = []) {
     baseCommit: workspace?.baseCommit || null,
     changedFiles: [...normalizedChangedFiles],
     entryCount: entries.length,
-    snapshotDir: relativePath(cwd, snapshotDir),
+    snapshotDir: snapshotDirRelative,
     entries,
   };
   writeJsonFile(manifestPath, manifest);
