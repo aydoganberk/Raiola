@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseArgs } = require('./common');
+const { parseArgs, resolveTargetRepoArg } = require('./common');
 const {
   formatInstallSummary,
   installWorkflowSurface,
@@ -14,7 +14,7 @@ function printHelp() {
 setup
 
 Usage:
-  node scripts/workflow/setup.js [--target /path/to/repo]
+  node scripts/workflow/setup.js [/path/to/repo] [--target /path/to/repo]
 
 Options:
   --target <path>        Target repository. Defaults to current working directory
@@ -69,7 +69,7 @@ function main() {
     return;
   }
 
-  const targetRepo = path.resolve(process.cwd(), String(args.target || '.'));
+  const targetRepo = resolveTargetRepoArg(args);
   const mode = detectMode(targetRepo);
   const dryRun = Boolean(args['dry-run']);
   const scriptProfile = String(args['script-profile'] || (mode === 'init' ? 'pilot' : 'full'));

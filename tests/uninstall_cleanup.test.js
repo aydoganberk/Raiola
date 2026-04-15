@@ -40,3 +40,36 @@ test('uninstall report advertises generated-artifact cleanup coverage and preser
   assert.ok(!fs.existsSync(path.join(targetRepo, '.workflow', 'runtime')));
   assert.ok(!fs.existsSync(path.join(targetRepo, '.workflow', 'repo-config.json')));
 });
+
+
+test('uninstall removes the installed runtime footprint, not just generated artifacts', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+
+  const uninstall = JSON.parse(run('node', [raiBin, 'uninstall', '--target', targetRepo, '--json'], repoRoot));
+
+  assert.equal(uninstall.installedRuntime.manifestPresent, true);
+  assert.ok(!fs.existsSync(path.join(targetRepo, '.codex', 'config.toml')));
+  assert.ok(!fs.existsSync(path.join(targetRepo, '.agents', 'plugins', 'marketplace.json')));
+  assert.ok(!fs.existsSync(path.join(targetRepo, '.workflowignore')));
+  assert.ok(!fs.existsSync(path.join(targetRepo, 'bin', 'raiola-mcp.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'package.json')));
+});
+
+test('uninstall blocks manifest paths that escape the target repo', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+
+  const outsideFile = path.join(path.dirname(targetRepo), 'escape-target.txt');
+  fs.writeFileSync(outsideFile, 'preserve me\n');
+
+  const manifestPath = path.join(targetRepo, '.workflow', 'product-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.generatedArtifacts.generatedArtifactFiles.push('../escape-target.txt');
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const uninstall = JSON.parse(run('node', [raiBin, 'uninstall', '--target', targetRepo, '--json'], repoRoot));
+
+  assert.ok(fs.existsSync(outsideFile));
+  assert.ok(uninstall.blocked.includes('../escape-target.txt'));
+});

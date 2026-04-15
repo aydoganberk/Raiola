@@ -159,6 +159,7 @@ const CLI_COMMAND_PROFILES = Object.freeze({
     'next-prompt',
     'quick',
     'team',
+    'hooks',
     'review',
     'monorepo',
     'ship-readiness',

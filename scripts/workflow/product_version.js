@@ -11,8 +11,8 @@ const EMBEDDED_PRODUCT = Object.freeze({
   legacySkillNames: Object.freeze([]),
 });
 
-function repoPackagePath() {
-  return path.join(__dirname, '..', '..', 'package.json');
+function repoPackagePath(repoRoot = path.join(__dirname, '..', '..')) {
+  return path.join(repoRoot, 'package.json');
 }
 
 
@@ -28,8 +28,8 @@ function isKnownProductName(value) {
   return knownProductNames().includes(String(value || ''));
 }
 
-function detectRepoProductMeta() {
-  const pkg = readJsonIfExists(repoPackagePath());
+function detectRepoProductMeta(repoRoot = path.join(__dirname, '..', '..')) {
+  const pkg = readJsonIfExists(repoPackagePath(repoRoot));
   if (!pkg || !isKnownProductName(pkg.name) || !pkg.version) {
     return null;
   }
@@ -41,7 +41,7 @@ function detectRepoProductMeta() {
 }
 
 function productMeta() {
-  return detectRepoProductMeta() || {
+  return detectRepoProductMeta(path.join(__dirname, '..', '..')) || {
     ...EMBEDDED_PRODUCT,
     source: 'embedded',
   };

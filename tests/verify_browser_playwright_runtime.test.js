@@ -10,7 +10,7 @@ function makeTempRepo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-verify-playwright-'));
 }
 
-function writeFakePlaywright(repoDir) {
+function writeFakePlaywright(repoDir, options = {}) {
   const moduleDir = path.join(repoDir, 'node_modules', 'playwright');
   fs.mkdirSync(moduleDir, { recursive: true });
   fs.writeFileSync(path.join(moduleDir, 'index.js'), `
@@ -63,11 +63,11 @@ exports.chromium = {
           fs.writeFileSync(screenshotPath, 'fake-playwright-png');
         },
         accessibility: {
-          snapshot: async () => ({
+          snapshot: async () => ${options.realAccessibilityTree === false ? 'null' : `({
             role: 'document',
             name: 'Playwright proof',
             children: [{ role: 'main', name: 'Preview' }],
-          }),
+          })`},
         },
         title: async () => {
           const match = html.match(/<title[^>]*>([\s\S]*?)<\\/title>/i);
@@ -88,10 +88,7 @@ exports.chromium = {
 `);
 }
 
-test('verify-browser resolves repo-local Playwright and stores real runtime proof artifacts', async () => {
-  const targetRepo = makeTempRepo();
-  writeFakePlaywright(targetRepo);
-
+function writePreviewHtml(targetRepo) {
   const htmlPath = path.join(targetRepo, 'preview.html');
   fs.writeFileSync(htmlPath, [
     '<!doctype html>',
@@ -106,6 +103,13 @@ test('verify-browser resolves repo-local Playwright and stores real runtime proo
     '</html>',
     '',
   ].join('\n'));
+  return htmlPath;
+}
+
+test('verify-browser resolves repo-local Playwright and stores real runtime proof artifacts', async () => {
+  const targetRepo = makeTempRepo();
+  writeFakePlaywright(targetRepo);
+  const htmlPath = writePreviewHtml(targetRepo);
 
   const payload = await runVerifyBrowser(targetRepo, {
     url: htmlPath,
@@ -119,6 +123,7 @@ test('verify-browser resolves repo-local Playwright and stores real runtime proo
   assert.equal(payload.execution.browserRuntime, true);
   assert.equal(payload.execution.realScreenshot, true);
   assert.equal(payload.execution.realAccessibilityTree, true);
+  assert.equal(payload.execution.accessibilityTreeSource, 'playwright');
   assert.equal(payload.renderer, 'playwright');
   assert.equal(payload.playwright.moduleName, 'playwright');
   assert.match(payload.playwright.resolvedFrom, /raiola-verify-playwright-/);
@@ -127,4 +132,24 @@ test('verify-browser resolves repo-local Playwright and stores real runtime proo
   assert.ok(payload.artifacts.screenshot.endsWith('.png'));
   assert.ok(fs.existsSync(path.join(targetRepo, payload.artifacts.screenshot)));
   assert.ok(fs.existsSync(path.join(targetRepo, payload.artifacts.accessibilityTree)));
+});
+
+test('verify-browser does not label fallback accessibility trees as real Playwright proof', async () => {
+  const targetRepo = makeTempRepo();
+  writeFakePlaywright(targetRepo, { realAccessibilityTree: false });
+  const htmlPath = writePreviewHtml(targetRepo);
+
+  const payload = await runVerifyBrowser(targetRepo, {
+    url: htmlPath,
+    adapter: 'auto',
+    requireProof: true,
+  });
+
+  assert.equal(payload.verdict, 'pass');
+  assert.equal(payload.proofStatus, 'verified');
+  assert.equal(payload.execution.browserRuntime, true);
+  assert.equal(payload.execution.realScreenshot, true);
+  assert.equal(payload.execution.realAccessibilityTree, false);
+  assert.equal(payload.execution.accessibilityTreeSource, 'html-fallback');
+  assert.equal(payload.playwright.realAccessibilityTree, false);
 });

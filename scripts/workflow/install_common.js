@@ -208,6 +208,7 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:start',
     'raiola:doctor',
     'raiola:health',
+    'raiola:hooks',
     'raiola:hud',
     'raiola:init',
     'raiola:launch',
@@ -275,6 +276,7 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:evidence',
     'raiola:explore',
     'raiola:health',
+    'raiola:hooks',
     'raiola:hud',
     'raiola:init',
     'raiola:launch',
@@ -645,7 +647,8 @@ function runtimeFilesForScriptProfile(profile = 'full', options = {}) {
     relativePath(source.repoRoot, source.binFile),
     ...(source.aliasBinFiles || []).map((filePath) => relativePath(source.repoRoot, filePath)),
     '.agents/skills/raiola/SKILL.md',
-  ];
+    fs.existsSync(source.workflowIgnore) ? relativePath(source.repoRoot, source.workflowIgnore) : null,
+  ].filter(Boolean);
 
   if (fs.existsSync(source.skillsDir)) {
     runtimeFiles.push(

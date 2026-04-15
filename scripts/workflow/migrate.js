@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseArgs } = require('./common');
+const { parseArgs, resolveTargetRepoArg } = require('./common');
 const {
   formatInstallSummary,
   installWorkflowSurface,
@@ -12,7 +12,7 @@ function printHelp() {
 migrate
 
 Usage:
-  node scripts/workflow/migrate.js --target /path/to/repo
+  node scripts/workflow/migrate.js [/path/to/repo] [--target /path/to/repo]
 
 Options:
   --target <path>        Target repository. Defaults to current working directory
@@ -33,7 +33,7 @@ function main() {
     return;
   }
 
-  const targetRepo = path.resolve(process.cwd(), String(args.target || '.'));
+  const targetRepo = resolveTargetRepoArg(args);
   const docsRoot = path.join(targetRepo, 'docs', 'workflow');
   const mode = fs.existsSync(docsRoot) ? 'migrate' : 'init';
   const report = installWorkflowSurface(targetRepo, {

@@ -55,12 +55,20 @@ function resolvePlaywrightModule(cwd) {
   return null;
 }
 
-function detectPlaywrightCli(cwd) {
+function npxBinary() {
+  return process.platform === 'win32' ? 'npx.cmd' : 'npx';
+}
+
+function detectPlaywrightCli(cwd, spawnSync = childProcess.spawnSync) {
   try {
-    const result = childProcess.spawnSync('npx', ['playwright', '--version'], {
+    const result = spawnSync(npxBinary(), ['--no-install', 'playwright', '--version'], {
       cwd: cwd || process.cwd(),
       encoding: 'utf8',
       stdio: 'pipe',
+      env: {
+        ...process.env,
+        npm_config_yes: 'false',
+      },
     });
     if (result.status === 0) {
       return {
@@ -84,6 +92,7 @@ async function captureWithPlaywright(adapter, options = {}) {
       ok: false,
       reason: 'Playwright launch surface is unavailable in this runtime.',
       moduleName: adapter?.moduleName || '',
+      realAccessibilityTree: false,
     };
   }
 
@@ -129,6 +138,7 @@ async function captureWithPlaywright(adapter, options = {}) {
       title,
       html,
       accessibilityTree,
+      realAccessibilityTree: Boolean(accessibilityTree),
       statusCode: gotoResponse?.status?.() ?? 200,
       headers: gotoResponse?.headers?.() ?? {},
       finalUrl: typeof page.url === 'function' ? page.url() : options.url,
@@ -140,6 +150,7 @@ async function captureWithPlaywright(adapter, options = {}) {
       reason: String(error?.message || error),
       moduleName: adapter?.moduleName || '',
       resolvedFrom: adapter?.resolvedFrom || '',
+      realAccessibilityTree: false,
     };
   } finally {
     await browser.close().catch(() => {});
@@ -152,7 +163,7 @@ function runPlaywrightAdapter(options = {}) {
   if (local) {
     return local;
   }
-  const cli = detectPlaywrightCli(cwd);
+  const cli = detectPlaywrightCli(cwd, options.spawnSync);
   if (cli) {
     return cli;
   }
@@ -165,6 +176,7 @@ function runPlaywrightAdapter(options = {}) {
 
 module.exports = {
   captureWithPlaywright,
+  detectPlaywrightCli,
   resolvePlaywrightModule,
   runPlaywrightAdapter,
 };

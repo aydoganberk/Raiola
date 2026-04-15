@@ -96,6 +96,70 @@ function buildServerDescriptor(cwd, serverId) {
   };
 }
 
+function compareDescriptor(expected, actual) {
+  const mismatches = [];
+  for (const key of ['name', 'title', 'transport', 'command', 'cwd', 'script', 'descriptorFile']) {
+    if (String(actual?.[key] || '') !== String(expected[key] || '')) {
+      mismatches.push(key);
+    }
+  }
+  const actualArgs = Array.isArray(actual?.args) ? actual.args.map(String) : [];
+  const expectedArgs = Array.isArray(expected.args) ? expected.args.map(String) : [];
+  if (JSON.stringify(actualArgs) !== JSON.stringify(expectedArgs)) {
+    mismatches.push('args');
+  }
+  return mismatches;
+}
+
+function normalizeInstalledManifest(cwd, manifest) {
+  const expectedById = new Map(serverIds().map((serverId) => [serverId, buildServerDescriptor(cwd, serverId)]));
+  const issues = [];
+  const descriptors = [];
+  const seen = new Set();
+
+  if (!manifest || typeof manifest !== 'object') {
+    return {
+      installed: false,
+      manifest: null,
+      descriptors: [],
+      issues,
+    };
+  }
+
+  if (manifest.repoRoot && path.resolve(String(manifest.repoRoot)) !== path.resolve(cwd)) {
+    issues.push('MCP manifest repoRoot does not match the active repository; ignoring embedded execution metadata.');
+  }
+
+  for (const rawDescriptor of Array.isArray(manifest.servers) ? manifest.servers : []) {
+    const serverId = String(rawDescriptor?.id || '').trim();
+    if (!serverId || !expectedById.has(serverId)) {
+      issues.push(`Ignored unknown MCP descriptor: ${serverId || 'unknown'}`);
+      continue;
+    }
+    if (seen.has(serverId)) {
+      issues.push(`Ignored duplicate MCP descriptor: ${serverId}`);
+      continue;
+    }
+    seen.add(serverId);
+    const expected = expectedById.get(serverId);
+    const mismatches = compareDescriptor(expected, rawDescriptor);
+    if (mismatches.length > 0) {
+      issues.push(`Ignored tampered MCP descriptor ${serverId}: ${mismatches.join(', ')}`);
+    }
+    descriptors.push(expected);
+  }
+
+  return {
+    installed: true,
+    manifest: {
+      ...manifest,
+      servers: descriptors,
+    },
+    descriptors,
+    issues,
+  };
+}
+
 function writeManifest(cwd, manifest) {
   writeJsonFile(manifestPath(cwd), manifest);
 }
@@ -327,8 +391,8 @@ function smokeDescriptor(descriptor) {
 }
 
 async function doctorMcp(cwd, args = {}) {
-  const manifest = loadManifest(cwd);
-  if (!manifest) {
+  const normalized = normalizeInstalledManifest(cwd, loadManifest(cwd));
+  if (!normalized.installed) {
     return {
       installed: false,
       verdict: 'warn',
@@ -340,50 +404,45 @@ async function doctorMcp(cwd, args = {}) {
   }
 
   const smoke = [];
-  for (const descriptor of manifest.servers || []) {
+  for (const descriptor of normalized.descriptors) {
     smoke.push(await smokeDescriptor(descriptor));
   }
   const failCount = smoke.filter((item) => item.status !== 'pass').length;
+  const verdict = failCount > 0 || normalized.issues.length > 0 ? 'fail' : 'pass';
   return {
     installed: true,
-    verdict: failCount > 0 ? 'fail' : 'pass',
+    verdict,
     file: relativePath(cwd, manifestPath(cwd)),
     smoke,
+    issues: normalized.issues,
     codexRegistry: codexRegistrySnapshot(String(args['codex-bin'] || 'codex')),
   };
 }
 
 function statusMcp(cwd, args = {}) {
-  const manifest = loadManifest(cwd);
+  const normalized = normalizeInstalledManifest(cwd, loadManifest(cwd));
   const registry = codexRegistrySnapshot(String(args['codex-bin'] || 'codex'));
   const registeredNames = new Set(registry.servers.map((server) => server.name));
-  const servers = manifest?.servers
-    ? manifest.servers.map((descriptor) => ({
-      id: descriptor.id,
-      name: descriptor.name,
-      toolCount: descriptor.toolCount,
-      descriptorFile: descriptor.descriptorFile,
-      registeredInCodex: registeredNames.has(descriptor.name),
-    }))
-    : serverIds().map((serverId) => {
-      const descriptor = buildServerDescriptor(cwd, serverId);
-      return {
-        id: descriptor.id,
-        name: descriptor.name,
-        toolCount: descriptor.toolCount,
-        descriptorFile: descriptor.descriptorFile,
-        registeredInCodex: registeredNames.has(descriptor.name),
-      };
-    });
+  const descriptors = normalized.installed
+    ? normalized.descriptors
+    : serverIds().map((serverId) => buildServerDescriptor(cwd, serverId));
+  const servers = descriptors.map((descriptor) => ({
+    id: descriptor.id,
+    name: descriptor.name,
+    toolCount: descriptor.toolCount,
+    descriptorFile: descriptor.descriptorFile,
+    registeredInCodex: registeredNames.has(descriptor.name),
+  }));
   return {
-    installed: Boolean(manifest),
-    enabled: Boolean(manifest?.enabled),
+    installed: normalized.installed,
+    enabled: Boolean(normalized.manifest?.enabled),
     file: relativePath(cwd, manifestPath(cwd)),
-    manifest: manifest || {
+    manifest: normalized.manifest || {
       enabled: false,
       servers,
     },
     servers,
+    issues: normalized.issues,
     codexRegistry: registry,
   };
 }
@@ -483,3 +542,10 @@ if (require.main === module) {
     process.exitCode = 1;
   });
 }
+
+module.exports = {
+  doctorMcp,
+  installMcp,
+  normalizeInstalledManifest,
+  statusMcp,
+};

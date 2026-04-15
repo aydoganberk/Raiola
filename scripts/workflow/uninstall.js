@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseArgs } = require('./common');
+const { parseArgs, resolveTargetRepoArg } = require('./common');
 const {
   readProductManifest,
   sourceLayout,
@@ -16,7 +16,7 @@ function printHelp() {
 uninstall
 
 Usage:
-  node scripts/workflow/uninstall.js [--target /path/to/repo]
+  node scripts/workflow/uninstall.js [/path/to/repo] [--target /path/to/repo]
 
 Options:
   --target <path>        Target repository. Defaults to current working directory
@@ -43,16 +43,44 @@ function walkFiles(dirPath, files = []) {
   return files;
 }
 
-function maybeRemove(targetPath, report, dryRun) {
+function isPathInside(rootDir, candidatePath) {
+  const relative = path.relative(rootDir, candidatePath);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function resolveInstalledTargetPath(targetRepo, value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return null;
+  }
+  const repoRoot = path.resolve(targetRepo);
+  const candidate = path.isAbsolute(raw)
+    ? path.resolve(raw)
+    : path.resolve(repoRoot, raw);
+  if (!isPathInside(repoRoot, candidate)) {
+    return null;
+  }
+  return candidate;
+}
+
+function maybeRemove(targetPath, report, dryRun, options = {}) {
+  const rawPath = options.rawPath || targetPath;
+  const safe = options.safe !== false;
+  if (safe && !targetPath) {
+    report.blocked.push(String(rawPath || ''));
+    return false;
+  }
+
   if (!fs.existsSync(targetPath)) {
     report.skipped.push(targetPath);
-    return;
+    return false;
   }
 
   if (!dryRun) {
     fs.rmSync(targetPath, { recursive: true, force: true });
   }
   report.removed.push(targetPath);
+  return true;
 }
 
 function cleanupEmptyParents(startPath, stopPath, dryRun) {
@@ -98,6 +126,43 @@ function installedSkillDirectories() {
     }
   }
   return [...directories];
+}
+
+function fallbackInstalledRuntimePaths() {
+  const paths = [];
+  for (const relativeScript of runtimeScriptFiles()) {
+    paths.push(path.join('scripts', 'workflow', relativeScript).replace(/\\/g, '/'));
+  }
+  for (const relativeScript of runtimeCliFiles()) {
+    paths.push(path.join('scripts', 'cli', relativeScript).replace(/\\/g, '/'));
+  }
+  for (const entry of [
+    'bin/rai.js',
+    'bin/raiola.js',
+    'bin/raiola-on.js',
+    'bin/raiola-mcp.js',
+    'bin/cwf.js',
+    'scripts/compare_golden_snapshots.ts',
+    '.workflowignore',
+    '.agents/plugins/marketplace.json',
+  ]) {
+    paths.push(entry);
+  }
+  for (const skillDir of installedSkillDirectories()) {
+    paths.push(`.agents/skills/${skillDir}`);
+  }
+  return [...new Set(paths)];
+}
+
+function installedRuntimeCleanupPlan(targetRepo) {
+  const manifest = readProductManifest(targetRepo);
+  const manifestRuntimeFiles = Array.isArray(manifest?.runtimeFiles)
+    ? manifest.runtimeFiles.filter(Boolean)
+    : [];
+  return {
+    manifest,
+    runtimePaths: manifestRuntimeFiles.length > 0 ? [...new Set(manifestRuntimeFiles)] : fallbackInstalledRuntimePaths(),
+  };
 }
 
 function removePackageScripts(targetRepo, dryRun) {
@@ -175,6 +240,7 @@ function generatedArtifactCleanupPlan(targetRepo) {
 
 function buildReport(targetRepo, purgeDocs) {
   const cleanupPlan = generatedArtifactCleanupPlan(targetRepo);
+  const runtimePlan = installedRuntimeCleanupPlan(targetRepo);
   return {
     ...contractPayload('uninstallReport'),
     generatedAt: new Date().toISOString(),
@@ -182,10 +248,16 @@ function buildReport(targetRepo, purgeDocs) {
     purgeDocs,
     removed: [],
     skipped: [],
+    blocked: [],
     preserved: [
       'docs/workflow unless --purge-docs is explicitly requested',
     ],
     packageScripts: null,
+    installedRuntime: {
+      cleanupCoverage: runtimePlan.runtimePaths,
+      source: runtimePlan.manifest ? 'product-manifest' : 'fallback-source-layout',
+      manifestPresent: Boolean(runtimePlan.manifest),
+    },
     generatedArtifacts: {
       cleanupCoverage: cleanupPlan.generatedPaths,
       source: cleanupPlan.manifest?.generatedArtifacts?.schema || 'raiola/generated-artifacts/v1',
@@ -201,29 +273,19 @@ function main() {
     return;
   }
 
-  const targetRepo = path.resolve(process.cwd(), String(args.target || '.'));
+  const targetRepo = resolveTargetRepoArg(args);
   const dryRun = Boolean(args['dry-run']);
   const purgeDocs = Boolean(args['purge-docs']);
   const cleanupPlan = generatedArtifactCleanupPlan(targetRepo);
+  const runtimePlan = installedRuntimeCleanupPlan(targetRepo);
   const report = buildReport(targetRepo, purgeDocs);
+  const removedPaths = [];
 
-  for (const relativeScript of runtimeScriptFiles()) {
-    const targetPath = path.join(targetRepo, 'scripts', 'workflow', relativeScript);
-    maybeRemove(targetPath, report, dryRun);
-  }
-
-  for (const relativeScript of runtimeCliFiles()) {
-    const targetPath = path.join(targetRepo, 'scripts', 'cli', relativeScript);
-    maybeRemove(targetPath, report, dryRun);
-  }
-
-  maybeRemove(path.join(targetRepo, 'bin', 'rai.js'), report, dryRun);
-  maybeRemove(path.join(targetRepo, 'bin', 'raiola.js'), report, dryRun);
-  maybeRemove(path.join(targetRepo, 'bin', 'raiola-on.js'), report, dryRun);
-  maybeRemove(path.join(targetRepo, 'bin', 'cwf.js'), report, dryRun);
-  maybeRemove(path.join(targetRepo, 'scripts', 'compare_golden_snapshots.ts'), report, dryRun);
-  for (const skillDir of installedSkillDirectories()) {
-    maybeRemove(path.join(targetRepo, '.agents', 'skills', skillDir), report, dryRun);
+  for (const runtimePath of runtimePlan.runtimePaths) {
+    const resolvedPath = resolveInstalledTargetPath(targetRepo, runtimePath);
+    if (maybeRemove(resolvedPath, report, dryRun, { rawPath: runtimePath })) {
+      removedPaths.push(resolvedPath);
+    }
   }
 
   const runtimePaths = [
@@ -233,18 +295,24 @@ function main() {
   ];
 
   for (const runtimePath of runtimePaths) {
-    maybeRemove(path.isAbsolute(runtimePath) ? runtimePath : path.join(targetRepo, runtimePath), report, dryRun);
+    const resolvedPath = resolveInstalledTargetPath(targetRepo, runtimePath);
+    if (maybeRemove(resolvedPath, report, dryRun, { rawPath: runtimePath })) {
+      removedPaths.push(resolvedPath);
+    }
   }
 
   if (purgeDocs) {
-    maybeRemove(path.join(targetRepo, 'docs', 'workflow'), report, dryRun);
+    const docsPath = resolveInstalledTargetPath(targetRepo, path.join('docs', 'workflow'));
+    if (maybeRemove(docsPath, report, dryRun, { rawPath: 'docs/workflow' })) {
+      removedPaths.push(docsPath);
+    }
   }
 
   report.packageScripts = removePackageScripts(targetRepo, dryRun);
-  cleanupEmptyParents(path.join(targetRepo, '.agents', 'skills', 'raiola'), targetRepo, dryRun);
-  cleanupEmptyParents(path.join(targetRepo, '.agents', 'skills', 'codex-workflow'), targetRepo, dryRun);
-  cleanupEmptyParents(path.join(targetRepo, 'scripts', 'workflow'), targetRepo, dryRun);
-  cleanupEmptyParents(path.join(targetRepo, '.workflow', 'state.json'), targetRepo, dryRun);
+  for (const removedPath of removedPaths) {
+    cleanupEmptyParents(removedPath, targetRepo, dryRun);
+  }
+  cleanupEmptyParents(path.join(targetRepo, 'package.json'), targetRepo, dryRun);
 
   if (args.json) {
     console.log(JSON.stringify(report, null, 2));
@@ -255,15 +323,14 @@ function main() {
   console.log(`- Target: \`${targetRepo}\``);
   console.log(`- Purge docs: \`${purgeDocs ? 'yes' : 'no'}\``);
   console.log(`- Removed paths: \`${report.removed.length}\``);
+  console.log(`- Blocked paths: \`${report.blocked.length}\``);
   console.log(`- Package scripts removed: \`${report.packageScripts.removed.length}\``);
   if (report.packageScripts.conflicts.length > 0) {
     console.log(`- Package script conflicts kept: \`${report.packageScripts.conflicts.length}\``);
   }
-  console.log(`- Generated artifact coverage: \`${report.generatedArtifacts.cleanupCoverage.length}\``);
-  console.log('\n## Safety\n');
-  console.log('- Canonical workflow markdown was preserved unless `--purge-docs` was explicitly requested.');
-  console.log('- Generated `.workflow/` runtime artifacts are cleaned using the installed manifest when available, with package defaults as fallback.');
-  console.log('- Only runtime/product surfaces installed by raiola were targeted for removal.');
+  if (report.blocked.length > 0) {
+    console.log(`- Blocked cleanup entries: \`${report.blocked.length}\``);
+  }
 }
 
 main();

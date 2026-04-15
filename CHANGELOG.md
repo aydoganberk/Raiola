@@ -53,11 +53,6 @@ Primary shell note: changelog command references are normalized to the current `
 - Cut the first clean release after the repository history rewrite so future published artifacts point at commit metadata with the GitHub `noreply` address instead of the old personal Gmail address.
 - Reset the release line after removing legacy public tags, making `0.4.6` the first release intended to ride on the sanitized public history.
 
-## 0.4.6 - 2026-04-11
-
-- Cut the first clean release after the repository history rewrite so future published artifacts point at commit metadata with the GitHub `noreply` address instead of the old personal Gmail address.
-- Reset the release line after removing legacy public tags, making `0.4.6` the first release intended to ride on the sanitized public history.
-
 ## 0.4.5 - 2026-04-11
 
 - Fixed the release workflow's tag-to-version guard so shell interpolation no longer breaks the `v<version>` comparison before trusted publishing runs.

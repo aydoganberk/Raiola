@@ -1754,12 +1754,7 @@ function buildRepoFindings(cwd, files, graph, units, stackPack, rootManifest, ro
         0.73,
       ));
     }
-    if (
-      unit.verifyScripts.length === 0
-      && unit.packagePath !== '.'
-      && rootVerifyScripts.length > 0
-      && ['package', 'app'].includes(unit.type)
-    ) {
+    if (unit.verifyScripts.length === 0 && unit.packagePath !== '.' && rootVerifyScripts.length > 0) {
       findings.probable.push(makeFinding(
         'probable',
         'medium',
@@ -1770,7 +1765,7 @@ function buildRepoFindings(cwd, files, graph, units, stackPack, rootManifest, ro
         0.71,
       ));
     }
-    if (unit.sourceFiles.length >= 8 && unit.testStatus === 'missing') {
+    if (unit.sourceFiles.length >= 8 && unit.testFiles.length === 0) {
       findings.probable.push(makeFinding(
         'probable',
         highRisk ? 'high' : 'medium',

@@ -141,9 +141,12 @@ function buildDoctorReport(cwd, rootDir) {
   const installedProductVersion = productManifest?.installedVersion || null;
   const expectedProductVersion = productVersion();
   const embeddedMeta = embeddedProductMeta();
-  const repoProductMeta = detectRepoProductMeta();
+  const productPackageRoot = path.resolve(__dirname, '..', '..');
+  const repoProductMeta = detectRepoProductMeta(productPackageRoot);
+  const installReportPresent = fs.existsSync(path.join(cwd, '.workflow', 'install-report.json'));
+  const isProductSourceRepo = path.resolve(cwd) === productPackageRoot && Boolean(repoProductMeta);
+  const enforceSourceReleaseInventory = isProductSourceRepo && !installReportPresent;
   const sourceRepoVersion = repoProductMeta?.version || null;
-  const isProductSourceRepo = Boolean(sourceRepoVersion);
   const versionDriftStatus = sourceRepoVersion ? 'fail' : 'warn';
   const packets = [
     buildPacketSnapshot(paths, { doc: 'context', step: 'discuss' }),
@@ -288,10 +291,10 @@ function buildDoctorReport(cwd, rootDir) {
     );
   }
 
-  if (isProductSourceRepo) {
+  if (enforceSourceReleaseInventory) {
     const missingGithubFiles = expectedGithubFiles.filter((entry) => !inventoryEntryExists(cwd, entry));
     pushCheck(
-      missingGithubFiles.length === 0 ? 'pass' : 'warn',
+      missingGithubFiles.length === 0 ? 'pass' : 'fail',
       missingGithubFiles.length === 0
         ? `Release inventory -> GitHub surfaces are present (${expectedGithubFiles.length})`
         : `Release inventory -> missing GitHub surfaces ${summarizeItems(missingGithubFiles.map((item) => `\`${item}\``))}`,

@@ -8,6 +8,7 @@ const {
   parseArgs,
   parseBoolean,
   parseNumber,
+  resolveTargetRepoArg,
   toList,
   toSemicolonList,
 } = require('./common_args');
@@ -310,6 +311,7 @@ module.exports = {
   parseMilestoneTable,
   parseNumber,
   profileDefaultsFor,
+  resolveTargetRepoArg,
   parseReferenceList,
   parseRefTable,
   parseSeedEntries,

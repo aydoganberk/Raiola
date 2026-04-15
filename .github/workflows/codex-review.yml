@@ -13,17 +13,15 @@ jobs:
   codex-review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
-          package-manager-cache: false
-      - run: npm test
+          node-version: 20
+      - run: npm test -- --runInBand=false
       - name: Prepare Raiola doctor packet
-        run: mkdir -p .workflow/reports && node scripts/workflow/doctor.js --json > .workflow/reports/doctor.json
+        run: node scripts/workflow/doctor.js --json > .workflow/reports/doctor.json
       - name: Upload doctor packet
-        if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: raiola-doctor
           path: .workflow/reports/doctor.json

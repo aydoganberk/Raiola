@@ -120,7 +120,7 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 - `rai verify-shell`
   Run a bounded shell verification command and store normalized evidence.
 - `rai verify-browser`
-  Run smoke browser verification or real Playwright proof. When the target repo has `playwright` or `@playwright/test` installed, `--adapter auto --require-proof` captures a real screenshot and accessibility tree.
+  Run smoke browser verification or real Playwright proof. When the target repo has `playwright` or `@playwright/test` installed, `--adapter auto --require-proof` captures a real screenshot and accessibility tree. `--timeout` bounds smoke HTTP fetches and Playwright runtime waits so a dead preview does not hang indefinitely.
 - `rai api-surface`
   Scan backend routes, middleware chains, auth signals, and data-store surfaces for API-heavy repositories or external local snapshots.
 - `rai verify-work`
@@ -252,7 +252,7 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 - `rai update`
   Refresh runtime files while preserving canonical markdown.
 - `rai uninstall`
-  Safely remove installed runtime surfaces.
+  Safely remove installed runtime surfaces. It now removes the manifest-declared install footprint, not just generated `.workflow/*` artifacts, and blocks cleanup entries that escape the target repo.
 - `rai benchmark`
   Run the hot-path benchmark harness.
 

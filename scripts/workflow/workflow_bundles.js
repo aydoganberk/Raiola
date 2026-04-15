@@ -1241,9 +1241,7 @@ function buildStartPlan(cwd, rootDir, options = {}) {
   }
   const frontendIntent = classifyFrontendIntent(goal, rawFrontendProfile);
   const relatedBundles = (bundle.relatedBundles || []).map((id) => findWorkflowBundle(id)).filter(Boolean);
-  const effectiveProfileId = options.profileId
-    || (repoConfigPayload.file?.exists ? repoConfigPayload.activeConfig?.defaultProfile : null)
-    || null;
+  const effectiveProfileId = options.profileId || repoConfigPayload.activeConfig?.defaultProfile || null;
   const profile = recommendStartProfile(bundle, {
     goal,
     route,

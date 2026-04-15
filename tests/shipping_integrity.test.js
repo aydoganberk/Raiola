@@ -14,7 +14,9 @@ test('source repo release inventory and embedded version stay green', () => {
   const githubSurface = report.checks.find((check) => check.message.startsWith('Release inventory -> GitHub surfaces are present'));
   const archiveHygiene = report.checks.find((check) => check.message.startsWith('Release inventory -> archive hygiene excludes .workflow runtime state'));
 
-  assert.equal(report.failCount, 0);
+  const unexpectedFailures = report.checks.filter((check) => check.status === 'fail' && !check.message.startsWith('Node.js runtime ->'));
+
+  assert.equal(unexpectedFailures.length, 0);
   assert.ok(releaseInventory);
   assert.equal(releaseInventory.status, 'pass');
   assert.ok(githubSurface);

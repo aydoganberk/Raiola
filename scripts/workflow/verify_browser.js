@@ -3,9 +3,10 @@ const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
 const childProcess = require('node:child_process');
-const { pathToFileURL } = require('node:url');
+const { fileURLToPath, pathToFileURL } = require('node:url');
 const { parseArgs } = require('./common');
 const { ensureDir } = require('./io/files');
+const { resolveExistingPathWithinRoot } = require('./io/path_guard');
 const { makeArtifactId, writeRuntimeMarkdown } = require('./runtime_helpers');
 const { captureWithPlaywright, runPlaywrightAdapter } = require('./browser_adapters/playwright');
 const {
@@ -38,6 +39,9 @@ Options:
   --require-proof        Fail when browser proof degrades to smoke-only evidence
   --interval <ms>        Watch interval in milliseconds. Defaults to 1500
   --iterations <n>       Limit watch mode iterations. Defaults to unlimited
+  --timeout <ms>         Network/browser timeout. Defaults to 10000 for smoke, 15000 for Playwright
+  --max-bytes <n>        Bound HTML/file payload size. Defaults to 2097152 bytes
+  --allow-external-file-target  Allow verify-browser to read file targets outside the repo root
   --json                 Print machine-readable output
   `);
 }
@@ -103,36 +107,103 @@ async function runVerifyBrowserControlLoop(cwd, options = {}) {
   };
 }
 
-function requestUrl(targetUrl) {
-  return new Promise((resolve, reject) => {
-    const client = targetUrl.startsWith('https:') ? https : http;
-    const request = client.get(targetUrl, (response) => {
-      const chunks = [];
-      response.on('data', (chunk) => chunks.push(chunk));
-      response.on('end', () => {
-        resolve({
-          statusCode: response.statusCode || 0,
-          headers: response.headers,
-          body: Buffer.concat(chunks).toString('utf8'),
-        });
-      });
-    });
-    request.on('error', reject);
-    request.end();
-  });
+function browserPayloadLimit(options = {}) {
+  const fallback = 2 * 1024 * 1024;
+  const parsed = Number(options.maxBytes || fallback);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
 }
 
-function readFileTarget(targetUrl) {
-  const filePath = targetUrl.startsWith('file://')
-    ? new URL(targetUrl).pathname
-    : targetUrl;
+function looksLikeExistingFileTarget(cwd, targetUrl) {
+  if (String(targetUrl || '').startsWith('file://')) {
+    return true;
+  }
+  const candidate = path.isAbsolute(String(targetUrl || ''))
+    ? path.resolve(String(targetUrl || ''))
+    : path.resolve(cwd, String(targetUrl || ''));
+  return fs.existsSync(candidate);
+}
+
+function resolveExternalFileTarget(cwd, targetUrl) {
+  const filePath = String(targetUrl || '').startsWith('file://')
+    ? fileURLToPath(targetUrl)
+    : String(targetUrl || '');
+  const absolutePath = path.isAbsolute(filePath)
+    ? path.resolve(filePath)
+    : path.resolve(cwd, filePath);
+  if (!fs.existsSync(absolutePath)) {
+    throw new Error(`Browser file target does not exist: ${filePath}`);
+  }
+  return absolutePath;
+}
+
+function readFileTarget(cwd, targetUrl, options = {}) {
+  const maxBytes = browserPayloadLimit(options);
+  const allowExternal = Boolean(options.allowExternalFileTarget);
+  const resolved = allowExternal
+    ? { absolutePath: resolveExternalFileTarget(cwd, targetUrl), relativePath: null }
+    : resolveExistingPathWithinRoot(cwd, String(targetUrl || '').startsWith('file://') ? fileURLToPath(targetUrl) : targetUrl, {
+      label: 'Browser file target',
+    });
+  const filePath = resolved.absolutePath;
+  const stat = fs.statSync(filePath);
+  if (stat.size > maxBytes) {
+    throw new Error(`Browser file target exceeded ${maxBytes} bytes`);
+  }
   return {
     statusCode: 200,
     headers: {
       'content-type': 'text/html; charset=utf-8',
     },
     body: fs.readFileSync(filePath, 'utf8'),
+    filePath,
   };
+}
+
+function requestUrl(targetUrl, options = {}, redirectCount = 0) {
+  const timeoutMs = Math.max(1, Number(options.timeoutMs || 10000));
+  const maxRedirects = Math.max(0, Number(options.maxRedirects || 4));
+  const maxBytes = browserPayloadLimit(options);
+  return new Promise((resolve, reject) => {
+    const client = targetUrl.startsWith('https:') ? https : http;
+    const request = client.get(targetUrl, { timeout: timeoutMs }, (response) => {
+      const statusCode = Number(response.statusCode || 0);
+      const location = response.headers?.location;
+      if (location && [301, 302, 303, 307, 308].includes(statusCode)) {
+        if (redirectCount >= maxRedirects) {
+          response.resume();
+          reject(new Error(`Too many redirects while requesting ${targetUrl}`));
+          return;
+        }
+        const redirectedUrl = new URL(location, targetUrl).toString();
+        response.resume();
+        resolve(requestUrl(redirectedUrl, options, redirectCount + 1));
+        return;
+      }
+
+      const chunks = [];
+      let size = 0;
+      response.on('data', (chunk) => {
+        size += chunk.length;
+        if (size > maxBytes) {
+          response.destroy(new Error(`Response exceeded ${maxBytes} bytes`));
+          return;
+        }
+        chunks.push(chunk);
+      });
+      response.on('error', reject);
+      response.on('end', () => {
+        resolve({
+          statusCode,
+          headers: response.headers,
+          body: Buffer.concat(chunks).toString('utf8'),
+        });
+      });
+    });
+    request.on('error', reject);
+    request.on('timeout', () => {
+      request.destroy(new Error(`Request timed out after ${timeoutMs}ms`));
+    });
+  });
 }
 
 function tryQuickLookScreenshot(htmlPath, artifactDir) {
@@ -247,11 +318,14 @@ async function runVerifyBrowser(cwd, options = {}) {
   const startedHr = process.hrtime.bigint();
   let response;
   let errorMessage = '';
+  let resolvedFileTargetPath = null;
+  const fileTarget = looksLikeExistingFileTarget(cwd, url);
 
   try {
-    response = url.startsWith('file://') || fs.existsSync(url)
-      ? readFileTarget(url)
-      : await requestUrl(url);
+    response = fileTarget
+      ? readFileTarget(cwd, url, options)
+      : await requestUrl(url, options);
+    resolvedFileTargetPath = response.filePath || null;
   } catch (error) {
     errorMessage = String(error.message || error);
     response = {
@@ -275,7 +349,7 @@ async function runVerifyBrowser(cwd, options = {}) {
   let playwrightCapture = null;
   if (adapterName === 'playwright' && adapter.supported) {
     playwrightCapture = await captureWithPlaywright(adapter, {
-      url: url.startsWith('file://') ? url : (fs.existsSync(url) ? pathToFileURL(path.resolve(url)).href : url),
+      url: resolvedFileTargetPath ? pathToFileURL(resolvedFileTargetPath).href : url,
       assertSelector: options.assert ? String(options.assert) : '',
       screenshotPath: path.join(artifactDir, 'playwright-screenshot.png'),
       timeoutMs: options.timeoutMs || 15000,
@@ -339,8 +413,9 @@ async function runVerifyBrowser(cwd, options = {}) {
   const htmlArtifactPath = path.join(artifactDir, 'response.html');
   fs.writeFileSync(htmlArtifactPath, response.body || '');
   fs.writeFileSync(path.join(artifactDir, 'headers.json'), `${JSON.stringify(response.headers || {}, null, 2)}\n`);
-  const accessibilityTree = playwrightCapture?.ok
-    ? (playwrightCapture.accessibilityTree || buildAccessibilityTreeFromHtml(response.body))
+  const realAccessibilityTree = Boolean(playwrightCapture?.ok && playwrightCapture.realAccessibilityTree);
+  const accessibilityTree = realAccessibilityTree
+    ? playwrightCapture.accessibilityTree
     : buildAccessibilityTreeFromHtml(response.body);
   fs.writeFileSync(path.join(artifactDir, 'accessibility-tree.json'), `${JSON.stringify(accessibilityTree, null, 2)}\n`);
 
@@ -400,7 +475,8 @@ async function runVerifyBrowser(cwd, options = {}) {
       requestedAdapter,
       proofRequired: Boolean(options.requireProof),
       realScreenshot: proofStatus === 'verified' && visualArtifact.kind === 'png',
-      realAccessibilityTree: proofStatus === 'verified' && Boolean(accessibilityTree),
+      realAccessibilityTree,
+      accessibilityTreeSource: realAccessibilityTree ? 'playwright' : 'html-fallback',
       finalUrl: playwrightCapture?.finalUrl || url,
       viewport: playwrightCapture?.viewport || null,
     },
@@ -416,6 +492,7 @@ async function runVerifyBrowser(cwd, options = {}) {
       resolvedFrom: playwrightCapture?.resolvedFrom || adapter.resolvedFrom || '',
       finalUrl: playwrightCapture?.finalUrl || '',
       viewport: playwrightCapture?.viewport || null,
+      realAccessibilityTree,
     } : null,
     summary: errorMessage || `HTTP ${response.statusCode || 'n/a'} | html=${htmlLike ? 'yes' : 'no'} | visual=${visualVerdict} | evidence=${evidenceLevel} | proof=${proofStatus} | ui=${uiContracts.verdict} | artifact=${visualArtifact.kind}`,
     artifacts: {
@@ -468,6 +545,9 @@ async function main() {
     requireProof: Boolean(args['require-proof']),
     interval: args.interval,
     iterations: args.iterations,
+    timeoutMs: args.timeout,
+    maxBytes: args['max-bytes'],
+    allowExternalFileTarget: Boolean(args['allow-external-file-target']),
   };
   const payload = args.watch
     ? await runVerifyBrowserControlLoop(cwd, runOptions)

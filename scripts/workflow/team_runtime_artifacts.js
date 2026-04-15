@@ -6,6 +6,7 @@ const childProcess = require('node:child_process');
 const { readJsonIfExists } = require('./io/json');
 const { safeArtifactToken } = require('./common_identity');
 const { ensureDir } = require('./io/files');
+const { hasRelativePrefix, normalizeSafeRelativePath, resolveSafePath } = require('./io/path_guard');
 const { appendJsonl, relativePath, writeJsonFile } = require('./roadmap_os');
 const { runReviewEngine } = require('./review_engine');
 
@@ -39,6 +40,76 @@ function materializationSnapshotDir(cwd, taskId) {
     materializationDir(cwd),
     safeArtifactToken(taskId, { label: 'Task id', prefix: 'task' }),
   );
+}
+
+const MATERIALIZATION_PREFIX = '.workflow/orchestration/materialized';
+
+function summarizeIssues(issues = [], limit = 4) {
+  return issues
+    .filter(Boolean)
+    .slice(0, limit)
+    .join('; ');
+}
+
+function normalizeMaterializationManifest(cwd, manifest) {
+  if (!manifest || typeof manifest !== 'object') {
+    return {
+      ok: false,
+      manifest: null,
+      issues: ['Materialization manifest is missing or invalid.'],
+    };
+  }
+
+  const issues = [];
+  let snapshotDir = '';
+  if (manifest.snapshotDir) {
+    try {
+      snapshotDir = normalizeSafeRelativePath(manifest.snapshotDir, { label: 'Materialization snapshot dir' });
+      if (!hasRelativePrefix(snapshotDir, MATERIALIZATION_PREFIX)) {
+        throw new Error('Materialization snapshot dir escapes the materialization boundary');
+      }
+    } catch (error) {
+      issues.push(error.message);
+    }
+  }
+
+  const entries = [];
+  for (const rawEntry of Array.isArray(manifest.entries) ? manifest.entries : []) {
+    try {
+      const entryPath = resolveSafePath(cwd, rawEntry?.path, { label: 'Materialization entry path' }).relativePath;
+      let snapshotFile = null;
+      if (rawEntry?.snapshotFile) {
+        const snapshotInfo = resolveSafePath(cwd, rawEntry.snapshotFile, {
+          label: 'Materialization snapshot file',
+          mustExist: Boolean(rawEntry.exists),
+        });
+        snapshotFile = snapshotInfo.relativePath;
+        if (!hasRelativePrefix(snapshotFile, MATERIALIZATION_PREFIX)) {
+          throw new Error('Materialization snapshot file escapes the materialization boundary');
+        }
+      }
+      if (rawEntry?.exists && !snapshotFile) {
+        throw new Error(`Materialization snapshot file is missing for ${entryPath}`);
+      }
+      entries.push({
+        ...rawEntry,
+        path: entryPath,
+        snapshotFile,
+      });
+    } catch (error) {
+      issues.push(error.message);
+    }
+  }
+
+  return {
+    ok: issues.length === 0,
+    manifest: {
+      ...manifest,
+      snapshotDir,
+      entries,
+    },
+    issues,
+  };
 }
 
 function mergeQueuePath(cwd) {
@@ -317,12 +388,15 @@ function materializeWorkspaceState(cwd, workspace, taskId, changedFiles = []) {
   fs.rmSync(snapshotDir, { recursive: true, force: true });
   ensureDir(snapshotDir);
 
-  const entries = changedFiles.map((relativeFile) => {
-    const normalizedFile = String(relativeFile || '').replace(/\\/g, '/');
-    const workspaceFile = path.join(workspace.path, normalizedFile);
+  const normalizedChangedFiles = changedFiles.map((relativeFile) => normalizeSafeRelativePath(relativeFile, {
+    label: 'Changed file path',
+  }));
+
+  const entries = normalizedChangedFiles.map((relativeFile) => {
+    const workspaceFile = resolveSafePath(workspace.path, relativeFile, { label: 'Changed file path' }).absolutePath;
     const exists = fs.existsSync(workspaceFile);
     const entry = {
-      path: normalizedFile,
+      path: relativeFile,
       exists,
       sha256: null,
       size: 0,
@@ -331,7 +405,7 @@ function materializeWorkspaceState(cwd, workspace, taskId, changedFiles = []) {
     };
 
     if (exists) {
-      const snapshotPath = path.join(snapshotDir, normalizedFile);
+      const snapshotPath = resolveSafePath(snapshotDir, relativeFile, { label: 'Changed file path' }).absolutePath;
       copyFileWithMode(workspaceFile, snapshotPath);
       const stat = safeStat(workspaceFile);
       entry.sha256 = hashFile(workspaceFile);
@@ -348,7 +422,7 @@ function materializeWorkspaceState(cwd, workspace, taskId, changedFiles = []) {
     taskId,
     workspaceMode: workspace?.mode || 'unknown',
     baseCommit: workspace?.baseCommit || null,
-    changedFiles: [...changedFiles],
+    changedFiles: [...normalizedChangedFiles],
     entryCount: entries.length,
     snapshotDir: relativePath(cwd, snapshotDir),
     entries,
@@ -363,16 +437,43 @@ function materializeWorkspaceState(cwd, workspace, taskId, changedFiles = []) {
 
 function loadMaterializationManifest(cwd, relativeFile) {
   if (!relativeFile) {
-    return null;
+    return {
+      ok: false,
+      manifest: null,
+      issues: ['Materialization manifest is missing for this patch bundle.'],
+    };
   }
-  return readJsonIfExists(path.join(cwd, relativeFile), null);
+
+  try {
+    const manifestFile = resolveSafePath(cwd, relativeFile, {
+      label: 'Materialization manifest file',
+      mustExist: true,
+    });
+    if (!hasRelativePrefix(manifestFile.relativePath, MATERIALIZATION_PREFIX)) {
+      throw new Error('Materialization manifest file escapes the materialization boundary');
+    }
+    const manifest = readJsonIfExists(manifestFile.absolutePath, null);
+    if (!manifest) {
+      return {
+        ok: false,
+        manifest: null,
+        issues: ['Materialization manifest is missing for this patch bundle.'],
+      };
+    }
+    return normalizeMaterializationManifest(cwd, manifest);
+  } catch (error) {
+    return {
+      ok: false,
+      manifest: null,
+      issues: [error.message],
+    };
+  }
 }
 
 function syncPathsBetweenTrees(sourceRoot, targetRoot, changedFiles = []) {
   for (const relativeFile of changedFiles) {
-    const normalizedFile = String(relativeFile || '').replace(/\\/g, '/');
-    const sourcePath = path.join(sourceRoot, normalizedFile);
-    const targetPath = path.join(targetRoot, normalizedFile);
+    const sourcePath = resolveSafePath(sourceRoot, relativeFile, { label: 'Changed file path' }).absolutePath;
+    const targetPath = resolveSafePath(targetRoot, relativeFile, { label: 'Changed file path' }).absolutePath;
     if (fs.existsSync(sourcePath)) {
       copyFileWithMode(sourcePath, targetPath);
     } else {
@@ -382,10 +483,17 @@ function syncPathsBetweenTrees(sourceRoot, targetRoot, changedFiles = []) {
 }
 
 function syncManifestToTarget(cwd, manifest, targetRoot) {
-  for (const entry of manifest.entries || []) {
-    const targetPath = path.join(targetRoot, entry.path);
+  const normalized = normalizeMaterializationManifest(cwd, manifest);
+  if (!normalized.ok) {
+    throw new Error(`Materialization manifest is unsafe: ${summarizeIssues(normalized.issues)}`);
+  }
+  for (const entry of normalized.manifest.entries || []) {
+    const targetPath = resolveSafePath(targetRoot, entry.path, { label: 'Materialization entry path' }).absolutePath;
     if (entry.exists && entry.snapshotFile) {
-      const snapshotPath = path.join(cwd, entry.snapshotFile);
+      const snapshotPath = resolveSafePath(cwd, entry.snapshotFile, {
+        label: 'Materialization snapshot file',
+        mustExist: true,
+      }).absolutePath;
       copyFileWithMode(snapshotPath, targetPath, entry.permissions);
     } else {
       fs.rmSync(targetPath, { recursive: true, force: true });
@@ -394,9 +502,21 @@ function syncManifestToTarget(cwd, manifest, targetRoot) {
 }
 
 function verifyManifestAgainstTarget(cwd, manifest, targetRoot) {
+  const normalized = normalizeMaterializationManifest(cwd, manifest);
+  if (!normalized.ok) {
+    return {
+      ok: false,
+      mismatches: normalized.issues.map((issue) => ({
+        path: 'manifest',
+        expected: 'safe-manifest',
+        actual: issue,
+      })),
+    };
+  }
+
   const mismatches = [];
-  for (const entry of manifest.entries || []) {
-    const targetPath = path.join(targetRoot, entry.path);
+  for (const entry of normalized.manifest.entries || []) {
+    const targetPath = resolveSafePath(targetRoot, entry.path, { label: 'Materialization entry path' }).absolutePath;
     const exists = fs.existsSync(targetPath);
     if (exists !== Boolean(entry.exists)) {
       mismatches.push({
@@ -449,13 +569,20 @@ function createTemporaryGitWorktree(cwd, prefix = 'raiola-runtime-') {
 }
 
 function renderPatchFromManifest(cwd, manifest) {
-  const entries = Array.isArray(manifest?.entries) ? manifest.entries : [];
+  const normalized = normalizeMaterializationManifest(cwd, manifest);
+  if (!normalized.ok) {
+    throw new Error(`Materialization manifest is unsafe: ${summarizeIssues(normalized.issues)}`);
+  }
+
+  const entries = Array.isArray(normalized.manifest?.entries) ? normalized.manifest.entries : [];
   if (entries.length === 0) {
     return '';
   }
 
   if (!isGitRepository(cwd)) {
-    const snapshotRoot = path.join(cwd, manifest.snapshotDir || '');
+    const snapshotRoot = normalized.manifest.snapshotDir
+      ? resolveSafePath(cwd, normalized.manifest.snapshotDir, { label: 'Materialization snapshot dir' }).absolutePath
+      : materializationDir(cwd);
     return entries
       .map((entry) => buildNoIndexDiff(cwd, snapshotRoot, entry.path))
       .filter((chunk) => String(chunk || '').trim())
@@ -464,14 +591,14 @@ function renderPatchFromManifest(cwd, manifest) {
 
   const tempWorktree = createTemporaryGitWorktree(cwd, 'raiola-patch-stage-');
   try {
-    syncManifestToTarget(cwd, manifest, tempWorktree.path);
+    syncManifestToTarget(cwd, normalized.manifest, tempWorktree.path);
     const paths = entries.map((entry) => entry.path);
     const addResult = run('git', ['add', '-A', '--', ...paths], tempWorktree.path);
     if (addResult.status !== 0) {
       throw new Error(addResult.stderr || addResult.stdout || 'git add failed while materializing a patch bundle');
     }
     const diffResult = run('git', ['diff', '--cached', '--binary', '--find-renames', '--relative', '--', ...paths], tempWorktree.path);
-        return diffResult.stdout || '';
+    return diffResult.stdout || '';
   } finally {
     tempWorktree.cleanup();
   }
@@ -481,8 +608,14 @@ function renderPatchText(cwd, manifest, workspace) {
   if (isGitRepository(cwd)) {
     return renderPatchFromManifest(cwd, manifest);
   }
-  const snapshotRoot = path.join(cwd, manifest.snapshotDir || workspace.path || '');
-  return (manifest.entries || [])
+  const normalized = normalizeMaterializationManifest(cwd, manifest);
+  if (!normalized.ok) {
+    throw new Error(`Materialization manifest is unsafe: ${summarizeIssues(normalized.issues)}`);
+  }
+  const snapshotRoot = normalized.manifest.snapshotDir
+    ? resolveSafePath(cwd, normalized.manifest.snapshotDir, { label: 'Materialization snapshot dir' }).absolutePath
+    : workspace.path;
+  return (normalized.manifest.entries || [])
     .map((entry) => buildNoIndexDiff(cwd, snapshotRoot, entry.path))
     .filter((chunk) => String(chunk || '').trim())
     .join('\n');
@@ -966,13 +1099,14 @@ function applyMergeQueue(cwd, mergeQueue, options = {}) {
       continue;
     }
     attempted += 1;
-    const manifest = loadMaterializationManifest(cwd, item.manifestFile);
-    if (!manifest) {
+    const manifestRecord = loadMaterializationManifest(cwd, item.manifestFile);
+    if (!manifestRecord.ok || !manifestRecord.manifest) {
       item.status = 'conflict';
-      item.applyError = 'Materialization manifest is missing for this patch bundle.';
+      item.applyError = summarizeIssues(manifestRecord.issues) || 'Materialization manifest is missing for this patch bundle.';
       applied.push({ taskId: item.taskId, patchFile: item.patchFile, status: 'conflict', error: item.applyError });
       continue;
     }
+    const manifest = manifestRecord.manifest;
 
     if (gitRepo) {
       const dirtyPaths = listExternalDirtyPaths(cwd);

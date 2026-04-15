@@ -3,6 +3,7 @@ const os = require('node:os');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const { ensureDir } = require('../common');
+const { resolveSafePath } = require('../io/path_guard');
 const { safeArtifactToken, slugify } = require('../common_identity');
 const {
   buildFailureResult,
@@ -79,7 +80,9 @@ function copyFileIfExists(sourcePath, targetPath) {
 function ensureSnapshotWorkspace(cwd, task, workspacePath) {
   ensureDir(workspacePath);
   for (const relativeFile of task.writeScope || []) {
-    copyFileIfExists(path.join(cwd, relativeFile), path.join(workspacePath, relativeFile));
+    const source = resolveSafePath(cwd, relativeFile, { label: 'Task write scope path' });
+    const target = resolveSafePath(workspacePath, relativeFile, { label: 'Task write scope path' });
+    copyFileIfExists(source.absolutePath, target.absolutePath);
   }
   return {
     mode: 'snapshot',

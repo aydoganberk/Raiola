@@ -118,10 +118,6 @@ const PHASES = Object.freeze([
   },
 ]);
 
-function isRepoWideAuditGoal(goal) {
-  return /\b(full repo|whole repo|entire repo|repo[- ]wide|full codebase|whole codebase|oneshot|one-shot|repo audit|audit the repo|audit this repo|full repo audit|codebase audit)\b/i.test(String(goal || ''));
-}
-
 function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
 }
@@ -1445,9 +1441,6 @@ function buildMonorepoMode(cwd, rootDir, options = {}) {
       markdownFile: monorepo.markdownFile,
     },
   });
-  if (commandPlan.bundleId === 'correction-wave' && !isRepoWideAuditGoal(goal)) {
-    commandPlan.resolvedPrimaryCommand = `rai monorepo-mode --goal ${JSON.stringify(goal)}`;
-  }
   const agents = options.skipAgents ? null : syncAgentsMonorepoLayer(cwd);
 
   const payload = {

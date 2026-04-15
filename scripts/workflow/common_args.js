@@ -1,3 +1,5 @@
+const path = require('node:path');
+
 function parseArgs(argv) {
   const args = { _: [] };
 
@@ -60,6 +62,17 @@ function toSemicolonList(value) {
   return [];
 }
 
+
+function resolveTargetRepoArg(args, options = {}) {
+  const cwd = path.resolve(String(options.cwd || process.cwd()));
+  const positionalIndex = Number.isInteger(options.positionalIndex) ? options.positionalIndex : 0;
+  const allowPositional = options.allowPositional !== false;
+  const positionalValues = Array.isArray(args?._) ? args._ : [];
+  const positional = allowPositional ? positionalValues[positionalIndex] : null;
+  const candidate = args?.target || positional || '.';
+  return path.resolve(cwd, String(candidate));
+}
+
 function parseBoolean(value, fallback) {
   if (value == null) {
     return fallback;
@@ -88,6 +101,7 @@ module.exports = {
   parseArgs,
   parseBoolean,
   parseNumber,
+  resolveTargetRepoArg,
   toList,
   toSemicolonList,
 };
