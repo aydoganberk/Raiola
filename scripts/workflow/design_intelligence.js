@@ -1,14 +1,19 @@
 const path = require('node:path');
-const { readIfExists, tryExtractSection } = require('./common');
+const {
+  tryExtractSection } = require('./common');
 const { buildFrontendProfile } = require('./map_frontend');
 const {
   collectComponentInventory,
   collectUiFiles,
   relativePath,
   writeDoc,
-} = require('./frontend_os');
+  } = require('./frontend_os');
 const { buildDesignDnaPayload } = require('./design_contracts');
 const { writeRuntimeJson } = require('./runtime_helpers');
+const { ensureDir,
+  writeTextIfChanged,
+  readTextIfExists: readIfExists,
+} = require('./io/files');
 const {
   TASTE_PROFILES,
   buildAcceptanceChecklist,
@@ -35,6 +40,47 @@ const {
   renderDirectionMarkdown,
   resolveTasteProfile,
 } = require('./design_intelligence_model');
+
+
+function flattenTokenEntries(value, prefix = []) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return prefix.length > 0 ? [{ key: prefix.join('-'), value }] : [];
+  }
+  return Object.entries(value).flatMap(([key, nested]) => flattenTokenEntries(nested, [...prefix, key]));
+}
+
+function buildTokenExports(cwd, rootDir, designTokens) {
+  const tokenEntries = flattenTokenEntries(designTokens).filter((entry) => ['string', 'number'].includes(typeof entry.value));
+  const cssLines = [':root {', ...tokenEntries.map((entry) => `  --rai-${entry.key}: ${entry.value};`), '}'];
+  const figmaVariables = {
+    schema: 'raiola/figma-variables/v1',
+    collections: [{
+      name: 'Raiola Taste Profile',
+      modes: [{ name: 'Default', values: Object.fromEntries(tokenEntries.map((entry) => [entry.key, entry.value])) }],
+    }],
+  };
+  const tailwindPartial = {
+    theme: {
+      extend: {
+        colors: Object.fromEntries(tokenEntries.filter((entry) => /color/i.test(entry.key)).map((entry) => [entry.key.replace(/-+/g, '_'), entry.value])),
+        spacing: Object.fromEntries(tokenEntries.filter((entry) => /space|gap|padding|radius/i.test(entry.key)).map((entry) => [entry.key.replace(/-+/g, '_'), entry.value])),
+      },
+    },
+  };
+  const exportDir = path.join(cwd, '.workflow', 'runtime', 'design-tokens');
+  ensureDir(exportDir);
+  const cssPath = path.join(exportDir, 'tokens.css');
+  const figmaPath = path.join(exportDir, 'figma-variables.json');
+  const tailwindPath = path.join(exportDir, 'tailwind.partial.json');
+  writeTextIfChanged(cssPath, `${cssLines.join('\n')}\n`);
+  writeTextIfChanged(figmaPath, `${JSON.stringify(figmaVariables, null, 2)}\n`);
+  writeTextIfChanged(tailwindPath, `${JSON.stringify(tailwindPartial, null, 2)}\n`);
+  return {
+    css: relativePath(cwd, cssPath),
+    figmaVariables: relativePath(cwd, figmaPath),
+    tailwindPartial: relativePath(cwd, tailwindPath),
+  };
+}
 
 function buildUiDirection(cwd, rootDir, options = {}) {
   const profile = buildFrontendProfile(cwd, rootDir, { scope: 'workstream', refresh: 'incremental' });
@@ -76,6 +122,7 @@ function buildUiDirection(cwd, rootDir, options = {}) {
     taste,
     antiPatterns,
   }, options);
+  const tokenExports = buildTokenExports(cwd, rootDir, designTokens);
   const payload = {
     generatedAt: new Date().toISOString(),
     workflowRootRelative: relativePath(cwd, rootDir),
@@ -96,6 +143,7 @@ function buildUiDirection(cwd, rootDir, options = {}) {
     implementationPrompts,
     designDna,
     designTokens,
+    tokenExports,
     componentCues: [...(tasteProfile.componentCues || [])],
     interactionCues: [...(tasteProfile.interactionCues || [])],
     styleGuardrails,

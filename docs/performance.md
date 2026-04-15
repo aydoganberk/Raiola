@@ -11,10 +11,17 @@ Current product targets for medium-size repos:
 - `map-codebase <2s`
 - `map-frontend <2s`
 - `launch <800ms cold / <300ms warm`
+- `start <2.6s`
 - `manager <400ms warm`
 - `next-prompt <150ms warm`
+- `package-graph <1.2s warm`
+- `workspace-impact <1.5s warm`
+- `codex operator <1.8s warm`
+- `hook-policy <250ms warm`
 - `codex contextpack <1.5s warm`
 - `codex promptpack <1.8s warm`
+
+These budgets are still calibrated for medium-size repos. Large or polyglot monorepo claims should be treated as an explicit benchmark lane, not assumed from the medium fixture alone.
 
 ## Implemented performance surfaces
 
@@ -26,15 +33,19 @@ Current product targets for medium-size repos:
 - repo fs index at `.workflow/fs-index.json`
 - repo-specific `.workflowignore` support to keep hot paths out of noisy directories
 - package graph cache at `.workflow/cache/package-graph.json`
+- repo-truth-aware workspace discovery that reuses manifest, workspace-config, ecosystem-marker, and `CODEOWNERS` signals instead of relying only on a manual workstream registry
 - impacted test ownership and internal dependency edges in the package graph cache
 - monorepo intelligence cache at `.workflow/cache/monorepo-intelligence.json`
 - symbol graph cache at `.workflow/cache/symbol-graph.json`
+- import graph cache at `.workflow/cache/import-graph.json` with explicit regex-scan caveats so consumers do not mistake it for a full AST-resolved graph
 - write-on-change state surfaces for `.workflow/state.json` and `.workflow/fs-index.json`
 - shared in-process runtime collector for `launch`, `hud`, `manager`, and `next-prompt`
+- structured start-plan generation so `rai start` can reuse intent routing, frontend mapping, and package-graph signals instead of rebuilding separate ad hoc operator state
+- profile/add-on packaging on top of `rai start` so deeper bundle lanes reuse the same plan state instead of re-running separate operator discovery commands
 - multilingual intent normalization and deterministic capability matching to avoid repeated fallback routing on non-English prompts
 - package-aware write-scope synthesis so broad parallel execute requests do not default to repo-wide edit scopes in monorepos
 - review orchestration artifacts that let large-review passes shard by package and persona instead of re-reading the whole repo every time
-- repo-local Codex control mirror under `.workflow/runtime/codex-control/`
+- native `.codex/` project layer with rollback journal under `.workflow/runtime/codex-control/`
 - packet lock and provenance cache under `.workflow/cache/packet-locks.json` and `.workflow/cache/packet-provenance.json`
 - mailbox/timeline logs under `.workflow/orchestration/runtime/*.jsonl`
 
@@ -46,12 +57,12 @@ Run:
 rai benchmark
 ```
 
-The benchmark surface covers every documented hot-path target, including `launch`, `manager`, `next-prompt`, `codex contextpack`, and `codex promptpack`.
+The benchmark surface covers every documented hot-path target, including `launch`, `start`, `manager`, `next-prompt`, `codex contextpack`, and `codex promptpack`. `rai start recommend` and `rai start list` ride on the same cached bundle and routing surfaces, so the guided entry layer stays lightweight even after profiles/add-ons/candidate scoring were added.
 
 Or:
 
 ```bash
-npm run raiola:benchmark -- --commands hud,doctor,map-codebase --runs 3 --assert-slo
+npm run rai -- benchmark --commands start,hud,doctor,map-codebase --runs 3 --assert-slo
 ```
 
 Or focus on operator-facing runtime commands directly:
@@ -66,6 +77,7 @@ Fixture-backed benchmarks are also supported:
 rai benchmark --fixture small --commands hud,next
 rai benchmark --fixture medium --commands hud,map-codebase
 rai benchmark --fixture large --commands hud
+rai benchmark --fixture polyglot --commands package-graph,workspace-impact,codex-operator,hook-policy
 ```
 
 The benchmark writes `.workflow/benchmarks/latest.json`.
@@ -78,7 +90,13 @@ rai benchmark --assert-slo --thresholds hud=300,next=500,doctor=1000
 
 Release CI runs the benchmark with `--assert-slo` from [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
 
-Route and stats telemetry write `.workflow/cache/model-routing.json`, verify surfaces write evidence under `.workflow/verifications/`, monorepo planning writes `.workflow/cache/monorepo-intelligence.json`, review orchestration writes `.workflow/reports/review-orchestration.{md,json}`, and evidence graph refreshes write `.workflow/evidence-graph/latest.json`.
+Route and stats telemetry write `.workflow/cache/model-routing.json`, `rai start` writes `.workflow/runtime/start-plan.{json,md}`, verify surfaces write evidence under `.workflow/verifications/`, monorepo planning writes `.workflow/cache/monorepo-intelligence.json`, review orchestration writes `.workflow/reports/review-orchestration.{md,json}`, and evidence graph refreshes write `.workflow/evidence-graph/latest.json`.
+
+## Proof levels and large-repo caveats
+
+`rai verify-browser` now records both `proofStatus` and `evidenceLevel`. `verified` means a real browser-capable adapter produced proof, `degraded` means browser proof was requested but capability fell back or failed, and `smoke-only` means the run only captured HTTP/HTML smoke evidence. Smoke or degraded runs should stay visible as capability loss rather than being narrated as full browser proof.
+
+The published SLO table remains a medium-repo baseline. Large/polyglot monorepo readiness should be shown with fixture-backed runs that track cold and warm package-graph latency, workspace-impact latency, operator packet generation latency, cache invalidation cost, and hook overhead. The polyglot fixture now includes Next.js, Expo/React Native, Hono, Go, Python, Rust, Java, Bazel, Turbo, pnpm, and CODEOWNERS signals so those numbers are not inferred from a JS-only toy fixture.
 
 ## Perf metrics
 
@@ -106,7 +124,7 @@ Useful counters include:
 
 For very large repos, the fastest path is no longer “scan everything, then decide”:
 
-- run `rai monorepo` once and reuse the generated package slices, review shards, and verify plan
+- run `rai start monorepo --goal "..."` or `rai monorepo` once and reuse the generated package slices, review shards, and verify plan
 - let `rai review-orchestrate` split deep review into parallel read-only package/persona waves
 - use `rai codex promptpack` so Codex sessions inherit the latest route, verify contract, UI direction, and review/monorepo context without rebuilding them each time
 - prefer package-local write scopes over broad repo-root scopes during Team Lite or subagent execution

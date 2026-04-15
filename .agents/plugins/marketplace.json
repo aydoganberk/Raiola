@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "plugins": [
+    {
+      "name": "raiola-codex-optimizer",
+      "description": "Native Codex optimizer for large repos, trust-aware hooks, layered AGENTS, installable skills, and first-party review surfaces.",
+      "category": "developer-tools",
+      "source": {
+        "path": "plugins/raiola-codex-optimizer"
+      },
+      "policy": {
+        "installation": "workspace",
+        "authentication": "none"
+      },
+      "interface": {
+        "displayName": "Raiola Codex Optimizer"
+      }
+    }
+  ]
+}

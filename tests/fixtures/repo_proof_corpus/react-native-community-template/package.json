@@ -1,0 +1,13 @@
+{
+  "name": "react-native-community-template-snapshot",
+  "private": true,
+  "dependencies": {
+    "react": "19.0.0",
+    "react-native": "0.81.0"
+  },
+  "scripts": {
+    "start": "react-native start",
+    "android": "react-native run-android",
+    "ios": "react-native run-ios"
+  }
+}

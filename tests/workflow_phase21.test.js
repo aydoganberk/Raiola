@@ -13,7 +13,7 @@ const {
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
+const raiBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase21-'));
@@ -102,7 +102,7 @@ function gitInit(targetRepo) {
 
 test('ui-direction exports experience thesis, signature moments, and codex prompts', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
@@ -130,7 +130,7 @@ test('ui-direction exports experience thesis, signature moments, and codex promp
 
 test('ui-direction accepts the semantic-minimal taste profile for native-first guidance', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
@@ -148,7 +148,7 @@ test('ui-direction accepts the semantic-minimal taste profile for native-first g
 
 test('review-mode produces a distinct execution spine, context pack, and artifacts', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   gitInit(targetRepo);
 
@@ -179,7 +179,7 @@ test('review-mode produces a distinct execution spine, context pack, and artifac
 
 test('monorepo intelligence discovers pnpm workspaces and builds agent waves', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedPnpmMonorepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
@@ -233,7 +233,7 @@ test('persona packs and typo-tolerant matching recover English and Turkish opera
 
 test('do payload includes a codex command plan for frontend lanes', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
@@ -243,10 +243,15 @@ test('do payload includes a codex command plan for frontend lanes', () => {
     targetRepo,
   ));
 
-  assert.ok(payload.commandPlan.primaryCommand.includes('rai ui-plan') || payload.commandPlan.primaryCommand.includes('rai do'));
+  assert.ok(payload.commandPlan.primaryCommand.includes('rai audit --goal'));
+  assert.ok(payload.commandPlan.resolvedPrimaryCommand.includes('rai map-frontend'));
   assert.ok(payload.commandPlan.secondaryCommands.some((command) => command.includes('rai ui-recipe')));
+  assert.equal(payload.commandPlan.bundleId, 'frontend-delivery');
+  assert.match(payload.commandPlan.recommendedStartCommand, /rai start frontend --goal/);
+  assert.ok(payload.commandPlan.commandFamilies.length >= 3);
+  assert.ok(payload.commandPlan.phases.some((phase) => phase.id === 'identify'));
   assert.ok(payload.commandPlan.codexAppFlow.length >= 1);
-  assert.ok(payload.commandPlan.codexAppFlow.some((entry) => entry.includes('UI-RECIPE')));
+  assert.ok(payload.commandPlan.codexAppFlow.some((entry) => entry.includes('FRONTEND_PROFILE') || entry.includes('UI-SPEC')));
   assert.ok(payload.verificationPlan.includes('rai ui-recipe'));
   assert.ok(payload.uiDirection);
   assert.ok(payload.uiSpec);

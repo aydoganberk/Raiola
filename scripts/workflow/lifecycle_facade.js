@@ -1,6 +1,13 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { ensureDir, getFieldValue, parseArgs, read } = require('./common');
+const {
+  getFieldValue,
+  parseArgs,
+} = require('./common');
+const {
+  ensureDir,
+  readText: read,
+} = require('./io/files');
 const { readProductManifest } = require('./product_manifest');
 
 function relativePath(fromDir, targetPath) {

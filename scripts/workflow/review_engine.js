@@ -7,6 +7,7 @@ const { buildUiReview } = require('./ui_review');
 const { buildPackageGraph } = require('./package_graph');
 const { buildSemanticAnalysis } = require('./review_semantic');
 const { buildSymbolGraph, findSymbolMatches } = require('./symbol_graph');
+const { buildFindingReplay, createReviewFinding } = require('./finding_model');
 
 const REVIEW_PERSONAS = Object.freeze([
   {
@@ -182,15 +183,57 @@ function isApiSurface(filePath, file) {
   ));
 }
 
+function isHardcodedSensitiveLiteral(line) {
+  const normalized = String(line || '').trim();
+  if (!normalized) {
+    return false;
+  }
+  if (/\bdesign\s+tokens?\b/i.test(normalized)) {
+    return false;
+  }
+  if (/\b(designTokens|tokenCount|csrfToken|fcmToken|notificationToken|sessionToken)\b/.test(normalized)) {
+    return false;
+  }
+  if (!/\b(secret|password|credential|token|api[_-]?key|client[_-]?secret)\b/i.test(normalized)) {
+    return false;
+  }
+  return /[:=]\s*['"`][^'"`\n]{6,}['"`]/.test(normalized);
+}
+
+function suggestedActionForCategory(category, severity) {
+  if (category === 'test gap') {
+    return 'Add or extend focused tests, then re-run the narrowest verify command that proves the behavior.';
+  }
+  if (category === 'frontend ux/a11y') {
+    return 'Capture browser evidence and verify loading, error, and empty UI states before closeout.';
+  }
+  if (category === 'security') {
+    return 'Remove or externalize the sensitive value and add an explicit verification note for the secret-bearing path.';
+  }
+  if (category === 'API drift') {
+    return 'Reconcile downstream callers and add contract verification for the changed API surface.';
+  }
+  if (category === 'data/migration') {
+    return 'Add rollback notes and a targeted validation step for the schema or migration change.';
+  }
+  if (severity === 'nice_to_have') {
+    return 'Capture the cleanup as a bounded follow-up if it does not belong in the current fix wave.';
+  }
+  return 'Reduce the risk in a bounded patch and attach explicit verification evidence for the touched behavior.';
+}
+
 function createFinding(file, category, severity, title, detail, pass) {
-  return {
+  return createReviewFinding({
     file,
     category,
     severity,
     title,
     detail,
     pass,
-  };
+    evidence: [file],
+    whyFound: detail,
+    suggestedNextAction: suggestedActionForCategory(category, severity),
+  });
 }
 
 function semanticSignalSummary(filePath, analysis) {
@@ -609,7 +652,7 @@ function runPasses(files, context, packageGraph, symbolGraph, cwd) {
         'semantic-correctness',
       ));
     }
-    if (file.addedLines.some((line) => /\b(secret|token|password|credential)\b/i.test(line))) {
+    if (file.addedLines.some((line) => isHardcodedSensitiveLiteral(line))) {
       findings.push(createFinding(
         file.file,
         'security',
@@ -698,30 +741,7 @@ function runPasses(files, context, packageGraph, symbolGraph, cwd) {
 }
 
 function buildReplay(previousFindings, currentFindings) {
-  const previousMap = new Map(previousFindings.map((item) => [`${item.file}:${item.title}`, item]));
-  const currentMap = new Map(currentFindings.map((item) => [`${item.file}:${item.title}`, item]));
-  const resolved = [];
-  const persistent = [];
-  const introduced = [];
-
-  for (const [key, finding] of previousMap.entries()) {
-    if (!currentMap.has(key)) {
-      resolved.push(finding);
-    } else {
-      persistent.push(currentMap.get(key));
-    }
-  }
-  for (const [key, finding] of currentMap.entries()) {
-    if (!previousMap.has(key)) {
-      introduced.push(finding);
-    }
-  }
-
-  return {
-    resolved,
-    persistent,
-    introduced,
-  };
+  return buildFindingReplay(previousFindings, currentFindings);
 }
 
 function renderMarkdownReport(payload) {

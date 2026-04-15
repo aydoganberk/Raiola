@@ -1,4 +1,6 @@
 const { parseArgs, resolveWorkflowRoot } = require('./common');
+const { buildPackageGraph } = require('./package_graph');
+const { buildReviewCorrectionControlPlane } = require('./review_correction_control_plane');
 const { runReviewEngine } = require('./review_engine');
 const { buildReviewOrchestration } = require('./review_orchestration');
 const { buildReviewTaskGraph } = require('./review_task_graph');
@@ -63,6 +65,17 @@ async function main(argv = process.argv.slice(2)) {
     payload.taskGraph = buildReviewTaskGraph(cwd, rootDir, payload, { orchestration });
   }
 
+  const packageGraph = buildPackageGraph(cwd, { writeFiles: true });
+  payload.controlPlane = buildReviewCorrectionControlPlane(cwd, {
+    goal: `review ${payload.mode}`,
+    review: payload,
+    taskGraph: payload.taskGraph || null,
+    packageGraph,
+    activeLane: packageGraph.repoShape === 'monorepo' ? 'large-repo-review' : 'diff-review',
+  }, {
+    promotePlanned: Boolean(payload.taskGraph),
+  });
+
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
     return;
@@ -79,6 +92,12 @@ async function main(argv = process.argv.slice(2)) {
   }
   if (payload.taskGraph) {
     console.log(`- Task graph: \`${payload.taskGraph.markdownFile}\``);
+  }
+  if (payload.controlPlane?.artifacts?.correctionControlMarkdown) {
+    console.log(`- Control plane: \`${payload.controlPlane.artifacts.correctionControlMarkdown}\``);
+  }
+  if (payload.controlPlane?.artifacts?.findingsRegistry) {
+    console.log(`- Findings registry: \`${payload.controlPlane.artifacts.findingsRegistry}\``);
   }
   console.log(`- Report: \`${payload.artifacts.markdown}\``);
   if (args.heatmap) {

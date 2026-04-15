@@ -1,65 +1,64 @@
-# Codex upgrade notes
+# Codex Upgrade Notes
 
-## What was added
+This build turns Raiola from a Codex-adjacent control plane into a more native Codex optimizer.
 
-This build pushes the product toward a stronger Codex-native workflow for large repos:
+## What changed
 
-- multilingual natural-language intent grounding across major languages
-- taste-aware frontend direction generation before UI spec and UI plan work begins
-- package-aware review orchestration with persona and wave planning
-- monorepo intelligence for write scopes, review shards, verify plans, and performance risks
-- Codex prompt packs that bundle route, verify contract, UI direction, and monorepo/review context
-- shell verification fallback so CI and agent hosts do not depend on `zsh`
-
-## New commands
-
-- `rai ui-direction`
-- `rai review-orchestrate`
-- `rai monorepo`
-- `rai codex promptpack --goal "..."`
-- richer `rai do` behavior on multilingual prompts
-- richer `rai review-mode` output via orchestration artifacts
+- real native config under `.codex/config.toml`
+- native hook assets under `.codex/hooks/*` plus an opt-in `.codex/hooks.json` registration
+- native project subagents under `.codex/agents/*.toml`
+- trust-aware mapping from Raiola posture into `approval_policy`, `sandbox_mode`, and network access
+- layered `AGENTS.md` guidance for workflow code, docs, skills, and GitHub surfaces
+- installable plugin packaging through `.agents/plugins/marketplace.json` and `plugins/raiola-codex-optimizer/`
+- first-party GitHub review wiring with `openai/codex-action@v1`
+- Codex prompt assets under `.github/codex/`
 
 ## Suggested flows
 
-### Frontend slice
+### Native repo bootstrap
 
 ```bash
-rai do "mejora el frontend con una dirección visual premium"
+rai codex setup --repo
+rai codex doctor --repo
+# optional: rai codex setup --repo --enable-hooks
+```
+
+### Large-repo planning
+
+```bash
+/agent monorepo_planner
+rai monorepo
+rai codex promptpack --goal "plan the shard and verification scope"
+```
+
+### Review and closeout
+
+```bash
+@codex review
+rai review
+rai ship-readiness
+```
+
+### Frontend execution
+
+```bash
+/agent browser_debugger
 rai ui-direction
-rai ui-spec
-rai ui-plan
 rai ui-review
 ```
 
-### Large-repo review
+## Main native artifacts
 
-```bash
-rai do "请做代码审查并验证浏览器"
-rai review-mode
-rai review-orchestrate
-rai codex promptpack --goal "review the diff and verify auth"
-```
-
-### Monorepo execution
-
-```bash
-rai monorepo
-rai team run --parallel --activation-text "aynı anda paketleri ilerlet" 
-rai codex promptpack --goal "implement package-local fixes and verify impacted scopes"
-```
-
-## Main artifacts
-
-- `docs/workflow/UI-DIRECTION.md`
-- `docs/workflow/MONOREPO.md`
-- `.workflow/runtime/ui-direction.json`
-- `.workflow/cache/monorepo-intelligence.json`
-- `.workflow/reports/review-orchestration.md`
-- `.workflow/reports/review-orchestration.json`
-- `.workflow/runtime/codex-control/promptpack.md`
-- `.workflow/runtime/codex-control/promptpack.json`
+- `.codex/config.toml`
+- `.codex/hooks/*.js`
+- `.codex/hooks.json` after explicit enable
+- `.codex/agents/*.toml`
+- `.codex/raiola-policy.json`
+- `.agents/plugins/marketplace.json`
+- `plugins/raiola-codex-optimizer/.codex-plugin/plugin.json`
+- `.github/codex/prompts/review.md`
+- `.github/workflows/codex-review.yml`
 
 ## Why it matters
 
-The goal is to make Codex spend fewer tokens rediscovering repo structure, reduce repo-wide scans in monorepos, give frontend work a higher aesthetic baseline, and make deep review repeatable under parallel execution.
+The goal is to make Codex pleasant on large repos, complex tasks, and high-stakes changes by reducing rediscovery cost, making trust posture enforceable, and keeping review, closeout, and orchestration first-party.

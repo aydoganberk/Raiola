@@ -2,7 +2,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   assertWorkflowFiles,
-  ensureDir,
   fileCoveredByStagePath,
   getFieldValue,
   hashString,
@@ -10,12 +9,15 @@ const {
   normalizeStagePath,
   parseArgs,
   parseMilestoneTable,
-  read,
   resolveWorkflowRoot,
   toList,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  ensureDir,
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 const {
   advanceWave,
   loadRuntimeState,

@@ -6,10 +6,8 @@ const {
   buildPacketSnapshot,
   computeWindowStatus,
   currentBranch,
-  ensureDir,
   getFieldValue,
   parseArgs,
-  read,
   resolveWorkflowRoot,
   runEvidenceChecks,
   slugify,
@@ -17,6 +15,10 @@ const {
   validateValidationContract,
   workflowPaths,
 } = require('./common');
+const {
+  ensureDir,
+  readText: read,
+} = require('./io/files');
 
 function printHelp() {
   console.log(`

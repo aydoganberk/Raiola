@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require('node:fs');
+const path = require('node:path');
 const {
   bumpVersion,
   cutChangelogRelease,
@@ -12,6 +13,8 @@ const {
   writeGithubOutput,
   writeJson,
 } = require('./common');
+const { buildDoctorReport } = require('../workflow/doctor');
+const { resolveWorkflowRoot } = require('../workflow/common');
 
 function usage() {
   console.log(`Usage: node scripts/release/cut_release.js --bump patch|minor|major [options]
@@ -22,7 +25,24 @@ Options:
   --product-version <path>   Override scripts/workflow/product_version.js path
   --changelog <path>         Override CHANGELOG.md path
   --allow-empty              Allow releasing with an empty Unreleased section
+  --skip-doctor              Skip the source-repo doctor gate (for utility / fixture usage)
 `);
+}
+
+
+function shouldRunDoctorGate(args) {
+  return !args['skip-doctor']
+    && !args.package
+    && !args['product-version']
+    && !args.changelog;
+}
+
+function runDoctorGate(cwd) {
+  const report = buildDoctorReport(cwd, resolveWorkflowRoot(cwd));
+  if (report.failCount > 0) {
+    const failingChecks = report.checks.filter((item) => item.status === 'fail').slice(0, 5).map((item) => item.message).join(' | ');
+    throw new Error(`doctor gate failed (${report.failCount} fail(s)). Run rai doctor --strict before cutting a release. ${failingChecks}`);
+  }
 }
 
 function main() {
@@ -41,6 +61,10 @@ function main() {
   const productVersionPath = args['product-version'] || paths.productVersion;
   const changelogPath = args.changelog || paths.changelog;
   const releaseDate = args.date || new Date().toISOString().slice(0, 10);
+
+  if (shouldRunDoctorGate(args)) {
+    runDoctorGate(process.cwd());
+  }
 
   const pkg = readJson(packagePath);
   const currentVersion = String(pkg.version || '');

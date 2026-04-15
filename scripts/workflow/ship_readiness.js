@@ -10,6 +10,7 @@ Usage:
 
 Options:
   --root <path>       Workflow root. Defaults to active workstream root
+  --mode <value>      auto|review|audit-only
   --json              Print machine-readable output
   `);
 }
@@ -33,8 +34,11 @@ function main() {
   console.log('# SHIP READINESS\n');
   console.log(`- Verdict: \`${payload.verdict}\``);
   console.log(`- Score: \`${payload.score}\``);
+  console.log(`- Trust mode: \`${payload.trustMode}\``);
   console.log(`- Output: \`${payload.outputPathRelative}\``);
+  console.log(`- Release control: \`${payload.releaseControl?.artifacts?.markdown || 'n/a'}\``);
   console.log(`- Pending approvals: \`${payload.approvalPlan.pending.length}\``);
+  console.log(`- Ship blockers: \`${payload.releaseControl?.shipReadinessBoard?.shipBlockerCount || 0}\``);
 }
 
 if (require.main === module) {

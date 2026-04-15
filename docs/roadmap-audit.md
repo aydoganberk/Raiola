@@ -17,14 +17,14 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 - The latest local doctor result is `0 fail / 0 warn`.
 - The latest benchmark stayed under SLO with warm medians of `hud 69ms`, `next 60ms`, `doctor 48ms`, `health 50ms`, `map-codebase 59ms`, and `map-frontend 56ms`.
 - The measured roadmap audit now enforces `220` intent utterances, `26` review diff scenarios, and `12` frontend audit scenarios with intent top-1 accuracy `100%`, top-3 coverage `100%`, review pass-rate `100%`, and frontend pass-rate `100%`.
-- The roadmap audit now reflects the repo-local fallback behavior for the virtual `.codex` root, the `playwright` browser adapter fallback when Playwright is unavailable, and the canonical `POLICY.md` governance surface.
+- The roadmap audit now reflects the native `.codex/` layer, first-party GitHub review surfaces, the `playwright` browser adapter fallback when Playwright is unavailable, and the canonical `POLICY.md` governance surface.
 
 ## CE Matrix
 
 | Roadmap phase | Status | Evidence |
 | --- | --- | --- |
 | `CE0` Program freeze and baseline | complete | [`Roadmap.md`](../Roadmap.md), this audit doc, updated README/commands/architecture/performance docs |
-| `CE1` Safe Codex control plane | complete | `scripts/workflow/codex_control.js`, [`docs/codex-integration.md`](../docs/codex-integration.md), `.workflow/runtime/codex-control/*`, diff/doctor/rollback/sync/role scaffolding surfaces |
+| `CE1` Safe Codex control plane | complete | `scripts/workflow/codex_control.js`, [`docs/codex-integration.md`](../docs/codex-integration.md), native `.codex/*`, backup journals under `.workflow/runtime/codex-control/*`, diff/doctor/rollback/sync/role scaffolding surfaces |
 | `CE2` Role, prompt, skill catalog | complete | repo-derived roles in `codex_control.js`, generated role/prompt catalogs, install/remove skill flows |
 | `CE3` Daily Intent OS | complete | `scripts/workflow/do.js`, `note.js`, `thread.js`, `backlog.js`, `docs/workflow/BACKLOG.md`, `docs/workflow/THREADS/*` |
 | `CE4` Trust layer | complete | `scripts/workflow/questions.js`, `claims.js`, `secure_phase.js`, `docs/workflow/QUESTIONS.md`, `docs/workflow/CLAIMS.md`, `docs/workflow/SECURITY.md` |
@@ -44,7 +44,7 @@ This document cross-checks [`Roadmap.md`](../Roadmap.md) against the current rep
 
 ## Implementation Notes
 
-- `rai codex` uses a repo-local virtual `.codex` root and stores its generated mirror under `.workflow/runtime/codex-control/`. This keeps the flow rollback-safe inside the repo sandbox while preserving the Codex control-plane contract.
+- `rai codex` writes a real repo-local `.codex/` layer and keeps backup journals under `.workflow/runtime/codex-control/` so the flow stays rollback-safe without losing native Codex behavior.
 - `rai verify-browser --adapter playwright` now exposes the adapter surface directly. If Playwright is not installed in the repo, the command records a controlled fallback instead of silently failing.
 - `rai team run --adapter hybrid` now combines worktree and subagent packet workspaces, writes mailbox/timeline events, and emits patch bundles during collect.
 - `rai policy` and `rai approvals` now treat `docs/workflow/POLICY.md` as the canonical ledger and keep runtime JSON mirrors derived from that document.

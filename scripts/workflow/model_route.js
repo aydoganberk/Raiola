@@ -7,6 +7,7 @@ const {
   workflowPaths,
 } = require('./common');
 const { analyzeIntent, evaluateRoutePayload, readRouteHistory } = require('./intent_engine');
+const { logRoutingDecision, suggestTelemetryBias } = require('./routing_telemetry');
 
 function printHelp() {
   console.log(`
@@ -113,13 +114,14 @@ function buildRoutePayload(cwd, rootDir, options = {}) {
   const goal = String(options.goal || buildGoalFromPhase(phase)).trim();
   const intentAnalysis = analyzeIntent(cwd, rootDir, goal);
   const fallbackRoute = routeForPhase(phase);
+  const telemetryBias = suggestTelemetryBias(cwd, { phase, goal });
   const payload = {
     generatedAt: new Date().toISOString(),
     rootDir: path.relative(cwd, rootDir).replace(/\\/g, '/'),
     phase,
     goal,
-    recommendedPreset: intentAnalysis.profile.preset || fallbackRoute.preset,
-    rationale: intentAnalysis.profile.reasons?.[0] || fallbackRoute.rationale,
+    recommendedPreset: (telemetryBias?.recommendedPreset && intentAnalysis.confidence < 0.82) ? telemetryBias.recommendedPreset : (intentAnalysis.profile.preset || fallbackRoute.preset),
+    rationale: telemetryBias && intentAnalysis.confidence < 0.82 ? `${intentAnalysis.profile.reasons?.[0] || fallbackRoute.rationale} ${telemetryBias.reason}`.trim() : (intentAnalysis.profile.reasons?.[0] || fallbackRoute.rationale),
     why: {
       chosenCapability: intentAnalysis.chosenCapability.id,
       fallbackCapability: intentAnalysis.fallbackCapability.id,
@@ -132,7 +134,8 @@ function buildRoutePayload(cwd, rootDir, options = {}) {
       personas: intentAnalysis.personaSignals,
     },
     confidence: intentAnalysis.confidence,
-    recommendedCapability: intentAnalysis.chosenCapability.id,
+    recommendedCapability: (telemetryBias?.recommendedCapability && intentAnalysis.confidence < 0.72) ? telemetryBias.recommendedCapability : intentAnalysis.chosenCapability.id,
+    telemetryBias,
     verificationPlan: intentAnalysis.verificationPlan,
     suggestedCodexProfile: intentAnalysis.profile,
     routeEvaluation: intentAnalysis.evaluation,
@@ -165,6 +168,14 @@ function buildRoutePayload(cwd, rootDir, options = {}) {
     ...(cache.history || []),
   ].slice(0, 25);
   writeCache(cwd, cache);
+  logRoutingDecision(cwd, {
+    source: 'model_route',
+    phase: payload.phase,
+    goal: payload.goal,
+    recommendedCapability: payload.recommendedCapability,
+    recommendedPreset: payload.recommendedPreset,
+    confidence: payload.confidence,
+  });
 
   return {
     ...payload,
@@ -263,6 +274,9 @@ function main() {
   console.log(`- Confidence: \`${payload.confidence}\``);
   console.log(`- Rationale: \`${payload.rationale}\``);
   console.log(`- Cache: \`${payload.cachePath}\``);
+  if (payload.telemetryBias) {
+    console.log(`- Telemetry bias: capability=\`${payload.telemetryBias.recommendedCapability || 'n/a'}\` preset=\`${payload.telemetryBias.recommendedPreset || 'n/a'}\` examples=\`${payload.telemetryBias.totalExamples}\``);
+  }
   if (args.why) {
     console.log('\n## Why\n');
     for (const reason of payload.why.chosenReasons) {

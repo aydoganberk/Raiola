@@ -1,0 +1,4 @@
+name: raiola-large-repo-optimizer
+description: Large-repo optimization skill for shard planning, bounded subagents, worktrees, and repo-audit-first execution.
+version: 0.4.7
+entrypoint: SKILL.md

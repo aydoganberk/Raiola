@@ -4,10 +4,10 @@ const {
   extractSection,
   getFieldValue,
   parseArgs,
-  read,
   resolveWorkflowRoot,
   workflowPaths,
 } = require('./common');
+const { readText: read } = require('./io/files');
 const { buildNextPayload } = require('./next_step');
 const { writeRuntimeMarkdown } = require('./runtime_helpers');
 

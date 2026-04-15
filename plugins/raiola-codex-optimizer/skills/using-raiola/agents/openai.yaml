@@ -1,0 +1,4 @@
+name: using-raiola
+description: Meta-skill that decides when to stay lightweight and when to activate Raiola workflow.
+version: 0.4.7
+entrypoint: SKILL.md

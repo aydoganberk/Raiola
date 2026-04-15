@@ -2,7 +2,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const childProcess = require('node:child_process');
-const { ensureDir, safeArtifactToken, slugify } = require('../common');
+const { ensureDir } = require('../common');
+const { safeArtifactToken, slugify } = require('../common_identity');
 const {
   buildFailureResult,
   inspectCodexWorker,
@@ -36,23 +37,34 @@ function canUseGitWorktree(cwd) {
   return result.status === 0;
 }
 
+function removeExistingWorkspace(cwd, workspacePath) {
+  if (!fs.existsSync(workspacePath)) {
+    return false;
+  }
+  const removal = run('git', ['worktree', 'remove', '--force', workspacePath], cwd);
+  if (removal.status !== 0 && fs.existsSync(workspacePath)) {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+  return true;
+}
+
 function ensureGitWorkspace(cwd, workspacePath) {
   ensureDir(path.dirname(workspacePath));
-  if (fs.existsSync(workspacePath)) {
-    return {
-      mode: 'git-worktree',
-      reused: true,
-    };
+  const reused = removeExistingWorkspace(cwd, workspacePath);
+  const head = run('git', ['rev-parse', 'HEAD'], cwd);
+  if (head.status !== 0) {
+    throw new Error(head.stderr || head.stdout || 'git rev-parse HEAD failed before workspace provisioning');
   }
-
-  const result = run('git', ['worktree', 'add', '--detach', workspacePath], cwd);
+  const baseCommit = String(head.stdout || '').trim();
+  const result = run('git', ['worktree', 'add', '--detach', workspacePath, baseCommit], cwd);
   if (result.status !== 0) {
     throw new Error(result.stderr || result.stdout || `git worktree add failed for ${workspacePath}`);
   }
 
   return {
     mode: 'git-worktree',
-    reused: false,
+    reused,
+    baseCommit,
   };
 }
 
@@ -168,6 +180,7 @@ function dispatch(state, runtimeState) {
       path: workspacePath,
       mode: provisioning.mode,
       reused: provisioning.reused,
+      baseCommit: provisioning.baseCommit || null,
       dispatchedAt: new Date().toISOString(),
     };
     if (supportsCodexExec(nextState)) {

@@ -3,16 +3,18 @@ const path = require('node:path');
 const childProcess = require('node:child_process');
 const {
   currentBranch,
-  ensureDir,
   getFieldValue,
   loadPreferences,
   parseArgs,
-  readIfExists,
   resolveWorkflowRoot,
   safeExec,
   slugify,
   workflowPaths,
 } = require('./common');
+const {
+  ensureDir,
+  readTextIfExists: readIfExists,
+} = require('./io/files');
 
 function printHelp() {
   console.log(`
@@ -28,6 +30,7 @@ Options:
   --milestone <name>    Optional milestone label used for branch/worktree naming
   --branch <name>       Optional explicit branch name
   --worktree <path>     Optional explicit worktree path
+  --link-node-modules   Symlink repo root node_modules into the worktree when present
   --dry-run             Preview without mutating git state
   --json                Print machine-readable output
   `);
@@ -139,6 +142,21 @@ function syncWorkflowFilesToWorktree(gitRoot, worktreePath, workflowRoot) {
   }
 }
 
+
+function linkSharedNodeModules(gitRoot, worktreePath) {
+  const sourcePath = path.join(gitRoot, 'node_modules');
+  const targetPath = path.join(worktreePath, 'node_modules');
+  if (!fs.existsSync(sourcePath) || fs.existsSync(targetPath)) {
+    return { linked: false, reason: fs.existsSync(sourcePath) ? 'target exists' : 'source missing' };
+  }
+  try {
+    fs.symlinkSync(sourcePath, targetPath, 'junction');
+    return { linked: true, targetPath };
+  } catch (error) {
+    return { linked: false, reason: error.message };
+  }
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help || args._.includes('help')) {
@@ -185,6 +203,7 @@ function main() {
     worktreePath,
     checkoutRoot: gitRoot || cwd,
     syncPerformed: false,
+    nodeModulesLink: null,
   };
 
   if (!gitRoot) {
@@ -245,6 +264,9 @@ function main() {
             : 'created_worktree_branch';
           payload.checkoutRoot = worktreePath;
           payload.syncPerformed = true;
+          if (args['link-node-modules'] || fs.existsSync(path.join(gitRoot, 'node_modules'))) {
+            payload.nodeModulesLink = linkSharedNodeModules(gitRoot, worktreePath);
+          }
         }
       }
     }
@@ -268,6 +290,9 @@ function main() {
   console.log(`- Checkout root: \`${payload.checkoutRoot}\``);
   if (payload.mode === 'worktree') {
     console.log(`- Worktree path: \`${payload.worktreePath}\``);
+  }
+  if (payload.nodeModulesLink) {
+    console.log(`- node_modules link: \`${payload.nodeModulesLink.linked ? 'linked' : payload.nodeModulesLink.reason || 'skipped'}\``);
   }
   if (payload.error) {
     console.log(`- Error: \`${payload.error}\``);

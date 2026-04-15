@@ -1,0 +1,4 @@
+name: raiola-review-closeout
+description: Review, verification, and ship-ready closeout discipline.
+version: 0.4.7
+entrypoint: SKILL.md

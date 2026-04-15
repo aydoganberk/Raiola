@@ -1,0 +1,4 @@
+name: raiola-native-operator
+description: Codex-first operator skill for native session shaping, slash flow, app-server/MCP choice, and trust-aware posture.
+version: 0.4.7
+entrypoint: SKILL.md

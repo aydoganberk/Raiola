@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raiola/setup-plan/v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "targetRepo",
+    "mode",
+    "compatibility",
+    "rollback"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raiola/setup-plan/v1"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "targetRepo": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string"
+    },
+    "compatibility": {
+      "type": "object"
+    },
+    "rollback": {
+      "type": "object"
+    },
+    "report": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

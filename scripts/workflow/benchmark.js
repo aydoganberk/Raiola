@@ -3,11 +3,13 @@ const os = require('node:os');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const { parseArgs } = require('./common');
+const { generatePolyglotFixture } = require('./perf/polyglot_fixture');
 
 const NODE_BINARY = process.execPath;
 
 const COMMANDS = {
   launch: [NODE_BINARY, ['scripts/workflow/launch.js', '--json']],
+  start: [NODE_BINARY, ['scripts/workflow/start.js', '--goal', 'land the next safe slice', '--json']],
   hud: [NODE_BINARY, ['scripts/workflow/hud.js', '--compact']],
   manager: [NODE_BINARY, ['scripts/workflow/manager.js', '--json']],
   next: [NODE_BINARY, ['scripts/workflow/next_step.js', '--json']],
@@ -16,11 +18,16 @@ const COMMANDS = {
   health: [NODE_BINARY, ['scripts/workflow/health.js', '--strict']],
   'map-codebase': [NODE_BINARY, ['scripts/workflow/map_codebase.js', '--compact']],
   'map-frontend': [NODE_BINARY, ['scripts/workflow/map_frontend.js', '--compact']],
+  'package-graph': [NODE_BINARY, ['scripts/workflow/package_graph.js', '--json']],
+  'workspace-impact': [NODE_BINARY, ['scripts/workflow/workspace_impact.js', '--json']],
+  'codex-operator': [NODE_BINARY, ['scripts/workflow/codex_control.js', 'operator', '--goal', 'stabilize polyglot monorepo workflow in Codex', '--json']],
+  'hook-policy': [NODE_BINARY, ['-e', "const cp=require('node:child_process'); const payload=JSON.stringify({cwd:process.cwd(), tool_input:{command:'npm run test'}}); const result=cp.spawnSync(process.execPath,['.codex/hooks/pre_tool_use_policy.js'],{cwd:process.cwd(),input:payload,encoding:'utf8',stdio:['pipe','pipe','pipe']}); if (result.stdout) process.stdout.write(result.stdout); if (result.stderr) process.stderr.write(result.stderr); process.exit(result.status ?? 0);"]],
   'codex-contextpack': [NODE_BINARY, ['scripts/workflow/codex_control.js', 'contextpack', '--goal', 'review the current diff', '--json']],
   'codex-promptpack': [NODE_BINARY, ['scripts/workflow/codex_control.js', 'promptpack', '--goal', 'review the current diff', '--json']],
 };
 const DEFAULT_SLO_MS = Object.freeze({
   launch: 800,
+  start: 2600,
   hud: 300,
   manager: 400,
   next: 500,
@@ -29,9 +36,13 @@ const DEFAULT_SLO_MS = Object.freeze({
   health: 1000,
   'map-codebase': 2000,
   'map-frontend': 2000,
+  'package-graph': 1200,
+  'workspace-impact': 1500,
+  'codex-operator': 1800,
+  'hook-policy': 250,
   'codex-contextpack': 1500,
   'codex-promptpack': 1800,
-});
+});;
 
 function printHelp() {
   console.log(`
@@ -42,8 +53,9 @@ Usage:
 
 Options:
   --target <path>        Benchmark target. Defaults to current working directory
-  --fixture <name>       small|medium|large benchmark fixture
-  --commands <a,b,c>     Commands to benchmark. Defaults to launch,hud,manager,next,next-prompt,doctor,health,map-codebase,map-frontend,codex-contextpack,codex-promptpack
+  --fixture <name>       small|medium|large|polyglot|polyglot-large benchmark fixture
+  --commands <a,b,c>     Commands to benchmark. Defaults to launch,start,hud,manager,next,next-prompt,doctor,health,map-codebase,map-frontend,package-graph,workspace-impact,codex-operator,hook-policy,codex-contextpack,codex-promptpack
+  --shared-package-count Number of shared packages when using a generated polyglot fixture
   --runs <n>             Warm run count. Defaults to 3
   --assert-slo           Exit non-zero if any selected command misses its SLO threshold
   --thresholds <spec>    Override SLOs, e.g. hud=300,next=500,doctor=1000
@@ -112,12 +124,17 @@ function runCommand(targetRepo, label, binary, args) {
     },
   });
   const ended = process.hrtime.bigint();
-  if (result.status !== 0) {
-    throw new Error(result.stderr || result.stdout || `${label} failed`);
+  if (result.error) {
+    throw result.error;
   }
   return {
     durationMs: Number((ended - started) / BigInt(1e6)),
     metrics: readPerfMetrics(targetRepo),
+    exitCode: Number.isInteger(result.status) ? result.status : null,
+    signal: result.signal || null,
+    success: result.status === 0 && !result.signal,
+    stdout: result.stdout || '',
+    stderr: result.stderr || '',
   };
 }
 
@@ -142,12 +159,23 @@ function fixtureDirectory(fixtureName) {
   return mapping[normalized] || null;
 }
 
-function prepareFixtureRepo(fixtureName) {
-  const sourceDir = fixtureDirectory(fixtureName);
+function prepareFixtureRepo(fixtureName, options = {}) {
+  const normalized = String(fixtureName || '').trim().toLowerCase();
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `rai-benchmark-${normalized || 'fixture'}-`));
+  const explicitSharedPackageCount = Number(options.sharedPackageCount || 0);
+  if (normalized === 'polyglot' || normalized === 'polyglot-large') {
+    const sharedPackageCount = explicitSharedPackageCount > 0
+      ? explicitSharedPackageCount
+      : normalized === 'polyglot-large'
+        ? 160
+        : 18;
+    generatePolyglotFixture(tempDir, { sharedPackageCount });
+    return tempDir;
+  }
+  const sourceDir = fixtureDirectory(normalized);
   if (!sourceDir || !fs.existsSync(sourceDir)) {
     throw new Error(`Unknown benchmark fixture: ${fixtureName}`);
   }
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `rai-benchmark-${fixtureName}-`));
   fs.cpSync(sourceDir, tempDir, { recursive: true });
   return tempDir;
 }
@@ -168,12 +196,12 @@ function main() {
   }
 
   const targetRepo = args.fixture
-    ? prepareFixtureRepo(args.fixture)
+    ? prepareFixtureRepo(args.fixture, { sharedPackageCount: args['shared-package-count'] })
     : path.resolve(process.cwd(), String(args.target || '.'));
   const runs = Math.max(1, Number(args.runs || 3));
   const assertSlo = Boolean(args['assert-slo']);
   const thresholds = parseThresholds(args.thresholds);
-  const selectedCommands = String(args.commands || 'launch,hud,manager,next,next-prompt,doctor,health,map-codebase,map-frontend,codex-contextpack,codex-promptpack')
+  const selectedCommands = String(args.commands || 'launch,start,hud,manager,next,next-prompt,doctor,health,map-codebase,map-frontend,package-graph,workspace-impact,codex-operator,hook-policy,codex-contextpack,codex-promptpack')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
@@ -199,6 +227,8 @@ function main() {
       coldMs: cold.durationMs,
       warmMedianMs: median(warmRuns.map((item) => item.durationMs)),
       lastMetrics: warmRuns[warmRuns.length - 1]?.metrics || cold.metrics,
+      exitCode: warmRuns[warmRuns.length - 1]?.exitCode ?? cold.exitCode,
+      success: warmRuns.every((item) => item.success) && cold.success,
     });
   }
 
@@ -207,7 +237,7 @@ function main() {
       command: result.command,
       thresholdMs: thresholds[result.command],
       warmMedianMs: result.warmMedianMs,
-      passed: result.warmMedianMs <= thresholds[result.command],
+      passed: result.warmMedianMs <= thresholds[result.command] && result.success !== false,
     }))
     .filter((item) => !item.passed);
 
@@ -215,6 +245,9 @@ function main() {
     generatedAt: new Date().toISOString(),
     targetRepo,
     fixture: args.fixture ? String(args.fixture) : null,
+    fixtureOptions: args.fixture
+      ? { sharedPackageCount: Number(args['shared-package-count'] || 0) || (String(args.fixture).toLowerCase() === 'polyglot-large' ? 160 : String(args.fixture).toLowerCase() === 'polyglot' ? 18 : null) }
+      : null,
     runs,
     results,
     slo: {

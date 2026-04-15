@@ -1,96 +1,226 @@
+const fs = require('node:fs');
 const path = require('node:path');
 const { parseArgs } = require('./common');
-const { readJsonFile, relativePath, writeJsonFile } = require('./roadmap_os');
+const { relativePath } = require('./roadmap_os');
+const {
+  buildConfigSpec,
+  hookConfigObject,
+  renderConfigToml,
+  resolveCodexHooksEnabled,
+  writeHookAssets,
+  writeHookRegistration,
+} = require('./codex_native');
 
 const DEFAULT_HOOKS = Object.freeze({
-  events: [
-    'session_start',
-    'question_needed',
-    'verify_failed',
-    'phase_complete',
-    'session_idle',
-    'session_end',
-  ],
-  enabled: false,
+  hooks: hookConfigObject().hooks,
+  generatedAt: null,
 });
 
+function codexRoot(cwd) {
+  return path.join(cwd, '.codex');
+}
+
 function hooksPath(cwd) {
-  return path.join(cwd, '.workflow', 'runtime', 'hooks', 'config.json');
+  return path.join(codexRoot(cwd), 'hooks.json');
+}
+
+function configPath(cwd) {
+  return path.join(codexRoot(cwd), 'config.toml');
+}
+
+function registrationPresent(cwd) {
+  return fs.existsSync(hooksPath(cwd));
 }
 
 function shippedHookAssets(cwd) {
-  const root = process.cwd() === cwd ? cwd : path.resolve(cwd);
-  const hookConfig = path.join(root, 'hooks', 'hooks.json');
-  const sessionStart = path.join(root, 'hooks', 'session-start.sh');
-  const metaSkill = path.join(root, 'skills', 'using-raiola', 'SKILL.md');
+  const root = path.resolve(cwd);
+  const hookConfig = path.join(root, '.codex', 'hooks.json');
+  const hookDir = path.join(root, '.codex', 'hooks');
+  const hookFiles = [
+    path.join(hookDir, 'common.js'),
+    path.join(hookDir, 'session_start.js'),
+    path.join(hookDir, 'pre_tool_use_policy.js'),
+    path.join(hookDir, 'post_tool_use_review.js'),
+    path.join(hookDir, 'user_prompt_submit.js'),
+    path.join(hookDir, 'stop_continue.js'),
+  ];
+  const metaSkillCandidates = [
+    path.join(root, 'skills', 'using-raiola', 'SKILL.md'),
+    path.join(root, '.agents', 'skills', 'raiola', 'SKILL.md'),
+  ];
+  const metaSkill = metaSkillCandidates.find((filePath) => fs.existsSync(filePath)) || metaSkillCandidates[0];
   return {
     hookConfig,
-    sessionStart,
+    hookFiles,
+    sessionStart: path.join(hookDir, 'session_start.js'),
+    preTool: path.join(hookDir, 'pre_tool_use_policy.js'),
     metaSkill,
-    present: [
-      hookConfig,
-      sessionStart,
-      metaSkill,
-    ].every((filePath) => require('node:fs').existsSync(filePath)),
+    present: hookFiles.every((filePath) => fs.existsSync(filePath)) && metaSkillCandidates.some((filePath) => fs.existsSync(filePath)),
   };
 }
 
-function loadHooks(cwd) {
-  const hooks = readJsonFile(hooksPath(cwd), null);
-  if (hooks) {
-    return hooks;
+function readHooks(cwd) {
+  const filePath = hooksPath(cwd);
+  if (!fs.existsSync(filePath)) {
+    return null;
   }
-  const seeded = {
-    ...DEFAULT_HOOKS,
-    generatedAt: new Date().toISOString(),
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function readHooksEnabled(cwd) {
+  return Boolean(resolveCodexHooksEnabled(cwd, {}));
+}
+
+function writeConfigWithHooksState(cwd, enabled) {
+  const filePath = configPath(cwd);
+  const hooksEnabled = Boolean(enabled);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+  if (!fs.existsSync(filePath)) {
+    const spec = buildConfigSpec(cwd, { repo: true, _: ['setup'], hooksEnabled });
+    fs.writeFileSync(filePath, renderConfigToml(spec));
+    return filePath;
+  }
+
+  let content = fs.readFileSync(filePath, 'utf8');
+  if (/^codex_hooks\s*=\s*(true|false)/m.test(content)) {
+    content = content.replace(/^codex_hooks\s*=\s*(true|false)/m, `codex_hooks = ${hooksEnabled ? 'true' : 'false'}`);
+  } else if (/^\[features\]$/m.test(content)) {
+    content = content.replace(/^\[features\]$/m, `[features]\ncodex_hooks = ${hooksEnabled ? 'true' : 'false'}`);
+  } else {
+    content = `${String(content || '').trimEnd()}\n\n[features]\ncodex_hooks = ${hooksEnabled ? 'true' : 'false'}\n`;
+  }
+  fs.writeFileSync(filePath, content.endsWith('\n') ? content : `${content}\n`);
+  return filePath;
+}
+
+function seedHookScripts(cwd) {
+  fs.mkdirSync(codexRoot(cwd), { recursive: true });
+  return writeHookAssets(codexRoot(cwd), { register: false });
+}
+
+function enableHooks(cwd) {
+  seedHookScripts(cwd);
+  writeHookRegistration(codexRoot(cwd));
+  writeConfigWithHooksState(cwd, true);
+}
+
+function disableHooks(cwd) {
+  seedHookScripts(cwd);
+  if (fs.existsSync(hooksPath(cwd))) {
+    fs.rmSync(hooksPath(cwd), { force: true });
+  }
+  writeConfigWithHooksState(cwd, false);
+}
+
+function statusPayload(cwd, action, options = {}) {
+  const shipped = shippedHookAssets(cwd);
+  const registeredHooks = readHooks(cwd);
+  const hooks = options.includeHooks ? (registeredHooks || { ...DEFAULT_HOOKS }) : undefined;
+  const enabled = readHooksEnabled(cwd);
+  const registered = registrationPresent(cwd);
+  const hookEvents = Object.keys((registeredHooks && registeredHooks.hooks) || {}).length;
+  return {
+    action,
+    file: relativePath(cwd, hooksPath(cwd)),
+    configFile: relativePath(cwd, configPath(cwd)),
+    hooksEnabled: enabled,
+    registrationPresent: registered,
+    hookEvents,
+    shippedHookAssets: {
+      present: shipped.present,
+      hookConfig: relativePath(cwd, shipped.hookConfig),
+      sessionStart: relativePath(cwd, shipped.sessionStart),
+      preTool: relativePath(cwd, shipped.preTool),
+      metaSkill: relativePath(cwd, shipped.metaSkill),
+      hookFiles: shipped.hookFiles.map((filePath) => relativePath(cwd, filePath)),
+    },
+    ...(options.includeHooks ? { hooks } : {}),
   };
-  writeJsonFile(hooksPath(cwd), seeded);
-  return seeded;
+}
+
+function validatePayload(cwd) {
+  const payload = statusPayload(cwd, 'validate');
+  const registrationRequired = payload.hooksEnabled;
+  const rawRegistration = fs.existsSync(hooksPath(cwd))
+    ? fs.readFileSync(hooksPath(cwd), 'utf8')
+    : '';
+  let registrationValid = !payload.registrationPresent;
+  if (payload.registrationPresent) {
+    try {
+      JSON.parse(rawRegistration);
+      registrationValid = true;
+    } catch {
+      registrationValid = false;
+    }
+  }
+  return {
+    ...payload,
+    registrationRequired,
+    registrationValid,
+    verdict: payload.shippedHookAssets.present && registrationValid && (!registrationRequired || payload.registrationPresent)
+      ? 'pass'
+      : payload.shippedHookAssets.present
+        ? 'warn'
+        : 'fail',
+  };
+}
+
+function printHelp() {
+  console.log('Usage: node scripts/workflow/hooks.js status|enable|disable|validate|list [--json]');
 }
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
-  const action = args._[0] || 'list';
+  const action = args._[0] || 'status';
   if (args.help || action === 'help') {
-    console.log('Usage: node scripts/workflow/hooks.js init|validate|list [--json]');
+    printHelp();
     return;
   }
+
   const cwd = process.cwd();
-  const hooks = loadHooks(cwd);
-  const shipped = shippedHookAssets(cwd);
-  const payload = action === 'validate'
-    ? {
-      action,
-      file: relativePath(cwd, hooksPath(cwd)),
-      verdict: hooks.enabled ? 'pass' : 'pass',
-      eventCount: hooks.events.length,
-      enabled: hooks.enabled,
-      shippedHookAssets: {
-        present: shipped.present,
-        hookConfig: relativePath(cwd, shipped.hookConfig),
-        sessionStart: relativePath(cwd, shipped.sessionStart),
-        metaSkill: relativePath(cwd, shipped.metaSkill),
-      },
-    }
-    : {
-      action: action === 'init' ? 'init' : 'list',
-      file: relativePath(cwd, hooksPath(cwd)),
-      hooks,
-      shippedHookAssets: {
-        present: shipped.present,
-        hookConfig: relativePath(cwd, shipped.hookConfig),
-        sessionStart: relativePath(cwd, shipped.sessionStart),
-        metaSkill: relativePath(cwd, shipped.metaSkill),
-      },
-    };
+  let payload;
+  switch (action) {
+    case 'status':
+      payload = statusPayload(cwd, 'status');
+      break;
+    case 'list':
+      payload = statusPayload(cwd, 'list', { includeHooks: true });
+      break;
+    case 'init':
+    case 'enable':
+      enableHooks(cwd);
+      payload = statusPayload(cwd, action === 'init' ? 'init' : 'enable', { includeHooks: true });
+      break;
+    case 'disable':
+      disableHooks(cwd);
+      payload = statusPayload(cwd, 'disable', { includeHooks: true });
+      break;
+    case 'validate':
+      payload = validatePayload(cwd);
+      break;
+    default:
+      throw new Error(`Unknown hooks action: ${action}`);
+  }
+
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
     return;
   }
+
   console.log('# HOOKS\n');
-  console.log(`- File: \`${payload.file}\``);
-  console.log(`- Enabled: \`${hooks.enabled ? 'yes' : 'no'}\``);
-  console.log(`- Shipped session-start assets: \`${shipped.present ? 'present' : 'missing'}\``);
+  console.log(`- Registration: \`${payload.registrationPresent ? 'present' : 'absent'}\``);
+  console.log(`- Hooks enabled: \`${payload.hooksEnabled ? 'yes' : 'no'}\``);
+  console.log(`- Native hook assets: \`${payload.shippedHookAssets.present ? 'present' : 'missing'}\``);
+  console.log(`- Config: \`${payload.configFile}\``);
+  console.log(`- Registration file: \`${payload.file}\``);
+  if (payload.action === 'validate') {
+    console.log(`- Verdict: \`${payload.verdict}\``);
+  }
 }
 
 if (require.main === module) {

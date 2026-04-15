@@ -1,0 +1,128 @@
+{
+  "generatedAt": "2026-04-14T15:52:17.995Z",
+  "proofType": "repo-proof",
+  "repoRoot": "/mnt/data/repo/tests/fixtures/repo_proof_corpus/astral-uv",
+  "repoRelative": "tests/fixtures/repo_proof_corpus/astral-uv",
+  "invokedFrom": "/mnt/data/repo",
+  "invokedFromRelative": ".",
+  "externalSnapshot": true,
+  "writeArtifacts": false,
+  "coverage": [
+    "monorepo"
+  ],
+  "repoTruth": {
+    "workspaceCount": 1,
+    "ecosystems": [
+      "rust"
+    ],
+    "markers": [
+      "rust",
+      "python"
+    ],
+    "ownershipSource": null,
+    "sampleWorkspaces": [
+      {
+        "root": "crates/uv",
+        "ecosystem": "rust",
+        "owners": [],
+        "sources": [
+          "manifest-scan"
+        ]
+      }
+    ]
+  },
+  "apiSurface": {
+    "endpointCount": 0,
+    "middlewareCount": 0,
+    "mountCount": 0,
+    "frameworks": [],
+    "authSignals": [],
+    "dataStores": [],
+    "artifacts": null
+  },
+  "frontend": {
+    "active": false,
+    "rootRelative": "docs/workflow",
+    "framework": "Custom",
+    "routing": "Custom Routing",
+    "productSurface": "Web App",
+    "browserLane": "on-demand",
+    "hasProofHarness": false,
+    "componentReuseVerdict": "thin",
+    "artifacts": null
+  },
+  "audit": {
+    "goal": "produce a local proof pack for this repository snapshot",
+    "repoShape": "monorepo",
+    "stackPack": "Node monorepo",
+    "healthVerdict": "at_risk",
+    "healthScore": 62,
+    "verifiedCount": 3,
+    "probableCount": 0,
+    "heuristicCount": 2,
+    "topFindings": [
+      {
+        "bucket": "verified",
+        "title": "Repository has executable code but no automated tests",
+        "severity": "high",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "Repository has no CI workflow",
+        "severity": "medium",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "Repository has no stable verify entrypoint",
+        "severity": "medium",
+        "why": ""
+      },
+      {
+        "bucket": "heuristic",
+        "title": "Monorepo has no repo-level CI workflow",
+        "severity": "low",
+        "why": ""
+      },
+      {
+        "bucket": "heuristic",
+        "title": "Possible orphan workspace",
+        "severity": "low",
+        "why": ""
+      }
+    ],
+    "artifacts": null,
+    "controlPlaneArtifacts": {
+      "findingsRegistry": ".workflow/reports/findings-registry.json",
+      "correctionControl": ".workflow/reports/correction-control.json",
+      "correctionControlMarkdown": ".workflow/reports/correction-control.md"
+    }
+  },
+  "verdict": {
+    "overallConfidence": "medium",
+    "score": 2,
+    "maxScore": 5,
+    "trustableFindings": [
+      "Workspace graph reports 1 root",
+      "Detected ecosystems: rust",
+      "Verified finding: Repository has executable code but no automated tests",
+      "Verified finding: Repository has no CI workflow",
+      "Verified finding: Repository has no stable verify entrypoint"
+    ],
+    "manualVerify": [
+      "Cross-workspace boundaries, owners, and release sequencing",
+      "Deployment-time integrations that are invisible in a read-only snapshot"
+    ],
+    "knownLimitations": [
+      "Static route scan may miss runtime-generated endpoints or framework-specific mounts.",
+      "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+    ]
+  },
+  "artifacts": null,
+  "recommendedNextLanes": [
+    "rai audit-repo --repo tests/fixtures/repo_proof_corpus/astral-uv --goal \"produce a local proof pack for this repository snapshot\" --json",
+    "cd tests/fixtures/repo_proof_corpus/astral-uv && rai workspace-impact --json",
+    "cd tests/fixtures/repo_proof_corpus/astral-uv && rai start recommend --goal \"produce a local proof pack for this repository snapshot\""
+  ]
+}

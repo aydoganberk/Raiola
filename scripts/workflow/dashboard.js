@@ -4,6 +4,8 @@ const childProcess = require('node:child_process');
 const { parseArgs, resolveWorkflowRoot, listGitChanges } = require('./common');
 const { buildBaseState } = require('./state_surface');
 const { listLatestEntries, readJsonIfExists, runtimePath } = require('./runtime_helpers');
+const { buildOperatingCenterPayload } = require('./operate');
+const { buildSupervisorPayload, renderTui } = require('./runtime_supervisor');
 
 function printHelp() {
   console.log(`
@@ -15,6 +17,8 @@ Usage:
 Options:
   --root <path>       Workflow root. Defaults to active workstream root
   --open              Open the generated local dashboard in the default browser
+  --refresh-planes    Refresh the unified operating-center surface before reading dashboard state
+  --tui               Render a terminal control room summary instead of HTML metadata
   --json              Print machine-readable output
   `);
 }
@@ -60,6 +64,10 @@ function compactList(items, limit = 8) {
   return [...new Set((items || []).map((item) => String(item || '').trim()).filter(Boolean))].slice(0, limit);
 }
 
+function compactValueList(items, limit = 8, accessor = (item) => item) {
+  return compactList((items || []).map((item) => accessor(item)).filter(Boolean), limit);
+}
+
 function buildQuickActions(payload) {
   const actions = [];
   const pushAction = (group, label, command, reason, tone = 'neutral') => {
@@ -68,6 +76,74 @@ function buildQuickActions(payload) {
     }
     actions.push({ group, label, command, reason, tone });
   };
+
+  if (payload.startPlan?.entryCommand) {
+    pushAction('bundle', 'Open structured start bundle', payload.startPlan.entryCommand, 'The latest start plan grouped overlapping commands into one operator entry.', 'good');
+  } else if (payload.route?.commandPlan?.recommendedExpandedStartCommand || payload.route?.commandPlan?.recommendedStartCommand) {
+    pushAction(
+      'bundle',
+      'Open structured start bundle',
+      payload.route.commandPlan.recommendedExpandedStartCommand || payload.route.commandPlan.recommendedStartCommand,
+      'Route planning suggests a packaged start bundle for this work.',
+      'good',
+    );
+  }
+
+  const frontendStart = payload.startPlan?.frontend || payload.route?.frontendStart || null;
+  const controlPlane = payload.controlPlane || {};
+  const operatingCenter = payload.operatingCenter || {};
+  const releaseControl = payload.releaseControl || {};
+  const trustCenter = payload.trustCenter || {};
+  const changeControl = payload.changeControl || {};
+  if (frontendStart?.workflowIntent?.lane === 'refactor') {
+    pushAction('frontend', 'Map shared components', 'rai component-map --json', 'Frontend refactor lane benefits from an explicit component inventory.', 'good');
+  }
+  if ((frontendStart?.suggestedAddOns || []).includes('surface')) {
+    pushAction('frontend', 'Expand surface inventory', 'rai page-blueprint --json', 'Surface add-on is recommended for this UI lane.', 'neutral');
+  }
+  if ((frontendStart?.suggestedAddOns || []).includes('design-system')) {
+    pushAction('frontend', 'Align design system', 'rai design-debt --json', 'Design-system add-on is recommended for this UI lane.', 'warn');
+  }
+  if ((frontendStart?.suggestedAddOns || []).includes('state')) {
+    pushAction('frontend', 'Map UX states', 'rai state-atlas --json', 'State add-on is recommended for this UI lane.', 'warn');
+  }
+  if (frontendStart?.workflowIntent?.lane === 'ship-readiness') {
+    pushAction('frontend', 'Run UI release gate', 'rai ship-readiness', 'Frontend ship-readiness lanes should keep the release gate visible.', 'risk');
+    pushAction('frontend', 'Run browser signoff', 'rai verify-browser --url http://localhost:3000 --json', 'Browser proof is part of the selected frontend closeout lane.', 'warn');
+  }
+
+  if (operatingCenter.primaryCommand) {
+    pushAction('operate', `Open ${operatingCenter.activePlane?.title || 'active plane'}`, operatingCenter.primaryCommand, `Operating Center ranked ${operatingCenter.activePlane?.title || 'the current plane'} first.`, operatingCenter.verdict === 'action-required' ? 'risk' : operatingCenter.verdict === 'attention-required' ? 'warn' : 'good');
+  }
+  if (operatingCenter.operatorSequence?.[0]?.command) {
+    pushAction('operate', 'Refresh the operating center', 'rai operate --refresh --json', 'Refresh the ranked plane board and publish surface in one pass.', 'neutral');
+  }
+
+  if (controlPlane.correctionBoard?.recommendedStarterCommand) {
+    pushAction('correction', 'Open correction bundle', controlPlane.correctionBoard.recommendedStarterCommand, 'The correction board already knows the fastest safe structured entry for the next wave.', 'good');
+  }
+  if (controlPlane.correctionPlanner?.recommendedNextCommand) {
+    pushAction('correction', 'Run next correction wave', controlPlane.correctionPlanner.recommendedNextCommand, 'Use the deduped findings registry and current wave plan instead of guessing the next fix command.', controlPlane.correctionBoard?.readyToPatchCount > 0 ? 'good' : 'warn');
+  }
+  if ((controlPlane.correctionBoard?.verifyQueue || [])[0]) {
+    pushAction('correction', 'Run correction verify queue', controlPlane.correctionBoard.verifyQueue[0], 'Correction planning already assembled a concrete verify queue for the current wave.', 'warn');
+  }
+  if (controlPlane.largeRepoBoard?.currentShard?.area) {
+    pushAction('scale', 'Open current shard', `rai start monorepo --goal ${JSON.stringify(`review ${controlPlane.largeRepoBoard.currentShard.area}`)} --with shard|ownership`, 'Large-repo board ranked a current shard so the next read/write wave is explicit.', 'neutral');
+  }
+
+  if (releaseControl.verifyStatusBoard?.primaryCommand) {
+    pushAction('trust', 'Run release verify queue', releaseControl.verifyStatusBoard.primaryCommand, 'Release control already narrowed the next verification command.', releaseControl.verifyStatusBoard.failedVerificationCount > 0 ? 'risk' : 'warn');
+  }
+  if (releaseControl.shipReadinessBoard?.releaseWave?.primaryCommand) {
+    pushAction('ship', 'Open release wave', releaseControl.shipReadinessBoard.releaseWave.primaryCommand, 'Ship-readiness and verify-work now share the same release-control wave.', releaseControl.shipReadinessBoard.shipBlockerCount > 0 ? 'risk' : 'good');
+  }
+  if (trustCenter.priorityActions?.[0]?.command) {
+    pushAction('trust', 'Clear trust-center priority action', trustCenter.priorityActions[0].command, trustCenter.priorityActions[0].reason || 'Trust Center already captured the next governance action.', trustCenter.verdict === 'hold' ? 'risk' : 'warn');
+  }
+  if (changeControl.nextActions?.[0]?.command) {
+    pushAction('ship', 'Follow the current change-control action', changeControl.nextActions[0].command, changeControl.nextActions[0].title || 'Change Control already has a concrete next step.', changeControl.verdict === 'blocked' ? 'risk' : 'warn');
+  }
 
   for (const command of payload.route?.verificationPlan || []) {
     pushAction('route', 'Run planned verification', command, 'Chosen route asked for this verification.', 'neutral');
@@ -123,11 +199,28 @@ function readDashboardData(cwd, rootDir) {
   const reviewConcerns = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'review-concerns.json')) || [];
   const shipReadiness = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'ship-readiness.json'));
   const verifyWork = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'verify-work.json'));
+  const releaseControl = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'release-control.json'));
   const benchmark = readJsonIfExists(path.join(cwd, '.workflow', 'benchmarks', 'latest.json'));
   const packetLatest = readJsonIfExists(path.join(cwd, '.workflow', 'packets', 'latest.json'));
   const packetContext = readJsonIfExists(path.join(cwd, '.workflow', 'packets', 'latest-context.json'));
   const frontendReview = readJsonIfExists(path.join(cwd, '.workflow', 'runtime', 'frontend-review.json'));
   const frontendSpec = readJsonIfExists(path.join(cwd, '.workflow', 'runtime', 'frontend-spec.json'));
+  const frontendProfile = readJsonIfExists(path.join(cwd, '.workflow', 'frontend-profile.json'));
+  const startPlan = readJsonIfExists(path.join(cwd, '.workflow', 'runtime', 'start-plan.json'));
+  const repoConfig = readJsonIfExists(path.join(cwd, '.workflow', 'runtime', 'repo-config.json'))
+    || readJsonIfExists(path.join(cwd, '.workflow', 'repo-config.json'))
+    || null;
+  const trustCenter = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'trust-center.json')) || null;
+  const changeControl = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'change-control.json')) || null;
+  const autopilot = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'autopilot.json')) || null;
+  const handoffOs = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'handoff-os.json')) || null;
+  const teamControlRoom = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'team-control-room.json')) || null;
+  const measurement = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'measurement.json')) || null;
+  const explainability = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'explainability.json')) || null;
+  const lifecycleCenter = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'lifecycle-center.json')) || null;
+  const operatingCenter = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'operating-center.json')) || null;
+  const findingsRegistry = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'findings-registry.json')) || null;
+  const correctionControl = readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'correction-control.json')) || null;
   const state = buildBaseState(cwd, rootDir);
   const browserArtifacts = readLatestArtifactMeta(cwd, 'browser', 6);
   const shellArtifacts = readLatestArtifactMeta(cwd, 'shell', 4);
@@ -156,11 +249,25 @@ function readDashboardData(cwd, rootDir) {
     },
     verifyWork,
     shipReadiness,
+    releaseControl,
     benchmark,
     packetLatest,
     packetContext,
     frontendReview,
     frontendSpec,
+    frontendProfile,
+    startPlan,
+    repoConfig,
+    trustCenter,
+    changeControl,
+    autopilot,
+    handoffOs,
+    teamControlRoom,
+    measurement,
+    explainability,
+    lifecycleCenter,
+    operatingCenter,
+    controlPlane: correctionControl || (findingsRegistry ? { findingsRegistry } : null),
     browserArtifacts,
     shellArtifacts,
     changedFiles,
@@ -209,17 +316,68 @@ function renderDashboardHtml(cwd, payload) {
   const routeProfile = route.suggestedCodexProfile || route.profile || {};
   const packetContext = payload.packetContext || {};
   const frontendReview = payload.frontendReview || {};
+  const frontendStart = payload.startPlan?.frontend || payload.route?.frontendStart || null;
+  const controlPlane = payload.controlPlane || {};
+  const releaseControl = payload.releaseControl || {};
+  const repoConfig = payload.repoConfig || {};
+  const trustCenter = payload.trustCenter || {};
+  const changeControl = payload.changeControl || {};
+  const autopilot = payload.autopilot || {};
+  const handoffOs = payload.handoffOs || {};
+  const teamControlRoom = payload.teamControlRoom || {};
+  const measurement = payload.measurement || {};
+  const explainability = payload.explainability || {};
+  const lifecycleCenter = payload.lifecycleCenter || {};
+  const operatingCenter = payload.operatingCenter || {};
+  const rawFrontendProfile = payload.frontendProfile || {};
+  const workflowBundle = payload.startPlan?.bundle || (route.commandPlan?.bundleHint
+    ? {
+      id: route.commandPlan.bundleHint.id || route.commandPlan?.bundleId || 'n/a',
+      label: route.commandPlan.bundleHint.label || route.commandPlan?.bundleLabel || 'n/a',
+    }
+    : {
+      id: route.commandPlan?.bundleId || 'n/a',
+      label: route.commandPlan?.bundleLabel || 'n/a',
+    });
+  const bundleStarterCommand = payload.startPlan?.entryCommand || route.commandPlan?.recommendedStartCommand || 'n/a';
+  const bundleExpandedStarter = payload.startPlan?.recommendedStarterCommand || route.commandPlan?.recommendedExpandedStartCommand || bundleStarterCommand;
+  const bundleFamilies = payload.startPlan?.commandFamilies || route.commandPlan?.commandFamilies || [];
+  const bundlePhases = payload.startPlan?.phases || route.commandPlan?.phases || [];
+  const bundleProfile = payload.startPlan?.profile || route.commandPlan?.startProfile || null;
+  const bundleAddOns = payload.startPlan?.addOns || route.commandPlan?.startAddOns || [];
+  const bundleRecommendedAddOns = payload.startPlan?.recommendedAddOns || route.commandPlan?.recommendedAddOns || route.commandPlan?.startAddOns || [];
+  const bundleCandidateBundles = payload.startPlan?.candidateBundles || route.commandPlan?.candidateBundles || [];
+  const bundleOperatorTips = payload.startPlan?.operatorTips || [];
+  const findingsRegistry = controlPlane.findingsRegistry || {};
+  const findingsSummary = findingsRegistry.summary || {};
+  const reviewControlRoom = controlPlane.reviewControlRoom || {};
+  const correctionBoard = controlPlane.correctionBoard || {};
+  const correctionPlanner = controlPlane.correctionPlanner || {};
+  const largeRepoBoard = controlPlane.largeRepoBoard || {};
+  const verifyStatusBoard = releaseControl.verifyStatusBoard || {};
+  const shipReadinessBoard = releaseControl.shipReadinessBoard || {};
+  const topHotspots = reviewControlRoom.topHotspots || [];
+  const correctionWaves = correctionPlanner.waves || [];
+  const rankedPackages = largeRepoBoard.rankedPackages || [];
+  const reviewFindingsCount = findingsSummary.open != null ? findingsSummary.open : payload.review.findings.length;
   const quickActions = buildQuickActions(payload);
   const summaryMetrics = [
     renderMetric('milestone', payload.state.workflow.milestone, 'neutral'),
     renderMetric('step', payload.state.workflow.step, 'neutral'),
     renderMetric('route', route.recommendedCapability || route.capability || 'n/a', 'neutral'),
+    renderMetric('bundle', workflowBundle.label || 'n/a', bundlePhases.length > 0 ? 'good' : 'neutral'),
+    renderMetric('bundle profile', bundleProfile?.label || 'n/a', bundleProfile?.id === 'deep' ? 'good' : bundleProfile?.id === 'speed' ? 'warn' : 'neutral'),
     renderMetric('confidence', route.confidence != null ? String(route.confidence) : 'n/a', route.confidence >= 0.8 ? 'good' : route.confidence >= 0.6 ? 'warn' : 'risk'),
     renderMetric('cost', routeProfile.costBudget || 'n/a', 'neutral'),
     renderMetric('risk', routeProfile.riskBudget || payload.shipReadiness?.verdict || 'n/a', payload.shipReadiness?.verdict === 'blocked' ? 'risk' : 'warn'),
-    renderMetric('review findings', String(payload.review.findings.length), payload.review.findings.length === 0 ? 'good' : 'warn'),
-    renderMetric('changed files', String(payload.changedFiles.length), payload.changedFiles.length <= 3 ? 'good' : 'warn'),
-    renderMetric('quick actions', String(quickActions.length), quickActions.length >= 1 ? 'good' : 'warn'),
+    renderMetric('open findings', String(reviewFindingsCount), reviewFindingsCount === 0 ? 'good' : 'warn'),
+    renderMetric('open blockers', String(reviewControlRoom.openBlockerCount || 0), (reviewControlRoom.openBlockerCount || 0) === 0 ? 'good' : 'risk'),
+    renderMetric('queued verify', String(verifyStatusBoard.queuedForVerifyCount || 0), (verifyStatusBoard.queuedForVerifyCount || 0) > 0 ? 'warn' : 'good'),
+    renderMetric('ship blockers', String(shipReadinessBoard.shipBlockerCount || 0), (shipReadinessBoard.shipBlockerCount || 0) === 0 ? 'good' : 'risk'),
+    renderMetric('ready to patch', String(correctionBoard.readyToPatchCount || 0), (correctionBoard.readyToPatchCount || 0) > 0 ? 'good' : 'neutral'),
+    renderMetric('ranked shards', String(rankedPackages.length), rankedPackages.length > 0 ? 'good' : 'neutral'),
+    renderMetric('operating verdict', operatingCenter.verdict || 'n/a', operatingCenter.verdict === 'action-required' ? 'risk' : operatingCenter.verdict === 'attention-required' ? 'warn' : operatingCenter.verdict ? 'good' : 'neutral'),
+    renderMetric('active plane', operatingCenter.activePlane?.title || 'n/a', operatingCenter.activePlane?.id ? 'good' : 'neutral'),
   ].join('');
 
   const benchmarkRows = (payload.benchmark?.results || []).slice(0, 6).map((result) => (
@@ -227,6 +385,7 @@ function renderDashboardHtml(cwd, payload) {
   )).join('');
 
   const verificationPlan = (route.verificationPlan || [])
+    .concat(verifyStatusBoard.verifyQueue || [])
     .concat(payload.shipReadiness?.nextActions || [])
     .slice(0, 8);
   const whyReasons = route.why?.chosenReasons || route.routeRationale || [];
@@ -235,6 +394,16 @@ function renderDashboardHtml(cwd, payload) {
   const frontendScorecard = frontendReview.scorecard || {};
   const accessibilityAudit = frontendReview.accessibilityAudit || frontendReview.accessibility || {};
   const journeyAudit = frontendReview.journeyAudit || frontendReview.journey || {};
+  const frontendFocus = compactList(frontendStart?.focusAreas || [], 4).join(', ') || 'none';
+  const frontendSuggestedAddOns = compactList(frontendStart?.suggestedAddOns || [], 6).join(', ') || 'none';
+  const frontendFramework = frontendStart?.framework || rawFrontendProfile.framework?.primary || 'n/a';
+  const frontendRouting = frontendStart?.routing || rawFrontendProfile.routing?.primary || rawFrontendProfile.routing?.label || 'n/a';
+  const frontendSurface = frontendStart?.productSurface || rawFrontendProfile.productSurface?.label || 'n/a';
+  const frontendUiSystem = frontendStart?.uiSystem || rawFrontendProfile.uiSystem?.primary || 'n/a';
+  const frontendCommandPack = frontendStart?.commandPack || rawFrontendProfile.recommendedCommandPack?.id || rawFrontendProfile.commandPack || 'n/a';
+  const frontendLane = frontendStart?.workflowIntent?.lane || 'n/a';
+  const repoConfigSummary = repoConfig.summary || repoConfig.repoConfig || {};
+  const repoConfigActive = repoConfig.activeConfig || repoConfig || {};
 
   return `<!doctype html>
 <html lang="en">
@@ -468,6 +637,7 @@ function renderDashboardHtml(cwd, payload) {
       transform: translateY(-1px);
       box-shadow: 0 10px 24px rgba(73, 49, 21, 0.1);
     }
+    .action-good { border-color: rgba(31, 122, 77, 0.28); }
     .action-risk { border-color: rgba(179, 38, 30, 0.28); }
     .action-warn { border-color: rgba(157, 104, 0, 0.28); }
     .action-group {
@@ -518,7 +688,7 @@ function renderDashboardHtml(cwd, payload) {
       <div>
         <span class="pill">workflow dashboard</span>
         <h1>${escapeHtml(payload.state.activeWorkstream.name)} control surface</h1>
-        <p>Local operator view backed by repo-native runtime state. It composes route confidence, verify evidence, review outputs, package heatmaps, and browser artifacts into a single resumable surface.</p>
+        <p>Local operator view backed by repo-native runtime state. It now composes route confidence, the review-correction control plane, findings registry, verify evidence, package heatmaps, and browser artifacts into a single resumable surface.</p>
         <div class="hero-meta">
           <span class="pill">phase ${escapeHtml(payload.state.workflow.phase)}</span>
           <span class="pill">step ${escapeHtml(payload.state.workflow.step)}</span>
@@ -539,6 +709,9 @@ function renderDashboardHtml(cwd, payload) {
             ['confidence', route.confidence != null ? route.confidence : 'n/a'],
             ['fallback', route.why?.fallbackCapability || route.fallbackCapability || 'n/a'],
             ['packet', packetSummary.primaryDoc || route.packet || 'n/a'],
+            ['bundle', workflowBundle.label || 'n/a'],
+            ['start', bundleStarterCommand || 'n/a'],
+            ['expanded start', bundleExpandedStarter || 'n/a'],
             ['ambiguity', route.why?.ambiguityClass || route.ambiguityClass || 'n/a'],
           ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No route data yet.')}
         </ul>
@@ -548,6 +721,45 @@ function renderDashboardHtml(cwd, payload) {
         <h2>Next Safe Actions</h2>
         <ul>
           ${renderList(verificationPlan, (item) => `<li><span>${escapeHtml(item)}</span><strong class="mono">queued</strong></li>`, 'No queued next actions yet.')}
+        </ul>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Workflow Bundle</h2>
+        <ul>
+          ${renderList([
+            ['bundle', workflowBundle.label || 'n/a'],
+            ['starter', bundleStarterCommand || 'n/a'],
+            ['expanded starter', bundleExpandedStarter || 'n/a'],
+            ['profile', bundleProfile ? `${bundleProfile.label} (${bundleProfile.reason || bundleProfile.id || 'auto'})` : 'n/a'],
+            ['add-ons', compactValueList(bundleAddOns, 6, (entry) => entry.id).join(', ') || 'none'],
+            ['recommended add-ons', compactValueList(bundleRecommendedAddOns, 6, (entry) => entry.id).join(', ') || 'none'],
+            ['candidate bundles', bundleCandidateBundles.length],
+            ['families', bundleFamilies.length],
+            ['phases', bundlePhases.length],
+            ['selection', payload.startPlan?.selectionReason || route.commandPlan?.bundleHint?.reason || 'route-derived'],
+          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No workflow bundle data yet.')}
+        </ul>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Bundled Phases</h2>
+        <ul>
+          ${renderList(bundlePhases.slice(0, 8), (phase) => `<li><span>${escapeHtml(phase.label)}</span><strong class="mono">${escapeHtml(phase.commands.length > 0 ? (phase.commands[0].cli || phase.commands[0].label || 'phase ready') : 'phase ready')}</strong></li>`, 'No structured bundle phases yet.')}
+        </ul>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Bundle Tips</h2>
+        <ul>
+          ${renderList(bundleOperatorTips.slice(0, 6), (item) => `<li><span>${escapeHtml(item)}</span><strong class="mono">tip</strong></li>`, 'No bundle tips recorded yet.')}
+        </ul>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Candidate Bundles</h2>
+        <ul>
+          ${renderList(bundleCandidateBundles.slice(0, 5), (candidate) => `<li><span>${escapeHtml(candidate.label || candidate.id || 'bundle')}</span><strong class="mono">${escapeHtml(`score ${candidate.score}`)}</strong></li>`, 'No alternate bundle candidates were recorded.')}
         </ul>
       </article>
 
@@ -561,6 +773,51 @@ function renderDashboardHtml(cwd, payload) {
               : '<div class="gallery-card"><div class="gallery-fallback">No quick actions yet</div><p>Run route, review, verify-work, or ship-readiness to populate command suggestions.</p></div>'}
           </div>
         </div>
+      </article>
+
+      <article class="panel span-4">
+        <h2>Review Control Room</h2>
+        <ul>
+          ${renderList([
+            ['active lane', reviewControlRoom.activeLane || 'n/a'],
+            ['open blockers', reviewControlRoom.openBlockerCount || 0],
+            ['high-confidence fixes', reviewControlRoom.highConfidenceFixes || 0],
+            ['risky refactors', reviewControlRoom.riskyRefactors || 0],
+            ['verify queue', (reviewControlRoom.verifyQueue || []).length],
+            ['re-review needed', (reviewControlRoom.rereviewNeededItems || []).length],
+            ['top hotspot', topHotspots[0]?.path || 'none'],
+          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No review control-room data yet.')}
+        </ul>
+      </article>
+
+      <article class="panel span-4">
+        <h2>Correction Board</h2>
+        <ul>
+          ${renderList([
+            ['ready to patch', correctionBoard.readyToPatchCount || 0],
+            ['needs human decision', correctionBoard.needsHumanDecisionCount || 0],
+            ['risky refactors', correctionBoard.riskyRefactorCount || 0],
+            ['patched / unverified', correctionBoard.patchedButUnverifiedCount || 0],
+            ['failed verification', correctionBoard.failedVerificationCount || 0],
+            ['closed findings', correctionBoard.closedFindingCount || 0],
+            ['starter', correctionBoard.recommendedStarterCommand || 'n/a'],
+          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No correction-board data yet.')}
+        </ul>
+      </article>
+
+      <article class="panel span-4">
+        <h2>Large Repo Board</h2>
+        <ul>
+          ${renderList([
+            ['repo shape', largeRepoBoard.repoShape || 'n/a'],
+            ['coverage depth', largeRepoBoard.coverageDepth || 'n/a'],
+            ['current shard', largeRepoBoard.currentShard?.area || 'none'],
+            ['next shard', largeRepoBoard.nextShard?.area || 'none'],
+            ['active wave', largeRepoBoard.correctionWaveProgress?.activeWave || 'none'],
+            ['ready in active wave', largeRepoBoard.correctionWaveProgress?.readyToPatchCount || 0],
+            ['ranked packages', rankedPackages.length],
+          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No large-repo board data yet.')}
+        </ul>
       </article>
 
       <article class="panel span-6">
@@ -589,9 +846,9 @@ function renderDashboardHtml(cwd, payload) {
       </article>
 
       <article class="panel span-4">
-        <h2>Package Heatmap</h2>
+        <h2>Review Hotspots</h2>
         <ul>
-          ${renderList(payload.review.packageHeatmap.slice(0, 6), (item) => `<li><span>${escapeHtml(item.package)}</span><strong class="mono">${escapeHtml(`${item.findings} findings / ${item.fileCount} files`)}</strong></li>`, 'No package heatmap yet.')}
+          ${renderList((topHotspots.length > 0 ? topHotspots : payload.review.packageHeatmap.slice(0, 6)), (item) => `<li><span>${escapeHtml(item.path || item.package || item.area || 'hotspot')}</span><strong class="mono">${escapeHtml(item.findings != null ? `${item.findings} findings / score ${item.severityScore || item.riskScore || 'n/a'}` : `${item.findings || 0} findings / ${item.fileCount || 0} files`)}</strong></li>`, 'No review hotspots yet.')}
         </ul>
       </article>
 
@@ -629,21 +886,39 @@ function renderDashboardHtml(cwd, payload) {
       </article>
 
       <article class="panel span-6">
-        <h2>Follow-up Tickets</h2>
+        <h2>Correction Waves</h2>
         <ul>
-          ${renderList(payload.review.followUps.slice(0, 8), (item) => `<li><span>${escapeHtml(item.title)}</span><strong class="mono">${escapeHtml(item.ownerLane)}</strong></li>`, 'No follow-up tickets were generated.')}
+          ${renderList((correctionWaves.length > 0 ? correctionWaves : payload.review.followUps.slice(0, 8)), (item) => `<li><span>${escapeHtml(item.label || item.title || 'wave')}</span><strong class="mono">${escapeHtml(item.itemCount != null ? `${item.itemCount} items / ${item.mode}` : (item.ownerLane || 'queued'))}</strong></li>`, 'No correction waves were generated yet.')}
         </ul>
       </article>
 
       <article class="panel span-6">
-        <h2>Traceability</h2>
+        <h2>Ranked Packages</h2>
+        <ul>
+          ${renderList((rankedPackages.length > 0 ? rankedPackages.slice(0, 8) : [
+            { area: 'validation rows', detail: payload.review.traceability?.validationRows?.length || 0 },
+            { area: 'linked rows', detail: payload.review.traceability?.linkedCount || 0 },
+            { area: 'unlinked rows', detail: payload.review.traceability?.unlinkedCount || 0 },
+            { area: 'unmapped files', detail: payload.review.traceability?.unmappedFiles?.length || 0 },
+          ]), (item) => `<li><span>${escapeHtml(item.area || item.label || 'area')}</span><strong class="mono">${escapeHtml(item.riskScore != null ? `score ${item.riskScore} / ${item.severity || 'n/a'}` : String(item.detail ?? 'n/a'))}</strong></li>`, 'No ranked packages yet.')}
+        </ul>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Frontend Control Room</h2>
         <ul>
           ${renderList([
-            ['validation rows', payload.review.traceability?.validationRows?.length || 0],
-            ['linked rows', payload.review.traceability?.linkedCount || 0],
-            ['unlinked rows', payload.review.traceability?.unlinkedCount || 0],
-            ['unmapped files', payload.review.traceability?.unmappedFiles?.length || 0],
-          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No traceability data yet.')}
+            ['lane', frontendLane],
+            ['framework', frontendFramework],
+            ['routing', frontendRouting],
+            ['surface', frontendSurface],
+            ['ui system', frontendUiSystem],
+            ['command pack', frontendCommandPack],
+            ['routes', frontendStart?.routeCount || 0],
+            ['route families', frontendStart?.routeFamilyCount || 0],
+            ['shared components', frontendStart?.sharedComponentCount || 0],
+            ['local components', frontendStart?.localComponentCount || 0],
+          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No frontend identification data yet.')}
         </ul>
       </article>
 
@@ -656,6 +931,8 @@ function renderDashboardHtml(cwd, payload) {
             ['journey', journeyAudit.coverage || 'n/a'],
             ['debt items', frontendReview.debt?.length || 0],
             ['browser evidence', payload.browserArtifacts.length],
+            ['suggested add-ons', frontendSuggestedAddOns],
+            ['focus areas', frontendFocus],
           ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No frontend review data yet.')}
         </ul>
       </article>
@@ -684,10 +961,38 @@ function renderDashboardHtml(cwd, payload) {
       </article>
 
       <article class="panel span-6">
+        <h2>Verify Status Board</h2>
+        <ul>
+          ${renderList([
+            ['shell gate', verifyStatusBoard.shellGate || 'n/a'],
+            ['browser gate', verifyStatusBoard.browserGate || 'n/a'],
+            ['open blockers', verifyStatusBoard.openBlockerCount || 0],
+            ['queued for verify', verifyStatusBoard.queuedForVerifyCount || 0],
+            ['failed verification', verifyStatusBoard.failedVerificationCount || 0],
+            ['pending re-review', verifyStatusBoard.pendingRereviewCount || 0],
+          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No verify-status data yet.')}
+        </ul>
+      </article>
+
+      <article class="panel span-6">
+        <h2>Ship Readiness Board</h2>
+        <ul>
+          ${renderList([
+            ['verdict', shipReadinessBoard.verdict || payload.shipReadiness?.verdict || 'n/a'],
+            ['score', shipReadinessBoard.score ?? payload.shipReadiness?.score ?? 'n/a'],
+            ['ship blockers', shipReadinessBoard.shipBlockerCount || 0],
+            ['pending approvals', shipReadinessBoard.pendingApprovalCount || payload.shipReadiness?.approvalPlan?.pending?.length || 0],
+            ['pending verification', shipReadinessBoard.pendingVerificationCount || 0],
+            ['release wave', shipReadinessBoard.releaseWave?.label || 'n/a'],
+          ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No ship-readiness status yet.')}
+        </ul>
+      </article>
+
+      <article class="panel span-6">
         <h2>Trust Board</h2>
         <ul>
           ${renderList([
-            ['pending approvals', payload.shipReadiness?.approvalPlan?.pending?.length || 0],
+            ['release control', payload.releaseControl?.artifacts?.markdown || 'n/a'],
             ['verify reasons', payload.verifyWork?.reasons?.length || 0],
             ['open questions', packetContext.context?.openQuestions?.length || 0],
             ['active assumptions', packetContext.context?.assumptions?.length || 0],
@@ -695,6 +1000,184 @@ function renderDashboardHtml(cwd, payload) {
           ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No trust data yet.')}
         </ul>
       </article>
+
+
+<article class="panel span-12">
+  <h2>Operating Center</h2>
+  <ul>
+    ${renderList([
+      ['verdict', operatingCenter.verdict || 'n/a'],
+      ['active plane', operatingCenter.activePlane?.title || 'n/a'],
+      ['active question', operatingCenter.activePlane?.question || 'n/a'],
+      ['primary command', operatingCenter.primaryCommand || 'n/a'],
+      ['compression', operatingCenter.compression?.summary || 'n/a'],
+      ['publish coverage', operatingCenter.publishSurface?.coverageRatio != null ? `${operatingCenter.publishSurface.coverageRatio}%` : 'n/a'],
+      ['github ready', operatingCenter.publishSurface?.githubReady != null ? (operatingCenter.publishSurface.githubReady ? 'yes' : 'no') : 'n/a'],
+      ['ci ready', operatingCenter.publishSurface?.ciReady != null ? (operatingCenter.publishSurface.ciReady ? 'yes' : 'no') : 'n/a'],
+      ['focus questions', operatingCenter.focusQuestions?.length || 0],
+      ['stack packs', operatingCenter.stackPacks?.map((pack) => pack.label).join(', ') || 'none'],
+    ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No operating-center artifact yet.')}
+  </ul>
+</article>
+
+<article class="panel span-4">
+  <h2>Repo Config</h2>
+  <ul>
+    ${renderList([
+      ['default profile', repoConfigSummary.defaultProfile || repoConfigActive.defaultProfile || 'n/a'],
+      ['trust level', repoConfigSummary.trustLevel || repoConfigActive.trustLevel || 'n/a'],
+      ['handoff standard', repoConfigSummary.handoffStandard || repoConfigActive.handoffStandard || 'n/a'],
+      ['detected profiles', (repoConfigSummary.detectedProfiles || repoConfigActive.detectedProfiles || []).join(', ') || 'none'],
+      ['preferred bundles', (repoConfigSummary.preferredBundles || repoConfigActive.preferredBundles || []).join(', ') || 'none'],
+      ['required verifications', (repoConfigSummary.requiredVerifications || repoConfigActive.requiredVerifications || []).join(', ') || 'none'],
+      ['external exports', (repoConfigSummary.externalExports || repoConfigActive.externalExports || []).length],
+      ['publish defaults', repoConfigSummary.releaseControl?.publishStepSummary != null ? (repoConfigSummary.releaseControl.publishStepSummary ? 'on' : 'off') : 'n/a'],
+    ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No repo-config artifact yet.')}
+  </ul>
+</article>
+
+<article class="panel span-4">
+  <h2>Trust Center</h2>
+  <ul>
+    ${renderList([
+      ['verdict', trustCenter.verdict || 'n/a'],
+      ['risk level', trustCenter.risk?.level || 'n/a'],
+      ['start gate', trustCenter.decisions?.start || 'n/a'],
+      ['merge gate', trustCenter.decisions?.merge || 'n/a'],
+      ['ship gate', trustCenter.decisions?.ship || 'n/a'],
+      ['pending approvals', trustCenter.approvals?.pending?.length || 0],
+      ['missing evidence', trustCenter.evidence?.gaps?.length || 0],
+      ['verification gaps', trustCenter.governance?.verificationGapCount || 0],
+    ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No trust-center artifact yet.')}
+  </ul>
+</article>
+
+<article class="panel span-4">
+  <h2>Change Control</h2>
+  <ul>
+    ${renderList([
+      ['verdict', changeControl.verdict || 'n/a'],
+      ['risk level', changeControl.riskLevel || 'n/a'],
+      ['safe to merge', changeControl.gates?.merge?.allowed != null ? (changeControl.gates.merge.allowed ? 'yes' : 'no') : 'n/a'],
+      ['safe to ship', changeControl.gates?.ship?.allowed != null ? (changeControl.gates.ship.allowed ? 'yes' : 'no') : 'n/a'],
+      ['verify queue', changeControl.gates?.verify?.queue || 0],
+      ['ship blockers', changeControl.gates?.ship?.blockers || 0],
+      ['rollback ready', changeControl.rollback?.ready != null ? (changeControl.rollback.ready ? 'yes' : 'no') : 'n/a'],
+      ['export coverage', changeControl.publishPlan?.exportCoverage?.coverageRatio != null ? `${changeControl.publishPlan.exportCoverage.coverageRatio}%` : 'n/a'],
+      ['github ready', changeControl.publishPlan?.github?.ready != null ? (changeControl.publishPlan.github.ready ? 'yes' : 'no') : 'n/a'],
+      ['ci ready', changeControl.publishPlan?.ci?.ready != null ? (changeControl.publishPlan.ci.ready ? 'yes' : 'no') : 'n/a'],
+      ['issue tracker open', changeControl.integrationSurface?.issueTrackerOpenItems || 0],
+      ['exports', Object.keys(changeControl.externalExports || {}).length],
+    ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No change-control artifact yet.')}
+  </ul>
+</article>
+
+<article class="panel span-4">
+  <h2>Autopilot</h2>
+  <ul>
+    ${renderList([
+      ['verdict', autopilot.verdict || 'n/a'],
+      ['branch', autopilot.branch || 'n/a'],
+      ['event', autopilot.eventContext?.eventName || autopilot.eventContext?.provider || 'n/a'],
+      ['mode', autopilot.automation?.mode || 'n/a'],
+      ['status', autopilot.automation?.status || 'n/a'],
+      ['next command', autopilot.morningSummary?.nextCommand || 'n/a'],
+      ['routines', autopilot.routines?.length || 0],
+      ['export coverage', autopilot.publishSurface?.coverageRatio != null ? `${autopilot.publishSurface.coverageRatio}%` : 'n/a'],
+      ['mailbox entries', autopilot.teamActivity?.mailboxEntries || 0],
+      ['recovery signals', autopilot.recoverySignals?.join(', ') || 'none'],
+    ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No autopilot artifact yet.')}
+  </ul>
+</article>
+
+<article class="panel span-4">
+  <h2>Handoff OS</h2>
+  <ul>
+    ${renderList([
+      ['verdict', handoffOs.verdict || 'n/a'],
+      ['next action', handoffOs.nextAction?.command || handoffOs.nextAction?.title || 'n/a'],
+      ['resume anchor', handoffOs.resumeAnchor || 'n/a'],
+      ['open decisions', handoffOs.openDecisions?.length || 0],
+      ['unresolved risks', handoffOs.unresolvedRisks?.length || 0],
+      ['open loops', handoffOs.continuity?.openLoopCount || 0],
+      ['verification ready', handoffOs.continuity?.verificationReady != null ? (handoffOs.continuity.verificationReady ? 'yes' : 'no') : 'n/a'],
+      ['continuity bundle', handoffOs.exports?.continuityBundle || 'n/a'],
+      ['compact export', handoffOs.exports?.compact || 'n/a'],
+    ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No handoff artifact yet.')}
+  </ul>
+</article>
+
+<article class="panel span-4">
+  <h2>Team Control Room</h2>
+  <ul>
+    ${renderList([
+      ['verdict', teamControlRoom.verdict || 'n/a'],
+      ['runtime', teamControlRoom.runtime?.status || 'n/a'],
+      ['active wave', teamControlRoom.runtime?.activeWave || 'n/a'],
+      ['roles', teamControlRoom.ownership?.length || 0],
+      ['lanes', teamControlRoom.lanes?.length || 0],
+      ['waiting roles', teamControlRoom.waitingRoles?.length || 0],
+      ['handoff queue', teamControlRoom.handoffQueue?.length || 0],
+      ['mailbox entries', teamControlRoom.activity?.mailboxEntries ?? teamControlRoom.runtime?.mailboxEntries ?? 0],
+      ['ownership gaps', teamControlRoom.ownershipGaps?.length || 0],
+      ['conflict blockers', teamControlRoom.conflicts?.blockerCount || 0],
+      ['merge queue next', teamControlRoom.mergeQueue?.nextTaskId || 'none'],
+    ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No team-control artifact yet.')}
+  </ul>
+</article>
+
+<article class="panel span-6">
+  <h2>Measurement / ROI</h2>
+  <ul>
+    ${renderList([
+      ['findings total', measurement.metrics?.findings?.total || 0],
+      ['findings closed', measurement.metrics?.findings?.closed || 0],
+      ['automated corrections', measurement.metrics?.corrections?.automated || 0],
+      ['verify pass rate', measurement.metrics?.verification?.passRate != null ? `${measurement.metrics.verification.passRate}%` : 'n/a'],
+      ['merge-ready ratio', measurement.metrics?.mergeReadiness?.ratio != null ? `${measurement.metrics.mergeReadiness.ratio}%` : 'n/a'],
+      ['export coverage', measurement.metrics?.exports?.coverageRatio != null ? `${measurement.metrics.exports.coverageRatio}%` : 'n/a'],
+      ['handoff loops', measurement.metrics?.handoffContinuity?.openLoops || 0],
+      ['team mailbox', measurement.metrics?.teamOps?.mailboxEntries || 0],
+      ['design debt', measurement.metrics?.frontendPolishDebt?.current || 0],
+      ['open findings delta', measurement.trend?.openFindingsDelta != null ? measurement.trend.openFindingsDelta : 'n/a'],
+    ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No measurement artifact yet.')}
+  </ul>
+</article>
+
+<article class="panel span-3">
+  <h2>Explainability</h2>
+  <ul>
+    ${renderList([
+      ['goal', explainability.goal || 'n/a'],
+      ['lane', explainability.route?.lane || 'n/a'],
+      ['bundle', explainability.start?.bundle?.id || 'n/a'],
+      ['confidence', explainability.route?.confidence != null ? explainability.route.confidence : 'n/a'],
+      ['confidence tier', explainability.confidenceBreakdown?.tier || 'n/a'],
+      ['coverage', explainability.surfaceCoverage?.ratio != null ? `${explainability.surfaceCoverage.ratio}%` : 'n/a'],
+      ['deep delta', explainability.deepMode?.addedCommands?.length || 0],
+      ['unsurveyed', explainability.unsurveyedSurfaces?.length || 0],
+    ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No explainability artifact yet.')}
+  </ul>
+</article>
+
+<article class="panel span-3">
+  <h2>Lifecycle Center</h2>
+  <ul>
+    ${renderList([
+      ['verdict', lifecycleCenter.verdict || 'n/a'],
+      ['installed version', lifecycleCenter.version?.installed || 'n/a'],
+      ['expected version', lifecycleCenter.version?.expected || 'n/a'],
+      ['doctor', lifecycleCenter.doctor ? `${lifecycleCenter.doctor.failCount}/${lifecycleCenter.doctor.warnCount}` : 'n/a'],
+      ['health', lifecycleCenter.health ? `${lifecycleCenter.health.failCount}/${lifecycleCenter.health.warnCount}` : 'n/a'],
+      ['safe actions', lifecycleCenter.selfHealing?.safeActions || 0],
+      ['upgrade drift', lifecycleCenter.upgrade?.drift != null ? (lifecycleCenter.upgrade.drift ? 'yes' : 'no') : 'n/a'],
+      ['config drift', lifecycleCenter.drift?.config?.present != null ? (lifecycleCenter.drift.config.present ? 'yes' : 'no') : 'n/a'],
+      ['export drift', lifecycleCenter.drift?.exports?.present != null ? (lifecycleCenter.drift.exports.present ? 'yes' : 'no') : 'n/a'],
+      ['runtime drift', lifecycleCenter.runtimeDrift?.present != null ? (lifecycleCenter.runtimeDrift.present ? 'yes' : 'no') : 'n/a'],
+    ], ([label, value]) => `<li><span>${escapeHtml(label)}</span><strong class="mono">${escapeHtml(String(value))}</strong></li>`, 'No lifecycle artifact yet.')}
+  </ul>
+</article>
+
     </section>
   </main>
   <script>
@@ -769,20 +1252,36 @@ function main() {
 
   const cwd = process.cwd();
   const rootDir = resolveWorkflowRoot(cwd, args.root);
+  if (args.refreshPlanes || args['refresh-planes']) {
+    buildOperatingCenterPayload(cwd, rootDir, { refresh: true });
+  }
   const payload = readDashboardData(cwd, rootDir);
   const written = writeDashboard(cwd, payload);
   const quickActions = buildQuickActions(payload);
   const opened = args.open ? maybeOpenDashboard(written.htmlPath) : false;
+  const controlPlane = payload.controlPlane || {};
+  const releaseControl = payload.releaseControl || {};
+  const findingsSummary = controlPlane.findingsRegistry?.summary || {};
+  const reviewControlRoom = controlPlane.reviewControlRoom || {};
+  const correctionBoard = controlPlane.correctionBoard || {};
+  const rankedPackages = controlPlane.largeRepoBoard?.rankedPackages || [];
   const result = {
     generatedAt: payload.generatedAt,
     file: relativePath(cwd, written.htmlPath),
     stateFile: relativePath(cwd, written.statePath),
     opened,
     summary: {
-      reviewFindings: payload.review.findings.length,
+      reviewFindings: findingsSummary.open != null ? findingsSummary.open : payload.review.findings.length,
+      openBlockers: reviewControlRoom.openBlockerCount || 0,
+      readyToPatch: correctionBoard.readyToPatchCount || 0,
+      rankedShards: rankedPackages.length,
       browserArtifacts: payload.browserArtifacts.length,
       changedFiles: payload.changedFiles.length,
-      shipVerdict: payload.shipReadiness?.verdict || 'n/a',
+      verifyQueued: releaseControl.verifyStatusBoard?.queuedForVerifyCount || 0,
+      shipBlockers: releaseControl.shipReadinessBoard?.shipBlockerCount || 0,
+      shipVerdict: payload.shipReadiness?.verdict || releaseControl.shipReadinessBoard?.verdict || 'n/a',
+      operatingVerdict: payload.operatingCenter?.verdict || 'n/a',
+      activePlane: payload.operatingCenter?.activePlane?.id || 'n/a',
       quickActions: quickActions.length,
     },
   };
@@ -792,12 +1291,25 @@ function main() {
     return;
   }
 
+  if (args.tui) {
+    const supervisor = buildSupervisorPayload(cwd, rootDir, args);
+    console.log(renderTui(supervisor));
+    return;
+  }
+
   console.log('# DASHBOARD\n');
   console.log(`- File: \`${result.file}\``);
   console.log(`- State: \`${result.stateFile}\``);
   console.log(`- Review findings: \`${result.summary.reviewFindings}\``);
+  console.log(`- Open blockers: \`${result.summary.openBlockers}\``);
+  console.log(`- Ready to patch: \`${result.summary.readyToPatch}\``);
+  console.log(`- Ranked shards: \`${result.summary.rankedShards}\``);
+  console.log(`- Queued verify: \`${result.summary.verifyQueued}\``);
+  console.log(`- Ship blockers: \`${result.summary.shipBlockers}\``);
   console.log(`- Browser artifacts: \`${result.summary.browserArtifacts}\``);
   console.log(`- Ship verdict: \`${result.summary.shipVerdict}\``);
+  console.log(`- Operating verdict: \`${result.summary.operatingVerdict}\``);
+  console.log(`- Active plane: \`${result.summary.activePlane}\``);
   console.log(`- Quick actions: \`${result.summary.quickActions}\``);
   if (args.open) {
     console.log(`- Opened: \`${opened ? 'yes' : 'no'}\``);

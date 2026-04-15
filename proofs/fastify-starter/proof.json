@@ -1,0 +1,99 @@
+{
+  "generatedAt": "2026-04-14T15:52:17.470Z",
+  "proofType": "repo-proof",
+  "repoRoot": "/mnt/data/repo/tests/fixtures/repo_proof_corpus/fastify-starter",
+  "repoRelative": "tests/fixtures/repo_proof_corpus/fastify-starter",
+  "invokedFrom": "/mnt/data/repo",
+  "invokedFromRelative": ".",
+  "externalSnapshot": true,
+  "writeArtifacts": false,
+  "coverage": [
+    "api"
+  ],
+  "repoTruth": {
+    "workspaceCount": 0,
+    "ecosystems": [],
+    "markers": [],
+    "ownershipSource": null,
+    "sampleWorkspaces": []
+  },
+  "apiSurface": {
+    "endpointCount": 3,
+    "middlewareCount": 0,
+    "mountCount": 0,
+    "frameworks": [
+      "fastify"
+    ],
+    "authSignals": [],
+    "dataStores": [],
+    "artifacts": null
+  },
+  "frontend": {
+    "active": false,
+    "rootRelative": "docs/workflow",
+    "framework": "Custom",
+    "routing": "Custom Routing",
+    "productSurface": "Web App",
+    "browserLane": "on-demand",
+    "hasProofHarness": false,
+    "componentReuseVerdict": "thin",
+    "artifacts": null
+  },
+  "audit": {
+    "goal": "produce a local proof pack for this repository snapshot",
+    "repoShape": "single-package",
+    "stackPack": "Generic repository",
+    "healthVerdict": "watch",
+    "healthScore": 83,
+    "verifiedCount": 1,
+    "probableCount": 2,
+    "heuristicCount": 0,
+    "topFindings": [
+      {
+        "bucket": "verified",
+        "title": "Repository has no CI workflow",
+        "severity": "medium",
+        "why": ""
+      },
+      {
+        "bucket": "probable",
+        "title": "Package relies on root-only verification",
+        "severity": "medium",
+        "why": ""
+      },
+      {
+        "bucket": "probable",
+        "title": "Dependency installs may drift between machines",
+        "severity": "low",
+        "why": ""
+      }
+    ],
+    "artifacts": null,
+    "controlPlaneArtifacts": {
+      "findingsRegistry": ".workflow/reports/findings-registry.json",
+      "correctionControl": ".workflow/reports/correction-control.json",
+      "correctionControlMarkdown": ".workflow/reports/correction-control.md"
+    }
+  },
+  "verdict": {
+    "overallConfidence": "medium",
+    "score": 3,
+    "maxScore": 5,
+    "trustableFindings": [
+      "API surface found 3 endpoints via fastify",
+      "Verified finding: Repository has no CI workflow"
+    ],
+    "manualVerify": [
+      "Deployment-time integrations that are invisible in a read-only snapshot"
+    ],
+    "knownLimitations": [
+      "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+    ]
+  },
+  "artifacts": null,
+  "recommendedNextLanes": [
+    "rai api-surface --repo tests/fixtures/repo_proof_corpus/fastify-starter --json",
+    "rai audit-repo --repo tests/fixtures/repo_proof_corpus/fastify-starter --goal \"produce a local proof pack for this repository snapshot\" --json",
+    "cd tests/fixtures/repo_proof_corpus/fastify-starter && rai start recommend --goal \"produce a local proof pack for this repository snapshot\""
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "generatedAt": "2026-04-14T15:52:17.333Z",
+  "proofType": "repo-proof",
+  "repoRoot": "/mnt/data/repo/tests/fixtures/repo_proof_corpus/next-admin-dashboard",
+  "repoRelative": "tests/fixtures/repo_proof_corpus/next-admin-dashboard",
+  "invokedFrom": "/mnt/data/repo",
+  "invokedFromRelative": ".",
+  "externalSnapshot": true,
+  "writeArtifacts": false,
+  "coverage": [
+    "api",
+    "frontend"
+  ],
+  "repoTruth": {
+    "workspaceCount": 0,
+    "ecosystems": [],
+    "markers": [],
+    "ownershipSource": null,
+    "sampleWorkspaces": []
+  },
+  "apiSurface": {
+    "endpointCount": 2,
+    "middlewareCount": 0,
+    "mountCount": 0,
+    "frameworks": [
+      "next-api"
+    ],
+    "authSignals": [],
+    "dataStores": [],
+    "artifacts": null
+  },
+  "frontend": {
+    "active": true,
+    "rootRelative": "docs/workflow",
+    "framework": "Next",
+    "routing": "Next App Router",
+    "productSurface": "Dashboard",
+    "browserLane": "smoke-plus-manual",
+    "hasProofHarness": false,
+    "componentReuseVerdict": "warn",
+    "artifacts": null
+  },
+  "audit": {
+    "goal": "produce a local proof pack for this repository snapshot",
+    "repoShape": "single-package",
+    "stackPack": "Next.js / React app",
+    "healthVerdict": "critical",
+    "healthScore": 0,
+    "verifiedCount": 5,
+    "probableCount": 7,
+    "heuristicCount": 1,
+    "topFindings": [
+      {
+        "bucket": "verified",
+        "title": "Repository has executable code but no automated tests",
+        "severity": "high",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "High-risk area has no owned tests",
+        "severity": "high",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "High-risk area has no owned tests",
+        "severity": "high",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "High-risk area has no owned tests",
+        "severity": "high",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "Repository has no CI workflow",
+        "severity": "medium",
+        "why": ""
+      }
+    ],
+    "artifacts": null,
+    "controlPlaneArtifacts": {
+      "findingsRegistry": ".workflow/reports/findings-registry.json",
+      "correctionControl": ".workflow/reports/correction-control.json",
+      "correctionControlMarkdown": ".workflow/reports/correction-control.md"
+    }
+  },
+  "verdict": {
+    "overallConfidence": "medium",
+    "score": 3,
+    "maxScore": 5,
+    "trustableFindings": [
+      "API surface found 2 endpoints via next-api",
+      "Frontend surface detected (Next / Next App Router)",
+      "Verified finding: Repository has executable code but no automated tests",
+      "Verified finding: High-risk area has no owned tests",
+      "Verified finding: Repository has no CI workflow"
+    ],
+    "manualVerify": [
+      "Critical UI flows, navigation params, and browser/mobile smoke paths",
+      "Deployment-time integrations that are invisible in a read-only snapshot"
+    ],
+    "knownLimitations": [
+      "No proof harness was detected for the frontend surface; manual smoke verification remains necessary.",
+      "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+    ]
+  },
+  "artifacts": null,
+  "recommendedNextLanes": [
+    "rai api-surface --repo tests/fixtures/repo_proof_corpus/next-admin-dashboard --json",
+    "cd tests/fixtures/repo_proof_corpus/next-admin-dashboard && rai map-frontend --root docs/workflow --json",
+    "rai audit-repo --repo tests/fixtures/repo_proof_corpus/next-admin-dashboard --goal \"produce a local proof pack for this repository snapshot\" --json",
+    "cd tests/fixtures/repo_proof_corpus/next-admin-dashboard && rai start recommend --goal \"produce a local proof pack for this repository snapshot\""
+  ]
+}

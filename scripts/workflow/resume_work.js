@@ -9,13 +9,15 @@ const {
   parseTableSectionObjects,
   parseMemoryEntries,
   parseMemoryEntry,
-  read,
   replaceField,
   resolveWorkflowRoot,
   today,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 
 function printHelp() {
   console.log(`

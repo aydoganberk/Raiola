@@ -68,7 +68,7 @@ Additional rules:
 
 1. `discuss`
    - Scan the codebase first.
-   - Follow `Discuss mode` from `PREFERENCES.md` using either `assumptions` or `interview`.
+   - Follow `Discuss mode` from `PREFERENCES.md` using `assumptions`, `interview`, or `proposal_first`.
    - Complete `intent capture -> constraint extraction -> execution shaping`.
    - Write user intent, explicit constraints, alternatives considered, success rubric, requirement list, seed intake, active recall intake, claim ledger, and unknowns into `CONTEXT.md`.
 2. `research`

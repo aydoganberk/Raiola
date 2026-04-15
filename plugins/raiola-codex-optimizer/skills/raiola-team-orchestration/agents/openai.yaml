@@ -1,0 +1,4 @@
+name: raiola-team-orchestration
+description: Bounded parallel work and subagent delegation with write-scope discipline.
+version: 0.4.7
+entrypoint: SKILL.md

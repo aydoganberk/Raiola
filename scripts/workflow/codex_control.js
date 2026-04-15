@@ -27,6 +27,13 @@ const {
   doPromptPack,
   doResumeCard,
 } = require('./codex_control_packets');
+const {
+  doCockpit,
+  doManagedExport,
+  doMission,
+  doOperator,
+  doTelemetry,
+} = require('./codex_operator_layer');
 
 function printHelp() {
   console.log(`
@@ -40,13 +47,13 @@ Usage:
 
 Actions:
   status           Show Codex control-plane status
-  setup            Write repo/local/global Codex config plus role/prompt catalog
+  setup            Write native Codex config, hooks, agents, and role/prompt catalog
   diff-config      Compare the current config against the desired generated config
-  doctor           Validate config, drift, and installed catalog files
+  doctor           Validate native config, hooks, subagents, drift, and installed catalog files
   rollback         Restore the latest journal backup
   uninstall        Remove generated Codex control-plane files
   repair           Re-run doctor and sync if drift or corruption is found
-  sync             Refresh generated roles, prompts, and catalog metadata
+  sync             Refresh native config, hooks, subagents, roles, prompts, and catalog metadata
   roles            List generated roles
   prompts          List generated prompts
   install-skill    Install the workflow skill for a role
@@ -58,6 +65,11 @@ Actions:
   contextpack      Write a task-shaped Codex context pack for app/CLI sessions
   resume-card      Generate a resume card for the current repo state
   plan-subagents   Suggest bounded subagent/worktree slices
+  operator         Build a native Codex operator packet with CLI, slash, app-server, MCP, and automation guidance
+  cockpit          Materialize a native Codex launch kit with runnable launchers, prompt/context packs, and continuity files
+  mission          Materialize an execution capsule with charter, launcher, recovery ladder, trust gates, and resume anchor
+  telemetry        Summarize hook-captured native Codex telemetry and operator friction
+  managed-export   Export Trust-aware native requirements.toml template for managed Codex deployment
 
 Options:
   --repo           Use <repo>/.codex (default)
@@ -93,6 +105,11 @@ const ACTIONS = {
   contextpack: doContextPack,
   'resume-card': doResumeCard,
   'plan-subagents': doPlanSubagents,
+  operator: doOperator,
+  cockpit: doCockpit,
+  mission: doMission,
+  telemetry: doTelemetry,
+  'managed-export': doManagedExport,
 };
 
 function main() {

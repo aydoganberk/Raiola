@@ -1,0 +1,11 @@
+{
+  "name": "healthy-workers-cloudflare-fixture",
+  "private": true,
+  "scripts": {
+    "test": "node -e \"process.exit(0)\"",
+    "lint": "node -e \"process.exit(0)\""
+  },
+  "dependencies": {
+    "wrangler": "4.0.0"
+  }
+}

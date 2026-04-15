@@ -67,6 +67,13 @@
 - `Constraint extraction` -> `Surface explicit constraints, tradeoffs, and unanswered high-leverage questions`
 - `Execution shaping` -> `Decide what a good strategy looks like before execution and validation planning begins`
 
+## Discuss Proposal
+
+- Status: `not_needed`
+- Selected option: `none`
+- Summary: `This discuss mode does not require a proposal approval gate.`
+- Approval note: `Proceed with the normal discuss packet.`
+
 ## User Intent
 
 - Primary request:

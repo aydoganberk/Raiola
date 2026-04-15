@@ -2,17 +2,21 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   assertWorkflowFiles,
-  ensureDir,
   hashString,
   loadPreferences,
   parseArgs,
   parseRefTable,
-  read,
   resolveWorkflowRoot,
   safeExec,
   workflowPaths,
-  writeIfChanged,
 } = require('./common');
+const {
+  ensureDir,
+  readText: read,
+  writeTextIfChanged: writeIfChanged,
+} = require('./io/files');
+const { readJsonIfExists } = require('./io/json');
+const { detectPackageManager } = require('./package/repo');
 const { listIndexedRepoFiles } = require('./fs_index');
 
 const GENERATOR_VERSION = 'phase2-map-v1';
@@ -51,13 +55,6 @@ function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
 }
 
-function readJsonIfExists(filePath) {
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
-
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-}
 
 function parsePathGroups(value) {
   if (!value) {
@@ -122,21 +119,6 @@ function topLevelDirectories(files) {
     .map(([name, fileCount]) => ({ name, fileCount }));
 }
 
-function detectPackageManager(fileSet) {
-  if (fileSet.has('pnpm-lock.yaml')) {
-    return 'pnpm';
-  }
-  if (fileSet.has('yarn.lock')) {
-    return 'yarn';
-  }
-  if (fileSet.has('bun.lockb') || fileSet.has('bun.lock')) {
-    return 'bun';
-  }
-  if (fileSet.has('package-lock.json')) {
-    return 'npm';
-  }
-  return 'unknown';
-}
 
 function maybeReadPackageJson(cwd) {
   const filePath = path.join(cwd, 'package.json');
@@ -349,7 +331,7 @@ function laneInputs({ cwd, files, paths, workstreamRefs }) {
 }
 
 function buildStackLane({ cwd, files, pkg, fileSet, extensionCounts, laneInputPaths }) {
-  const packageManager = detectPackageManager(fileSet);
+  const packageManager = fileSet.has('package.json') ? detectPackageManager(fileSet) : 'unknown';
   const frameworks = detectFrameworks(pkg, fileSet);
   const scripts = Object.keys(pkg?.scripts || {}).sort();
   const workflowScripts = workflowScriptNames(pkg);

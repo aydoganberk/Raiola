@@ -3,10 +3,10 @@ const path = require('node:path');
 const {
   parseArgs,
   parseMilestoneTable,
-  read,
   resolveWorkflowRoot,
   workflowPaths,
 } = require('./common');
+const { readText: read } = require('./io/files');
 const { buildNextPayload } = require('./next_step');
 
 function printHelp() {

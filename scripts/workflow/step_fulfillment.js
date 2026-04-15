@@ -8,7 +8,6 @@ const {
   parseArgs,
   parseTableSectionObjects,
   parseValidationContract,
-  read,
   readPlanGateStatus,
   renderMarkdownTable,
   replaceField,
@@ -20,8 +19,11 @@ const {
   syncWindowDocument,
   today,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 const { applyContinuityCheckpoint } = require('./checkpoint');
 
 const STEP_MODE_MATRIX = Object.freeze({

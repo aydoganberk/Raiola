@@ -8,5 +8,11 @@
   "homepage": "https://github.com/aydoganberk/Raiola",
   "repository": "https://github.com/aydoganberk/Raiola",
   "license": "MIT",
-  "commands": "./.claude/commands"
+  "commands": "./.claude/commands",
+  "hooks": {
+    "SessionStart": "./.claude/hooks/session_start.js",
+    "PreToolUse": "./.claude/hooks/pre_tool_use.js",
+    "PostToolUse": "./.claude/hooks/post_tool_use.js",
+    "SessionEnd": "./.claude/hooks/session_end.js"
+  }
 }

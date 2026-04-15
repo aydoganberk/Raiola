@@ -1,14 +1,17 @@
 const path = require('node:path');
 const {
-  ensureDir,
   getFieldValue,
   listGitChanges,
-  readIfExists,
   resolveWorkflowRoot,
   tryExtractSection,
   workflowPaths,
-  writeIfChanged,
 } = require('./common');
+const {
+  ensureDir,
+  readTextIfExists: readIfExists,
+  writeTextIfChanged: writeIfChanged,
+} = require('./io/files');
+const { readJsonIfExists } = require('./io/json');
 const { buildBaseState } = require('./state_surface');
 const { analyzeIntent } = require('./intent_engine');
 const { selectCodexProfile, getCodexProfiles } = require('./codex_profile_engine');
@@ -39,17 +42,6 @@ function buildIntentAnalysisForCodex(cwd, args) {
   };
 }
 
-function readJsonIfExists(filePath) {
-  const content = readIfExists(filePath);
-  if (!content) {
-    return null;
-  }
-  try {
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
-}
 
 function loadLatestReviewOrchestration(cwd) {
   return readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'review-orchestration.json'));

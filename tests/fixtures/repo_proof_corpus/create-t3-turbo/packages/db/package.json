@@ -1,0 +1,6 @@
+{
+  "name": "@snapshot/db",
+  "dependencies": {
+    "drizzle-orm": "0.33.0"
+  }
+}

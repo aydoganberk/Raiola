@@ -1,0 +1,7 @@
+{
+  "name": "audit-auth-fixture",
+  "private": true,
+  "dependencies": {
+    "better-auth": "1.2.0"
+  }
+}

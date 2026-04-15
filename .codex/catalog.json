@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-04-14T17:24:54.190Z",
+  "scope": "repo",
+  "roles": [
+    {
+      "name": "repo-explorer",
+      "summary": "Maps the codebase, packet refs, and likely impact surface before execution."
+    },
+    {
+      "name": "release-noter",
+      "summary": "Prepares review, ship, PR brief, and release communication artifacts."
+    },
+    {
+      "name": "frontend-verifier",
+      "summary": "Validates UI surfaces, browser evidence, and frontend-specific regressions."
+    },
+    {
+      "name": "docs-verifier",
+      "summary": "Checks command docs, getting-started flows, and closeout narratives."
+    }
+  ],
+  "prompts": [
+    {
+      "name": "reviewer",
+      "summary": "Bias toward bugs, regressions, and missing tests before summaries."
+    },
+    {
+      "name": "implementer",
+      "summary": "Bias toward delivering a concrete patch slice with verification."
+    },
+    {
+      "name": "release-noter",
+      "summary": "Bias toward PR, release notes, and ship communication quality."
+    }
+  ],
+  "nativeProfile": "raiola-monorepo"
+}

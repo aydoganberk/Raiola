@@ -1,0 +1,787 @@
+{
+  "generatedAt": "2026-04-14T17:24:54.175Z",
+  "repoRoot": ".",
+  "workflowRoot": "docs/workflow",
+  "repoConfig": {
+    "path": ".workflow/repo-config.json",
+    "exists": false,
+    "defaultProfile": "deep",
+    "trustLevel": "strict",
+    "preferredBundles": [
+      "monorepo-audit-wave",
+      "correction-wave",
+      "ship-closeout",
+      "frontend-delivery",
+      "frontend-review",
+      "frontend-ship-readiness",
+      "review-wave"
+    ],
+    "preferredAddOns": [
+      "browser",
+      "surface",
+      "state",
+      "handoff",
+      "design-system",
+      "parallel",
+      "ownership",
+      "shard",
+      "repair",
+      "trust",
+      "regression"
+    ],
+    "preferredPlanes": [
+      "repo-config",
+      "safety-control",
+      "release-control",
+      "monorepo-control",
+      "repo-control",
+      "team-control",
+      "autopilot",
+      "handoff",
+      "explain",
+      "lifecycle",
+      "measure"
+    ],
+    "requiredVerifications": [
+      "npm test",
+      "cargo test",
+      "cargo check",
+      "mvn test",
+      "rai map-frontend --json",
+      "rai api-surface --json",
+      "rai verify-work --json",
+      "rai audit-repo --mode oneshot --json"
+    ],
+    "handoffStandard": "release-ready",
+    "automation": {
+      "dailySummary": true,
+      "branchStartAdvice": true,
+      "reviewLaneOnPr": true,
+      "correctionOnVerifyFail": true,
+      "milestoneDriftAlert": true,
+      "inactiveThreadRecovery": true,
+      "ciFailureRecovery": true,
+      "pullRequestPublish": true,
+      "teamMailboxRecovery": true,
+      "releaseWaveRefresh": true
+    },
+    "releaseControl": {
+      "publishStepSummary": true,
+      "stickyPrComment": true,
+      "ciGate": true,
+      "issueTrackerExport": true,
+      "slackStructuredPayload": true,
+      "statusBadge": true,
+      "uploadArtifacts": true,
+      "preferJsonArtifacts": true,
+      "requireRollbackHint": true
+    },
+    "surfaceCompression": {
+      "summary": "8 golden path(s) stay foregrounded; advanced capabilities open as optional packs.",
+      "coreFlows": [
+        {
+          "id": "start-safe",
+          "label": "Start safe",
+          "commands": [
+            "rai start",
+            "rai do",
+            "rai next"
+          ],
+          "summary": "Daily entry path for bounded work and stepwise execution."
+        },
+        {
+          "id": "prove-and-close",
+          "label": "Prove and close",
+          "commands": [
+            "rai verify-work --json",
+            "rai doctor --json",
+            "rai handoff"
+          ],
+          "summary": "Default closeout path that keeps proof and handoff visible."
+        },
+        {
+          "id": "codex-operator",
+          "label": "Shape Codex session",
+          "commands": [
+            "rai codex operator --goal \"...\"",
+            "rai codex cockpit --goal \"...\" --json"
+          ],
+          "summary": "Task-aware session shaping for native Codex runs."
+        },
+        {
+          "id": "frontend-proof",
+          "label": "Frontend proof",
+          "commands": [
+            "rai map-frontend",
+            "rai verify-browser --url http://localhost:3000 --json"
+          ],
+          "summary": "Web/frontend golden path for browser proof and UI review."
+        },
+        {
+          "id": "mobile-surface",
+          "label": "Mobile surface",
+          "commands": [
+            "rai map-frontend",
+            "rai ui-review --goal \"...\" --json",
+            "rai verify-work --json"
+          ],
+          "summary": "Mobile-first path that keeps screen flow and state coverage explicit."
+        },
+        {
+          "id": "api-contract",
+          "label": "API contract",
+          "commands": [
+            "rai api-surface --json",
+            "rai trust --json",
+            "rai verify-work --json"
+          ],
+          "summary": "Backend-first path that surfaces endpoints, auth/data signals, and verification debt."
+        },
+        {
+          "id": "monorepo-audit",
+          "label": "Monorepo audit",
+          "commands": [
+            "rai monorepo",
+            "rai review-orchestrate",
+            "rai audit-repo --mode oneshot --json"
+          ],
+          "summary": "Package-aware path for large or polyglot repos."
+        },
+        {
+          "id": "ship",
+          "label": "Ship",
+          "commands": [
+            "rai release-control",
+            "rai control-plane-publish"
+          ],
+          "summary": "Release-oriented lane with export and gate artifacts."
+        }
+      ],
+      "optionalPacks": [
+        {
+          "id": "frontend-pack",
+          "opens": [
+            "browser",
+            "surface",
+            "design-system",
+            "handoff"
+          ]
+        },
+        {
+          "id": "mobile-pack",
+          "opens": [
+            "surface",
+            "state",
+            "handoff"
+          ]
+        },
+        {
+          "id": "monorepo-pack",
+          "opens": [
+            "parallel",
+            "ownership",
+            "shard",
+            "repair"
+          ]
+        },
+        {
+          "id": "trust-pack",
+          "opens": [
+            "trust",
+            "regression",
+            "release-control"
+          ]
+        },
+        {
+          "id": "cli-pack",
+          "opens": [
+            "lifecycle",
+            "rollback",
+            "publish"
+          ]
+        }
+      ]
+    },
+    "externalExports": [
+      "github-pr-comment",
+      "github-pr-comment-json",
+      "github-check-summary",
+      "github-check-summary-json",
+      "github-actions-step-summary",
+      "github-actions-output-json",
+      "ci-gate",
+      "repo-status-json",
+      "status-badge-json",
+      "issue-tracker-json",
+      "slack-summary",
+      "slack-summary-json",
+      "export-manifest-json",
+      "control-plane-packet-json"
+    ],
+    "explainability": {
+      "showWhy": true,
+      "showUnsurveyedSurfaces": true,
+      "showDeepModeDelta": true,
+      "showConfidenceBreakdown": true,
+      "showCoverageSignals": true
+    },
+    "detectedProfiles": [
+      "nextjs-app",
+      "expo-react-native",
+      "express-api",
+      "monorepo-workspace",
+      "polyglot-monorepo",
+      "rust-workspace",
+      "java-workspace",
+      "design-system-heavy-frontend",
+      "repo-native-cli"
+    ],
+    "stackPacks": [
+      {
+        "id": "nextjs-app",
+        "preferredPlane": "frontend-control",
+        "preferredPlanes": [
+          "frontend-control",
+          "release-control",
+          "handoff"
+        ],
+        "bundleBias": [
+          "frontend-delivery",
+          "frontend-review",
+          "frontend-ship-readiness"
+        ],
+        "addOnBias": [
+          "browser",
+          "surface",
+          "state",
+          "handoff"
+        ]
+      },
+      {
+        "id": "expo-react-native",
+        "preferredPlane": "frontend-control",
+        "preferredPlanes": [
+          "frontend-control",
+          "handoff",
+          "measure"
+        ],
+        "bundleBias": [
+          "frontend-delivery",
+          "review-wave"
+        ],
+        "addOnBias": [
+          "surface",
+          "state",
+          "handoff"
+        ]
+      },
+      {
+        "id": "express-api",
+        "preferredPlane": "trust",
+        "preferredPlanes": [
+          "trust",
+          "release-control",
+          "measure"
+        ],
+        "bundleBias": [
+          "review-wave",
+          "ship-closeout"
+        ],
+        "addOnBias": [
+          "trust",
+          "regression"
+        ]
+      },
+      {
+        "id": "monorepo-workspace",
+        "preferredPlane": "monorepo-control",
+        "preferredPlanes": [
+          "monorepo-control",
+          "safety-control",
+          "repo-control"
+        ],
+        "bundleBias": [
+          "monorepo-audit-wave",
+          "correction-wave",
+          "ship-closeout"
+        ],
+        "addOnBias": [
+          "parallel",
+          "ownership",
+          "shard",
+          "repair"
+        ]
+      },
+      {
+        "id": "polyglot-monorepo",
+        "preferredPlane": "monorepo-control",
+        "preferredPlanes": [
+          "monorepo-control",
+          "safety-control",
+          "repo-control"
+        ],
+        "bundleBias": [
+          "monorepo-audit-wave",
+          "correction-wave",
+          "ship-closeout"
+        ],
+        "addOnBias": [
+          "parallel",
+          "ownership",
+          "shard",
+          "repair",
+          "trust"
+        ]
+      },
+      {
+        "id": "rust-workspace",
+        "preferredPlane": "trust",
+        "preferredPlanes": [
+          "trust",
+          "release-control",
+          "measure"
+        ],
+        "bundleBias": [
+          "review-wave",
+          "ship-closeout"
+        ],
+        "addOnBias": [
+          "trust",
+          "regression"
+        ]
+      },
+      {
+        "id": "java-workspace",
+        "preferredPlane": "trust",
+        "preferredPlanes": [
+          "trust",
+          "release-control",
+          "measure"
+        ],
+        "bundleBias": [
+          "review-wave",
+          "ship-closeout"
+        ],
+        "addOnBias": [
+          "trust",
+          "regression"
+        ]
+      },
+      {
+        "id": "design-system-heavy-frontend",
+        "preferredPlane": "frontend-control",
+        "preferredPlanes": [
+          "frontend-control",
+          "release-control",
+          "handoff"
+        ],
+        "bundleBias": [
+          "frontend-delivery",
+          "frontend-review",
+          "frontend-ship-readiness"
+        ],
+        "addOnBias": [
+          "browser",
+          "state",
+          "design-system",
+          "handoff"
+        ]
+      },
+      {
+        "id": "repo-native-cli",
+        "preferredPlane": "lifecycle",
+        "preferredPlanes": [
+          "lifecycle",
+          "release-control",
+          "measure"
+        ],
+        "bundleBias": [
+          "slice-delivery",
+          "ship-closeout"
+        ],
+        "addOnBias": [
+          "trust",
+          "regression"
+        ]
+      }
+    ]
+  },
+  "repoSignals": {
+    "frontend": true,
+    "mobile": true,
+    "api": true,
+    "monorepo": true,
+    "docsHeavy": true,
+    "ecosystems": [
+      "java",
+      "rust"
+    ],
+    "packageCount": 4,
+    "apiEndpointCount": 6,
+    "changedPackages": [],
+    "impactedPackages": [
+      "."
+    ],
+    "workspaceRoots": [
+      "tests/fixtures/repo_proof_corpus/astral-uv",
+      "tests/fixtures/repo_proof_corpus/astral-uv/crates/uv",
+      "tests/fixtures/repo_proof_corpus/react-native-community-template/android"
+    ],
+    "surfaceRoots": [
+      "."
+    ],
+    "apiRoots": [
+      "."
+    ]
+  },
+  "taskSignals": {
+    "goalText": "",
+    "changedPackages": [],
+    "impactedPackages": [
+      "."
+    ],
+    "workspaceRoots": [
+      "tests/fixtures/repo_proof_corpus/astral-uv",
+      "tests/fixtures/repo_proof_corpus/astral-uv/crates/uv",
+      "tests/fixtures/repo_proof_corpus/react-native-community-template/android"
+    ],
+    "touchedPackageCount": 1,
+    "frontendTask": false,
+    "mobileTask": false,
+    "backendTask": false,
+    "monorepoTask": true,
+    "releaseTask": false,
+    "verifyTask": false,
+    "browserProof": false,
+    "docsTask": false,
+    "repoWideEdit": false,
+    "riskTask": false,
+    "wantsNetwork": false,
+    "packageAware": true
+  },
+  "trustCenter": null,
+  "selectedProfile": "raiola-monorepo",
+  "approvalPolicy": "on-request",
+  "sandboxMode": "workspace-write",
+  "networkAccess": false,
+  "reasoningEffort": "high",
+  "agentsMaxThreads": 8,
+  "agentsMaxDepth": 2,
+  "locked": false,
+  "strict": true,
+  "riskLevel": "high",
+  "pendingApprovals": 0,
+  "verificationGaps": 0,
+  "planReadinessGaps": 0,
+  "missingEvidence": 0,
+  "selectionRationale": [
+    "Task mentions monorepo/package graph concerns, so package-aware routing is foregrounded.",
+    "Changed or impacted package count -> 1.",
+    "Selected raiola-monorepo for repo frontend=yes monorepo=yes.",
+    "Strict posture is active, but task signals still preferred a more specific session shape; hooks remain strict."
+  ],
+  "profileBehavior": {
+    "name": "raiola-monorepo",
+    "writeScopeMode": "changed-packages-first",
+    "verifyMode": "package-contract-first",
+    "networkAccess": false,
+    "agentsMaxThreads": 8,
+    "agentsMaxDepth": 2,
+    "recommendedSubagents": [
+      "monorepo_planner",
+      "reviewer"
+    ]
+  },
+  "writeBoundary": {
+    "mode": "changed-packages-first",
+    "roots": [
+      "scripts",
+      "tests",
+      "docs",
+      ".codex",
+      ".claude",
+      "bin"
+    ],
+    "protectedRoots": [
+      ".git",
+      ".workflow",
+      "node_modules"
+    ],
+    "allowGeneratedWorkflowWrites": false,
+    "repoWideChangeThreshold": 8
+  },
+  "verifyContract": {
+    "mode": "package-contract-first",
+    "requiredCommands": [
+      "npm test",
+      "cargo test",
+      "cargo check",
+      "mvn test",
+      "rai map-frontend --json",
+      "rai api-surface --json",
+      "rai verify-work --json",
+      "rai audit-repo --mode oneshot --json"
+    ],
+    "packageFirst": true,
+    "browserProofPreferred": false,
+    "explicitDegradeOnFallback": true,
+    "capabilityDegradeMustBeVisible": true,
+    "packageContracts": [
+      {
+        "root": ".",
+        "lane": "api-contract",
+        "commands": [
+          "rai api-surface --json",
+          "rai verify-work --json"
+        ],
+        "reason": "API-owning package root requires route inventory and backend verification.",
+        "packageName": ".",
+        "ecosystem": "node",
+        "manifest": "package.json",
+        "owners": []
+      },
+      {
+        "root": "tests/fixtures/repo_proof_corpus/astral-uv",
+        "lane": "rust-contract",
+        "commands": [
+          "cd \"tests/fixtures/repo_proof_corpus/astral-uv\" && cargo test",
+          "cd \"tests/fixtures/repo_proof_corpus/astral-uv\" && cargo check"
+        ],
+        "reason": "Package root requires rust-aware verification.",
+        "packageName": "uv-workspace",
+        "ecosystem": "rust",
+        "manifest": "Cargo.toml",
+        "owners": [
+          "@aydoganberk"
+        ]
+      },
+      {
+        "root": "tests/fixtures/repo_proof_corpus/astral-uv/crates/uv",
+        "lane": "rust-contract",
+        "commands": [
+          "cd \"tests/fixtures/repo_proof_corpus/astral-uv/crates/uv\" && cargo test",
+          "cd \"tests/fixtures/repo_proof_corpus/astral-uv/crates/uv\" && cargo check"
+        ],
+        "reason": "Package root requires rust-aware verification.",
+        "packageName": "uv",
+        "ecosystem": "rust",
+        "manifest": "Cargo.toml",
+        "owners": [
+          "@aydoganberk"
+        ]
+      },
+      {
+        "root": "tests/fixtures/repo_proof_corpus/react-native-community-template/android",
+        "lane": "java-contract",
+        "commands": [
+          "cd \"tests/fixtures/repo_proof_corpus/react-native-community-template/android\" && ./gradlew test"
+        ],
+        "reason": "Package root requires java-aware verification.",
+        "packageName": "android",
+        "ecosystem": "java",
+        "manifest": "build.gradle",
+        "owners": [
+          "@aydoganberk"
+        ]
+      }
+    ],
+    "packageVerificationMatrix": [
+      {
+        "root": ".",
+        "packageName": ".",
+        "lane": "api-contract",
+        "ecosystem": "node",
+        "manifest": "package.json",
+        "owners": [],
+        "commands": [
+          "rai api-surface --json",
+          "rai verify-work --json"
+        ]
+      },
+      {
+        "root": "tests/fixtures/repo_proof_corpus/astral-uv",
+        "packageName": "uv-workspace",
+        "lane": "rust-contract",
+        "ecosystem": "rust",
+        "manifest": "Cargo.toml",
+        "owners": [
+          "@aydoganberk"
+        ],
+        "commands": [
+          "cd \"tests/fixtures/repo_proof_corpus/astral-uv\" && cargo test",
+          "cd \"tests/fixtures/repo_proof_corpus/astral-uv\" && cargo check"
+        ]
+      },
+      {
+        "root": "tests/fixtures/repo_proof_corpus/astral-uv/crates/uv",
+        "packageName": "uv",
+        "lane": "rust-contract",
+        "ecosystem": "rust",
+        "manifest": "Cargo.toml",
+        "owners": [
+          "@aydoganberk"
+        ],
+        "commands": [
+          "cd \"tests/fixtures/repo_proof_corpus/astral-uv/crates/uv\" && cargo test",
+          "cd \"tests/fixtures/repo_proof_corpus/astral-uv/crates/uv\" && cargo check"
+        ]
+      },
+      {
+        "root": "tests/fixtures/repo_proof_corpus/react-native-community-template/android",
+        "packageName": "android",
+        "lane": "java-contract",
+        "ecosystem": "java",
+        "manifest": "build.gradle",
+        "owners": [
+          "@aydoganberk"
+        ],
+        "commands": [
+          "cd \"tests/fixtures/repo_proof_corpus/react-native-community-template/android\" && ./gradlew test"
+        ]
+      }
+    ],
+    "matrixSummary": {
+      "packageCount": 4,
+      "ecosystems": [
+        "node",
+        "rust",
+        "java"
+      ],
+      "lanes": [
+        "api-contract",
+        "rust-contract",
+        "java-contract"
+      ]
+    },
+    "verificationDebt": {
+      "verificationGaps": 0,
+      "planReadinessGaps": 0,
+      "missingEvidence": 0
+    }
+  },
+  "commandPolicy": {
+    "protectedPaths": [
+      ".git",
+      ".workflow",
+      "node_modules"
+    ],
+    "repoWideChangeThreshold": 8,
+    "releaseScriptFamilies": [
+      "release",
+      "publish",
+      "deploy",
+      "workflow",
+      "changeset"
+    ],
+    "explicitWriteBoundaryRequired": true,
+    "packageManagerIntrospection": true,
+    "nestedPackageManagerIntrospection": true,
+    "capabilityDegradeMustBeExplicit": true,
+    "ciWorkflowRiskEscalation": true,
+    "waveWriteRootThreshold": 4,
+    "commandDenylist": [
+      "npm publish",
+      "pnpm publish",
+      "yarn npm publish",
+      "gh release",
+      "git push --tags"
+    ],
+    "commandAllowlist": [
+      "npm test",
+      "pnpm test",
+      "yarn test",
+      "node --test",
+      "rai verify-work --json"
+    ]
+  },
+  "profileSummaries": {
+    "raiola-balanced": {
+      "approval_policy": "on-request",
+      "sandbox_mode": "workspace-write",
+      "model_reasoning_effort": "medium",
+      "web_search": "cached",
+      "network_access": false,
+      "agents_max_threads": 5,
+      "agents_max_depth": 1,
+      "write_scope_mode": "task-root",
+      "verify_mode": "targeted",
+      "explicit_write_boundary_required": false,
+      "package_first": false,
+      "browser_proof_preferred": false
+    },
+    "raiola-strict": {
+      "approval_policy": "on-request",
+      "sandbox_mode": "workspace-write",
+      "model_reasoning_effort": "high",
+      "web_search": "cached",
+      "network_access": false,
+      "agents_max_threads": 5,
+      "agents_max_depth": 2,
+      "write_scope_mode": "explicit-write-boundary",
+      "verify_mode": "contract-required",
+      "explicit_write_boundary_required": true,
+      "package_first": false,
+      "browser_proof_preferred": false
+    },
+    "raiola-frontend": {
+      "approval_policy": "on-request",
+      "sandbox_mode": "workspace-write",
+      "model_reasoning_effort": "high",
+      "web_search": "cached",
+      "network_access": false,
+      "agents_max_threads": 5,
+      "agents_max_depth": 1,
+      "write_scope_mode": "surface-bounded",
+      "verify_mode": "browser-proof-preferred",
+      "explicit_write_boundary_required": false,
+      "package_first": false,
+      "browser_proof_preferred": true
+    },
+    "raiola-monorepo": {
+      "approval_policy": "on-request",
+      "sandbox_mode": "workspace-write",
+      "model_reasoning_effort": "high",
+      "web_search": "cached",
+      "network_access": false,
+      "agents_max_threads": 8,
+      "agents_max_depth": 2,
+      "write_scope_mode": "changed-packages-first",
+      "verify_mode": "package-contract-first",
+      "explicit_write_boundary_required": true,
+      "package_first": true,
+      "browser_proof_preferred": false
+    },
+    "raiola-locked": {
+      "approval_policy": "untrusted",
+      "sandbox_mode": "read-only",
+      "model_reasoning_effort": "medium",
+      "web_search": "cached",
+      "network_access": false,
+      "agents_max_threads": 4,
+      "agents_max_depth": 1,
+      "write_scope_mode": "read-only",
+      "verify_mode": "read-only-review",
+      "explicit_write_boundary_required": false,
+      "package_first": false,
+      "browser_proof_preferred": false
+    }
+  },
+  "roles": [
+    {
+      "name": "repo-explorer",
+      "summary": "Maps the codebase, packet refs, and likely impact surface before execution."
+    },
+    {
+      "name": "release-noter",
+      "summary": "Prepares review, ship, PR brief, and release communication artifacts."
+    },
+    {
+      "name": "frontend-verifier",
+      "summary": "Validates UI surfaces, browser evidence, and frontend-specific regressions."
+    },
+    {
+      "name": "docs-verifier",
+      "summary": "Checks command docs, getting-started flows, and closeout narratives."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+name = "trust_analyst"
+description = "Read-only analyst for approvals, sandbox posture, verification gaps, and policy drift."
+model = "gpt-5.4-mini"
+model_reasoning_effort = "medium"
+sandbox_mode = "read-only"
+developer_instructions = """
+Inspect approval posture, risk, and missing evidence before work widens.
+Translate trust signals into concrete next steps instead of vague warnings.
+"""
+[mcp_servers.raiolaPolicy]
+command = "node"
+args = ["scripts/workflow/mcp_server.js", "--server", "policy", "--repo", "."]
+cwd = "."

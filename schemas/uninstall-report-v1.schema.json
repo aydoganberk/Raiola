@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raiola/uninstall-report/v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "targetRepo",
+    "removed",
+    "generatedArtifacts"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raiola/uninstall-report/v1"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "targetRepo": {
+      "type": "string"
+    },
+    "removed": {
+      "type": "array"
+    },
+    "skipped": {
+      "type": "array"
+    },
+    "packageScripts": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "generatedArtifacts": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

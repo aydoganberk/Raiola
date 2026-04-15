@@ -1,9 +1,9 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { ensureDir } = require('./common');
 const { buildPackageGraph } = require('./package_graph');
 const { relativePath } = require('./roadmap_os');
+const { ensureDir } = require('./io/files');
 
 function severityWeight(severity) {
   if (severity === 'must_fix') {

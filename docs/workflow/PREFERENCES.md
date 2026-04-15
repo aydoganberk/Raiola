@@ -85,6 +85,8 @@
   - `Clarify the goal first, then ask only high-leverage questions`
 - `assumptions`
   - `Scan the codebase first, then write evidence-backed assumptions and let the user correct them if needed`
+- `proposal_first`
+  - `Generate 2-3 short discuss options first, require one approval, then open only the depth implied by the chosen option`
 
 ## Reasoning Profiles
 

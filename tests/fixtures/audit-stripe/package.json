@@ -1,0 +1,7 @@
+{
+  "name": "audit-stripe-fixture",
+  "private": true,
+  "dependencies": {
+    "stripe": "17.5.0"
+  }
+}

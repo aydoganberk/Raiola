@@ -10,6 +10,15 @@
 
 - High-signal operational UI with dense data, fast scanning, and powerful states.
 
+## External Design DNA
+
+- Product category: `Analytics Platform`
+- Reference blend: `Linear Precision structure + VoltAgent Command Energy type cues + VoltAgent Command Energy accent restraint`
+- North star: Data-heavy products need dense but legible hierarchy, evidence rails, and stable state design.
+- `Linear Precision` -> Precise hierarchy, thin borders, disciplined density, and confident restraint.
+- `VoltAgent Command Energy` -> Dark command-center focus, signal-color discipline, and architecture-first storytelling.
+- `Cohere Data-Rich` -> Enterprise credibility, data-forward composition, and restrained gradient energy.
+
 ## Experience Thesis
 
 - Title: `Operator Dense control-plane`
@@ -128,6 +137,10 @@
 - Do not waste vertical space with oversized chrome.
 - Avoid decorative gradients that reduce scan speed.
 - Avoid oversized cards that waste vertical space and slow operator scanning.
+- Contract ban: Do not replace data relationships with oversized decorative cards.
+- Contract ban: Do not bury status, risk, or primary actions below fold-heavy hero chrome.
+- Contract ban: Do not mix multiple visual metaphors on one screen.
+- Contract ban: Do not hide core actions in tertiary menus when the task is frequent.
 
 ## Style Guardrails
 
@@ -148,6 +161,110 @@
 - Refactor repeated utility piles into semantic wrappers or shared primitives once patterns repeat.
 - Keep custom primitives, but restyle density, radius, spacing, and typography systematically.
 
+## Semantic Guardrails
+
+- Prefer semantic landmarks (`header`, `nav`, `main`, `section`, `article`, `footer`) before anonymous wrapper stacks.
+- Reach for `button`, `a`, `label`, `fieldset`, `dialog`, `details`, `table`, `progress`, `meter`, and `output` before custom div-based interactions.
+- If a pattern repeats more than twice, extract a small named primitive or semantic wrapper instead of cloning utility piles.
+- Write the state contract first: loading, empty, error, success, disabled, and recovery paths are first-class UI.
+- Preserve keyboard, focus, and dismissal behavior as part of the design contract, not as post-polish cleanup.
+- When data is relational, real table semantics and stable summary rails beat decorative card farms.
+
+## Native-First Decision Matrix
+
+### Relational data views
+
+- Native first: `table + thead + tbody`
+- Use when: Use for operator lists, audit logs, comparison screens, and anything row/column driven.
+- Why: Real table semantics preserve scan speed, keyboard expectations, and accessible structure.
+- Stack translation: Prefer <table>/<thead>/<tbody> before composing custom grid chrome.
+
+### Confirm, edit, or drill-in overlays
+
+- Native first: `dialog`
+- Use when: Use for confirm flows, inline editing overlays, inspectors, and focused task interruptions.
+- Why: A dialog contract keeps dismissal, focus return, and escape behavior predictable.
+- Stack translation: Start from <dialog> or a very thin wrapper before introducing custom portal choreography.
+
+### Advanced settings and expandable sections
+
+- Native first: `details + summary`
+- Use when: Use when secondary metadata, FAQs, advanced filters, or low-frequency settings expand inline.
+- Why: Disclosure primitives reduce custom JS and make collapsed vs expanded state explicit.
+- Stack translation: Use <details>/<summary> for first-pass behavior, then wrap only if the repo needs extra control.
+
+### Forms and inline validation
+
+- Native first: `label + input/select/textarea + fieldset`
+- Use when: Use for settings, onboarding, account flows, and any form that needs clear helper and error copy.
+- Why: Native form semantics keep labels, validation, and keyboard flow resilient before styling decisions compound.
+- Stack translation: Start with label/input/select/fieldset semantics and add wrappers only when repeated patterns emerge.
+
+### Secondary actions and contextual menus
+
+- Native first: `button + popover/menu`
+- Use when: Use for row actions, filter menus, split buttons, and compact secondary command surfaces.
+- Why: Button-targeted menus make trigger ownership and dismissal rules easier to standardize.
+- Stack translation: Start with button + popover/menu semantics rather than bespoke trays and invisible div click zones.
+
+### Status, success, and recovery messaging
+
+- Native first: `output + aria-live + progress/meter where relevant`
+- Use when: Use for save/delete/retry flows, async jobs, uploads, and transient result messaging.
+- Why: Status feedback becomes easier to reuse when message semantics are explicit before the toast/banner styling layer.
+- Stack translation: Use output/aria-live plus one shared toast helper instead of page-local success banners.
+
+## Recipe Pack
+
+### Semantic page shell
+
+- Use when: Use for any new page, dashboard, settings screen, or content workspace.
+- Structure: header/nav -> main -> primary action lane -> secondary rail or footer
+- Implementation bias: Start with landmarks and one obvious primary action before decorative treatment.
+
+### Async state cluster
+
+- Use when: Use whenever a screen loads remote data, saves, retries, or can become empty.
+- Structure: loading skeleton -> empty state -> error/recovery state -> success confirmation
+- Implementation bias: Implement all four states together so the happy path does not monopolize polish.
+
+### Form card / settings section
+
+- Use when: Use for settings, onboarding, account forms, and edit panels.
+- Structure: section header -> labeled fields -> helper/error copy -> action row
+- Implementation bias: Keep labels, helper text, and validation semantics explicit before spacing polish.
+
+### Filter -> table -> inspector
+
+- Use when: Use for admin, ops, queues, audit, or review-heavy surfaces.
+- Structure: filter bar -> relational table -> sticky detail/inspector pane -> action/status rail
+- Implementation bias: Favor true table semantics and predictable inspector behavior over oversized summary cards.
+
+### Command + summary rail
+
+- Use when: Use when operators need risk, next action, and status visible while scanning detail.
+- Structure: top command lane -> summary metrics -> main work area -> evidence/status rail
+- Implementation bias: Keep scan speed ahead of novelty and let the summary rail anchor decision-making.
+
+### Prototype -> translation lane
+
+- Use when: Use when the repo lacks a strong shared UI system or a new surface is still ambiguous.
+- Structure: semantic HTML prototype -> approval snapshot -> thin shared primitive extraction -> stack translation
+- Implementation bias: Reduce churn by settling hierarchy and state semantics before framework-specific styling expands.
+
+## Prototype Mode
+
+- Recommended: `yes`
+- Mode: `semantic-html-first`
+- Rationale: Start with a semantic HTML/CSS prototype to settle hierarchy, state coverage, and native interaction contracts before stack translation.
+- Entry strategy: Prototype the shell, state variants, and one primary flow with low-JS semantic primitives, then translate only after the structure feels stable.
+- Deliverable: Prototype shell with semantic landmarks and one primary action lane.
+- Deliverable: Loading, empty, error, and success states captured before visual polish.
+- Deliverable: Translation notes that map each native primitive to the target stack equivalent.
+- Handoff: Freeze hierarchy and state behavior before translating to repo-local components.
+- Handoff: Map native primitives to the target UI stack deliberately instead of re-inventing them page by page.
+- Handoff: Re-run browser/UI review after translation so the semantic contract survives the final polish layer.
+
 ## Codex Implementation Recipes
 
 - Start each frontend task by restating the design direction in one sentence: "quiet precision with dense information and strong alignment; compact but breathable; micro-motion only for state change, selection, and live status; default to even less motion if the stack lacks dedicated motion primitives."
@@ -157,6 +274,7 @@
 - When a diff changes visuals, also patch empty/loading/error/success states in the same pass if they share the component.
 - End every UI slice with a concise visual QA checklist and the exact browser review command.
 - For operational surfaces, prefer composable table/filter/panel primitives over custom dashboard art direction.
+- If the screen is still ambiguous, prototype it in semantic HTML/CSS first and translate only after the shell and state model stabilize.
 
 ## Codex Implementation Prompts
 

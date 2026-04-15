@@ -1,0 +1,104 @@
+{
+  "generatedAt": "2026-04-14T15:52:18.131Z",
+  "proofType": "repo-proof",
+  "repoRoot": "/mnt/data/repo/tests/fixtures/repo_proof_corpus/hono-starter",
+  "repoRelative": "tests/fixtures/repo_proof_corpus/hono-starter",
+  "invokedFrom": "/mnt/data/repo",
+  "invokedFromRelative": ".",
+  "externalSnapshot": true,
+  "writeArtifacts": false,
+  "coverage": [
+    "repo-audit"
+  ],
+  "repoTruth": {
+    "workspaceCount": 0,
+    "ecosystems": [],
+    "markers": [],
+    "ownershipSource": null,
+    "sampleWorkspaces": []
+  },
+  "apiSurface": {
+    "endpointCount": 0,
+    "middlewareCount": 0,
+    "mountCount": 0,
+    "frameworks": [],
+    "authSignals": [],
+    "dataStores": [],
+    "artifacts": null
+  },
+  "frontend": {
+    "active": false,
+    "rootRelative": "docs/workflow",
+    "framework": "Custom",
+    "routing": "Custom Routing",
+    "productSurface": "Web App",
+    "browserLane": "on-demand",
+    "hasProofHarness": false,
+    "componentReuseVerdict": "thin",
+    "artifacts": null
+  },
+  "audit": {
+    "goal": "produce a local proof pack for this repository snapshot",
+    "repoShape": "single-package",
+    "stackPack": "Generic repository",
+    "healthVerdict": "at_risk",
+    "healthScore": 62,
+    "verifiedCount": 3,
+    "probableCount": 1,
+    "heuristicCount": 0,
+    "topFindings": [
+      {
+        "bucket": "verified",
+        "title": "Repository has executable code but no automated tests",
+        "severity": "high",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "Repository has no CI workflow",
+        "severity": "medium",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "Repository has no stable verify entrypoint",
+        "severity": "medium",
+        "why": ""
+      },
+      {
+        "bucket": "probable",
+        "title": "Dependency installs may drift between machines",
+        "severity": "low",
+        "why": ""
+      }
+    ],
+    "artifacts": null,
+    "controlPlaneArtifacts": {
+      "findingsRegistry": ".workflow/reports/findings-registry.json",
+      "correctionControl": ".workflow/reports/correction-control.json",
+      "correctionControlMarkdown": ".workflow/reports/correction-control.md"
+    }
+  },
+  "verdict": {
+    "overallConfidence": "low",
+    "score": 1,
+    "maxScore": 5,
+    "trustableFindings": [
+      "Verified finding: Repository has executable code but no automated tests",
+      "Verified finding: Repository has no CI workflow",
+      "Verified finding: Repository has no stable verify entrypoint"
+    ],
+    "manualVerify": [
+      "Deployment-time integrations that are invisible in a read-only snapshot"
+    ],
+    "knownLimitations": [
+      "Static route scan may miss runtime-generated endpoints or framework-specific mounts.",
+      "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+    ]
+  },
+  "artifacts": null,
+  "recommendedNextLanes": [
+    "rai audit-repo --repo tests/fixtures/repo_proof_corpus/hono-starter --goal \"produce a local proof pack for this repository snapshot\" --json",
+    "cd tests/fixtures/repo_proof_corpus/hono-starter && rai start recommend --goal \"produce a local proof pack for this repository snapshot\""
+  ]
+}

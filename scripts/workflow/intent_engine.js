@@ -1,11 +1,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { buildBaseState } = require('./state_surface');
+const {
+  buildBaseState } = require('./state_surface');
 const {
   normalizeWorkflowControlUtterance,
-  readIfExists,
   workflowPaths,
 } = require('./common');
+const { readTextIfExists: readIfExists } = require('./io/files');
 const { buildFrontendProfile } = require('./map_frontend');
 const { listCapabilities } = require('./capability_registry');
 const { buildPackageGraph } = require('./package_graph');

@@ -1,0 +1,11 @@
+{
+  "name": "hono-starter-snapshot",
+  "private": true,
+  "dependencies": {
+    "hono": "4.6.0",
+    "@hono/node-server": "1.13.0"
+  },
+  "scripts": {
+    "dev": "node src/index.ts"
+  }
+}

@@ -1,0 +1,3 @@
+# Keep runtime/cache state out of archive-style source exports.
+.workflow export-ignore
+.workflow/** export-ignore

@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseArgs, safeArtifactToken } = require('./common');
+const { parseArgs } = require('./common');
+const { safeArtifactToken } = require('./common_identity');
 const { listEntries, relativePath } = require('./roadmap_os');
 
 function patchDir(cwd) {

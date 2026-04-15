@@ -7,7 +7,7 @@ const childProcess = require('node:child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
+const raiBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase20-'));
@@ -54,6 +54,37 @@ function seedFrontendRepo(targetRepo) {
   writeFile(targetRepo, 'preview.html', '<!doctype html><html><body><main><h1>Preview</h1></main></body></html>\n');
 }
 
+function seedFlutterRepo(targetRepo) {
+  const packageJsonPath = path.join(targetRepo, 'package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  packageJson.scripts = {
+    test: 'node -e "process.exit(0)"',
+    lint: 'node -e "process.exit(0)"',
+    typecheck: 'node -e "process.exit(0)"',
+  };
+  fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+  writeFile(
+    targetRepo,
+    'pubspec.yaml',
+    'name: conflip\nflutter:\n  uses-material-design: true\n',
+  );
+  writeFile(
+    targetRepo,
+    'lib/main.dart',
+    'import \'package:flutter/material.dart\';\nvoid main() => runApp(const MaterialApp(home: Placeholder()));\n',
+  );
+  writeFile(
+    targetRepo,
+    'lib/features/onboarding/onboarding_screen.dart',
+    'import \'package:flutter/material.dart\';\nclass OnboardingScreen extends StatelessWidget { const OnboardingScreen({super.key}); @override Widget build(BuildContext context) { return const Placeholder(); } }\n',
+  );
+  writeFile(
+    targetRepo,
+    'lib/features/home/home_screen.dart',
+    'import \'package:flutter/material.dart\';\nclass HomeScreen extends StatelessWidget { const HomeScreen({super.key}); @override Widget build(BuildContext context) { return const Placeholder(); } }\n',
+  );
+}
+
 function seedMonorepo(targetRepo) {
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
@@ -96,7 +127,7 @@ function gitInit(targetRepo) {
 
 test('ui-direction accepts explicit taste profiles and exports richer design signals', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
@@ -136,9 +167,34 @@ test('ui-direction accepts explicit taste profiles and exports richer design sig
   assert.ok(fs.existsSync(path.join(targetRepo, spec.stateAtlas.file)));
 });
 
+test('map-frontend emits routing, surface inventory, planning signals, and command packs', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  seedFrontendRepo(targetRepo);
+
+  const frontendMap = JSON.parse(run(
+    'node',
+    [path.join(targetRepo, 'scripts', 'workflow', 'map_frontend.js'), '--json'],
+    targetRepo,
+  ));
+
+  assert.equal(frontendMap.framework.primary, 'Next');
+  assert.equal(frontendMap.routing.primary, 'next-app-router');
+  assert.equal(frontendMap.surfaceInventory.routeCount, 1);
+  assert.ok(frontendMap.surfaceInventory.sharedComponentCount >= 1);
+  assert.equal(frontendMap.planningSignals.webSurface, true);
+  assert.equal(frontendMap.planningSignals.mobileSurface, false);
+  assert.equal(frontendMap.planningSignals.needsStateAtlas, false);
+  assert.equal(frontendMap.planningSignals.needsComponentStrategy, false);
+  assert.equal(frontendMap.planningSignals.needsFullBrief, false);
+  assert.ok(frontendMap.commandPacks.available.some((pack) => pack.id === 'frontend-lean-core'));
+  assert.equal(frontendMap.recommendedCommandPack.id, 'frontend-lean-core');
+  assert.ok(frontendMap.recommendedCommandPack.commands.some((command) => command.includes('rai ui-spec')));
+});
+
 test('design-dna and state-atlas generate downstream site-building contracts', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   writeFile(
     targetRepo,
@@ -171,7 +227,7 @@ test('design-dna and state-atlas generate downstream site-building contracts', (
 
 test('page-blueprint, design-md, component-strategy, design-benchmark, and frontend-brief generate external-site artifact packs', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   writeFile(
     targetRepo,
@@ -230,9 +286,43 @@ test('page-blueprint, design-md, component-strategy, design-benchmark, and front
   assert.ok(fs.existsSync(path.join(targetRepo, frontendBrief.runtimeFile)));
 });
 
+test('flutter/mobile repos are recognized as mobile-first surfaces instead of web-first page families', () => {
+  const targetRepo = makeTempRepo();
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  seedFlutterRepo(targetRepo);
+
+  const targetBin = path.join(targetRepo, 'bin', 'rai.js');
+  const frontendMap = JSON.parse(run(
+    'node',
+    [path.join(targetRepo, 'scripts', 'workflow', 'map_frontend.js'), '--json'],
+    targetRepo,
+  ));
+  const designDna = JSON.parse(run(
+    'node',
+    [targetBin, 'design-dna', '--goal', 'plan the flutter mobile consumer app onboarding flow with gestures and bottom sheets', '--json'],
+    targetRepo,
+  ));
+  const blueprint = JSON.parse(run(
+    'node',
+    [targetBin, 'page-blueprint', '--goal', 'plan the flutter mobile consumer app onboarding flow with gestures and bottom sheets', '--json'],
+    targetRepo,
+  ));
+
+  assert.equal(frontendMap.framework.primary, 'Flutter');
+  assert.equal(frontendMap.routing.primary, 'flutter-navigator');
+  assert.equal(frontendMap.productSurface.id, 'mobile-app');
+  assert.equal(frontendMap.interactionModel.primary, 'gesture-heavy');
+  assert.equal(frontendMap.recommendedCommandPack.id, 'mobile-surface-pack');
+  assert.ok(frontendMap.visualVerdict.areas.some((item) => item.area === 'screen flow'));
+  assert.ok(frontendMap.visualVerdict.areas.some((item) => item.area === 'gesture fidelity'));
+  assert.equal(designDna.productCategory.id, 'mobile-consumer-app');
+  assert.equal(blueprint.pageType.id, 'mobile-screen-flow');
+  assert.ok(blueprint.sections.some((item) => item.id === 'primary-task'));
+});
+
 test('ui-recipe scaffolds a framework-aware semantic-first slice', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
 
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
@@ -262,7 +352,7 @@ test('ui-recipe scaffolds a framework-aware semantic-first slice', () => {
 
 test('component-map reports primitive opportunities for repeated frontend patterns', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   writeFile(targetRepo, 'components/Modal.tsx', 'export function Modal() { return <div className="modal-shell"><button>Close</button></div>; }\n');
   writeFile(targetRepo, 'components/DataGrid.tsx', 'export function DataGrid() { return <div className="grid"><div>Row</div></div>; }\n');
@@ -276,7 +366,7 @@ test('component-map reports primitive opportunities for repeated frontend patter
 
 test('review-tasks builds a blocker-first four-wave task graph for large review loops', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   gitInit(targetRepo);
 
@@ -319,7 +409,7 @@ test('review-tasks builds a blocker-first four-wave task graph for large review 
 
 test('codex contextpack wraps workflow, repo, frontend, and review context into budgeted attachments', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedFrontendRepo(targetRepo);
   gitInit(targetRepo);
 
@@ -396,7 +486,7 @@ test('codex contextpack wraps workflow, repo, frontend, and review context into 
 
 test('codex contextpack still infers focus files when no review graph or frontend lane is active', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const wrapper = JSON.parse(run(
@@ -412,7 +502,7 @@ test('codex contextpack still infers focus files when no review graph or fronten
 
 test('monorepo intelligence exposes hotspots and context budgets for broad package graphs', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   seedMonorepo(targetRepo);
   gitInit(targetRepo);
 

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raiola/product-manifest/v2",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "installedVersion",
+    "artifactSchemas",
+    "generatedArtifacts"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raiola/product-manifest/v2"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "installedVersion": {
+      "type": "string"
+    },
+    "scriptProfile": {
+      "type": "string"
+    },
+    "artifactSchemas": {
+      "type": "object"
+    },
+    "generatedArtifacts": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

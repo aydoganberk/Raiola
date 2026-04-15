@@ -2,7 +2,6 @@ const path = require('node:path');
 const {
   buildPacketSnapshot,
   controlPaths,
-  ensureDir,
   extractSection,
   getFieldValue,
   getOpenCarryforwardItems,
@@ -11,13 +10,16 @@ const {
   parseMemoryEntry,
   parseSeedEntries,
   parseWorkstreamTable,
-  read,
   readPlanGateStatus,
-  readIfExists,
   workflowPaths,
-  write,
-  writeIfChanged,
 } = require('./common');
+const {
+  ensureDir,
+  readText: read,
+  readTextIfExists: readIfExists,
+  writeText: write,
+  writeTextIfChanged: writeIfChanged,
+} = require('./io/files');
 
 function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');

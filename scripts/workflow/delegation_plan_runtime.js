@@ -2,8 +2,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   ensureDir,
-  write,
-} = require('./common');
+  writeText: write,
+} = require('./io/files');
 
 const COMPLETED_STATUSES = new Set(['completed', 'skipped']);
 const ACTIVE_STATUSES = new Set(['ready', 'in_progress']);

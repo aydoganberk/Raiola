@@ -8,12 +8,14 @@ const {
   listGitChanges,
   parseArgs,
   parseValidationContract,
-  read,
   resolveWorkflowRoot,
   tryExtractSection,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 
 function reportsDir(cwd) {
   return path.join(cwd, '.workflow', 'reports');

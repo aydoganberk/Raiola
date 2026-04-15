@@ -1,10 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
-const {
-  ensureDir,
-  parseArgs,
-} = require('./common');
+const { parseArgs } = require('./common');
+const { ensureDir } = require('./io/files');
 const { makeArtifactId, writeRuntimeMarkdown } = require('./runtime_helpers');
 
 function printHelp() {

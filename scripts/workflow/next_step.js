@@ -1,5 +1,8 @@
 const path = require('node:path');
-const { latestReviewData, latestVerifyWork } = require('./trust_os');
+const {
+  latestReviewData,
+  latestVerifyWork } = require('./trust_os');
+const { readDiscussProposalState } = require('./discuss_proposals');
 const {
   assertWorkflowFiles,
   computeWindowStatus,
@@ -11,12 +14,12 @@ const {
   parseMemoryEntries,
   parseMemoryEntry,
   parseSeedEntries,
-  read,
   readPlanGateStatus,
   resolveWorkflowRoot,
   workflowControlExamplesForFamily,
   workflowPaths,
 } = require('./common');
+const { readText: read } = require('./io/files');
 const { buildFrontendProfile } = require('./map_frontend');
 const { writeStateSurface } = require('./state_surface');
 
@@ -51,6 +54,7 @@ function deriveRecommendation(state) {
     seeds,
     windowStatus,
     frontendProfile,
+    discussApproval,
   } = state;
 
   const recommendation = {
@@ -122,6 +126,60 @@ function deriveRecommendation(state) {
   }
 
   if (step === 'discuss') {
+    if (preferences.discussMode === 'proposal_first' && discussApproval.status !== 'approved') {
+      recommendation.title = 'Approve one discuss proposal before expanding the packet';
+      recommendation.command = 'rai discuss --json';
+      recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
+        lite: [
+          'Review the 2-3 proposal options and prefer the recommended one unless repo signals disagree',
+          'Record the chosen option with `rai discuss --approve proposal-1|proposal-2|proposal-3`',
+          'Do not deepen CONTEXT.md beyond the approved option yet',
+        ],
+        standard: [
+          'Review the 2-3 proposal options and prefer the recommended one unless repo signals disagree',
+          'Record the chosen option with `rai discuss --approve proposal-1|proposal-2|proposal-3`',
+          'Only after approval, fill the discuss fields implied by that option',
+          'Keep the artifact set lean until the approved option proves it needs more depth',
+        ],
+        full: [
+          'Review the 2-3 proposal options and prefer the recommended one unless repo signals disagree',
+          'Record the chosen option with `rai discuss --approve proposal-1|proposal-2|proposal-3`',
+          'Only after approval, fill the discuss fields implied by that option',
+          'Keep the artifact set lean until the approved option proves it needs more depth',
+          'Document why a heavier option was chosen if it deviates from the recommendation',
+        ],
+      });
+      recommendation.note = `Discuss approval is still ${discussApproval.status} | plan=${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
+      return recommendation;
+    }
+
+    if (preferences.discussMode === 'proposal_first') {
+      recommendation.title = 'Run discuss against the approved proposal';
+      recommendation.command = 'Refresh the initial packet snapshot in CONTEXT.md inside the approved proposal scope';
+      recommendation.checklist = checklistForProfile(preferences.workflowProfile, {
+        lite: [
+          'Use the approved option as the cap on discuss depth',
+          'Write only the fields needed to make the next safe slice explicit',
+          'Keep constraints, questions, and success rubric tied to the approved option',
+        ],
+        standard: [
+          'Use the approved option as the cap on discuss depth',
+          'Write only the fields needed to make the next safe slice explicit',
+          'Keep constraints, questions, and success rubric tied to the approved option',
+          'Only escalate to a heavier artifact set if the approved option is no longer sufficient',
+        ],
+        full: [
+          'Use the approved option as the cap on discuss depth',
+          'Write only the fields needed to make the next safe slice explicit',
+          'Keep constraints, questions, and success rubric tied to the approved option',
+          'Only escalate to a heavier artifact set if the approved option is no longer sufficient',
+          'Record the reason if you later need to supersede the approved option',
+        ],
+      });
+      recommendation.note = `Approved option -> ${discussApproval.selectedOption} | ${discussApproval.summary} | plan=${planGate} | profile=${preferences.workflowProfile} | automation=${preferences.automationMode}`;
+      return recommendation;
+    }
+
     recommendation.title = preferences.discussMode === 'assumptions'
       ? 'Run discuss in assumptions mode'
       : 'Run discuss in interview mode';
@@ -405,6 +463,7 @@ function buildNextPayload(cwd, rootDir, options = {}) {
   const handoff = read(paths.handoff);
   const memory = read(paths.memory);
   const seedsDoc = read(paths.seeds);
+  const contextDoc = read(paths.context);
   const preferences = loadPreferences(paths);
   const milestone = String(getFieldValue(status, 'Current milestone') || 'NONE').trim();
   const step = String(getFieldValue(status, 'Current milestone step') || 'unknown').trim();
@@ -418,6 +477,7 @@ function buildNextPayload(cwd, rootDir, options = {}) {
   const seeds = parseSeedEntries(extractSection(seedsDoc, 'Open Seeds'), 'No open seeds yet');
   const windowStatus = computeWindowStatus(paths);
   const frontendProfile = buildFrontendProfile(cwd, rootDir);
+  const discussApproval = readDiscussProposalState(contextDoc, preferences.discussMode);
 
   const recommendation = deriveRecommendation({
     preferences,
@@ -431,6 +491,7 @@ function buildNextPayload(cwd, rootDir, options = {}) {
     seeds,
     windowStatus,
     frontendProfile,
+    discussApproval,
   });
   const gapRecommendation = options.fromGap ? biggestGapRecommendation(cwd) : null;
 
@@ -466,6 +527,10 @@ function buildNextPayload(cwd, rootDir, options = {}) {
       visualVerdictRequired: frontendProfile.visualVerdict.required,
       signals: frontendProfile.signals.hits.map((item) => item.label),
       refreshStatus: frontendProfile.fingerprint.refreshStatus,
+    },
+    discussApproval: {
+      required: preferences.discussMode === 'proposal_first',
+      ...discussApproval,
     },
     recommendation: gapRecommendation || recommendation,
   };

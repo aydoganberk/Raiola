@@ -1,10 +1,57 @@
+## 0.4.8
+
+- Added import-graph-aware monorepo intelligence so blast radius can expand through workspace imports and cross-file consumers instead of package boundaries alone.
+- Upgraded frontend component inventory with export, prop-interface, and consumer counting signals plus package-alias consumer inference for shared UI packages.
+- Added delta-based continuity checkpoints with milestone snapshots, JSON-patch-style operations, and resumable checkpoint artifacts under `.workflow/runtime/checkpoints/`.
+- Upgraded file indexing to persistent cache-first behavior under `.workflow/cache/file-index.json` with fast git-status reuse when the repo is unchanged.
+- Added design token export pipeline outputs for CSS custom properties, Figma Variables JSON, and Tailwind partials from taste-profile generation.
+- Added content-addressable evidence objects and structured explainability traces for downstream agent-readable reasoning and stale-evidence inspection.
+- Added package-level repo-config override discovery for monorepo package-local `.workflow/package-config.json` files.
+
 # Changelog
+## Unreleased
+
+- formalized lifecycle transitions with a repo-visible lifecycle FSM and recommended next-state output
+- added an agent-agnostic runtime contract surface that detects Codex, Claude Code, Cursor, and Aider footprints
+- upgraded browser verification to emit an accessibility tree artifact and use Playwright capture when available
+- strengthened worktree isolation by optionally symlinking shared node_modules into isolated worker checkouts
+
 
 Primary shell note: changelog command references are normalized to the current `rai` shell and `raiola` package surface to avoid naming drift after the rebrand.
 
 ## Unreleased
 
-_No unreleased changes yet._
+- Added a native Codex operator layer with `rai codex operator`, `rai codex cockpit`, `rai codex mission`, `rai codex telemetry`, managed requirements export, app-server / Agents SDK scaffolds, operator evals, and new installable operator skills.
+- Added reusable Codex execution capsules under `.workflow/runtime/codex-control/missions/` so high-stakes tasks now get a mission charter, recovery file, launcher, trust/release gates, and a concrete resume anchor instead of living only as ephemeral session state.
+
+- Added a converged control-plane packet surface so Change Control now publishes `control-plane-packet.json` beside repo status, export manifests, CI gate output, and GitHub output maps.
+- Expanded `rai release-control` to materialize Explainability as part of the supporting ship surfaces and to converge the release lane until continuity/export links stabilize.
+- Expanded Handoff OS so continuity bundles now carry trust/change-control/explainability decision basis, linked control-plane summaries, and external resume links back to repo status, export manifest, and the control-plane packet.
+- Expanded Measurement / ROI so it also reports control-plane integrity signals such as packet presence and explainability visibility.
+
+- Hardened control-plane artifact persistence so persisted report JSON now carries its own artifact/runtime paths instead of leaving downstream publish surfaces to reconstruct them.
+- Expanded `rai release-control` so the change-control lane materializes Handoff OS, Measurement / ROI, Lifecycle Center, Team Control Room, and Autopilot as supporting ship surfaces before exporting release artifacts.
+- Fixed control-plane publish self-references so `repo-status.json`, `export-manifest.json`, and GitHub output paths stay stable and machine-readable across the full export set.
+- Added `rai operate`, a unified engineering operating center that ranks the core planes, chooses the active question, compresses the command surface, and preserves publish readiness in one repo-native entry.
+- Expanded `rai repo-config` with opinionated stack packs and preferred-plane ordering for Next.js apps, Express APIs, Cloudflare Workers, Supabase/Stripe repos, monorepos, design-system-heavy frontends, and repo-native CLIs.
+- Expanded the dashboard, CLI help, package surface, and CI control-plane job so Operating Center artifacts, stack-pack defaults, and plane refreshes show up in the shipped product instead of living as hidden internals.
+- Added `rai control-plane-publish`, a thin export bridge above Change Control that regenerates GitHub PR comments, check summaries, step summaries, GitHub outputs, status badge JSON, issue-tracker JSON, Slack payloads, and export manifests from the latest release gate.
+- Expanded Change Control, Autopilot, Handoff OS, Team Control Room, Measurement / ROI, Explainability, and Lifecycle Center so publish coverage, PR-event routines, continuity bundles, mailbox/timeline activity, confidence breakdowns, repo-config drift, and export drift all show up in first-class product surfaces.
+- Added a dedicated GitHub Actions control-plane publish job that emits the repo-native reports, uploads `.workflow/exports/*`, writes step summaries/outputs, and keeps a sticky PR comment synced from the release-control state.
+- Added repo-native control planes: `rai repo-config`, `rai trust`, `rai release-control`, `rai autopilot`, `rai handoff`, `rai team-control`, `rai measure`, `rai explain`, and `rai lifecycle`, with dedicated `.workflow/reports/*` artifacts and runtime mirrors.
+- Added stack-pack detection and repo-native defaults so bundle/profile/add-on selection, required verifications, automation preferences, and handoff standards can be configured once per repo through `.workflow/repo-config.json`.
+- Expanded the dashboard and release path so Trust Center, Change Control, Handoff OS, Team Control Room, Measurement / ROI, Explainability, Lifecycle Center, and external GitHub/CI/Slack exports are visible from the shipped product surface.
+- Added `rai start`, a productized workflow-bundle entry that groups overlapping audit/review/fix/verify/frontend/closeout commands into structured plans with reusable `.workflow/runtime/start-plan.{json,md}` artifacts.
+- Added a second-round guided start layer with `rai start recommend`, bundle candidate scoring, `speed|balanced|deep` start profiles, and `trust|docs|handoff|parallel|browser|recommended` add-ons so the same entry can scale from a lean slice to a fuller product lane.
+- Expanded command planning so `rai do`, monorepo mode, frontend lanes, and dashboard surfaces now share the same bundle metadata, grouped command families, starter-command guidance, and richer expanded-start recommendations.
+- Improved frontend identification with routing detection, surface inventory, planning signals, and recommended command packs so frontend planning and review flows become easier to start correctly, even when generic ship wording overlaps with frontend product work.
+- Updated installer profiles, docs, help output, benchmark coverage, dashboard rendering, and tests so the bundle layer is part of the shipped product surface rather than a hidden add-on.
+- Added a frontend-focused third round that splits UI work into `frontend-delivery`, `frontend-review`, `frontend-refactor`, `frontend-polish`, and `frontend-ship-readiness`, with `surface`, `design-system`, and `state` overlays carried through `rai start`, `rai do`, and the dashboard control room.
+
+## 0.4.6 - 2026-04-11
+
+- Cut the first clean release after the repository history rewrite so future published artifacts point at commit metadata with the GitHub `noreply` address instead of the old personal Gmail address.
+- Reset the release line after removing legacy public tags, making `0.4.6` the first release intended to ride on the sanitized public history.
 
 ## 0.4.6 - 2026-04-11
 

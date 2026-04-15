@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raiola/api-surface/v2",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "endpointCount",
+    "frameworks"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raiola/api-surface/v2"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "endpointCount": {
+      "type": "integer"
+    },
+    "frameworks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "endpoints": {
+      "type": "array"
+    },
+    "runtimeVerification": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "analysis": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

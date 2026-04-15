@@ -11,7 +11,6 @@ const {
   parseArgs,
   parseTableSectionObjects,
   parseValidationContract,
-  read,
   replaceField,
   replaceSection,
   resolveWorkflowRoot,
@@ -19,8 +18,11 @@ const {
   syncWindowDocument,
   today,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 const { buildFrontendProfile } = require('./map_frontend');
 const { writeStateSurface } = require('./state_surface');
 
@@ -383,14 +385,7 @@ function main() {
       'evidence_expectation',
       'status',
     ]);
-    const requiredVerdictAreas = [
-      'responsive',
-      'interaction',
-      'visual consistency',
-      'component reuse',
-      'accessibility smoke',
-      'screenshot evidence',
-    ];
+    const requiredVerdictAreas = (frontendProfile.visualVerdict?.areas || []).map((item) => String(item.area || '').toLowerCase());
     const coveredVerdictAreas = new Set(verdictRows.map((row) => row.verdict_area.toLowerCase()));
     const missingVerdictAreas = requiredVerdictAreas.filter((area) => !coveredVerdictAreas.has(area));
 

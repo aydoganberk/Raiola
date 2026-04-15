@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raiola/do-route/v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "goal",
+    "lane",
+    "capability"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raiola/do-route/v1"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "lane": {
+      "type": "string"
+    },
+    "capability": {
+      "type": "string"
+    },
+    "commandPlan": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

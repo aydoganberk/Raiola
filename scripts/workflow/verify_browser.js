@@ -3,12 +3,22 @@ const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
 const childProcess = require('node:child_process');
-const {
-  ensureDir,
-  parseArgs,
-} = require('./common');
+const { pathToFileURL } = require('node:url');
+const { parseArgs } = require('./common');
+const { ensureDir } = require('./io/files');
 const { makeArtifactId, writeRuntimeMarkdown } = require('./runtime_helpers');
-const { runPlaywrightAdapter } = require('./browser_adapters/playwright');
+const { captureWithPlaywright, runPlaywrightAdapter } = require('./browser_adapters/playwright');
+const {
+  buildAccessibilityTreeFromHtml,
+  buildSummarySvg,
+  deriveVisualVerdict,
+  extractAccessibilitySignals,
+  extractJourneySignals,
+  extractMetadataSignals,
+  extractUiContractSignals,
+  extractVisualSignals,
+} = require('./browser_contracts');
+const { contractPayload } = require('./contract_versions');
 
 function printHelp() {
   console.log(`
@@ -19,12 +29,78 @@ Usage:
 
 Options:
   --url <http://...>     Target URL
-  --adapter <name>       smoke|playwright. Defaults to smoke
+  --adapter <name>       smoke|playwright|auto. Defaults to smoke
+                         auto uses repo-local Playwright when available
   --assert <selector>    Assert a simple tag, .class, or #id signal exists
   --smoke                Run smoke mode (default behavior)
   --screenshot-only      Store fetch evidence without verdict gating
+  --watch                Run a browser verification control loop
+  --require-proof        Fail when browser proof degrades to smoke-only evidence
+  --interval <ms>        Watch interval in milliseconds. Defaults to 1500
+  --iterations <n>       Limit watch mode iterations. Defaults to unlimited
   --json                 Print machine-readable output
   `);
+}
+
+function sha256(value) {
+  return require('node:crypto').createHash('sha256').update(String(value || ''), 'utf8').digest('hex');
+}
+
+function controlLoopDir(cwd) {
+  return path.join(cwd, '.workflow', 'verifications', 'browser-control');
+}
+
+async function runVerifyBrowserControlLoop(cwd, options = {}) {
+  const intervalMs = Number(options.interval || 1500);
+  const maxIterations = options.iterations == null ? null : Math.max(1, Number(options.iterations));
+  ensureDir(controlLoopDir(cwd));
+  const startedAt = new Date().toISOString();
+  const entries = [];
+  let index = 0;
+  while (maxIterations == null || index < maxIterations) {
+    const meta = await runVerifyBrowser(cwd, options);
+    const htmlPath = path.join(cwd, meta.artifacts.html);
+    const htmlHash = fs.existsSync(htmlPath) ? sha256(fs.readFileSync(htmlPath, 'utf8')) : null;
+    const previous = entries[entries.length - 1] || null;
+    const drift = previous && previous.htmlHash && htmlHash && previous.htmlHash !== htmlHash ? 'changed' : 'stable';
+    entries.push({
+      iteration: index + 1,
+      at: new Date().toISOString(),
+      verdict: meta.verdict,
+      visualVerdict: meta.visualVerdict,
+      statusCode: meta.statusCode,
+      htmlHash,
+      screenshot: meta.artifacts.screenshot,
+      accessibilityTree: meta.artifacts.accessibilityTree,
+      drift,
+      uiContracts: meta.uiContracts?.verdict || 'n/a',
+    });
+    index += 1;
+    if (maxIterations != null && index >= maxIterations) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  const payload = {
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    url: options.url,
+    intervalMs,
+    iterations: entries.length,
+    driftCount: entries.filter((entry) => entry.drift === 'changed').length,
+    entries,
+  };
+  const filePath = path.join(controlLoopDir(cwd), 'latest.json');
+  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+  return {
+    mode: 'watch',
+    ...payload,
+    artifacts: {
+      log: path.relative(cwd, filePath).replace(/\\/g, '/'),
+      latestScreenshot: entries[entries.length - 1]?.screenshot || null,
+      latestAccessibilityTree: entries[entries.length - 1]?.accessibilityTree || null,
+    },
+  };
 }
 
 function requestUrl(targetUrl) {
@@ -57,242 +133,6 @@ function readFileTarget(targetUrl) {
     },
     body: fs.readFileSync(filePath, 'utf8'),
   };
-}
-
-function stripTags(value) {
-  return String(value || '')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function escapeXml(value) {
-  return String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-function firstMatch(content, pattern) {
-  return content.match(pattern)?.[1] || '';
-}
-
-function extractVisualSignals(body) {
-  const title = stripTags(firstMatch(body, /<title[^>]*>([\s\S]*?)<\/title>/i));
-  const heading = stripTags(firstMatch(body, /<h1[^>]*>([\s\S]*?)<\/h1>/i))
-    || stripTags(firstMatch(body, /<h2[^>]*>([\s\S]*?)<\/h2>/i));
-  const mainBody = firstMatch(body, /<main[^>]*>([\s\S]*?)<\/main>/i);
-  const mainText = stripTags(mainBody);
-  const bodyText = stripTags(firstMatch(body, /<body[^>]*>([\s\S]*?)<\/body>/i) || body);
-  const snippet = (mainText || bodyText).slice(0, 280);
-  const hasMain = /<main[\s>]/i.test(body);
-  const hasHeading = /<h[1-3][\s>]/i.test(body);
-  const hasNav = /<nav[\s>]/i.test(body);
-  const hasForm = /<form[\s>]/i.test(body);
-  const hasButton = /<button[\s>]|type=["']submit["']/i.test(body);
-  const signalScore = [
-    Boolean(title),
-    Boolean(heading),
-    hasMain,
-    hasHeading,
-    hasNav,
-    hasForm,
-    hasButton,
-  ].filter(Boolean).length;
-
-  return {
-    title,
-    heading,
-    snippet,
-    hasMain,
-    hasHeading,
-    hasNav,
-    hasForm,
-    hasButton,
-    signalScore,
-  };
-}
-
-function stripTagContents(value) {
-  return stripTags(String(value || ''));
-}
-
-function collectTagMatches(body, tagName) {
-  return [...String(body || '').matchAll(new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'gi'))];
-}
-
-function extractAccessibilitySignals(body) {
-  const issues = [];
-  const pushIssue = (severity, rule, detail) => {
-    issues.push({ severity, rule, detail });
-  };
-  const htmlTag = body.match(/<html\b([^>]*)>/i)?.[1] || '';
-  const hasLang = /\blang\s*=\s*["'][^"']+["']/i.test(htmlTag);
-  if (!hasLang) {
-    pushIssue('medium', 'document-lang', 'The root html element does not declare a lang attribute.');
-  }
-  if (!/<main[\s>]/i.test(body)) {
-    pushIssue('medium', 'landmark-main', 'A main landmark was not detected in the document.');
-  }
-
-  const images = [...String(body || '').matchAll(/<img\b([^>]*)>/gi)];
-  const imagesWithoutAlt = images.filter((match) => !/\balt\s*=\s*["'][^"']*["']/i.test(match[1] || '')).length;
-  if (imagesWithoutAlt > 0) {
-    pushIssue('high', 'image-alt', `${imagesWithoutAlt} image element(s) are missing alt text.`);
-  }
-
-  const labelsByFor = new Set([...String(body || '').matchAll(/<label\b[^>]*for=["']([^"']+)["'][^>]*>/gi)].map((match) => match[1]));
-  const fields = [...String(body || '').matchAll(/<(input|select|textarea)\b([^>]*)>/gi)];
-  const unlabeledFields = fields.filter((match) => {
-    const attrs = match[2] || '';
-    if (/\btype=["']?(hidden|submit|button|reset)["']?/i.test(attrs)) {
-      return false;
-    }
-    if (/\b(aria-label|aria-labelledby|title)\s*=/i.test(attrs)) {
-      return false;
-    }
-    const id = attrs.match(/\bid=["']([^"']+)["']/i)?.[1];
-    return !id || !labelsByFor.has(id);
-  }).length;
-  if (unlabeledFields > 0) {
-    pushIssue('high', 'form-label', `${unlabeledFields} form control(s) do not have an obvious accessible label.`);
-  }
-
-  const unlabeledButtons = collectTagMatches(body, 'button').filter((match) => {
-    const full = match[0] || '';
-    const attrs = full.match(/<button\b([^>]*)>/i)?.[1] || '';
-    const text = stripTagContents(match[1] || '');
-    return !text && !/\b(aria-label|aria-labelledby|title)\s*=/i.test(attrs);
-  }).length;
-  if (unlabeledButtons > 0) {
-    pushIssue('high', 'button-name', `${unlabeledButtons} button element(s) do not expose an accessible name.`);
-  }
-
-  return {
-    verdict: issues.some((issue) => issue.severity === 'high')
-      ? 'fail'
-      : issues.length > 0
-        ? 'warn'
-        : 'pass',
-    issueCount: issues.length,
-    issues,
-    checks: {
-      hasLang,
-      hasMain: /<main[\s>]/i.test(body),
-      imagesWithoutAlt,
-      unlabeledFields,
-      unlabeledButtons,
-    },
-  };
-}
-
-function extractJourneySignals(body) {
-  const signals = {
-    nav: /<nav[\s>]/i.test(body),
-    main: /<main[\s>]/i.test(body),
-    heading: /<h[1-2][\s>]/i.test(body),
-    primaryAction: /<button[\s>]|type=["']submit["']|<a\b[^>]*>([\s\S]*?(start|get started|continue|save|submit|buy|ship|next))/i.test(body),
-    form: /<form[\s>]|<(input|select|textarea)\b/i.test(body),
-    feedback: /\b(loading|spinner|skeleton|error|retry|success|saved|empty state|no results|aria-live)\b/i.test(body),
-  };
-  const missing = Object.entries(signals)
-    .filter(([, present]) => !present)
-    .map(([key]) => key)
-    .filter((key) => !['form', 'feedback', 'nav'].includes(key));
-  return {
-    coverage: missing.length === 0
-      ? 'pass'
-      : missing.length <= 2
-        ? 'warn'
-        : 'incomplete',
-    signals,
-    missing,
-    summary: missing.length === 0
-      ? 'Core journey signals were detected.'
-      : `Missing journey signals: ${missing.join(', ')}.`,
-  };
-}
-
-function wrapText(value, limit = 72, maxLines = 4) {
-  const words = String(value || '').split(/\s+/).filter(Boolean);
-  if (words.length === 0) {
-    return [];
-  }
-
-  const lines = [];
-  let current = '';
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word;
-    if (next.length <= limit) {
-      current = next;
-      continue;
-    }
-    if (current) {
-      lines.push(current);
-    }
-    current = word;
-    if (lines.length >= maxLines) {
-      break;
-    }
-  }
-
-  if (current && lines.length < maxLines) {
-    lines.push(current);
-  }
-
-  if (lines.length === maxLines && words.join(' ').length > lines.join(' ').length) {
-    lines[lines.length - 1] = `${lines[lines.length - 1].slice(0, Math.max(0, limit - 3))}...`;
-  }
-
-  return lines;
-}
-
-function buildSummarySvg(payload) {
-  const lines = [
-    ...wrapText(payload.title || 'Untitled page', 34, 2),
-    ...wrapText(payload.heading || payload.url, 48, 2),
-    ...wrapText(payload.snippet || 'No readable body text was captured from the response.', 62, 5),
-  ];
-  const lineHeight = 34;
-  const startY = 214;
-  const textNodes = lines
-    .map((line, index) => `<text x="84" y="${startY + (index * lineHeight)}" fill="#0f172a" font-size="${index < 2 ? 28 : 22}" font-family="Menlo, Monaco, 'Courier New', monospace">${escapeXml(line)}</text>`)
-    .join('\n');
-  const badges = [
-    `HTTP ${payload.statusCode || 'n/a'}`,
-    `transport ${payload.verdict}`,
-    `visual ${payload.visualVerdict}`,
-    payload.renderer,
-  ];
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Browser verification summary">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#e0f2fe"/>
-      <stop offset="100%" stop-color="#fef3c7"/>
-    </linearGradient>
-  </defs>
-  <rect width="1280" height="720" fill="url(#bg)"/>
-  <rect x="48" y="44" width="1184" height="632" rx="28" fill="#fffbeb" stroke="#0f172a" stroke-width="3"/>
-  <text x="84" y="112" fill="#0f172a" font-size="36" font-family="Menlo, Monaco, 'Courier New', monospace">VERIFY BROWSER</text>
-  <text x="84" y="154" fill="#334155" font-size="22" font-family="Menlo, Monaco, 'Courier New', monospace">${escapeXml(payload.url)}</text>
-  <rect x="84" y="564" width="1112" height="72" rx="18" fill="#ffffff" stroke="#cbd5e1"/>
-  <text x="110" y="608" fill="#334155" font-size="22" font-family="Menlo, Monaco, 'Courier New', monospace">${escapeXml(badges.join(' | '))}</text>
-  <text x="84" y="520" fill="#475569" font-size="20" font-family="Menlo, Monaco, 'Courier New', monospace">signals: title=${payload.signals.title ? 'yes' : 'no'} heading=${payload.signals.hasHeading ? 'yes' : 'no'} main=${payload.signals.hasMain ? 'yes' : 'no'} nav=${payload.signals.hasNav ? 'yes' : 'no'} form=${payload.signals.hasForm ? 'yes' : 'no'} button=${payload.signals.hasButton ? 'yes' : 'no'}</text>
-  ${textNodes}
-</svg>
-`;
 }
 
 function tryQuickLookScreenshot(htmlPath, artifactDir) {
@@ -347,19 +187,6 @@ function writeSummarySvg(artifactDir, payload) {
   };
 }
 
-function deriveVisualVerdict({ errorMessage, htmlLike, statusCode, signals }) {
-  if (errorMessage || statusCode >= 400) {
-    return 'fail';
-  }
-  if (!htmlLike) {
-    return 'inconclusive';
-  }
-  if (signals.signalScore >= 2) {
-    return 'pass';
-  }
-  return 'inconclusive';
-}
-
 function assertSelector(body, selector) {
   const value = String(selector || '').trim();
   if (!value) {
@@ -393,6 +220,21 @@ function assertSelector(body, selector) {
   };
 }
 
+function buildBrowserReadinessHint(meta, uiContracts, options, adapterName) {
+  const requireProof = Boolean(options.requireProof);
+  const proofIntent = requireProof || adapterName === 'playwright';
+  if (proofIntent) {
+    return 'proof-first';
+  }
+  if (uiContracts.patterns.form || uiContracts.patterns.dialog || uiContracts.patterns.table) {
+    return 'interaction-smoke';
+  }
+  if (meta.viewport.present || uiContracts.landmarks.main) {
+    return 'layout-smoke';
+  }
+  return 'lightweight-smoke';
+}
+
 async function runVerifyBrowser(cwd, options = {}) {
   const url = String(options.url || '').trim();
   if (!url) {
@@ -419,17 +261,47 @@ async function runVerifyBrowser(cwd, options = {}) {
     };
   }
 
+  const requestedAdapter = String(options.adapter || 'smoke').trim().toLowerCase() || 'smoke';
+  const autoCandidate = requestedAdapter === 'auto' ? runPlaywrightAdapter({ cwd }) : null;
+  const adapterName = requestedAdapter === 'auto'
+    ? (autoCandidate?.supported ? 'playwright' : 'smoke')
+    : requestedAdapter;
+  const adapter = adapterName === 'playwright' ? (autoCandidate || runPlaywrightAdapter({ cwd })) : {
+    supported: true,
+    renderer: 'smoke',
+  };
+
+  ensureDir(artifactDir);
+  let playwrightCapture = null;
+  if (adapterName === 'playwright' && adapter.supported) {
+    playwrightCapture = await captureWithPlaywright(adapter, {
+      url: url.startsWith('file://') ? url : (fs.existsSync(url) ? pathToFileURL(path.resolve(url)).href : url),
+      assertSelector: options.assert ? String(options.assert) : '',
+      screenshotPath: path.join(artifactDir, 'playwright-screenshot.png'),
+      timeoutMs: options.timeoutMs || 15000,
+    });
+    if (playwrightCapture?.ok) {
+      errorMessage = '';
+      if (playwrightCapture.html) {
+        response.body = playwrightCapture.html;
+      }
+      if (Number.isFinite(playwrightCapture.statusCode)) {
+        response.statusCode = playwrightCapture.statusCode;
+      }
+      if (playwrightCapture.headers && Object.keys(playwrightCapture.headers).length > 0) {
+        response.headers = playwrightCapture.headers;
+      }
+    }
+  }
+
   const durationMs = Number((process.hrtime.bigint() - startedHr) / BigInt(1e6));
   const finishedAt = new Date().toISOString();
   const htmlLike = /<html|<!doctype html/i.test(response.body);
   const visualSignals = extractVisualSignals(response.body);
   const accessibility = extractAccessibilitySignals(response.body);
   const journey = extractJourneySignals(response.body);
-  const adapterName = String(options.adapter || 'smoke').trim().toLowerCase() || 'smoke';
-  const adapter = adapterName === 'playwright' ? runPlaywrightAdapter() : {
-    supported: true,
-    renderer: 'smoke',
-  };
+  const metadata = extractMetadataSignals(response.body);
+  const uiContracts = extractUiContractSignals(response.body);
   const selectorAssertion = assertSelector(response.body, options.assert);
   const visualVerdict = deriveVisualVerdict({
     errorMessage,
@@ -437,6 +309,17 @@ async function runVerifyBrowser(cwd, options = {}) {
     statusCode: response.statusCode,
     signals: visualSignals,
   });
+  const proofStatus = adapterName === 'playwright'
+    ? (playwrightCapture?.ok ? 'verified' : 'degraded')
+    : 'smoke-only';
+  const evidenceLevel = proofStatus === 'verified'
+    ? 'proof'
+    : proofStatus === 'degraded'
+      ? 'degraded'
+      : 'smoke';
+  const capabilityDegraded = proofStatus === 'degraded'
+    || (adapterName === 'playwright' && !adapter.supported)
+    || (!playwrightCapture?.ok && adapterName === 'playwright');
   let verdict = errorMessage
     ? 'fail'
     : options.screenshotOnly
@@ -449,12 +332,28 @@ async function runVerifyBrowser(cwd, options = {}) {
   if (selectorAssertion.checked && !selectorAssertion.matched) {
     verdict = 'fail';
   }
+  if (options.requireProof && proofStatus !== 'verified') {
+    verdict = 'fail';
+  }
 
-  ensureDir(artifactDir);
   const htmlArtifactPath = path.join(artifactDir, 'response.html');
   fs.writeFileSync(htmlArtifactPath, response.body || '');
   fs.writeFileSync(path.join(artifactDir, 'headers.json'), `${JSON.stringify(response.headers || {}, null, 2)}\n`);
-  const renderedPreview = tryQuickLookScreenshot(htmlArtifactPath, artifactDir);
+  const accessibilityTree = playwrightCapture?.ok
+    ? (playwrightCapture.accessibilityTree || buildAccessibilityTreeFromHtml(response.body))
+    : buildAccessibilityTreeFromHtml(response.body);
+  fs.writeFileSync(path.join(artifactDir, 'accessibility-tree.json'), `${JSON.stringify(accessibilityTree, null, 2)}\n`);
+
+  const renderedPreview = playwrightCapture?.ok && fs.existsSync(path.join(artifactDir, 'playwright-screenshot.png'))
+    ? {
+      ok: true,
+      kind: 'png',
+      renderer: adapter.renderer,
+      screenshotPath: path.join(artifactDir, 'playwright-screenshot.png'),
+      error: '',
+    }
+    : tryQuickLookScreenshot(htmlArtifactPath, artifactDir);
+
   const visualArtifact = renderedPreview.ok
     ? renderedPreview
     : writeSummarySvg(artifactDir, {
@@ -462,15 +361,18 @@ async function runVerifyBrowser(cwd, options = {}) {
       statusCode: response.statusCode,
       verdict,
       visualVerdict,
-      title: visualSignals.title,
+      title: playwrightCapture?.title || visualSignals.title,
       heading: visualSignals.heading,
       snippet: visualSignals.snippet,
       signals: visualSignals,
       renderer: renderedPreview.error ? 'summary-svg-fallback' : 'summary-svg',
     });
+
   const meta = {
+    ...contractPayload('verifyBrowser'),
     kind: 'browser',
     url,
+    requestedAdapter,
     adapter: adapterName,
     startedAt,
     finishedAt,
@@ -480,18 +382,47 @@ async function runVerifyBrowser(cwd, options = {}) {
     screenshotOnly: Boolean(options.screenshotOnly),
     verdict,
     visualVerdict,
+    proofStatus,
+    evidenceLevel,
+    capabilityDegraded,
+    canClaimBrowserProof: proofStatus === 'verified',
     selectorAssertion,
     visualSignals,
     accessibility,
     journey,
+    metadata,
+    uiContracts,
     renderer: adapter.supported ? visualArtifact.renderer : adapter.renderer,
+    execution: {
+      mode: proofStatus === 'verified' ? 'browser-runtime' : 'html-smoke',
+      browserRuntime: proofStatus === 'verified',
+      runtimeAdapter: adapterName,
+      requestedAdapter,
+      proofRequired: Boolean(options.requireProof),
+      realScreenshot: proofStatus === 'verified' && visualArtifact.kind === 'png',
+      realAccessibilityTree: proofStatus === 'verified' && Boolean(accessibilityTree),
+      finalUrl: playwrightCapture?.finalUrl || url,
+      viewport: playwrightCapture?.viewport || null,
+    },
     adapterFallbackReason: adapter.reason || '',
+    adapterModule: adapter.moduleName || '',
     renderError: renderedPreview.ok ? '' : renderedPreview.error,
-    summary: errorMessage || `HTTP ${response.statusCode || 'n/a'} | html=${htmlLike ? 'yes' : 'no'} | visual=${visualVerdict} | artifact=${visualArtifact.kind}`,
+    readinessHint: buildBrowserReadinessHint(metadata, uiContracts, options, adapterName),
+    accessibilityTreeArtifact: path.relative(cwd, path.join(artifactDir, 'accessibility-tree.json')).replace(/\\/g, '/'),
+    playwright: adapterName === 'playwright' ? {
+      ok: Boolean(playwrightCapture?.ok),
+      reason: playwrightCapture?.reason || adapter.reason || '',
+      moduleName: playwrightCapture?.moduleName || adapter.moduleName || '',
+      resolvedFrom: playwrightCapture?.resolvedFrom || adapter.resolvedFrom || '',
+      finalUrl: playwrightCapture?.finalUrl || '',
+      viewport: playwrightCapture?.viewport || null,
+    } : null,
+    summary: errorMessage || `HTTP ${response.statusCode || 'n/a'} | html=${htmlLike ? 'yes' : 'no'} | visual=${visualVerdict} | evidence=${evidenceLevel} | proof=${proofStatus} | ui=${uiContracts.verdict} | artifact=${visualArtifact.kind}`,
     artifacts: {
       html: path.relative(cwd, path.join(artifactDir, 'response.html')).replace(/\\/g, '/'),
       headers: path.relative(cwd, path.join(artifactDir, 'headers.json')).replace(/\\/g, '/'),
       screenshot: path.relative(cwd, visualArtifact.screenshotPath).replace(/\\/g, '/'),
+      accessibilityTree: path.relative(cwd, path.join(artifactDir, 'accessibility-tree.json')).replace(/\\/g, '/'),
     },
   };
   fs.writeFileSync(path.join(artifactDir, 'meta.json'), `${JSON.stringify(meta, null, 2)}\n`);
@@ -501,13 +432,19 @@ async function runVerifyBrowser(cwd, options = {}) {
 
 - Verdict: \`${meta.verdict}\`
 - Visual verdict: \`${meta.visualVerdict}\`
+- Proof status: \`${meta.proofStatus}\`
+- Evidence level: \`${meta.evidenceLevel}\`
 - Adapter: \`${meta.adapter}\`
+- Browser runtime: \`${meta.execution.browserRuntime ? 'yes' : 'no'}\`
 - URL: \`${meta.url}\`
 - Status code: \`${meta.statusCode}\`
 - Summary: \`${meta.summary}\`
 - Renderer: \`${meta.renderer}\`
 - Accessibility: \`${meta.accessibility.verdict}\`
 - Journey: \`${meta.journey.coverage}\`
+- UI contracts: \`${meta.uiContracts.verdict}\`
+- Title: \`${meta.metadata.title || 'n/a'}\`
+- Viewport meta: \`${meta.metadata.viewport.present ? 'yes' : 'no'}\`
 - Artifact dir: \`${path.relative(cwd, artifactDir).replace(/\\/g, '/')}\`
 `);
 
@@ -522,13 +459,19 @@ async function main() {
   }
 
   const cwd = process.cwd();
-  const payload = await runVerifyBrowser(cwd, {
+  const runOptions = {
     url: args.url,
     adapter: args.adapter,
     assert: args.assert,
     smoke: Boolean(args.smoke),
     screenshotOnly: Boolean(args['screenshot-only']),
-  });
+    requireProof: Boolean(args['require-proof']),
+    interval: args.interval,
+    iterations: args.iterations,
+  };
+  const payload = args.watch
+    ? await runVerifyBrowserControlLoop(cwd, runOptions)
+    : await runVerifyBrowser(cwd, runOptions);
 
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -536,13 +479,33 @@ async function main() {
   }
 
   console.log('# VERIFY BROWSER\n');
+  if (payload.mode === 'watch') {
+    console.log(`- Mode: \`watch\``);
+    console.log(`- URL: \`${payload.url}\``);
+    console.log(`- Iterations: \`${payload.iterations}\``);
+    console.log(`- Drift count: \`${payload.driftCount}\``);
+    console.log(`- Log: \`${payload.artifacts.log}\``);
+    return;
+  }
   console.log(`- Verdict: \`${payload.verdict}\``);
   console.log(`- URL: \`${payload.url}\``);
   console.log(`- Status code: \`${payload.statusCode}\``);
   console.log(`- Visual verdict: \`${payload.visualVerdict}\``);
+  console.log(`- Proof status: \`${payload.proofStatus}\``);
+  console.log(`- Evidence level: \`${payload.evidenceLevel}\``);
   console.log(`- Adapter: \`${payload.adapter}\``);
   console.log(`- Renderer: \`${payload.renderer}\``);
+  console.log(`- Browser runtime: \`${payload.execution.browserRuntime ? 'yes' : 'no'}\``);
+  if (payload.playwright?.moduleName) {
+    console.log(`- Playwright module: \`${payload.playwright.moduleName}\``);
+  }
+  console.log(`- UI contracts: \`${payload.uiContracts.verdict}\``);
+  console.log(`- Metadata title: \`${payload.metadata.title || 'n/a'}\``);
+  console.log(`- Viewport meta: \`${payload.metadata.viewport.present ? 'yes' : 'no'}\``);
   console.log(`- Summary: \`${payload.summary}\``);
+  if (payload.adapterFallbackReason) {
+    console.log(`- Adapter note: \`${payload.adapterFallbackReason}\``);
+  }
   console.log(`- Accessibility: \`${payload.accessibility.verdict}\` issues=\`${payload.accessibility.issueCount}\``);
   console.log(`- Journey: \`${payload.journey.coverage}\``);
   if (payload.selectorAssertion?.checked) {
@@ -563,4 +526,5 @@ module.exports = {
   extractAccessibilitySignals,
   extractJourneySignals,
   runVerifyBrowser,
+  runVerifyBrowserControlLoop,
 };

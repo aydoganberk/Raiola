@@ -173,12 +173,13 @@ function inspectCodexWorker(workspace) {
     return null;
   }
 
-  const running = pidIsRunning(live.pid);
+  const hasResultFile = fs.existsSync(live.resultFile);
+  const running = hasResultFile ? false : pidIsRunning(live.pid);
   return {
     ...live,
     running,
     finishedAt: running ? null : (live.finishedAt || new Date().toISOString()),
-    hasResultFile: fs.existsSync(live.resultFile),
+    hasResultFile,
     hasLogFile: fs.existsSync(live.logFile),
   };
 }

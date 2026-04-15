@@ -1,0 +1,41 @@
+{
+  "name": "raiola-codex-optimizer",
+  "version": "0.4.7",
+  "description": "Codex-native optimizer with trust-aware config generation, hooks, subagents, layered AGENTS, GitHub review prompts, and installable Raiola skills.",
+  "skills": [
+    "skills/using-raiola",
+    "skills/raiola-quick-lane",
+    "skills/raiola-milestone-lifecycle",
+    "skills/raiola-review-closeout",
+    "skills/raiola-team-orchestration",
+    "skills/raiola-frontend-lane",
+    "skills/raiola-monorepo-mode",
+    "skills/raiola-code-simplification",
+    "skills/raiola-native-operator",
+    "skills/raiola-release-gate",
+    "skills/raiola-large-repo-optimizer",
+    "skills/raiola-automation-curator",
+    "skills/raiola-codex-cockpit",
+    "skills/raiola-native-telemetry",
+    "skills/raiola-repo-control-room",
+    "skills/raiola-workspace-impact-planner",
+    "skills/raiola-monorepo-control-room",
+    "skills/raiola-frontend-control-room",
+    "skills/raiola-safety-control-room"
+  ],
+  "subagents": [
+    ".codex/agents/pr-explorer.toml",
+    ".codex/agents/reviewer.toml",
+    ".codex/agents/docs-researcher.toml",
+    ".codex/agents/monorepo-planner.toml",
+    ".codex/agents/code-mapper.toml",
+    ".codex/agents/browser-debugger.toml",
+    ".codex/agents/ui-fixer.toml",
+    ".codex/agents/operator-supervisor.toml",
+    ".codex/agents/trust-analyst.toml",
+    ".codex/agents/release-gatekeeper.toml",
+    ".codex/agents/automation-curator.toml"
+  ],
+  "homepage": "https://github.com/aydoganberk/Raiola",
+  "repository": "https://github.com/aydoganberk/Raiola"
+}

@@ -5,11 +5,11 @@ const {
   embeddedProductMeta,
   productCommandName,
   productVersion,
-} = require('./product_version');
+  } = require('./product_version');
 const {
   missingGitignoreEntries,
   WORKFLOW_GITIGNORE_ENTRIES,
-} = require('./install_common');
+  } = require('./install_common');
 const {
   assertWorkflowFiles,
   buildPacketSnapshot,
@@ -19,16 +19,18 @@ const {
   parseArgs,
   parseMilestoneTable,
   parseWorkstreamTable,
-  read,
   resolveWorkflowRoot,
   warnAgentsSize,
   workflowPaths,
 } = require('./common');
+const { readText: read } = require('./io/files');
 const { readProductManifest, readInstalledVersionMarker } = require('./product_manifest');
 const { applyRepairPlan, buildRepairPlan } = require('./repair');
 const { buildRiskSummary } = require('./risk_score');
 const { buildRuntimePrerequisiteChecks } = require('./runtime_prereqs');
 const { writeStateSurface } = require('./state_surface');
+const { contractPayload } = require('./contract_versions');
+const { buildSetupCompatibilityReport } = require('./setup_compatibility');
 
 function summarizeItems(items, limit = 3) {
   if (items.length <= limit) {
@@ -40,6 +42,36 @@ function summarizeItems(items, limit = 3) {
 function extractNodeScriptPath(scriptValue) {
   const match = String(scriptValue || '').trim().match(/^node\s+([^\s]+)/);
   return match ? match[1] : null;
+}
+
+
+function inventoryEntryExists(cwd, relativeEntry) {
+  const normalized = String(relativeEntry || '').trim();
+  if (!normalized) {
+    return false;
+  }
+  return fs.existsSync(path.join(cwd, normalized));
+}
+
+
+function gitattributesHasEntries(cwd, entries = []) {
+  const filePath = path.join(cwd, '.gitattributes');
+  if (!fs.existsSync(filePath)) {
+    return false;
+  }
+  const content = fs.readFileSync(filePath, 'utf8');
+  return entries.every((entry) => content.includes(entry));
+}
+
+function expectedGithubReleaseSurface() {
+  return [
+    '.github/AGENTS.md',
+    '.github/codex/AGENTS.md',
+    '.github/codex/prompts/review.md',
+    '.github/workflows/codex-review.yml',
+    '.github/workflows/ci.yml',
+    '.github/workflows/release.yml',
+  ];
 }
 
 function printHelp() {
@@ -89,6 +121,17 @@ function buildDoctorReport(cwd, rootDir) {
     ...((productManifest?.runtimeFiles || []).filter(Boolean)),
   ])].sort();
   const packageJsonPath = path.join(cwd, 'package.json');
+  const packageJson = (() => {
+    if (!fs.existsSync(packageJsonPath)) {
+      return null;
+    }
+    try {
+      return JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    } catch {
+      return null;
+    }
+  })();
+  const expectedGithubFiles = expectedGithubReleaseSurface();
   const skillPath = path.join(cwd, '.agents', 'skills', 'raiola', 'SKILL.md');
   const expectedSkillFiles = [...new Set([
     productManifest?.skillPath || '.agents/skills/raiola/SKILL.md',
@@ -107,6 +150,11 @@ function buildDoctorReport(cwd, rootDir) {
     buildPacketSnapshot(paths, { doc: 'execplan', step: 'plan' }),
     buildPacketSnapshot(paths, { doc: 'validation', step: 'audit' }),
   ];
+
+  const compatibility = buildSetupCompatibilityReport(cwd, {
+    scriptProfile: productManifest?.scriptProfile || 'full',
+    manageGitignore: true,
+  });
 
   pushCheck(resolvedActiveRoot === rootDir ? 'pass' : 'warn', `Active workstream root -> ${activeRoot || defaultActiveRoot}`);
   pushCheck(milestone === String(getFieldValue(execplan, 'Active milestone') || 'NONE')
@@ -130,7 +178,7 @@ function buildDoctorReport(cwd, rootDir) {
     `Workflow profile -> repo=${preferences.repoWorkflowProfileRaw}, effective=${preferences.workflowProfile}`,
   );
   pushCheck(
-    ['interview', 'assumptions'].includes(preferences.discussMode) ? 'pass' : 'fail',
+    ['interview', 'assumptions', 'proposal_first'].includes(preferences.discussMode) ? 'pass' : 'fail',
     `Discuss mode -> ${preferences.discussMode}`,
   );
   pushCheck(
@@ -174,44 +222,41 @@ function buildDoctorReport(cwd, rootDir) {
       'Package scripts -> package.json is missing, so repo-local raiola:* commands are unavailable',
       `${productCommandName()} update --overwrite-scripts`,
     );
+  } else if (!packageJson) {
+    pushCheck(
+      'fail',
+      'Package scripts -> package.json is invalid JSON',
+      `Fix package.json JSON syntax, then rerun ${productCommandName()} doctor --repair`,
+    );
   } else {
-    try {
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-      const currentScripts = packageJson.scripts || {};
-      const missingScripts = [];
-      const mismatchedScripts = [];
+    const currentScripts = packageJson.scripts || {};
+    const missingScripts = [];
+    const mismatchedScripts = [];
 
-      for (const [name, expected] of expectedScriptEntries) {
-        if (!(name in currentScripts)) {
-          missingScripts.push(name);
-          continue;
-        }
-        if (currentScripts[name] !== expected) {
-          mismatchedScripts.push(name);
-        }
+    for (const [name, expected] of expectedScriptEntries) {
+      if (!(name in currentScripts)) {
+        missingScripts.push(name);
+        continue;
       }
+      if (currentScripts[name] !== expected) {
+        mismatchedScripts.push(name);
+      }
+    }
 
-      if (missingScripts.length === 0 && mismatchedScripts.length === 0) {
-        pushCheck('pass', `Package scripts -> ${expectedScriptEntries.length} expected raiola:* mappings are installed`);
-      } else {
-        const details = [];
-        if (missingScripts.length > 0) {
-          details.push(`missing=${summarizeItems(missingScripts)}`);
-        }
-        if (mismatchedScripts.length > 0) {
-          details.push(`mismatched=${summarizeItems(mismatchedScripts)}`);
-        }
-        pushCheck(
-          'fail',
-          `Package scripts -> ${details.join(' | ')}`,
-          `${productCommandName()} update --overwrite-scripts`,
-        );
+    if (missingScripts.length === 0 && mismatchedScripts.length === 0) {
+      pushCheck('pass', `Package scripts -> ${expectedScriptEntries.length} expected raiola:* mappings are installed`);
+    } else {
+      const details = [];
+      if (missingScripts.length > 0) {
+        details.push(`missing=${summarizeItems(missingScripts)}`);
       }
-    } catch (error) {
+      if (mismatchedScripts.length > 0) {
+        details.push(`mismatched=${summarizeItems(mismatchedScripts)}`);
+      }
       pushCheck(
         'fail',
-        `Package scripts -> package.json is invalid JSON (${String(error.message || error)})`,
-        `Fix package.json JSON syntax, then rerun ${productCommandName()} doctor --repair`,
+        `Package scripts -> ${details.join(' | ')}`,
+        `${productCommandName()} update --overwrite-scripts`,
       );
     }
   }
@@ -231,6 +276,29 @@ function buildDoctorReport(cwd, rootDir) {
     );
   }
 
+
+  if (packageJson?.files?.length) {
+    const missingPackagedEntries = packageJson.files.filter((entry) => !inventoryEntryExists(cwd, entry));
+    pushCheck(
+      missingPackagedEntries.length === 0 ? 'pass' : 'fail',
+      missingPackagedEntries.length === 0
+        ? `Release inventory -> package.json files entries resolve (${packageJson.files.length})`
+        : `Release inventory -> package.json files contains missing paths ${summarizeItems(missingPackagedEntries.map((item) => `\`${item}\``))}`,
+      missingPackagedEntries.length === 0 ? null : 'Restore or remove the missing file-inventory entries before shipping',
+    );
+  }
+
+  if (isProductSourceRepo) {
+    const missingGithubFiles = expectedGithubFiles.filter((entry) => !inventoryEntryExists(cwd, entry));
+    pushCheck(
+      missingGithubFiles.length === 0 ? 'pass' : 'fail',
+      missingGithubFiles.length === 0
+        ? `Release inventory -> GitHub surfaces are present (${expectedGithubFiles.length})`
+        : `Release inventory -> missing GitHub surfaces ${summarizeItems(missingGithubFiles.map((item) => `\`${item}\``))}`,
+      missingGithubFiles.length === 0 ? null : 'Restore the documented .github release surfaces before packaging',
+    );
+  }
+
   const recommendedGitignoreEntries = productManifest?.recommendedGitignoreEntries || WORKFLOW_GITIGNORE_ENTRIES;
   const missingIgnoreEntries = missingGitignoreEntries(cwd, recommendedGitignoreEntries);
   pushCheck(
@@ -239,6 +307,15 @@ function buildDoctorReport(cwd, rootDir) {
       ? `Gitignore hygiene -> runtime artifacts are ignored (${recommendedGitignoreEntries.join(', ')})`
       : `Gitignore hygiene -> missing ${summarizeItems(missingIgnoreEntries)}`,
     missingIgnoreEntries.length === 0 ? null : `${productCommandName()} update`,
+  );
+
+  const requiredArchiveIgnoreEntries = ['.workflow export-ignore', '.workflow/** export-ignore'];
+  pushCheck(
+    gitattributesHasEntries(cwd, requiredArchiveIgnoreEntries) ? 'pass' : 'warn',
+    gitattributesHasEntries(cwd, requiredArchiveIgnoreEntries)
+      ? 'Release inventory -> archive hygiene excludes .workflow runtime state'
+      : 'Release inventory -> .gitattributes is missing .workflow export-ignore rules',
+    gitattributesHasEntries(cwd, requiredArchiveIgnoreEntries) ? null : 'Add .workflow export-ignore rules to .gitattributes before packaging source archives',
   );
 
   const skillSurfacePresent = fs.existsSync(skillPath);
@@ -318,16 +395,51 @@ function buildDoctorReport(cwd, rootDir) {
   }
   pushCheck('pass', warnAgentsSize(cwd));
 
+  if (compatibility.detectedTooling.hookManagers.length > 0) {
+    pushCheck(
+      'pass',
+      `Compatibility -> hook/tooling managers detected (${compatibility.detectedTooling.hookManagers.join(', ')}); Raiola keeps Git-hook integration repo-local and opt-in`,
+    );
+  }
+  if (compatibility.detectedTooling.linters.length > 0) {
+    pushCheck(
+      'pass',
+      `Compatibility -> lint/format tooling detected (${compatibility.detectedTooling.linters.join(', ')})`,
+    );
+  }
+  if (compatibility.detectedTooling.ciWorkflows.length > 0) {
+    pushCheck(
+      compatibility.conflicts.managedFiles.some((entry) => entry.path.startsWith('.github/')) ? 'warn' : 'pass',
+      `Compatibility -> CI workflows detected (${compatibility.detectedTooling.ciWorkflows.join(', ')})`,
+      compatibility.conflicts.managedFiles.some((entry) => entry.path.startsWith('.github/')) ? `${productCommandName()} setup --dry-run` : null,
+    );
+  }
+  if (compatibility.conflicts.managedFiles.length > 0) {
+    pushCheck(
+      'warn',
+      `Compatibility -> managed surface overlaps ${summarizeItems(compatibility.conflicts.managedFiles.map((entry) => `\`${entry.path}\``))}`,
+      `${productCommandName()} setup --dry-run`,
+    );
+  }
+  if (compatibility.detectedTooling.agentDirs.claude) {
+    pushCheck(
+      'pass',
+      'Compatibility -> existing .claude directory detected; Raiola setup does not overwrite it by default',
+    );
+  }
+
   const failCount = checks.filter((item) => item.status === 'fail').length;
   const warnCount = checks.filter((item) => item.status === 'warn').length;
   const risk = buildRiskSummary(checks);
   return {
+    ...contractPayload('doctorReport'),
     rootDir,
     rootDirRelative: path.relative(cwd, rootDir),
     failCount,
     warnCount,
     checks,
     risk,
+    compatibility,
   };
 }
 

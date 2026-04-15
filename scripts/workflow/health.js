@@ -14,7 +14,6 @@ const {
   parseMilestoneTable,
   parseSeedEntries,
   parseWorkstreamTable,
-  read,
   readPlanGateStatus,
   resolveWorkflowRoot,
   runEvidenceChecks,
@@ -22,6 +21,7 @@ const {
   warnAgentsSize,
   workflowPaths,
 } = require('./common');
+const { readText: read } = require('./io/files');
 const { applyRepairPlan, buildRepairPlan } = require('./repair');
 const { buildRiskSummary } = require('./risk_score');
 const { buildRuntimePrerequisiteChecks } = require('./runtime_prereqs');
@@ -122,13 +122,13 @@ function buildHealthReport(cwd, rootDir, options = {}) {
     );
     pushCheck(
       packet.storedInputHash ? 'pass' : (milestone === 'NONE' ? 'warn' : 'fail'),
-      `${packet.primary.key} input hash must be present`,
-      { packet: packet.primary.key },
+      `${packet.primary.key} runtime packet input hash must be present so packet sync status is trustworthy`,
+      { packet: packet.primary.key, category: 'runtime-sync' },
     );
     pushCheck(
       packet.hashDrift ? (milestone === 'NONE' ? 'warn' : 'fail') : 'pass',
-      `${packet.primary.key} packet hash must not be stale`,
-      { packet: packet.primary.key },
+      `${packet.primary.key} runtime packet hash drift detected; sync the packet before treating this as a quality issue`,
+      { packet: packet.primary.key, category: 'runtime-sync' },
     );
     pushCheck(
       packet.budgetStatus === 'critical' ? 'fail' : packet.budgetStatus === 'warn' ? 'warn' : 'pass',
@@ -216,6 +216,7 @@ function buildHealthReport(cwd, rootDir, options = {}) {
 
   const failCount = checks.filter((item) => item.status === 'fail').length;
   const warnCount = checks.filter((item) => item.status === 'warn').length;
+  const runtimeSyncCount = checks.filter((item) => item.category === 'runtime-sync' && item.status !== 'pass').length;
   const risk = buildRiskSummary(checks);
 
   return {
@@ -223,6 +224,7 @@ function buildHealthReport(cwd, rootDir, options = {}) {
     strictMode,
     failCount,
     warnCount,
+    runtimeSyncCount,
     checks,
     risk,
     packetHashes: packets.map((packet) => ({ doc: packet.primary.key, hash: packet.inputHash })),
@@ -272,6 +274,7 @@ function main() {
   console.log(`- Root: \`${report.rootDir}\``);
   console.log(`- Fail count: \`${report.failCount}\``);
   console.log(`- Warn count: \`${report.warnCount}\``);
+  console.log(`- Runtime sync flags: \`${report.runtimeSyncCount}\``);
   console.log(`- Risk: \`${report.risk.level}\` (\`${report.risk.score}/100\`)`);
   console.log(`- Strict mode: \`${report.strictMode ? 'on' : 'off'}\``);
   console.log(`\n## Checks\n`);

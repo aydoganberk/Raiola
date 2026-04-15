@@ -4,10 +4,10 @@ const childProcess = require('node:child_process');
 const {
   listGitChanges,
   parseArgs,
-  read,
   resolveWorkflowRoot,
   workflowPaths,
 } = require('./common');
+const { readText: read } = require('./io/files');
 const { listIndexedRepoFiles } = require('./fs_index');
 const { buildCodebaseMap } = require('./map_codebase');
 const { buildFrontendProfile } = require('./map_frontend');

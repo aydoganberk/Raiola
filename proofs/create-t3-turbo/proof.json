@@ -1,0 +1,177 @@
+{
+  "generatedAt": "2026-04-14T15:52:17.810Z",
+  "proofType": "repo-proof",
+  "repoRoot": "/mnt/data/repo/tests/fixtures/repo_proof_corpus/create-t3-turbo",
+  "repoRelative": "tests/fixtures/repo_proof_corpus/create-t3-turbo",
+  "invokedFrom": "/mnt/data/repo",
+  "invokedFromRelative": ".",
+  "externalSnapshot": true,
+  "writeArtifacts": false,
+  "coverage": [
+    "api",
+    "frontend",
+    "monorepo"
+  ],
+  "repoTruth": {
+    "workspaceCount": 5,
+    "ecosystems": [
+      "node"
+    ],
+    "markers": [
+      "turbo"
+    ],
+    "ownershipSource": "CODEOWNERS",
+    "sampleWorkspaces": [
+      {
+        "root": "apps/expo",
+        "ecosystem": "node",
+        "owners": [
+          "@mobile-team"
+        ],
+        "sources": [
+          "package.json",
+          "pnpm-workspace.yaml"
+        ]
+      },
+      {
+        "root": "apps/nextjs",
+        "ecosystem": "node",
+        "owners": [
+          "@web-team"
+        ],
+        "sources": [
+          "package.json",
+          "pnpm-workspace.yaml"
+        ]
+      },
+      {
+        "root": "packages/api",
+        "ecosystem": "node",
+        "owners": [
+          "@api-team"
+        ],
+        "sources": [
+          "package.json",
+          "pnpm-workspace.yaml"
+        ]
+      },
+      {
+        "root": "packages/db",
+        "ecosystem": "node",
+        "owners": [],
+        "sources": [
+          "package.json",
+          "pnpm-workspace.yaml"
+        ]
+      },
+      {
+        "root": "packages/ui",
+        "ecosystem": "node",
+        "owners": [],
+        "sources": [
+          "package.json",
+          "pnpm-workspace.yaml"
+        ]
+      }
+    ]
+  },
+  "apiSurface": {
+    "endpointCount": 1,
+    "middlewareCount": 0,
+    "mountCount": 0,
+    "frameworks": [
+      "next-api"
+    ],
+    "authSignals": [],
+    "dataStores": [],
+    "artifacts": null
+  },
+  "frontend": {
+    "active": true,
+    "rootRelative": "docs/workflow",
+    "framework": "Expo",
+    "routing": "Next App Router",
+    "productSurface": "Mobile App",
+    "browserLane": "simulator-smoke",
+    "hasProofHarness": false,
+    "componentReuseVerdict": "note",
+    "artifacts": null
+  },
+  "audit": {
+    "goal": "produce a local proof pack for this repository snapshot",
+    "repoShape": "monorepo",
+    "stackPack": "Node monorepo",
+    "healthVerdict": "critical",
+    "healthScore": 0,
+    "verifiedCount": 5,
+    "probableCount": 8,
+    "heuristicCount": 3,
+    "topFindings": [
+      {
+        "bucket": "verified",
+        "title": "Repository has executable code but no automated tests",
+        "severity": "high",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "High-risk area has no owned tests",
+        "severity": "high",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "High-risk area has no owned tests",
+        "severity": "high",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "High-risk area has no owned tests",
+        "severity": "high",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "Repository has no CI workflow",
+        "severity": "medium",
+        "why": ""
+      }
+    ],
+    "artifacts": null,
+    "controlPlaneArtifacts": {
+      "findingsRegistry": ".workflow/reports/findings-registry.json",
+      "correctionControl": ".workflow/reports/correction-control.json",
+      "correctionControlMarkdown": ".workflow/reports/correction-control.md"
+    }
+  },
+  "verdict": {
+    "overallConfidence": "high",
+    "score": 4,
+    "maxScore": 5,
+    "trustableFindings": [
+      "Workspace graph reports 5 roots",
+      "Detected ecosystems: node",
+      "API surface found 1 endpoint via next-api",
+      "Frontend surface detected (Expo / Next App Router)",
+      "Verified finding: Repository has executable code but no automated tests"
+    ],
+    "manualVerify": [
+      "Critical UI flows, navigation params, and browser/mobile smoke paths",
+      "Cross-workspace boundaries, owners, and release sequencing",
+      "Deployment-time integrations that are invisible in a read-only snapshot"
+    ],
+    "knownLimitations": [
+      "No proof harness was detected for the frontend surface; manual smoke verification remains necessary.",
+      "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+    ]
+  },
+  "artifacts": null,
+  "recommendedNextLanes": [
+    "rai api-surface --repo tests/fixtures/repo_proof_corpus/create-t3-turbo --json",
+    "cd tests/fixtures/repo_proof_corpus/create-t3-turbo && rai map-frontend --root docs/workflow --json",
+    "rai audit-repo --repo tests/fixtures/repo_proof_corpus/create-t3-turbo --goal \"produce a local proof pack for this repository snapshot\" --json",
+    "cd tests/fixtures/repo_proof_corpus/create-t3-turbo && rai workspace-impact --json",
+    "cd tests/fixtures/repo_proof_corpus/create-t3-turbo && rai start recommend --goal \"produce a local proof pack for this repository snapshot\""
+  ]
+}

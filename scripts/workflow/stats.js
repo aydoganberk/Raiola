@@ -1,5 +1,5 @@
-const fs = require('node:fs');
 const path = require('node:path');
+const { readJsonIfExists } = require('./io/json');
 const {
   loadPreferences,
   parseArgs,
@@ -27,16 +27,6 @@ Options:
   `);
 }
 
-function readJsonIfExists(filePath) {
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return null;
-  }
-}
 
 function buildStatsPayload(cwd, rootDir, options = {}) {
   const paths = workflowPaths(rootDir, cwd);

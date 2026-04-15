@@ -7,7 +7,7 @@ const childProcess = require('node:child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
+const raiBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase16-'));
@@ -29,7 +29,7 @@ function readJson(targetRepo, relativePath) {
 
 test('intent engine, route replay/eval, and codex bootstrap surfaces are scriptable', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const goal = 'review the frontend diff and capture browser evidence';
@@ -58,7 +58,7 @@ test('intent engine, route replay/eval, and codex bootstrap surfaces are scripta
 
 test('review engine and frontend OS artifacts generate canonical outputs', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
@@ -104,6 +104,7 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
   );
 
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
+  const startPlan = JSON.parse(run('node', [targetBin, 'start', 'frontend', '--goal', 'build an analytics review dashboard', '--json'], targetRepo));
   const uiSpec = JSON.parse(run('node', [targetBin, 'ui-spec', '--json'], targetRepo));
   const designDna = JSON.parse(run('node', [targetBin, 'design-dna', '--json'], targetRepo));
   const stateAtlas = JSON.parse(run('node', [targetBin, 'state-atlas', '--json'], targetRepo));
@@ -156,6 +157,7 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
   assert.ok(fs.existsSync(path.join(targetRepo, review.artifacts.traceability)));
   assert.ok(fs.existsSync(path.join(targetRepo, review.artifacts.blockers)));
   assert.ok(review.uiReview);
+  assert.equal(startPlan.bundle.id, 'frontend-delivery');
   assert.ok(packetExplain.compilerSummary);
   assert.ok(Array.isArray(packetExplain.compilerSummary.scope.impactedPackages));
   assert.ok(fs.existsSync(path.join(targetRepo, packetExplain.contextArtifact)));
@@ -164,6 +166,8 @@ test('review engine and frontend OS artifacts generate canonical outputs', () =>
   assert.match(dashboardHtml, /workflow dashboard/i);
   assert.match(dashboardHtml, /command palette/i);
   assert.match(dashboardHtml, /context compiler/i);
+  assert.match(dashboardHtml, /workflow bundle/i);
+  assert.match(dashboardHtml, /frontend delivery/i);
   const dashboardState = readJson(targetRepo, dashboard.stateFile);
   assert.ok(dashboardState.packetContext);
   assert.ok(dashboard.summary.quickActions >= 1);

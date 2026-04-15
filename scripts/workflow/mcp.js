@@ -1,7 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
-const { parseArgs, slugify } = require('./common');
+const { parseArgs } = require('./common');
+const { slugify } = require('./common_identity');
 const { readJsonFile, relativePath, writeJsonFile } = require('./roadmap_os');
 const { serverIds, toolCountFor } = require('./mcp_server');
 

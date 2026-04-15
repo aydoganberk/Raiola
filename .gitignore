@@ -1,4 +1,12 @@
-node_modules/
-.DS_Store
-.agents/
+# Canonical workflow docs live under docs/workflow/
+# Runtime/cache/export surfaces are derived and should stay local by default.
 .workflow/
+
+# Keep source-level workflow ignore controls visible.
+!.workflowignore
+
+# Common local noise
+.DS_Store
+node_modules/
+coverage/
+*.log

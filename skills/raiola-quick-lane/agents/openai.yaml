@@ -1,0 +1,4 @@
+name: raiola-quick-lane
+description: Low-ritual lane for narrow tasks with visible artifacts and clean escalation.
+version: 0.4.7
+entrypoint: SKILL.md

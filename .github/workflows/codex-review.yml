@@ -1,0 +1,27 @@
+name: codex-review
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  codex-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm test -- --runInBand=false
+      - name: Prepare Raiola doctor packet
+        run: node scripts/workflow/doctor.js --json > .workflow/reports/doctor.json
+      - name: Upload doctor packet
+        uses: actions/upload-artifact@v4
+        with:
+          name: raiola-doctor
+          path: .workflow/reports/doctor.json

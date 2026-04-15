@@ -1,8 +1,9 @@
 # Package contents are primarily controlled via package.json#files.
 # This file exists to avoid npm's gitignore fallback and to keep dev-only
 # surfaces out of the published tarball even if the whitelist is widened later.
-.github/
-.workflow/
+.github/workflows/ci.yml
+.github/workflows/cut-release.yml
+.github/workflows/release.yml
 tests/
 Roadmap.md
 CONTRIBUTING.md

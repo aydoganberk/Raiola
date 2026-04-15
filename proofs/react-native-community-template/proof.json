@@ -1,0 +1,129 @@
+{
+  "generatedAt": "2026-04-14T15:52:17.664Z",
+  "proofType": "repo-proof",
+  "repoRoot": "/mnt/data/repo/tests/fixtures/repo_proof_corpus/react-native-community-template",
+  "repoRelative": "tests/fixtures/repo_proof_corpus/react-native-community-template",
+  "invokedFrom": "/mnt/data/repo",
+  "invokedFromRelative": ".",
+  "externalSnapshot": true,
+  "writeArtifacts": false,
+  "coverage": [
+    "frontend",
+    "monorepo"
+  ],
+  "repoTruth": {
+    "workspaceCount": 1,
+    "ecosystems": [
+      "java"
+    ],
+    "markers": [],
+    "ownershipSource": null,
+    "sampleWorkspaces": [
+      {
+        "root": "android",
+        "ecosystem": "java",
+        "owners": [],
+        "sources": [
+          "manifest-scan"
+        ]
+      }
+    ]
+  },
+  "apiSurface": {
+    "endpointCount": 0,
+    "middlewareCount": 0,
+    "mountCount": 0,
+    "frameworks": [],
+    "authSignals": [],
+    "dataStores": [],
+    "artifacts": null
+  },
+  "frontend": {
+    "active": true,
+    "rootRelative": "docs/workflow",
+    "framework": "React Native",
+    "routing": "React Native Navigation",
+    "productSurface": "Mobile App",
+    "browserLane": "simulator-smoke",
+    "hasProofHarness": false,
+    "componentReuseVerdict": "warn",
+    "artifacts": null
+  },
+  "audit": {
+    "goal": "produce a local proof pack for this repository snapshot",
+    "repoShape": "monorepo",
+    "stackPack": "Node monorepo",
+    "healthVerdict": "at_risk",
+    "healthScore": 61,
+    "verifiedCount": 3,
+    "probableCount": 1,
+    "heuristicCount": 1,
+    "topFindings": [
+      {
+        "bucket": "verified",
+        "title": "Repository has executable code but no automated tests",
+        "severity": "high",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "Repository has no CI workflow",
+        "severity": "medium",
+        "why": ""
+      },
+      {
+        "bucket": "verified",
+        "title": "Repository has no stable verify entrypoint",
+        "severity": "medium",
+        "why": ""
+      },
+      {
+        "bucket": "probable",
+        "title": "Dependency installs may drift between machines",
+        "severity": "low",
+        "why": ""
+      },
+      {
+        "bucket": "heuristic",
+        "title": "Monorepo has no repo-level CI workflow",
+        "severity": "low",
+        "why": ""
+      }
+    ],
+    "artifacts": null,
+    "controlPlaneArtifacts": {
+      "findingsRegistry": ".workflow/reports/findings-registry.json",
+      "correctionControl": ".workflow/reports/correction-control.json",
+      "correctionControlMarkdown": ".workflow/reports/correction-control.md"
+    }
+  },
+  "verdict": {
+    "overallConfidence": "medium",
+    "score": 3,
+    "maxScore": 5,
+    "trustableFindings": [
+      "Workspace graph reports 1 root",
+      "Detected ecosystems: java",
+      "Frontend surface detected (React Native / React Native Navigation)",
+      "Verified finding: Repository has executable code but no automated tests",
+      "Verified finding: Repository has no CI workflow"
+    ],
+    "manualVerify": [
+      "Critical UI flows, navigation params, and browser/mobile smoke paths",
+      "Cross-workspace boundaries, owners, and release sequencing",
+      "Deployment-time integrations that are invisible in a read-only snapshot"
+    ],
+    "knownLimitations": [
+      "Static route scan may miss runtime-generated endpoints or framework-specific mounts.",
+      "No proof harness was detected for the frontend surface; manual smoke verification remains necessary.",
+      "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+    ]
+  },
+  "artifacts": null,
+  "recommendedNextLanes": [
+    "cd tests/fixtures/repo_proof_corpus/react-native-community-template && rai map-frontend --root docs/workflow --json",
+    "rai audit-repo --repo tests/fixtures/repo_proof_corpus/react-native-community-template --goal \"produce a local proof pack for this repository snapshot\" --json",
+    "cd tests/fixtures/repo_proof_corpus/react-native-community-template && rai workspace-impact --json",
+    "cd tests/fixtures/repo_proof_corpus/react-native-community-template && rai start recommend --goal \"produce a local proof pack for this repository snapshot\""
+  ]
+}

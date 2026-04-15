@@ -1,20 +1,25 @@
 const path = require('node:path');
+const { readJsonIfExists } = require('./io/json');
 const {
-  ensureDir,
   parseArgs,
-  readIfExists,
   replaceOrAppendSection,
   resolveWorkflowRoot,
   warnAgentsSize,
-  writeIfChanged,
 } = require('./common');
+const {
+  ensureDir,
+  readTextIfExists: readIfExists,
+  writeTextIfChanged: writeIfChanged,
+} = require('./io/files');
 const { buildCodebaseMap } = require('./map_codebase');
 const { buildMonorepoIntelligence } = require('./monorepo');
 const { buildPackageGraph } = require('./package_graph');
 const { analyzeIntent } = require('./intent_engine');
 const { selectCodexProfile } = require('./codex_profile_engine');
 const { buildCodexContextPack } = require('./context_pack');
+const { buildReviewCorrectionControlPlane } = require('./review_correction_control_plane');
 const { buildCommandPlan } = require('./command_plan');
+const { runRepoAudit } = require('./repo_audit_engine');
 
 const TRACK_DEFINITIONS = Object.freeze([
   {
@@ -116,6 +121,7 @@ const PHASES = Object.freeze([
 function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
 }
+
 
 function quote(value) {
   return JSON.stringify(String(value || '').trim());
@@ -558,14 +564,23 @@ function buildCriticalAreas(packageMeta) {
     why: meta.reasons.join('; ') || 'shared package with meaningful downstream fan-out',
     files: unique([meta.path, ...meta.primaryFiles, ...meta.testFiles]).slice(0, 10),
     failures: meta.failures,
+    auditFindings: meta.auditFindings || [],
+    auditWhy: meta.auditWhy || [],
     reviewBeforeImplementation: ['critical', 'high'].includes(meta.severity) ? 'yes' : 'recommended',
     tags: meta.tags,
     verifyCommands: meta.verifyCommands.slice(0, 4),
   }));
 }
 
-function selectSubsystem(criticalAreas, subsystem) {
+function selectSubsystem(criticalAreas, subsystem, repoAudit = null) {
   if (!subsystem) {
+    const suggestedArea = repoAudit?.suggestedPassOrder?.[0]?.area;
+    if (suggestedArea) {
+      const matched = criticalAreas.find((item) => item.path === suggestedArea || item.packageId === suggestedArea || item.name === suggestedArea);
+      if (matched) {
+        return matched;
+      }
+    }
     return criticalAreas[0] || null;
   }
   const needle = String(subsystem).trim().toLowerCase();
@@ -635,6 +650,61 @@ function buildTracks(trackDefs, packageMeta, sourceOfTruth) {
   }).sort((left, right) => right.riskScore - left.riskScore || left.label.localeCompare(right.label));
 }
 
+function areaForAuditFinding(finding) {
+  return String(finding?.area || '').trim();
+}
+
+function mergePackageMetaWithRepoAudit(packageMeta, repoAudit) {
+  if (!repoAudit) {
+    return packageMeta;
+  }
+  const heatByArea = new Map((repoAudit.subsystemHeatmap || []).map((item) => [item.area, item]));
+  const passOrderByArea = new Map((repoAudit.suggestedPassOrder || []).map((item) => [item.area, item.order]));
+  const findingsByArea = new Map();
+  for (const finding of [...(repoAudit.findings?.verified || []), ...(repoAudit.findings?.probable || [])]) {
+    const area = areaForAuditFinding(finding);
+    if (!area || area === 'repo' || area === 'test') {
+      continue;
+    }
+    const bucket = findingsByArea.get(area) || [];
+    bucket.push(finding);
+    findingsByArea.set(area, bucket);
+  }
+
+  return packageMeta
+    .map((meta) => {
+      const auditHeat = heatByArea.get(meta.path) || null;
+      const auditFindings = findingsByArea.get(meta.path) || [];
+      const auditPriority = passOrderByArea.get(meta.path) || null;
+      const auditBoost = (auditHeat ? Math.min(10, Math.round((auditHeat.riskScore || 0) / 6)) : 0)
+        + Math.min(8, auditFindings.length * 2)
+        + (auditPriority && auditPriority <= 3 ? 4 : 0);
+      const auditWhy = [];
+      if (auditHeat) {
+        auditWhy.push(`repo-audit ${auditHeat.severity} hotspot score ${auditHeat.riskScore}`);
+      }
+      if (auditPriority) {
+        auditWhy.push(`repo-audit pass order ${auditPriority}`);
+      }
+      if (auditFindings.length > 0) {
+        auditWhy.push(...auditFindings.slice(0, 2).map((finding) => finding.title));
+      }
+      const next = {
+        ...meta,
+        auditHeat,
+        auditFindings: auditFindings.slice(0, 4),
+        auditPriority,
+        auditWhy,
+        riskScore: meta.riskScore + auditBoost,
+        reasons: unique([...(meta.reasons || []), ...auditWhy]),
+        failures: unique([...(meta.failures || []), ...auditFindings.slice(0, 3).map((finding) => finding.title)]).slice(0, 5),
+      };
+      next.severity = severityFromScore(next.riskScore);
+      return next;
+    })
+    .sort((left, right) => right.riskScore - left.riskScore || left.path.localeCompare(right.path));
+}
+
 function buildRepoMap(cwd, map, graph, packageMeta, monorepo, rootDir) {
   const repoFiles = Object.keys(graph.ownership || {}).sort();
   const areas = topLevelAreas(map, packageMeta, repoFiles);
@@ -656,18 +726,24 @@ function buildRepoMap(cwd, map, graph, packageMeta, monorepo, rootDir) {
   };
 }
 
-function buildPatchPlan(criticalAreas, monorepo, goal) {
+function buildPatchPlan(criticalAreas, monorepo, goal, repoAudit = null) {
+  const repoLevelNotes = [
+    ...(repoAudit?.findings?.verified || []).filter((finding) => finding.area === 'repo').map((finding) => `${finding.title}: ${finding.detail}`),
+    ...(repoAudit?.findings?.probable || []).filter((finding) => finding.area === 'repo').map((finding) => `${finding.title}: ${finding.detail}`),
+  ].slice(0, 4);
   const patchGroups = criticalAreas.slice(0, 3).map((area, index) => ({
     id: `patch-${index + 1}`,
     title: `Bounded slice for ${area.path}`,
     why: `${area.severity} risk area: ${area.why}`,
     impactedFiles: area.files.slice(0, 6),
     verification: area.verifyCommands.length > 0 ? area.verifyCommands : monorepo.verify.rootSmoke.slice(0, 3),
+    auditFindings: (area.auditFindings || []).map((finding) => `[${finding.severity}] ${finding.title}`).slice(0, 3),
     rollbackSensitivity: area.severity === 'critical'
       ? 'high: shared contracts or boundary behavior may fan out across dependents'
       : 'medium: keep the change package-local until downstream checks are clean',
   }));
   const dependencyNotes = unique([
+    ...repoLevelNotes,
     ...criticalAreas.slice(0, 4).map((area) => `${area.path}: ${area.why}`),
     ...(monorepo.performanceRisks || []).slice(0, 3),
   ]).slice(0, 8);
@@ -695,9 +771,11 @@ function buildPhasePlan(goal, selectedSubsystem, files) {
   return PHASES.map((phase) => {
     const commands = [];
     if (phase.id === 'repo-map') {
+      commands.push(`rai audit-repo --mode oneshot --goal ${qGoal}`);
       commands.push('rai map-codebase --scope repo');
       commands.push(`rai monorepo-mode --phase repo-map --goal ${qGoal}`);
     } else if (phase.id === 'critical-areas') {
+      commands.push(`rai audit-repo --mode oneshot --goal ${qGoal}`);
       commands.push('rai monorepo --json');
       commands.push(`rai monorepo-mode --phase critical-areas --goal ${qGoal}`);
     } else if (phase.id === 'deep-analysis') {
@@ -724,12 +802,26 @@ function buildPhasePlan(goal, selectedSubsystem, files) {
   });
 }
 
-function buildPromptLibrary(goal, selectedSubsystem, tracks) {
+function buildPromptLibrary(goal, selectedSubsystem, tracks, repoAudit = null) {
   const trackLines = tracks.map((track) => `${track.label}: ${track.focus}`).join('\n');
   const selectedLabel = selectedSubsystem?.path || selectedSubsystem?.name || '[SUBSYSTEM_NAME]';
+  const auditSummaryLines = repoAudit
+    ? [
+      `Repo health: ${repoAudit.repoHealth?.verdict || 'unknown'} / score ${repoAudit.repoHealth?.score ?? 'n/a'}`,
+      `Top pass order: ${(repoAudit.suggestedPassOrder || []).slice(0, 4).map((item) => item.area).join(' -> ') || 'none'}`,
+      `Top verified findings: ${(repoAudit.findings?.verified || []).slice(0, 4).map((item) => `${item.area}: ${item.title}`).join(' | ') || 'none'}`,
+      `Top probable findings: ${(repoAudit.findings?.probable || []).slice(0, 4).map((item) => `${item.area}: ${item.title}`).join(' | ') || 'none'}`,
+    ]
+    : ['No repo-audit prepass summary was available.'];
+  const selectedAuditLines = selectedSubsystem?.auditFindings?.length
+    ? selectedSubsystem.auditFindings.map((finding) => `${finding.severity}: ${finding.title} -> ${finding.detail}`)
+    : ['No subsystem-specific audit findings were preloaded for this area.'];
   const master = `You are doing a principal-level monorepo analysis.
 
 This is a large repository. Do NOT pretend to understand everything at once.
+
+Repo-audit scout summary:
+${auditSummaryLines.map((line) => `- ${line}`).join('\n')}
 
 Work in phases:
 
@@ -793,7 +885,9 @@ Tasks:
 
 Do not review everything yet.
 Do not propose refactors yet.
-Just build the map and point out the likely architectural spine.`;
+Just build the map and point out the likely architectural spine.
+
+Use the repo-audit scout as your seed, but correct it if source code disproves it.`;
 
   const criticalAreas = `Based on the repository map, identify the 5 highest-risk subsystems from an engineering perspective.
 
@@ -813,9 +907,15 @@ For each subsystem provide:
 - whether it should be reviewed before implementation work
 
 Do not give generic advice.
-Tie every claim to concrete code areas or file paths where possible.`;
+Tie every claim to concrete code areas or file paths where possible.
+
+Audit scout hints:
+${auditSummaryLines.map((line) => `- ${line}`).join('\n')}`;
 
   const deepReview = `Now do a deep review of this subsystem only: ${selectedLabel}
+
+Preloaded audit findings for this subsystem:
+${selectedAuditLines.map((line) => `- ${line}`).join('\n')}
 
 Review goals:
 - find real engineering risks, not style issues
@@ -867,6 +967,8 @@ First produce:
 2. dependency/risk notes,
 3. verification strategy,
 4. rollback sensitivity.
+
+Repo-audit prepass should influence patch ordering, but not replace code inspection.
 
 Then wait for execution within the same reasoning process and apply the plan in safe order.`;
 
@@ -1053,6 +1155,9 @@ function renderReviewScopeMarkdown(goal, selectedSubsystem, criticalAreas, track
     lines.push(`- \`${area.severity}\` ${area.path} -> ${area.why}`);
     lines.push(`  Files: \`${area.files.join(', ')}\``);
     lines.push(`  Failures: \`${area.failures.join(' | ')}\``);
+    if ((area.auditFindings || []).length > 0) {
+      lines.push(`  Audit findings: \`${area.auditFindings.map((finding) => `[${finding.severity}] ${finding.title}`).join(' | ')}\``);
+    }
   }
 
   lines.push('', '## Track Ranking', '');
@@ -1081,6 +1186,9 @@ function renderPatchPlanMarkdown(goal, patchPlan, phasePlan, promptLibrary, file
     lines.push(`- ${group.title}`);
     lines.push(`  Why: ${group.why}`);
     lines.push(`  Impacted files: \`${group.impactedFiles.join(', ') || 'none'}\``);
+    if ((group.auditFindings || []).length > 0) {
+      lines.push(`  Audit findings: \`${group.auditFindings.join(' | ')}\``);
+    }
     lines.push(`  Verification: \`${group.verification.join(' | ') || 'none'}\``);
     lines.push(`  Rollback sensitivity: \`${group.rollbackSensitivity}\``);
   }
@@ -1123,6 +1231,17 @@ function renderMonorepoModeMarkdown(payload) {
     `- Profile: \`${payload.profile.id}\``,
     `- Repo shape: \`${payload.monorepo.repoShape}\``,
     `- Selected subsystem: \`${payload.selectedSubsystem?.path || payload.selectedSubsystem?.name || 'none'}\``,
+    '',
+    '## Repo Audit Scout',
+    '',
+    `- Report: \`${payload.files.repoAudit}\``,
+    `- Repo health: \`${payload.repoAudit.repoHealth.verdict}\``,
+    `- Score: \`${payload.repoAudit.repoHealth.score}\``,
+    `- Verified findings: \`${payload.repoAudit.repoHealth.counts.verified}\``,
+    `- Probable findings: \`${payload.repoAudit.repoHealth.counts.probable}\``,
+    ...(payload.repoAudit.suggestedPassOrder.length > 0
+      ? payload.repoAudit.suggestedPassOrder.slice(0, 4).map((item) => `- Pass ${item.order}: \`${item.area}\` -> ${item.why}`)
+      : ['- `No audit pass order was generated.`']),
     '',
     '## Repo Map',
     '',
@@ -1223,6 +1342,7 @@ function renderMonorepoModeMarkdown(payload) {
   lines.push(`- REPO_MAP: \`${payload.files.repoMap}\``);
   lines.push(`- REVIEW_SCOPE: \`${payload.files.reviewScope}\``);
   lines.push(`- PATCH_PLAN: \`${payload.files.patchPlan}\``);
+  lines.push(`- REPO_AUDIT: \`${payload.files.repoAudit}\``);
   lines.push('');
   return `${lines.join('\n').trimEnd()}\n`;
 }
@@ -1263,18 +1383,27 @@ function buildMonorepoMode(cwd, rootDir, options = {}) {
     writeFiles: true,
     maxWorkers: options.maxWorkers || 4,
   });
+  const repoAudit = options['skip-audit-prepass']
+    ? readJsonIfExists(path.join(cwd, '.workflow', 'reports', 'repo-audit.json'), null)
+    : runRepoAudit(cwd, {
+      goal: `repo audit prepass for ${goal}`,
+      mode: 'oneshot',
+      stack: options.stack,
+      writeArtifacts: true,
+    });
   const graph = buildPackageGraph(cwd, { writeFiles: true });
   const repoFiles = Object.keys(graph.ownership || {}).sort();
-  const packageMeta = buildPackageMeta(graph, monorepo, repoFiles);
+  const packageMeta = mergePackageMetaWithRepoAudit(buildPackageMeta(graph, monorepo, repoFiles), repoAudit);
   const repoMap = buildRepoMap(cwd, map, graph, packageMeta, monorepo, rootDir);
   const criticalAreas = buildCriticalAreas(packageMeta);
-  const selectedSubsystem = selectSubsystem(criticalAreas, options.subsystem);
+  const selectedSubsystem = selectSubsystem(criticalAreas, options.subsystem, repoAudit);
   const tracks = buildTracks(TRACK_DEFINITIONS, packageMeta, repoMap.sourceOfTruth);
-  const patchPlan = buildPatchPlan(criticalAreas, monorepo, goal);
+  const patchPlan = buildPatchPlan(criticalAreas, monorepo, goal, repoAudit);
   const files = {
     report: path.join(cwd, '.workflow', 'reports', 'monorepo-mode.md'),
     json: path.join(cwd, '.workflow', 'reports', 'monorepo-mode.json'),
     agents: path.join(cwd, 'AGENTS.md'),
+    repoAudit: path.join(cwd, '.workflow', 'reports', 'repo-audit.md'),
     repoMap: path.join(rootDir, 'REPO_MAP.md'),
     reviewScope: path.join(rootDir, 'REVIEW_SCOPE.md'),
     patchPlan: path.join(rootDir, 'PATCH_PLAN.md'),
@@ -1286,7 +1415,7 @@ function buildMonorepoMode(cwd, rootDir, options = {}) {
     execute: relativePath(cwd, path.join(cwd, '.workflow', 'reports', 'monorepo-mode.md')),
     verify: relativePath(cwd, path.join(cwd, '.workflow', 'reports', 'monorepo-mode.md')),
   };
-  const promptLibrary = buildPromptLibrary(goal, selectedSubsystem, tracks);
+  const promptLibrary = buildPromptLibrary(goal, selectedSubsystem, tracks, repoAudit);
   const phasePlan = buildPhasePlan(goal, selectedSubsystem, {
     ...files,
     report: relativePath(cwd, files.report),
@@ -1320,6 +1449,15 @@ function buildMonorepoMode(cwd, rootDir, options = {}) {
     goal,
     phase,
     profile,
+    repoAudit: {
+      repoHealth: repoAudit?.repoHealth || { verdict: 'unknown', score: 0, counts: { verified: 0, probable: 0, heuristic: 0 } },
+      suggestedPassOrder: (repoAudit?.suggestedPassOrder || []).slice(0, 6),
+      stackPack: repoAudit?.stackPack || null,
+      stackDiagnostics: repoAudit?.stackDiagnostics || null,
+      artifacts: repoAudit?.artifacts || null,
+      topVerifiedFindings: (repoAudit?.findings?.verified || []).slice(0, 5),
+      topProbableFindings: (repoAudit?.findings?.probable || []).slice(0, 5),
+    },
     repoMap,
     monorepo,
     criticalAreas,
@@ -1340,11 +1478,25 @@ function buildMonorepoMode(cwd, rootDir, options = {}) {
       report: relativePath(cwd, files.report),
       json: relativePath(cwd, files.json),
       agents: relativePath(cwd, files.agents),
+      repoAudit: relativePath(cwd, files.repoAudit),
       repoMap: relativePath(cwd, files.repoMap),
       reviewScope: relativePath(cwd, files.reviewScope),
       patchPlan: relativePath(cwd, files.patchPlan),
     },
   };
+
+  payload.controlPlane = buildReviewCorrectionControlPlane(cwd, {
+    goal,
+    repoAudit,
+    monorepo: {
+      ...monorepo,
+      criticalAreas,
+    },
+    packageGraph: graph,
+    activeLane: 'large-repo-review',
+  }, {
+    promotePlanned: true,
+  });
 
   writeIfChanged(files.repoMap, renderRepoMapMarkdown(goal, repoMap, payload.files.repoMap));
   writeIfChanged(
@@ -1373,6 +1525,8 @@ Options:
   --root <path>         Workflow root. Defaults to active workstream root
   --phase <id>          full|repo-map|critical-areas|deep-analysis|risks|patch-plan|execute|verify
   --subsystem <name>    Explicit subsystem/package to deep-review first
+  --stack <name>        Optional audit stack override such as flutter-firebase
+  --skip-audit-prepass  Reuse the latest repo-audit artifact instead of running a fresh scout
   --max-workers <n>     Maximum bounded write lanes for monorepo planning
   --skip-agents         Do not create or refresh the root AGENTS.md monorepo section
   --json                Print machine-readable output
@@ -1392,6 +1546,8 @@ async function main(argv = process.argv.slice(2)) {
     goal: String(args.goal || args._.join(' ') || 'run the staged monorepo workflow').trim(),
     phase: args.phase ? String(args.phase).trim() : 'full',
     subsystem: args.subsystem ? String(args.subsystem).trim() : '',
+    stack: args.stack ? String(args.stack).trim() : '',
+    'skip-audit-prepass': Boolean(args['skip-audit-prepass']),
     maxWorkers: Number(args['max-workers'] || 4),
     skipAgents: Boolean(args['skip-agents']),
   });
@@ -1409,6 +1565,9 @@ async function main(argv = process.argv.slice(2)) {
   console.log(`- REVIEW_SCOPE: \`${payload.files.reviewScope}\``);
   console.log(`- PATCH_PLAN: \`${payload.files.patchPlan}\``);
   console.log(`- Critical areas: \`${payload.criticalAreas.length}\``);
+  if (payload.controlPlane?.artifacts?.correctionControlMarkdown) {
+    console.log(`- Control plane: \`${payload.controlPlane.artifacts.correctionControlMarkdown}\``);
+  }
   console.log(`- Tracks: \`${payload.tracks.length}\``);
   console.log(`- Selected subsystem: \`${payload.selectedSubsystem?.path || payload.selectedSubsystem?.name || 'none'}\``);
   console.log(`- Phase prompt: \`${payload.phase}\``);

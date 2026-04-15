@@ -30,6 +30,11 @@ function normalizeWorkflowMode(value, fallback = 'solo') {
   return ['solo', 'team'].includes(normalized) ? normalized : fallback;
 }
 
+function normalizeDiscussMode(value, fallback = 'assumptions') {
+  const normalized = String(value || '').trim().toLowerCase().replace(/-/g, '_');
+  return ['interview', 'assumptions', 'proposal_first'].includes(normalized) ? normalized : fallback;
+}
+
 function normalizeCommitGranularity(value, fallback = 'manual') {
   const normalized = String(value || '').trim().toLowerCase();
   return ['manual', 'phase', 'chunk'].includes(normalized) ? normalized : fallback;
@@ -59,6 +64,10 @@ function defaultReasoningProfileForStep(step, preferences = {}) {
   }
 
   if (normalizedStep === 'discuss' && discussMode === 'assumptions') {
+    return 'balanced';
+  }
+
+  if (normalizedStep === 'discuss' && discussMode === 'proposal_first') {
     return 'balanced';
   }
 
@@ -232,6 +241,7 @@ function loadPreferences(paths) {
     ...profileDefaults,
     healthStrictRequired: mode === 'team' ? true : profileDefaults.healthStrictRequired,
   };
+  const discussModeRaw = String((content && markdown.getFieldValue(content, 'Discuss mode')) || defaults.discussMode).trim();
 
   let gitIsolation = String((content && markdown.getFieldValue(content, 'Git isolation')) || defaults.gitIsolation).trim();
   let autoPush = parseBoolean(content && markdown.getFieldValue(content, 'Auto push'), defaults.autoPush);
@@ -261,7 +271,7 @@ function loadPreferences(paths) {
     repoWorkflowProfileRaw,
     milestoneProfileOverride,
     milestoneProfileOverrideRaw,
-    discussMode: String((content && markdown.getFieldValue(content, 'Discuss mode')) || defaults.discussMode).trim(),
+    discussMode: normalizeDiscussMode(discussModeRaw, defaults.discussMode),
     repoAutomationMode,
     repoAutomationModeRaw,
     automationMode,
@@ -306,6 +316,7 @@ module.exports = {
   normalizeAutomationMode,
   normalizeAutomationStatus,
   normalizeAutomationWindowPolicy,
+  normalizeDiscussMode,
   normalizePlanGateStatus,
   normalizeReasoningProfile,
   normalizeTokenEfficiencyMeasures,

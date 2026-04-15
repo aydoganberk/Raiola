@@ -1,11 +1,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { slugify } = require('./common_identity');
 const {
   ensureDir,
-  readIfExists,
-  slugify,
-  writeIfChanged,
-} = require('./common');
+  writeTextIfChanged: writeIfChanged,
+} = require('./io/files');
+const { readJsonIfExists } = require('./io/json');
 
 function runtimeDir(cwd) {
   return path.join(cwd, '.workflow', 'runtime');
@@ -15,18 +15,6 @@ function runtimePath(cwd, ...segments) {
   return path.join(runtimeDir(cwd), ...segments);
 }
 
-function readJsonIfExists(filePath) {
-  const content = readIfExists(filePath);
-  if (!content) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
-}
 
 function writeRuntimeJson(cwd, fileName, payload) {
   const filePath = runtimePath(cwd, fileName);

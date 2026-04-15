@@ -1,21 +1,19 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { ensureDir, parseArgs, readIfExists, resolveWorkflowRoot, writeIfChanged } = require('./common');
+const {
+  parseArgs,
+  resolveWorkflowRoot,
+} = require('./common');
+const {
+  ensureDir,
+  writeTextIfChanged: writeIfChanged,
+} = require('./io/files');
+const { readJsonIfExists: readJson } = require('./io/json');
+const { commandFor, detectPackageManager } = require('./package/repo');
 const { buildPackageGraph } = require('./package_graph');
 const { relativePath } = require('./roadmap_os');
 
-function readJson(filePath, fallback = {}) {
-  const content = readIfExists(filePath);
-  if (!content) {
-    return fallback;
-  }
-  try {
-    return JSON.parse(content);
-  } catch {
-    return fallback;
-  }
-}
 
 function writeJson(filePath, payload) {
   writeIfChanged(filePath, `${JSON.stringify(payload, null, 2)}\n`);
@@ -27,22 +25,6 @@ function writeMarkdown(filePath, content) {
   return filePath;
 }
 
-function detectPackageManager(cwd) {
-  if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) {
-    return 'pnpm';
-  }
-  if (fs.existsSync(path.join(cwd, 'yarn.lock'))) {
-    return 'yarn';
-  }
-  if (fs.existsSync(path.join(cwd, 'bun.lockb')) || fs.existsSync(path.join(cwd, 'bun.lock'))) {
-    return 'bun';
-  }
-  return 'npm';
-}
-
-function quoteShell(value) {
-  return /[\s"]/g.test(String(value)) ? JSON.stringify(String(value)) : String(value);
-}
 
 function packageManifest(cwd, packageId) {
   const manifestPath = packageId === '.'
@@ -56,27 +38,6 @@ function scriptsForPackage(cwd, packageId) {
   return manifest.scripts || {};
 }
 
-function commandFor(manager, packageId, scriptName) {
-  const dir = packageId === '.' ? '.' : packageId;
-  if (manager === 'pnpm') {
-    return packageId === '.'
-      ? `pnpm run ${scriptName}`
-      : `pnpm --dir ${quoteShell(dir)} run ${scriptName}`;
-  }
-  if (manager === 'yarn') {
-    return packageId === '.'
-      ? `yarn ${scriptName}`
-      : `yarn --cwd ${quoteShell(dir)} ${scriptName}`;
-  }
-  if (manager === 'bun') {
-    return packageId === '.'
-      ? `bun run ${scriptName}`
-      : `bun --cwd ${quoteShell(dir)} run ${scriptName}`;
-  }
-  return packageId === '.'
-    ? `npm run ${scriptName}`
-    : `npm --prefix ${quoteShell(dir)} run ${scriptName}`;
-}
 
 function pickTopPackages(graph, options = {}) {
   const candidates = [...(graph.changedPackages || []), ...(graph.impactedPackages || [])];

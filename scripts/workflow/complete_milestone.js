@@ -2,6 +2,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const {
+  defaultDiscussProposalState,
+  discussBreakdownLines,
+  renderDiscussProposalSection,
+  } = require('./discuss_proposals');
+const {
   assertWorkflowFiles,
   controlPaths,
   currentBranch,
@@ -16,7 +21,6 @@ const {
   parseMemoryEntry,
   parseMilestoneTable,
   parseWorkstreamTable,
-  read,
   renderArchivedMilestones,
   renderMemorySection,
   renderMilestoneTable,
@@ -37,10 +41,13 @@ const {
   validateValidationContract,
   warnAgentsSize,
   workflowPaths,
-  write,
-  ensureDir,
   computeWindowStatus,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+  ensureDir,
+} = require('./io/files');
 
 function printHelp() {
   console.log(`
@@ -106,6 +113,8 @@ function main() {
   const noGit = Boolean(args['no-git']);
   const agentsReview = String(args['agents-review'] || '').trim();
   const preferences = loadPreferences(paths);
+  const discussMode = preferences.discussMode;
+  const discussBreakdown = discussBreakdownLines(discussMode);
   const noPush = Boolean(args['no-push']) || !preferences.autoPush;
   const requireStrictHealth = Boolean(preferences.healthStrictRequired);
 
@@ -286,11 +295,9 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
 - Non-goals:
   - \`Keeping historical milestone details on this card\`
 - Discuss mode:
-  - \`${preferences.discussMode}\`
+  - \`${discussMode}\`
 - Discuss breakdown:
-  - \`intent capture -> user intent + requirement list\`
-  - \`constraint extraction -> explicit constraints + unanswered high-leverage questions\`
-  - \`execution shaping -> alternatives considered + success rubric\`
+${discussBreakdown.map((line) => `  ${line}`).join('\n')}
 - Clarifying questions / assumptions:
   - \`Fill this when the next milestone opens\`
 - Seed intake:
@@ -343,6 +350,7 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
   context = replaceField(context, 'Packet version', '5');
   context = replaceField(context, 'Input hash', 'pending_sync');
   context = replaceField(context, 'Confidence summary', 'mixed_idle_surface');
+  context = replaceField(context, 'Discuss mode', discussMode);
   context = replaceSection(context, 'Problem Frame', `
 - Goal:
   - \`Provide a clean starting surface for the next workflow milestone if the user wants one\`
@@ -351,11 +359,11 @@ ${clearedMemoryEntries.length === 0 ? '- `No cleared active memory notes`' : cle
 - Non-goals:
   - \`Starting a workflow milestone without the user's request\`
 `);
-  context = replaceSection(context, 'Discuss Breakdown', [
-    '- `Intent capture -> turn the user request into concrete intent and requirements`',
-    '- `Constraint extraction -> surface explicit constraints and unanswered high-leverage questions`',
-    '- `Execution shaping -> compare approaches before execution and validation start`',
-  ].join('\n'));
+  context = replaceSection(context, 'Discuss Breakdown', discussBreakdown.join('\n'));
+  context = replaceOrAppendSection(context, 'Discuss Proposal', renderDiscussProposalSection({
+    mode: discussMode,
+    ...defaultDiscussProposalState(discussMode),
+  }));
   context = replaceSection(context, 'User Intent', `
 - Primary request:
   - \`Fill this when the next milestone opens\`

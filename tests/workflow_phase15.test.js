@@ -7,7 +7,7 @@ const childProcess = require('node:child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
+const raiBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase15-'));
@@ -29,7 +29,7 @@ function readFile(targetRepo, relativePath) {
 
 test('roadmap daily-intent and trust surfaces work end-to-end', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const codex = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'codex', 'setup', '--repo', '--json'], targetRepo));
   const intent = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'do', 'investigate audit drift', '--json'], targetRepo));
@@ -59,7 +59,7 @@ test('roadmap daily-intent and trust surfaces work end-to-end', () => {
   const packetVerify = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'packet', 'verify', '--step', 'plan', '--json'], targetRepo));
   const evidence = JSON.parse(run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'evidence', '--json'], targetRepo));
 
-  assert.match(codex.configFile, /codex-control\/repo-codex\/config\.toml$/);
+  assert.match(codex.configFile, /\.codex\/config\.toml$/);
   assert.ok(codex.roles.length >= 2);
   assert.equal(intent.previewFirst, true);
   assert.ok(intent.suggestedCommands.includes('rai packet compile'));
@@ -76,7 +76,7 @@ test('roadmap daily-intent and trust surfaces work end-to-end', () => {
 
 test('codex control-plane lifecycle stays rollback-safe and scriptable', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
   const setup = JSON.parse(run('node', [targetBin, 'codex', 'setup', '--repo', '--json'], targetRepo));
@@ -114,7 +114,7 @@ test('codex control-plane lifecycle stays rollback-safe and scriptable', () => {
 
 test('roadmap governance and operator-center surfaces stay scriptable', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
 
   const policy = JSON.parse(run(
     'node',
@@ -182,7 +182,7 @@ test('roadmap governance and operator-center surfaces stay scriptable', () => {
 
 test('hybrid team runtime, browser adapter, and patch surfaces produce artifacts', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'init', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'init', '--target', targetRepo, '--skip-verify'], repoRoot);
   run('git', ['init'], targetRepo);
   run('git', ['config', 'user.email', 'test@example.com'], targetRepo);
   run('git', ['config', 'user.name', 'Test User'], targetRepo);

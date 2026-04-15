@@ -5,6 +5,65 @@ const { writeRuntimeJson } = require('./runtime_helpers');
 
 const PAGE_TYPES = Object.freeze([
   {
+    id: 'mobile-screen-flow',
+    label: 'Mobile Screen Flow',
+    cues: ['mobile', 'flutter', 'ios', 'android', 'consumer app', 'screen flow', 'gesture', 'bottom sheet', 'tab bar'],
+    archetypes: ['saas-app', 'content-studio', 'commerce'],
+    categories: ['mobile-consumer-app', 'content-studio', 'b2b-saas'],
+    summary: 'Phone-first screen family with short task paths, clear orientation, and gesture-aware transitions.',
+    primaryOutcome: 'Help users complete the core task in a few confident taps without losing context.',
+    sections: [
+      {
+        id: 'entry-shell',
+        title: 'Entry shell and orientation',
+        goal: 'Make the screen purpose, current context, and primary next action obvious on first paint.',
+        components: ['app bar', 'context title', 'primary CTA', 'status summary'],
+        states: ['loading', 'first-run', 'permissions'],
+      },
+      {
+        id: 'primary-task',
+        title: 'Primary task path',
+        goal: 'Let users finish the main task quickly with touch-friendly layout and clear progress.',
+        components: ['task card', 'form or composer', 'progressive disclosure', 'sticky action'],
+        states: ['form-validation', 'success', 'error'],
+      },
+      {
+        id: 'secondary-surface',
+        title: 'Secondary surface',
+        goal: 'Use sheets, tabs, or drawers to expose extra detail without derailing the main flow.',
+        components: ['bottom sheet', 'tab bar', 'segmented control', 'detail list'],
+        states: ['empty', 'offline', 'permissions'],
+      },
+      {
+        id: 'feedback-recovery',
+        title: 'Feedback and recovery',
+        goal: 'Keep loading, error, offline, and completion feedback close to the action that triggered it.',
+        components: ['inline status', 'retry action', 'toast/banner', 'confirmation summary'],
+        states: ['loading', 'error', 'offline', 'success'],
+      },
+    ],
+    proofSurfaces: [
+      'Show the primary task path or real screen flow before decorative brand framing.',
+      'Touch targets, keyboard behavior, and feedback timing matter more than desktop-like density.',
+    ],
+    copyGoals: [
+      'Keep labels short, concrete, and action-led.',
+      'Use recovery copy that tells users what to do next without forcing them to backtrack.',
+    ],
+    responsivePriorities: [
+      'Treat compact phones as the default shape; scale up to larger devices second.',
+      'Protect safe-area spacing, keyboard avoidance, and thumb-reach for primary actions.',
+    ],
+    motionMoments: [
+      'Use motion to preserve orientation across sheets, tab changes, and task completion.',
+      'Gestures should feel supported by the layout rather than layered on top of a desktop structure.',
+    ],
+    antiPatterns: [
+      'Do not transpose a desktop dashboard grid directly onto a mobile flow.',
+      'Do not hide critical recovery or save feedback behind gestures users may miss.',
+    ],
+  },
+  {
     id: 'landing-page',
     label: 'Landing Page',
     cues: ['landing', 'homepage', 'marketing', 'hero', 'launch', 'campaign', 'product page'],
@@ -325,6 +384,7 @@ const ROLE_PALETTES = Object.freeze({
   'ai-platform': { accent: '#0f766e', accentSoft: '#ccfbf1', secondary: '#2563eb' },
   'analytics-platform': { accent: '#2563eb', accentSoft: '#dbeafe', secondary: '#059669' },
   'b2b-saas': { accent: '#2563eb', accentSoft: '#dbeafe', secondary: '#0f766e' },
+  'mobile-consumer-app': { accent: '#0f766e', accentSoft: '#ccfbf1', secondary: '#c2410c' },
   'marketing-site': { accent: '#c2410c', accentSoft: '#ffedd5', secondary: '#0f766e' },
   commerce: { accent: '#b45309', accentSoft: '#fef3c7', secondary: '#0f766e' },
   'service-business': { accent: '#2f855a', accentSoft: '#dcfce7', secondary: '#b76e79' },
@@ -435,6 +495,7 @@ function normalize(value) {
 
 function inferPageType(goal, direction, designDna) {
   const text = normalize(goal);
+  const productSurface = direction.profile?.productSurface?.id || 'web-app';
   const ranked = PAGE_TYPES
     .map((entry) => {
       let score = entry.cues.reduce((sum, cue) => (text.includes(cue) ? sum + 2 : sum), 0);
@@ -446,6 +507,9 @@ function inferPageType(goal, direction, designDna) {
       }
       if (entry.id === 'landing-page' && direction.archetype.id === 'editorial-marketing') {
         score += 1;
+      }
+      if (entry.id === 'mobile-screen-flow' && productSurface === 'mobile-app') {
+        score += 5;
       }
       if (entry.id === 'dashboard' && direction.archetype.id === 'control-plane') {
         score += 2;
@@ -459,6 +523,9 @@ function inferPageType(goal, direction, designDna) {
       if (entry.id === 'pricing' && /\b(pricing|plans|tiers|subscription)\b/.test(text)) {
         score += 3;
       }
+      if (productSurface === 'mobile-app' && entry.id === 'landing-page') {
+        score -= 2;
+      }
       return { entry, score };
     })
     .sort((left, right) => right.score - left.score);
@@ -470,8 +537,8 @@ function inferPageType(goal, direction, designDna) {
   return {
     ...chosen,
     reason: ranked[0]?.score > 0
-      ? `Matched ${chosen.label.toLowerCase()} cues from the current goal plus ${direction.archetype.label} archetype alignment.`
-      : `Defaulted to ${chosen.label.toLowerCase()} because it fits the ${direction.archetype.label} archetype best.`,
+      ? `Matched ${chosen.label.toLowerCase()} cues from the current goal plus ${direction.archetype.label} archetype and ${direction.profile?.productSurface?.label?.toLowerCase() || 'current surface'} alignment.`
+      : `Defaulted to ${chosen.label.toLowerCase()} because it fits the ${direction.archetype.label} archetype and ${direction.profile?.productSurface?.label?.toLowerCase() || 'current surface'} best.`,
   };
 }
 
@@ -485,6 +552,14 @@ function resolveSectionStates(section, stateAtlas) {
 }
 
 function buildImplementationSequence(pageType) {
+  if (pageType.id === 'mobile-screen-flow') {
+    return [
+      `Land ${pageType.sections[0].title} first so orientation and the primary action are obvious on the first screen.`,
+      `Build ${pageType.sections[1].title} next together with inline validation and success/error recovery.`,
+      `Close with ${pageType.sections.slice(2).map((section) => section.title).join(' and ')} while verifying gesture fidelity, safe areas, and state continuity in the same pass.`,
+    ];
+  }
+
   const ordered = pageType.sections.map((section) => section.title);
   return [
     `Land ${ordered[0]} first so hierarchy and the primary outcome are visible immediately.`,
@@ -506,6 +581,7 @@ function buildPageBlueprintPayload(cwd, rootDir, direction, designDna, stateAtla
   return {
     generatedAt: new Date().toISOString(),
     workflowRootRelative: relativePath(cwd, rootDir),
+    productSurface: direction.profile.productSurface,
     pageType: {
       id: pageType.id,
       label: pageType.label,
@@ -526,6 +602,7 @@ function buildPageBlueprintPayload(cwd, rootDir, direction, designDna, stateAtla
 function renderPageBlueprintMarkdown(payload) {
   const lines = [
     `- Workflow root: \`${payload.workflowRootRelative}\``,
+    `- Product surface: \`${payload.productSurface.label}\``,
     `- Page type: \`${payload.pageType.label}\``,
     `- Why: ${payload.pageType.reason}`,
     `- Primary outcome: ${payload.primaryOutcome}`,

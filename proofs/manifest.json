@@ -1,0 +1,258 @@
+{
+  "generatedAt": "2026-04-14T15:52:17.146Z",
+  "corpusType": "repo-proof-corpus",
+  "snapshotStrategy": "curated-reduced-snapshot",
+  "repoCount": 6,
+  "entries": [
+    {
+      "slug": "next-admin-dashboard",
+      "title": "Next.js Admin Dashboard Template",
+      "category": "next-react-web",
+      "sourceUrl": "https://github.com/vercel/nextjs-postgres-nextauth-tailwindcss-template",
+      "snapshotType": "curated-reduced-snapshot",
+      "fixtureDir": "tests/fixtures/repo_proof_corpus/next-admin-dashboard",
+      "proofPath": "proofs/next-admin-dashboard/proof.json",
+      "summaryPath": "proofs/next-admin-dashboard/summary.md",
+      "coverage": [
+        "api",
+        "frontend"
+      ],
+      "overallConfidence": "medium",
+      "trustableFindings": [
+        "API surface found 2 endpoints via next-api",
+        "Frontend surface detected (Next / Next App Router)",
+        "Verified finding: Repository has executable code but no automated tests",
+        "Verified finding: High-risk area has no owned tests",
+        "Verified finding: Repository has no CI workflow"
+      ],
+      "manualVerify": [
+        "Critical UI flows, navigation params, and browser/mobile smoke paths",
+        "Deployment-time integrations that are invisible in a read-only snapshot"
+      ],
+      "knownLimitations": [
+        "No proof harness was detected for the frontend surface; manual smoke verification remains necessary.",
+        "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+      ],
+      "findings": {
+        "verified": 5,
+        "probable": 7,
+        "heuristic": 1
+      },
+      "expectations": {
+        "coverage": [
+          "api",
+          "frontend"
+        ],
+        "frameworkSignals": [
+          "next-api"
+        ]
+      }
+    },
+    {
+      "slug": "fastify-starter",
+      "title": "Fastify Starter",
+      "category": "api-fastify",
+      "sourceUrl": "https://github.com/fastify/fastify-starter-codesandbox",
+      "snapshotType": "curated-reduced-snapshot",
+      "fixtureDir": "tests/fixtures/repo_proof_corpus/fastify-starter",
+      "proofPath": "proofs/fastify-starter/proof.json",
+      "summaryPath": "proofs/fastify-starter/summary.md",
+      "coverage": [
+        "api"
+      ],
+      "overallConfidence": "medium",
+      "trustableFindings": [
+        "API surface found 3 endpoints via fastify",
+        "Verified finding: Repository has no CI workflow"
+      ],
+      "manualVerify": [
+        "Deployment-time integrations that are invisible in a read-only snapshot"
+      ],
+      "knownLimitations": [
+        "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+      ],
+      "findings": {
+        "verified": 1,
+        "probable": 2,
+        "heuristic": 0
+      },
+      "expectations": {
+        "coverage": [
+          "api"
+        ],
+        "frameworkSignals": [
+          "fastify"
+        ]
+      }
+    },
+    {
+      "slug": "react-native-community-template",
+      "title": "React Native Community Template",
+      "category": "react-native-mobile",
+      "sourceUrl": "https://github.com/react-native-community/template",
+      "snapshotType": "curated-reduced-snapshot",
+      "fixtureDir": "tests/fixtures/repo_proof_corpus/react-native-community-template",
+      "proofPath": "proofs/react-native-community-template/proof.json",
+      "summaryPath": "proofs/react-native-community-template/summary.md",
+      "coverage": [
+        "frontend",
+        "monorepo"
+      ],
+      "overallConfidence": "medium",
+      "trustableFindings": [
+        "Workspace graph reports 1 root",
+        "Detected ecosystems: java",
+        "Frontend surface detected (React Native / React Native Navigation)",
+        "Verified finding: Repository has executable code but no automated tests",
+        "Verified finding: Repository has no CI workflow"
+      ],
+      "manualVerify": [
+        "Critical UI flows, navigation params, and browser/mobile smoke paths",
+        "Cross-workspace boundaries, owners, and release sequencing",
+        "Deployment-time integrations that are invisible in a read-only snapshot"
+      ],
+      "knownLimitations": [
+        "Static route scan may miss runtime-generated endpoints or framework-specific mounts.",
+        "No proof harness was detected for the frontend surface; manual smoke verification remains necessary.",
+        "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+      ],
+      "findings": {
+        "verified": 3,
+        "probable": 1,
+        "heuristic": 1
+      },
+      "expectations": {
+        "coverage": [
+          "frontend"
+        ],
+        "frameworkSignals": [
+          "React Native"
+        ]
+      }
+    },
+    {
+      "slug": "create-t3-turbo",
+      "title": "create-t3-turbo",
+      "category": "pnpm-turbo-monorepo",
+      "sourceUrl": "https://github.com/t3-oss/create-t3-turbo",
+      "snapshotType": "curated-reduced-snapshot",
+      "fixtureDir": "tests/fixtures/repo_proof_corpus/create-t3-turbo",
+      "proofPath": "proofs/create-t3-turbo/proof.json",
+      "summaryPath": "proofs/create-t3-turbo/summary.md",
+      "coverage": [
+        "api",
+        "frontend",
+        "monorepo"
+      ],
+      "overallConfidence": "high",
+      "trustableFindings": [
+        "Workspace graph reports 5 roots",
+        "Detected ecosystems: node",
+        "API surface found 1 endpoint via next-api",
+        "Frontend surface detected (Expo / Next App Router)",
+        "Verified finding: Repository has executable code but no automated tests"
+      ],
+      "manualVerify": [
+        "Critical UI flows, navigation params, and browser/mobile smoke paths",
+        "Cross-workspace boundaries, owners, and release sequencing",
+        "Deployment-time integrations that are invisible in a read-only snapshot"
+      ],
+      "knownLimitations": [
+        "No proof harness was detected for the frontend surface; manual smoke verification remains necessary.",
+        "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+      ],
+      "findings": {
+        "verified": 5,
+        "probable": 8,
+        "heuristic": 3
+      },
+      "expectations": {
+        "coverage": [
+          "api",
+          "frontend",
+          "monorepo"
+        ],
+        "frameworkSignals": [
+          "next-api"
+        ]
+      }
+    },
+    {
+      "slug": "astral-uv",
+      "title": "uv",
+      "category": "polyglot-python-rust",
+      "sourceUrl": "https://github.com/astral-sh/uv",
+      "snapshotType": "curated-reduced-snapshot",
+      "fixtureDir": "tests/fixtures/repo_proof_corpus/astral-uv",
+      "proofPath": "proofs/astral-uv/proof.json",
+      "summaryPath": "proofs/astral-uv/summary.md",
+      "coverage": [
+        "monorepo"
+      ],
+      "overallConfidence": "medium",
+      "trustableFindings": [
+        "Workspace graph reports 1 root",
+        "Detected ecosystems: rust",
+        "Verified finding: Repository has executable code but no automated tests",
+        "Verified finding: Repository has no CI workflow",
+        "Verified finding: Repository has no stable verify entrypoint"
+      ],
+      "manualVerify": [
+        "Cross-workspace boundaries, owners, and release sequencing",
+        "Deployment-time integrations that are invisible in a read-only snapshot"
+      ],
+      "knownLimitations": [
+        "Static route scan may miss runtime-generated endpoints or framework-specific mounts.",
+        "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+      ],
+      "findings": {
+        "verified": 3,
+        "probable": 0,
+        "heuristic": 2
+      },
+      "expectations": {
+        "coverage": [
+          "monorepo"
+        ],
+        "frameworkSignals": []
+      }
+    },
+    {
+      "slug": "hono-starter",
+      "title": "Hono Starter Templates",
+      "category": "api-hono",
+      "sourceUrl": "https://github.com/honojs/starter",
+      "snapshotType": "curated-reduced-snapshot",
+      "fixtureDir": "tests/fixtures/repo_proof_corpus/hono-starter",
+      "proofPath": "proofs/hono-starter/proof.json",
+      "summaryPath": "proofs/hono-starter/summary.md",
+      "coverage": [
+        "repo-audit"
+      ],
+      "overallConfidence": "low",
+      "trustableFindings": [
+        "Verified finding: Repository has executable code but no automated tests",
+        "Verified finding: Repository has no CI workflow",
+        "Verified finding: Repository has no stable verify entrypoint"
+      ],
+      "manualVerify": [
+        "Deployment-time integrations that are invisible in a read-only snapshot"
+      ],
+      "knownLimitations": [
+        "Static route scan may miss runtime-generated endpoints or framework-specific mounts.",
+        "Read-only snapshot mode cannot confirm secrets, env wiring, or live services."
+      ],
+      "findings": {
+        "verified": 3,
+        "probable": 1,
+        "heuristic": 0
+      },
+      "expectations": {
+        "coverage": [
+          "repo-audit"
+        ],
+        "frameworkSignals": []
+      }
+    }
+  ]
+}

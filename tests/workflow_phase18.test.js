@@ -7,7 +7,7 @@ const childProcess = require('node:child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
-const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
+const raiBin = path.join(repoRoot, 'bin', 'rai.js');
 
 function makeTempRepo() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'raiola-phase18-'));
@@ -25,7 +25,7 @@ function run(command, args, cwd) {
 
 test('phase 8 trust surfaces generate fix plans, approval plans, ship gates, and richer evidence graphs', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
 
   run('git', ['init'], targetRepo);
@@ -76,10 +76,14 @@ test('phase 8 trust surfaces generate fix plans, approval plans, ship gates, and
   assert.equal(verifyShell.verdict, 'pass');
   assert.equal(verifyBrowser.verdict, 'pass');
   assert.ok(fs.existsSync(path.join(targetRepo, verifyWork.artifacts.json)));
+  assert.ok(fs.existsSync(path.join(targetRepo, verifyWork.artifacts.releaseControl)));
   assert.ok(verifyWork.fixPlan.length >= 1);
+  assert.ok(verifyWork.releaseControl.verifyStatusBoard.queuedForVerifyCount >= 1);
   assert.ok(approvalPlan.pending.some((item) => item.target === 'migrations'));
   assert.ok(fs.existsSync(path.join(targetRepo, shipReadiness.artifacts.json)));
+  assert.ok(fs.existsSync(path.join(targetRepo, shipReadiness.artifacts.releaseControl)));
   assert.equal(shipReadiness.verdict, 'blocked');
+  assert.ok(shipReadiness.releaseControl.shipReadinessBoard.shipBlockerCount >= 1);
   assert.ok(evidence.nodes.some((node) => node.kind === 'question'));
   assert.ok(evidence.nodes.some((node) => node.kind === 'assumption'));
   assert.ok(evidence.nodes.some((node) => node.kind === 'review_finding'));
@@ -90,7 +94,7 @@ test('phase 8 trust surfaces generate fix plans, approval plans, ship gates, and
 
 test('roadmap-compatible wrappers and aliases are scriptable', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--script-profile', 'core', '--skip-verify'], repoRoot);
   const targetBin = path.join(targetRepo, 'bin', 'rai.js');
 
   run(

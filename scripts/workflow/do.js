@@ -2,11 +2,18 @@ const path = require('node:path');
 const { parseArgs, resolveWorkflowRoot } = require('./common');
 const { analyzeIntent } = require('./intent_engine');
 const { writeRuntimeJson } = require('./runtime_helpers');
+const { contractPayload } = require('./contract_versions');
 const { buildUiRecipeScaffold } = require('./ui_recipe');
+const { ensureRepoConfig, summarizeRepoConfig } = require('./repo_config');
 const { buildUiSpec } = require('./ui_spec');
 const { buildUiDirection } = require('./design_intelligence');
 const { buildMonorepoIntelligence } = require('./monorepo');
 const { buildCommandPlan } = require('./command_plan');
+const { buildFrontendProfile } = require('./map_frontend');
+const { findWorkflowBundle } = require('./workflow_bundle_catalog');
+const { buildStartEntryCommand, buildStartRecommendation } = require('./workflow_start_intelligence');
+const { buildFrontendStartSummary, classifyFrontendIntent } = require('./workflow_frontend_start');
+const { logRoutingDecision, suggestTelemetryBias } = require('./routing_telemetry');
 
 function printHelp() {
   console.log(`
@@ -24,8 +31,14 @@ Options:
   `);
 }
 
+function wantsFrontendGoal(goal) {
+  return /\b(frontend|ui|ux|design|surface|screen|dashboard|page|layout|component|form|table|modal|drawer|settings|onboarding|landing|hero|mobile|responsive|a11y|accessibility)\b/i.test(String(goal || ''));
+}
+
 function buildDoPayload(cwd, rootDir, goal) {
+  const repoConfigPayload = ensureRepoConfig(cwd, rootDir, { writeIfMissing: false });
   const analysis = analyzeIntent(cwd, rootDir, goal);
+  const telemetryBias = suggestTelemetryBias(cwd, { phase: analysis.repoSignals.workflowStep || 'plan', goal });
   const secureNeeded = analysis.risk.level !== 'low';
   const verifyNeeded = analysis.intent.verify
     || ['execute', 'frontend', 'review', 'verify', 'ship', 'incident'].includes(analysis.chosenCapability.domain);
@@ -42,18 +55,20 @@ function buildDoPayload(cwd, rootDir, goal) {
     suggestedCommands.unshift('rai packet compile');
   }
   const payload = {
+    ...contractPayload('do'),
     generatedAt: new Date().toISOString(),
     goal,
     rootDir: path.relative(cwd, rootDir).replace(/\\/g, '/'),
     currentStep: analysis.repoSignals.workflowStep,
     currentMilestone: analysis.repoSignals.workflowMilestone,
     lane: analysis.lane,
-    capability: analysis.chosenCapability.id,
+    capability: telemetryBias?.recommendedCapability && analysis.confidence < 0.72 ? telemetryBias.recommendedCapability : analysis.chosenCapability.id,
     fallbackCapability: analysis.fallbackCapability.id,
     secondaryCapability: analysis.secondaryCapability?.id || analysis.fallbackCapability.id,
     confidence: analysis.confidence,
-    recommendedPreset: analysis.profile.preset,
-    profile: analysis.profile,
+    recommendedPreset: telemetryBias?.recommendedPreset && analysis.confidence < 0.82 ? telemetryBias.recommendedPreset : analysis.profile.preset,
+    telemetryBias,
+    profile: { ...analysis.profile, preset: telemetryBias?.recommendedPreset && analysis.confidence < 0.82 ? telemetryBias.recommendedPreset : analysis.profile.preset },
     routeRationale: analysis.chosenCapability.reasons,
     ambiguityReasons: analysis.ambiguityReasons,
     ambiguityClass: analysis.ambiguityClass,
@@ -70,10 +85,58 @@ function buildDoPayload(cwd, rootDir, goal) {
     suggestedCommands,
     routeEvaluation: analysis.evaluation,
     repoSignals: analysis.repoSignals,
+    repoConfig: summarizeRepoConfig(repoConfigPayload),
     previewFirst: true,
     dryRunSafe: true,
   };
   payload.commandPlan = buildCommandPlan(payload);
+
+  const shouldProbeFrontend = payload.lane === 'frontend' || payload.repoSignals.frontendActive || wantsFrontendGoal(goal);
+  const frontendProfile = shouldProbeFrontend
+    ? buildFrontendProfile(cwd, rootDir, { scope: 'workstream', refresh: 'incremental' })
+    : null;
+  const frontendIntent = classifyFrontendIntent(goal, frontendProfile);
+  payload.frontendStart = buildFrontendStartSummary(frontendProfile, frontendIntent);
+
+  const startBundleId = frontendIntent.frontend
+    ? frontendIntent.primaryBundleId
+    : payload.commandPlan.bundleId;
+  const startBundle = findWorkflowBundle(startBundleId) || findWorkflowBundle(payload.commandPlan.bundleId);
+  if (startBundle) {
+    const startRecommendation = buildStartRecommendation(startBundle, {
+      goal,
+      route: {
+        lane: payload.lane,
+        capability: payload.capability,
+        confidence: payload.confidence,
+        packet: payload.packet,
+        commandPlan: payload.commandPlan,
+        repoSignals: payload.repoSignals,
+      },
+      packageGraph: {
+        repoShape: payload.repoSignals.repoShape,
+        packageCount: payload.repoSignals.packageCount,
+      },
+      frontendProfile,
+    });
+    payload.commandPlan.bundleHint = {
+      id: startBundle.id,
+      label: startBundle.label,
+      reason: frontendIntent.frontend ? frontendIntent.reason : 'route_command_plan',
+    };
+    payload.commandPlan.startBundleId = startBundle.id;
+    payload.commandPlan.startBundleLabel = startBundle.label;
+    payload.commandPlan.startProfile = {
+      id: startRecommendation.profile.id,
+      label: startRecommendation.profile.label,
+      reason: startRecommendation.profile.reason,
+    };
+    payload.commandPlan.startAddOns = startRecommendation.recommendedAddOns;
+    payload.commandPlan.recommendedAddOns = startRecommendation.recommendedAddOns;
+    payload.commandPlan.candidateBundles = startRecommendation.candidates.slice(0, 5);
+    payload.commandPlan.recommendedStartCommand = buildStartEntryCommand(startBundle.id, goal);
+    payload.commandPlan.recommendedExpandedStartCommand = startRecommendation.starterCommand;
+  }
   return payload;
 }
 
@@ -104,7 +167,7 @@ function main() {
     throw new Error('Provide a goal via --goal or free-form text.');
   }
   const payload = buildDoPayload(cwd, rootDir, goal);
-  if (!args['dry-run'] && payload.lane === 'frontend') {
+  if (!args['dry-run'] && (payload.lane === 'frontend' || payload.frontendStart)) {
     const uiDirection = buildUiDirection(cwd, rootDir, { goal });
     const uiSpec = buildUiSpec(cwd, rootDir, { goal });
     const uiRecipe = buildUiRecipeScaffold(cwd, rootDir, { goal });
@@ -122,6 +185,17 @@ function main() {
     };
   }
   writeRuntimeJson(cwd, 'do-latest.json', payload);
+  logRoutingDecision(cwd, {
+    source: 'do',
+    phase: payload.currentStep || 'plan',
+    goal: payload.goal,
+    recommendedCapability: payload.capability,
+    recommendedPreset: payload.recommendedPreset,
+    confidence: payload.confidence,
+    repoShape: payload.repoSignals.repoShape,
+    monorepo: payload.repoSignals.monorepo,
+    frontendActive: payload.repoSignals.frontendActive,
+  });
 
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -155,14 +229,59 @@ function main() {
   console.log(`- Verify needed: \`${payload.trust.verifyNeeded ? 'yes' : 'no'}\``);
   console.log(`- Secure needed: \`${payload.trust.secureNeeded ? 'yes' : 'no'}\``);
   console.log(`- Language mix: \`${formatLanguageMix(payload.languageMix)}\``);
+  console.log(`- Repo profile: \`${payload.repoConfig.defaultProfile}\` / trust=\`${payload.repoConfig.trustLevel}\``);
+  console.log(`- Bundle: \`${payload.commandPlan.bundleLabel || payload.commandPlan.bundleId}\``);
+  if (payload.telemetryBias) {
+    console.log(`- Telemetry bias: capability=\`${payload.telemetryBias.recommendedCapability || 'n/a'}\` preset=\`${payload.telemetryBias.recommendedPreset || 'n/a'}\` examples=\`${payload.telemetryBias.totalExamples}\``);
+  }
+  if (payload.commandPlan.recommendedStartCommand) {
+    console.log(`- Start bundle: \`${payload.commandPlan.recommendedStartCommand}\``);
+  }
+  if (payload.commandPlan.startBundleLabel) {
+    console.log(`- Start lane: \`${payload.commandPlan.startBundleLabel}\` (${payload.commandPlan.bundleHint?.reason || 'route-derived'})`);
+  }
+  if (payload.commandPlan.startProfile) {
+    console.log(`- Start profile: \`${payload.commandPlan.startProfile.label}\` (${payload.commandPlan.startProfile.reason})`);
+  }
+  if (payload.frontendStart) {
+    console.log(`- Frontend lane: \`${payload.frontendStart.workflowIntent?.lane || 'n/a'}\``);
+    console.log(`- Frontend pack: \`${payload.frontendStart.commandPack}\``);
+    console.log(`- Frontend surface: \`${payload.frontendStart.productSurface}\``);
+  }
+  if (Array.isArray(payload.commandPlan.startAddOns) && payload.commandPlan.startAddOns.length > 0) {
+    console.log(`- Recommended start add-ons: \`${payload.commandPlan.startAddOns.map((entry) => entry.id).join(', ')}\``);
+  }
+  if (payload.commandPlan.recommendedExpandedStartCommand) {
+    console.log(`- Expanded starter: \`${payload.commandPlan.recommendedExpandedStartCommand}\``);
+  }
   console.log(`- Primary command: \`${payload.commandPlan.primaryCommand}\``);
+  if (payload.commandPlan.resolvedPrimaryCommand && payload.commandPlan.resolvedPrimaryCommand !== payload.commandPlan.primaryCommand) {
+    console.log(`- Resolved command: \`${payload.commandPlan.resolvedPrimaryCommand}\``);
+  }
   console.log(`- Execution mode: \`${payload.commandPlan.executionMode}\``);
   console.log('\n## Suggested Commands\n');
   for (const command of payload.suggestedCommands) {
     console.log(`- \`${command.replace('<goal>', payload.goal)}\``);
   }
+  if (Array.isArray(payload.commandPlan.commandFamilies) && payload.commandPlan.commandFamilies.length > 0) {
+    console.log('\n## Command Families\n');
+    for (const family of payload.commandPlan.commandFamilies) {
+      console.log(`- \`${family.label}\` -> ${family.commands.join(', ')}`);
+    }
+  }
+  if (Array.isArray(payload.commandPlan.phases) && payload.commandPlan.phases.length > 0) {
+    console.log('\n## Structured Phases\n');
+    for (const phase of payload.commandPlan.phases) {
+      console.log(`### ${phase.label}`);
+      console.log(`- ${phase.objective}`);
+      for (const command of phase.commands) {
+        console.log(`- \`${command}\``);
+      }
+      console.log('');
+    }
+  }
   if (payload.commandPlan.secondaryCommands.length > 0) {
-    console.log('\n## Command Plan\n');
+    console.log('\n## Expanded Command List\n');
     for (const command of payload.commandPlan.secondaryCommands) {
       console.log(`- \`${command}\``);
     }

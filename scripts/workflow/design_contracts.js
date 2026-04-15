@@ -1,5 +1,6 @@
 const path = require('node:path');
-const { readIfExists, tryExtractSection } = require('./common');
+const { tryExtractSection } = require('./common');
+const { readTextIfExists: readIfExists } = require('./io/files');
 const {
   buildFrontendProfile,
   collectComponentInventory,
@@ -189,6 +190,19 @@ const PRODUCT_CATEGORIES = Object.freeze([
     antiPatterns: [
       'Do not over-brand routine app surfaces at the cost of clarity.',
       'Do not let marketing hero conventions leak into core task flows.',
+    ],
+  },
+  {
+    id: 'mobile-consumer-app',
+    label: 'Mobile Consumer App',
+    summary: 'Mobile-first consumer products need short task paths, gesture discipline, and trustworthy state handling before visual flourish.',
+    archetypes: ['saas-app', 'content-studio', 'commerce'],
+    cues: ['mobile', 'flutter', 'ios', 'android', 'consumer app', 'screen flow', 'tab bar', 'bottom sheet', 'swipe', 'gesture'],
+    defaultReferences: ['replicate-cleanroom', 'cursor-editorial', 'opencode-terminal'],
+    stateBias: ['loading', 'empty', 'error', 'success', 'offline', 'permissions', 'first-run', 'form-validation'],
+    antiPatterns: [
+      'Do not force desktop information architecture onto a phone-first flow.',
+      'Do not hide critical feedback behind gestures users have to rediscover.',
     ],
   },
   {
@@ -465,6 +479,9 @@ function inferProductCategory(direction, contextText, profile) {
     if (entry.archetypes.includes(direction.archetype.id)) {
       score += 2;
     }
+    if (entry.id === 'mobile-consumer-app' && profile.productSurface?.id === 'mobile-app') {
+      score += 6;
+    }
     if (entry.id === 'developer-tool' && /\b(codex|workflow|terminal|code|cli)\b/.test(text)) {
       score += 1;
     }
@@ -482,6 +499,9 @@ function inferProductCategory(direction, contextText, profile) {
     }
     if (entry.id === 'content-studio' && profile.stack.forms.length > 0 && /\b(editor|publish|draft)\b/.test(text)) {
       score += 1;
+    }
+    if (profile.productSurface?.id === 'mobile-app' && ['marketing-site', 'developer-tool', 'ai-platform'].includes(entry.id)) {
+      score -= 2;
     }
     if (entry.id === 'marketing-site' && /\b(developer|ai|agent|dashboard|workspace|platform|saas|editor)\b/.test(text)) {
       score -= 1;
@@ -621,6 +641,7 @@ function buildDesignDnaPayload(cwd, rootDir, direction, options = {}) {
   return {
     generatedAt: new Date().toISOString(),
     workflowRootRelative: relativePath(cwd, rootDir),
+    productSurface: profile.productSurface,
     productCategory: {
       id: category.id,
       label: category.label,
@@ -649,6 +670,8 @@ function buildDesignDnaPayload(cwd, rootDir, direction, options = {}) {
 function renderDesignDnaMarkdown(payload) {
   const lines = [
     `- Workflow root: \`${payload.workflowRootRelative}\``,
+    `- Product surface: \`${payload.productSurface.label}\``,
+    `- Surface reason: ${payload.productSurface.reason}`,
     `- Product category: \`${payload.productCategory.label}\``,
     `- Why: ${payload.productCategory.reason}`,
     `- Reference blend: \`${payload.blend.summary}\``,
@@ -714,6 +737,11 @@ function buildStateIds(category, direction, profile, contextText, surfaceSignals
   if (profile.stack.forms.length > 0 || surfaceSignals.hasFormSurface || /\b(form|submit|signup|contact|settings|lead)\b/i.test(contextText)) {
     selected.add('form-validation');
   }
+  if (profile.productSurface?.id === 'mobile-app') {
+    selected.add('offline');
+    selected.add('permissions');
+    selected.add('first-run');
+  }
   if (direction.archetype.id === 'editorial-marketing') {
     selected.add('mobile-nav');
   }
@@ -777,6 +805,7 @@ function buildStateAtlasPayload(cwd, rootDir, direction, designDna, options = {}
   return {
     generatedAt: new Date().toISOString(),
     workflowRootRelative: relativePath(cwd, rootDir),
+    productSurface: profile.productSurface,
     productCategory: {
       id: category.id,
       label: category.label,
@@ -792,6 +821,7 @@ function buildStateAtlasPayload(cwd, rootDir, direction, designDna, options = {}
 function renderStateAtlasMarkdown(payload) {
   const lines = [
     `- Workflow root: \`${payload.workflowRootRelative}\``,
+    `- Product surface: \`${payload.productSurface.label}\``,
     `- Product category: \`${payload.productCategory.label}\``,
     `- State families: \`${payload.stateCount}\``,
     `- Required in first pass: \`${payload.requiredStates.join(', ')}\``,

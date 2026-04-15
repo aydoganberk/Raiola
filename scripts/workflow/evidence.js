@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { listGitChanges, parseArgs } = require('./common');
@@ -6,6 +7,39 @@ const { readApprovals } = require('./policy');
 const { latestReviewData, latestVerifyWork, readAssumptions } = require('./trust_os');
 const { listLatestEntries } = require('./runtime_helpers');
 const { relativePath, readTableDocument, writeJsonFile } = require('./roadmap_os');
+
+
+function sha256File(filePath) {
+  try {
+    return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  } catch {
+    return null;
+  }
+}
+
+function materializeEvidenceObject(cwd, run) {
+  const absoluteMeta = run.metaFile ? path.join(cwd, run.metaFile) : null;
+  const absoluteRun = path.join(cwd, run.path);
+  const sourcePath = absoluteMeta && fs.existsSync(absoluteMeta) ? absoluteMeta : absoluteRun;
+  const contentHash = sha256File(sourcePath);
+  if (!contentHash) {
+    return null;
+  }
+  const storeDir = path.join(cwd, '.workflow', 'evidence-store', 'objects');
+  fs.mkdirSync(storeDir, { recursive: true });
+  const objectPath = path.join(storeDir, `${contentHash}.json`);
+  const payload = {
+    hash: contentHash,
+    kind: run.kind,
+    sourcePath: path.relative(cwd, sourcePath).replace(/\\/g, '/'),
+    artifactPath: run.path,
+    capturedAt: new Date().toISOString(),
+  };
+  if (!fs.existsSync(objectPath)) {
+    fs.writeFileSync(objectPath, `${JSON.stringify(payload, null, 2)}\n`);
+  }
+  return { hash: contentHash, objectFile: path.relative(cwd, objectPath).replace(/\\/g, '/') };
+}
 
 function printHelp() {
   console.log(`
@@ -84,7 +118,10 @@ function buildEvidenceGraph(cwd) {
   const verifyRuns = [
     ...latestVerifyArtifacts(cwd, 'shell'),
     ...latestVerifyArtifacts(cwd, 'browser'),
-  ];
+  ].map((run) => ({
+    ...run,
+    evidenceObject: materializeEvidenceObject(cwd, run),
+  }));
   const questions = readQuestions(cwd);
   const assumptions = readAssumptions(cwd);
   const review = latestReviewData(cwd);
@@ -127,6 +164,8 @@ function buildEvidenceGraph(cwd) {
       kind: 'verify_run',
       label: run.path,
       metaFile: run.metaFile,
+      contentHash: run.evidenceObject?.hash || null,
+      evidenceObject: run.evidenceObject?.objectFile || null,
     })),
     ...review.findings.map((finding, index) => ({
       id: `review:${index}:${finding.file}:${finding.title}`,
@@ -289,6 +328,10 @@ function buildEvidenceGraph(cwd) {
     generatedAt: new Date().toISOString(),
     nodes,
     edges,
+    evidenceStore: {
+      objectCount: verifyRuns.filter((run) => run.evidenceObject?.hash).length,
+      objectPreview: verifyRuns.map((run) => run.evidenceObject?.objectFile).filter(Boolean).slice(0, 8),
+    },
     coverage: {
       claimCount: claims.rows.length,
       supportedClaims: claims.rows.filter((row) => row.status === 'supported').length,

@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { ensureDir, safeArtifactToken } = require('../common');
+const { ensureDir } = require('../common');
+const { safeArtifactToken } = require('../common_identity');
 const {
   buildFailureResult,
   inspectCodexWorker,

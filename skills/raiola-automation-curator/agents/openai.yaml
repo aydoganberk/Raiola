@@ -1,0 +1,4 @@
+name: raiola-automation-curator
+description: Automation skill for Codex app automations, worktree-safe recurring tasks, and `codex exec --json` eval loops.
+version: 0.4.7
+entrypoint: SKILL.md

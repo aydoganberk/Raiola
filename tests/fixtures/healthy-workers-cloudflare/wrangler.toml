@@ -1,0 +1,3 @@
+name = "healthy-worker"
+main = "workers/index.ts"
+compatibility_date = "2026-01-01"

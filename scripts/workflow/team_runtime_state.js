@@ -1,5 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { ensureDir } = require('./io/fs');
+const { readJsonIfExists } = require('./io/json');
 const delegation = require('./delegation_plan');
 const { relativePath } = require('./roadmap_os');
 const { appendIndexedEvent, getLogSnapshot } = require('./team_runtime_log_index');
@@ -29,9 +31,6 @@ function timelinePath(cwd) {
   return path.join(runtimeDir(cwd), 'timeline.jsonl');
 }
 
-function ensureDir(dirPath) {
-  fs.mkdirSync(dirPath, { recursive: true });
-}
 
 function writeRuntimeState(cwd, payload) {
   ensureDir(runtimeDir(cwd));
@@ -45,16 +44,6 @@ function readRuntimeState(cwd) {
   return JSON.parse(fs.readFileSync(runtimeStatePath(cwd), 'utf8'));
 }
 
-function readJsonIfExists(filePath, fallback = null) {
-  if (!fs.existsSync(filePath)) {
-    return fallback;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return fallback;
-  }
-}
 
 function buildTaskMetadata(orchestrationState) {
   const tasks = Array.isArray(orchestrationState?.tasks) ? orchestrationState.tasks : [];

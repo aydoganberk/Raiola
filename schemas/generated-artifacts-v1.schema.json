@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raiola/generated-artifacts/v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "generatedArtifactRoots",
+    "generatedArtifactFiles"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raiola/generated-artifacts/v1"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "generatedArtifactRoots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "generatedArtifactFiles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}

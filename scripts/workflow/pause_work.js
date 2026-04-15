@@ -5,15 +5,17 @@ const {
   getFieldValue,
   getSectionField,
   parseArgs,
-  read,
   replaceField,
   replaceSection,
   resolveWorkflowRoot,
   today,
   toList,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 const { applyContinuityCheckpoint, buildContinuityCheckpoint } = require('./checkpoint');
 
 function printHelp() {

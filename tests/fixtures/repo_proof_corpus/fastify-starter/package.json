@@ -1,0 +1,13 @@
+{
+  "name": "fastify-starter-snapshot",
+  "private": true,
+  "dependencies": {
+    "fastify": "5.0.0",
+    "@fastify/jwt": "9.0.0",
+    "@fastify/cors": "10.0.0"
+  },
+  "scripts": {
+    "dev": "node src/server.js",
+    "test": "node --test"
+  }
+}

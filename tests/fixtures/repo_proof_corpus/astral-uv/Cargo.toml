@@ -1,0 +1,7 @@
+[workspace]
+members = ['crates/uv']
+
+[package]
+name = 'uv-workspace'
+version = '0.0.0'
+edition = '2021'

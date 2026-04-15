@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raiola/start-plan/v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "goal"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raiola/start-plan/v1"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "stability": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "bundle": {
+      "type": "object"
+    },
+    "profile": {
+      "type": "object"
+    },
+    "artifacts": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

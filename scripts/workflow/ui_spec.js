@@ -1,5 +1,10 @@
 const path = require('node:path');
-const { parseArgs, readIfExists, resolveWorkflowRoot, tryExtractSection } = require('./common');
+const {
+  parseArgs,
+  resolveWorkflowRoot,
+  tryExtractSection,
+} = require('./common');
+const { readTextIfExists: readIfExists } = require('./io/files');
 const {
   buildAccessibilityAudit,
   buildFrontendProfile,

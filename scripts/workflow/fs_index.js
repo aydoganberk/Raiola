@@ -19,9 +19,13 @@ function relativePath(fromDir, targetPath) {
 }
 
 function indexPath(cwd) {
-  return path.join(cwd, '.workflow', 'fs-index.json');
+  return path.join(cwd, '.workflow', 'cache', 'file-index.json');
 }
 
+
+function legacyIndexPath(cwd) {
+  return path.join(cwd, '.workflow', 'fs-index.json');
+}
 function workflowIgnorePath(cwd) {
   return path.join(cwd, '.workflowignore');
 }
@@ -106,7 +110,7 @@ function listRepoFilesRaw(cwd) {
 }
 
 function readIndex(cwd) {
-  const content = readTextIfExists(indexPath(cwd));
+  const content = readTextIfExists(indexPath(cwd)) || readTextIfExists(legacyIndexPath(cwd));
   if (!content) {
     return null;
   }
@@ -128,13 +132,37 @@ function buildEntries(cwd, files) {
   }));
 }
 
+function fastStatusChangedFiles(cwd) {
+  const status = safeExecCached('git', ['status', '--porcelain', '--untracked-files=all'], { cwd });
+  if (!status.ok || !status.stdout) {
+    return null;
+  }
+  return status.stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.slice(3).trim().replace(/\\/g, '/'))
+    .filter(Boolean);
+}
+
 function listIndexedRepoFiles(cwd, options = {}) {
   const refreshMode = String(options.refreshMode || 'incremental').trim().toLowerCase() === 'full'
     ? 'full'
     : 'incremental';
+  const previous = refreshMode === 'incremental' ? readIndex(cwd) : null;
+  const fastChanged = refreshMode === 'incremental' ? fastStatusChangedFiles(cwd) : null;
+  if (previous && Array.isArray(previous.files) && Array.isArray(fastChanged) && fastChanged.length === 0) {
+    return {
+      ...previous,
+      refreshMode,
+      refreshStatus: 'current',
+      changedFiles: [],
+      files: previous.files,
+      indexPath: indexPath(cwd),
+    };
+  }
   const files = listRepoFilesRaw(cwd);
   const entries = buildEntries(cwd, files);
-  const previous = refreshMode === 'incremental' ? readIndex(cwd) : null;
   const changedFiles = [];
 
   if (previous?.entries) {
@@ -155,7 +183,7 @@ function listIndexedRepoFiles(cwd, options = {}) {
   }
 
   const payload = {
-    version: 1,
+    version: 2,
     generatedAt: previous?.generatedAt || new Date().toISOString(),
     refreshMode,
     refreshStatus: !previous
@@ -164,6 +192,7 @@ function listIndexedRepoFiles(cwd, options = {}) {
         ? 'current'
         : 'changed',
     fileCount: files.length,
+    files,
     changedFiles,
     entries,
   };
@@ -183,7 +212,7 @@ function listIndexedRepoFiles(cwd, options = {}) {
         ...previous,
         refreshMode,
         refreshStatus: payload.refreshStatus,
-        files,
+        files: previous.files || files,
         indexPath: indexPath(cwd),
       };
     }
@@ -191,9 +220,11 @@ function listIndexedRepoFiles(cwd, options = {}) {
 
   ensureDir(path.dirname(indexPath(cwd)));
   writeTextIfChanged(indexPath(cwd), `${JSON.stringify(payload, null, 2)}\n`);
+  writeTextIfChanged(legacyIndexPath(cwd), `${JSON.stringify(payload, null, 2)}\n`);
   return {
     ...payload,
     files,
+    legacyIndexPath: legacyIndexPath(cwd),
     indexPath: indexPath(cwd),
   };
 }

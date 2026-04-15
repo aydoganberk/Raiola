@@ -2,15 +2,18 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   parseArgs,
-  read,
   renderMarkdownTable,
-  writeIfChanged,
 } = require('./common');
+const {
+  readText: read,
+  writeTextIfChanged: writeIfChanged,
+} = require('./io/files');
 const {
   relativePath,
   readTableDocument,
   writeJsonFile,
 } = require('./roadmap_os');
+const { loadPolicyDsl, policyDslPath, resolveDslDecision } = require('./policy_dsl');
 
 const DOMAIN_HEADERS = Object.freeze(['Domain', 'Read', 'Edit', 'Delete', 'Move', 'Notes']);
 const OPERATION_HEADERS = Object.freeze(['Operation', 'Decision', 'Notes']);
@@ -73,6 +76,7 @@ function defaultPolicyContent() {
     '',
     'This document is the canonical workflow policy surface.',
     'Runtime mirrors under `.workflow/runtime/policy.json` and `.workflow/runtime/approvals.json` are derived state only.',
+    'Declarative overrides live in `.workflow/policy.rules` and are evaluated before the markdown matrix is applied.',
     '',
     `## Domain Matrix\n${renderMarkdownTable(DOMAIN_HEADERS, DEFAULT_DOMAIN_ROWS)}`,
     '',
@@ -126,6 +130,7 @@ function writePolicyDocument(cwd, payload) {
     '',
     'This document is the canonical workflow policy surface.',
     'Runtime mirrors under `.workflow/runtime/policy.json` and `.workflow/runtime/approvals.json` are derived state only.',
+    'Declarative overrides live in `.workflow/policy.rules` and are evaluated before the markdown matrix is applied.',
     '',
     `## Domain Matrix\n${renderMarkdownTable(DOMAIN_HEADERS, payload.domainRows)}`,
     '',
@@ -136,7 +141,7 @@ function writePolicyDocument(cwd, payload) {
   writeIfChanged(filePath, `${content.trimEnd()}\n`);
 }
 
-function derivePolicyRuntime(doc) {
+function derivePolicyRuntime(doc, dsl) {
   return {
     generatedAt: new Date().toISOString(),
     mode: 'standard',
@@ -161,28 +166,35 @@ function derivePolicyRuntime(doc) {
         },
       ]),
     ),
+    declarative: {
+      file: relativePath(path.dirname(path.dirname(path.dirname(doc.filePath))), dsl.filePath),
+      ruleCount: dsl.rules.length,
+      grantCount: dsl.grants.length,
+      issueCount: dsl.issues.length,
+    },
   };
 }
 
-function deriveApprovalsRuntime(doc) {
+function deriveApprovalsRuntime(doc, dsl) {
   return {
     generatedAt: new Date().toISOString(),
-    grants: doc.approvalRows.map((row) => ({
-      target: row[0],
-      reason: row[1],
-      grantedAt: row[2],
-    })),
+    grants: [
+      ...doc.approvalRows.map((row) => ({ target: row[0], reason: row[1], grantedAt: row[2], source: 'markdown' })),
+      ...dsl.grants.map((grant) => ({ target: grant.target, reason: grant.reason, grantedAt: `dsl:line:${grant.line}`, source: 'dsl' })),
+    ],
   };
 }
 
 function syncRuntimeFromDocument(cwd, doc) {
-  const policy = derivePolicyRuntime(doc);
-  const approvals = deriveApprovalsRuntime(doc);
+  const dsl = loadPolicyDsl(cwd);
+  const policy = derivePolicyRuntime(doc, dsl);
+  const approvals = deriveApprovalsRuntime(doc, dsl);
   writeJsonFile(runtimePolicyFile(cwd), policy);
   writeJsonFile(approvalsFile(cwd), approvals);
   return {
     policy,
     approvals,
+    dsl,
   };
 }
 
@@ -213,11 +225,13 @@ function readPolicyDocument(cwd) {
 }
 
 function loadPolicy(cwd) {
-  return derivePolicyRuntime(readPolicyDocument(cwd));
+  const dsl = loadPolicyDsl(cwd);
+  return derivePolicyRuntime(readPolicyDocument(cwd), dsl);
 }
 
 function readApprovals(cwd) {
-  return deriveApprovalsRuntime(readPolicyDocument(cwd));
+  const dsl = loadPolicyDsl(cwd);
+  return deriveApprovalsRuntime(readPolicyDocument(cwd), dsl);
 }
 
 function grantApproval(cwd, target, reason) {
@@ -327,6 +341,7 @@ function escalate(decision, mode, actor) {
 function checkPolicy(cwd, args) {
   const policy = loadPolicy(cwd);
   const approvals = readApprovals(cwd);
+  const dsl = loadPolicyDsl(cwd);
   const files = String(args.files || '')
     .split(';')
     .map((item) => item.trim())
@@ -336,10 +351,12 @@ function checkPolicy(cwd, args) {
   const mode = String(args.mode || policy.mode || 'standard').trim();
   const results = files.map((filePath) => {
     const domain = domainForFile(filePath);
+    const dslResolution = resolveDslDecision(dsl, { cwd, file: filePath, path: filePath, domain, operation, actor, mode });
     const domainPolicy = policy.matrix[domain] || {};
     const operationDefault = resolveOperationDefault(policy, operation);
-    const rawDecision = domainPolicy[operation] || operationDefault.decision;
-    const matchingApproval = findMatchingApproval(approvals, filePath, domain, operation);
+    const markdownDecision = domainPolicy[operation] || operationDefault.decision;
+    const rawDecision = dslResolution.strongestDecision || markdownDecision;
+    const matchingApproval = dslResolution.grants[0] || findMatchingApproval(approvals, filePath, domain, operation);
     const escalatedDecision = escalate(rawDecision, mode, actor);
     const approvalOutcome = applyApproval(escalatedDecision, matchingApproval);
     return {
@@ -349,19 +366,23 @@ function checkPolicy(cwd, args) {
       actor,
       decision: approvalOutcome.decision,
       rawDecision,
-      rule: domainPolicy[operation] ? `domain:${domain}:${operation}` : `operation:${operation}`,
-      notes: domainPolicy[operation] ? domainPolicy.notes || '' : operationDefault.notes || '',
+      markdownDecision,
+      rule: dslResolution.strongestRule ? `dsl:line:${dslResolution.strongestRule.line}` : (domainPolicy[operation] ? `domain:${domain}:${operation}` : `operation:${operation}`),
+      notes: dslResolution.strongestRule?.note || (domainPolicy[operation] ? domainPolicy.notes || '' : operationDefault.notes || ''),
       approved: approvalOutcome.approved,
       approvalTarget: matchingApproval ? matchingApproval.target : '',
+      declarative: dslResolution,
       overrideHint: escalatedDecision === 'block'
-        ? 'No override available in-product; change scope or review the policy doc.'
-        : `Run rai approvals grant --target ${domain} --reason "Document the approval"` ,
+        ? 'No override available in-product; change scope or review the policy rules/doc.'
+        : `Run rai approvals grant --target ${domain} --reason "Document the approval"`,
     };
   });
   return {
     action: 'check',
     policyFile: relativePath(cwd, runtimePolicyFile(cwd)),
     canonicalFile: relativePath(cwd, canonicalPolicyFile(cwd)),
+    declarativeFile: relativePath(cwd, policyDslPath(cwd)),
+    declarativeIssues: dsl.issues,
     mode,
     results,
     verdict: results.some((item) => item.decision === 'block')
@@ -379,24 +400,33 @@ function main() {
     printHelp();
     return;
   }
+
   const cwd = process.cwd();
+  const dsl = loadPolicyDsl(cwd);
   const payload = action === 'check'
     ? checkPolicy(cwd, args)
     : {
       action: 'status',
       policyFile: relativePath(cwd, runtimePolicyFile(cwd)),
       canonicalFile: relativePath(cwd, canonicalPolicyFile(cwd)),
+      declarativeFile: relativePath(cwd, policyDslPath(cwd)),
       policy: loadPolicy(cwd),
       approvals: readApprovals(cwd).grants,
+      declarative: dsl.rules.map((rule) => ({ line: rule.line, source: rule.source, decision: rule.decision })),
+      declarativeIssues: dsl.issues,
     };
+
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
     return;
   }
+
   console.log('# POLICY\n');
   console.log(`- Action: \`${payload.action}\``);
   console.log(`- Canonical file: \`${payload.canonicalFile}\``);
   console.log(`- File: \`${payload.policyFile}\``);
+  console.log(`- Declarative rules: \`${payload.declarativeFile || relativePath(cwd, policyDslPath(cwd))}\``);
+  console.log(`- Declarative issues: \`${payload.declarativeIssues?.length || 0}\``);
   if (payload.results) {
     for (const row of payload.results) {
       console.log(`- \`${row.file}\` -> \`${row.domain}\` / \`${row.decision}\` via \`${row.rule}\``);

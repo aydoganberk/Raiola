@@ -77,7 +77,8 @@ test('monorepo-mode emits staged artifacts, prompts, and shell help for large re
   assert.ok(payload.selectedSubsystem?.path);
   assert.ok(payload.promptLibrary.master.includes('Phase 1: Build a repo map'));
   assert.ok(payload.promptLibrary.deepReview.includes(payload.selectedSubsystem.path));
-  assert.ok(payload.commandPlan.primaryCommand.includes('rai monorepo-mode'));
+  assert.ok(payload.commandPlan.primaryCommand.includes('rai fix --goal'));
+  assert.ok(payload.commandPlan.resolvedPrimaryCommand.includes('rai monorepo-mode'));
   assert.ok(payload.phasePlan.some((phase) => phase.id === 'patch-plan'));
   assert.equal(payload.files.agents, 'AGENTS.md');
   assert.ok(payload.agents);
@@ -107,8 +108,13 @@ test('command plan promotes monorepo-mode for review work on monorepos', () => {
     profile: { id: 'monorepo-delta' },
   });
 
-  assert.match(plan.primaryCommand, /rai monorepo-mode/);
+  assert.match(plan.primaryCommand, /rai audit --goal/);
+  assert.match(plan.resolvedPrimaryCommand, /rai monorepo-mode/);
   assert.ok(plan.secondaryCommands.some((command) => command.includes('rai review-mode')));
+  assert.equal(plan.bundleId, 'monorepo-audit-wave');
+  assert.match(plan.recommendedStartCommand, /rai start monorepo --goal/);
+  assert.ok(plan.commandFamilies.length >= 2);
+  assert.ok(plan.phases.some((phase) => phase.id === 'inspect'));
   assert.ok(plan.secondaryCommands.some((command) => command.includes('rai monorepo --json')));
   assert.ok(plan.parallelFlow.some((entry) => entry.includes('read-only')));
 });

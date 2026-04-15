@@ -1,12 +1,18 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseArgs, resolveWorkflowRoot, ensureDir } = require('./common');
+const {
+  parseArgs,
+  resolveWorkflowRoot,
+} = require('./common');
+const { ensureDir } = require('./io/files');
 const { runReviewEngine } = require('./review_engine');
 const { buildReviewOrchestration } = require('./review_orchestration');
 const { buildReviewTaskGraph } = require('./review_task_graph');
 const { buildMonorepoIntelligence } = require('./monorepo');
 const { buildCodexContextPack } = require('./context_pack');
 const { selectCodexProfile } = require('./codex_profile_engine');
+const { buildPackageGraph } = require('./package_graph');
+const { buildReviewCorrectionControlPlane } = require('./review_correction_control_plane');
 
 function reviewReportsDir(cwd) {
   return path.join(cwd, '.workflow', 'reports');
@@ -137,6 +143,8 @@ function renderMarkdown(payload) {
     `- Review report: \`${payload.review.artifacts?.markdown || payload.review.outputPathRelative || 'n/a'}\``,
     `- Orchestration: \`${payload.orchestration.markdownFile}\``,
     `- Task graph: \`${payload.taskGraph.markdownFile}\``,
+    `- Control plane: \`${payload.controlPlane?.artifacts?.correctionControlMarkdown || 'n/a'}\``,
+    `- Findings registry: \`${payload.controlPlane?.artifacts?.findingsRegistry || 'n/a'}\``,
     '',
     '## Review Lenses',
     '',
@@ -238,6 +246,10 @@ async function buildReviewMode(cwd, rootDir, options = {}) {
   const contextPack = buildCodexContextPack(cwd, rootDir, goal, analysis, profile, {
     taste: options.taste,
   });
+  const packageGraph = buildPackageGraph(cwd, {
+    writeFiles: true,
+    changedFiles: (review.files || []).map((file) => file.file),
+  });
 
   const payload = {
     generatedAt: new Date().toISOString(),
@@ -247,6 +259,15 @@ async function buildReviewMode(cwd, rootDir, options = {}) {
     orchestration,
     taskGraph,
     monorepo,
+    packageGraph: {
+      repoShape: packageGraph.repoShape,
+      packageCount: packageGraph.packageCount,
+      changedPackages: packageGraph.changedPackages || [],
+      impactedPackages: packageGraph.impactedPackages || [],
+      impactedTests: packageGraph.impactedTests || [],
+      ownership: packageGraph.ownership || {},
+      packages: packageGraph.packages || [],
+    },
     contextPack,
     reviewLenses: buildReviewLenses(review, orchestration, monorepo),
     topBlockers: buildTopBlockers(review),
@@ -260,6 +281,17 @@ async function buildReviewMode(cwd, rootDir, options = {}) {
       ],
     },
   };
+
+  payload.controlPlane = buildReviewCorrectionControlPlane(cwd, {
+    goal,
+    review,
+    taskGraph,
+    monorepo,
+    packageGraph,
+    activeLane: packageGraph.repoShape === 'monorepo' ? 'large-repo-review' : 'diff-review',
+  }, {
+    promotePlanned: true,
+  });
 
   const artifacts = writeArtifacts(cwd, payload);
   payload.file = relativePath(cwd, artifacts.markdownPath);
@@ -318,6 +350,9 @@ async function main(argv = process.argv.slice(2)) {
   console.log(`- Lenses: \`${payload.reviewLenses.length}\``);
   console.log(`- Top blockers: \`${payload.topBlockers.length}\``);
   console.log(`- Waves: \`${payload.taskGraph.waves.length}\``);
+  if (payload.controlPlane?.artifacts?.correctionControlMarkdown) {
+    console.log(`- Control plane: \`${payload.controlPlane.artifacts.correctionControlMarkdown}\``);
+  }
 }
 
 module.exports = {

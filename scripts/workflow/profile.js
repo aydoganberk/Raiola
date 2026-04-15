@@ -5,6 +5,7 @@ const {
   resolveWorkflowRoot,
   workflowPaths,
 } = require('./common');
+const { ensureRepoConfig, summarizeRepoConfig } = require('./repo_config');
 
 function printHelp() {
   console.log(`
@@ -21,6 +22,7 @@ Options:
 
 function buildProfilePayload(cwd, rootDir) {
   const preferences = loadPreferences(workflowPaths(rootDir, cwd));
+  const repoConfigPayload = ensureRepoConfig(cwd, rootDir, { writeIfMissing: false });
   return {
     generatedAt: new Date().toISOString(),
     rootDir: path.relative(cwd, rootDir).replace(/\\/g, '/'),
@@ -40,6 +42,7 @@ function buildProfilePayload(cwd, rootDir) {
       execute: 'fast',
       audit: 'balanced',
     },
+    repoConfig: summarizeRepoConfig(repoConfigPayload),
   };
 }
 
@@ -64,6 +67,7 @@ function main() {
   console.log(`- Repo default: \`${payload.repoWorkflowProfile}\``);
   console.log(`- Budget profile: \`${payload.budgetProfile}\``);
   console.log(`- Automation: \`${payload.automationMode}\` (\`${payload.automationStatus}\`)`);
+  console.log(`- Repo config: profile=\`${payload.repoConfig.defaultProfile}\` trust=\`${payload.repoConfig.trustLevel}\``);
 }
 
 if (require.main === module) {

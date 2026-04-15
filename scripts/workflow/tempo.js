@@ -5,15 +5,17 @@ const {
   loadPreferences,
   normalizeWorkflowProfile,
   parseArgs,
-  read,
   replaceField,
   resolveWorkflowControlIntent,
   resolveWorkflowRoot,
   syncWindowDocument,
   today,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 const { writeStateSurface } = require('./state_surface');
 
 function printHelp() {

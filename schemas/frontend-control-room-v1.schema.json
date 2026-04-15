@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raiola/frontend-control-room/v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "verdict",
+    "frontend",
+    "remedies"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raiola/frontend-control-room/v1"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "verdict": {
+      "type": "string"
+    },
+    "frontend": {
+      "type": "object"
+    },
+    "browserEvidence": {
+      "type": "object"
+    },
+    "audits": {
+      "type": "object"
+    },
+    "remedies": {
+      "type": "array"
+    },
+    "nextActions": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": true
+}

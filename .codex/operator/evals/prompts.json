@@ -1,0 +1,10 @@
+[
+  {
+    "id": "review",
+    "prompt": "Review the current repository and name the top 3 risks."
+  },
+  {
+    "id": "release",
+    "prompt": "List the remaining release blockers and missing migration notes."
+  }
+]

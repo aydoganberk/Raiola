@@ -1,0 +1,4 @@
+name: raiola-milestone-lifecycle
+description: Full milestone lifecycle for discuss, research, plan, execute, audit, and complete.
+version: 0.4.7
+entrypoint: SKILL.md

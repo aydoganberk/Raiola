@@ -2,17 +2,19 @@ const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const {
-  ensureDir,
   getFieldValue,
   parseArgs,
-  read,
-  readIfExists,
   replaceOrAppendField,
   replaceOrAppendSection,
   resolveWorkflowRoot,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  ensureDir,
+  readText: read,
+  readTextIfExists: readIfExists,
+  writeText: write,
+} = require('./io/files');
 
 function printHelp() {
   console.log(`

@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { readJsonIfExists } = require('./io/json');
 const { buildBaseState } = require('./state_surface');
 const { parseArgs, resolveWorkflowRoot } = require('./common');
 const { buildEvidenceGraph } = require('./evidence');
@@ -13,16 +14,6 @@ function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
 }
 
-function readJsonIfExists(filePath, fallback = null) {
-  if (!fs.existsSync(filePath)) {
-    return fallback;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return fallback;
-  }
-}
 
 function clipText(content, maxChars = 12000) {
   const limit = Number.isFinite(Number(maxChars)) ? Math.max(200, Number(maxChars)) : 12000;
@@ -600,6 +591,8 @@ if (require.main === module) {
 module.exports = {
   PROTOCOL_VERSION,
   SERVER_CATALOG,
+  createServerRuntime,
+  main,
   serverIds,
   toolCountFor,
 };

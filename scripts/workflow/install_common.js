@@ -7,7 +7,8 @@ const {
   productName,
   productCommandName,
   productVersion,
-} = require('./product_version');
+  } = require('./product_version');
+const { doSetup: seedCodexControl } = require('./codex_control_catalog');
 const {
   PACKET_VERSION,
   buildPacketSnapshot,
@@ -15,11 +16,9 @@ const {
   controlPaths,
   ensureField,
   ensureSection,
-  ensureDir,
   extractSection,
   getFieldValue,
   parseWorkstreamTable,
-  read,
   renderWorkstreamTable,
   replaceField,
   replaceOrAppendField,
@@ -29,8 +28,15 @@ const {
   syncWindowDocument,
   today,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  ensureDir,
+  readText: read,
+  writeText: write,
+} = require('./io/files');
+const { readRuntimeScriptCatalog } = require('./runtime_script_catalog');
+const { CLI_CONTRACT_VERSION, contractPayload, manifestSchemaMap } = require('./contract_versions');
+const { buildGeneratedArtifactsManifest } = require('./generated_artifacts');
 
 function slugifyName(value) {
   return String(value || 'workflow-repo')
@@ -53,10 +59,25 @@ function layoutFromRoot(repoRoot) {
     aliasBinFiles: [
       path.join(repoRoot, 'bin', 'raiola.js'),
       path.join(repoRoot, 'bin', 'raiola-on.js'),
+      path.join(repoRoot, 'bin', 'raiola-mcp.js'),
     ],
     compareScript: path.join(repoRoot, 'scripts', 'compare_golden_snapshots.ts'),
     skillFile: path.join(repoRoot, 'skill', 'SKILL.md'),
     skillsDir: path.join(repoRoot, 'skills'),
+    codexDir: path.join(repoRoot, '.codex'),
+    agentsPluginsDir: path.join(repoRoot, '.agents', 'plugins'),
+    pluginsDir: path.join(repoRoot, 'plugins'),
+    githubCodexDir: path.join(repoRoot, '.github', 'codex'),
+    codexWorkflowFile: path.join(repoRoot, '.github', 'workflows', 'codex-review.yml'),
+    scriptsAgentsFile: path.join(repoRoot, 'scripts', 'AGENTS.md'),
+    workflowAgentsFile: path.join(repoRoot, 'scripts', 'workflow', 'AGENTS.md'),
+    githubAgentsFile: path.join(repoRoot, '.github', 'AGENTS.md'),
+    docsAgentsFile: path.join(repoRoot, 'docs', 'AGENTS.md'),
+    docsWorkflowAgentsFile: path.join(repoRoot, 'docs', 'workflow', 'AGENTS.md'),
+    skillsAgentsFile: path.join(repoRoot, 'skills', 'AGENTS.md'),
+    githubCodexAgentsFile: path.join(repoRoot, '.github', 'codex', 'AGENTS.md'),
+    pluginsAgentsFile: path.join(repoRoot, 'plugins', 'AGENTS.md'),
+    pluginPackageAgentsFile: path.join(repoRoot, 'plugins', 'raiola-codex-optimizer', 'AGENTS.md'),
     packageJson: path.join(repoRoot, 'package.json'),
     workflowIgnore: path.join(repoRoot, '.workflowignore'),
   };
@@ -164,18 +185,27 @@ function legacyWorkflowScriptName(scriptName) {
 
 const WORKFLOW_GITIGNORE_ENTRIES = Object.freeze([
   '.workflow/',
-  '.agents/',
 ]);
 
 const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
   pilot: [
+    'raiola:audit',
+    'raiola:audit-repo',
+    'raiola:repo-proof',
+    'raiola:fix',
     'raiola:on',
     'raiola:backlog',
     'raiola:checkpoint',
+    'raiola:repo-config',
     'raiola:codex',
     'raiola:contextpack',
+    'raiola:trust',
+    'raiola:release-control',
+    'raiola:control-plane-publish',
+    'raiola:handoff',
     'raiola:dashboard',
     'raiola:do',
+    'raiola:start',
     'raiola:doctor',
     'raiola:health',
     'raiola:hud',
@@ -186,6 +216,7 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:migrate',
     'raiola:monorepo',
     'raiola:milestone',
+    'raiola:milestone-edit',
     'raiola:next',
     'raiola:next-prompt',
     'raiola:note',
@@ -201,27 +232,44 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:thread',
     'raiola:uninstall',
     'raiola:update',
+    'raiola:verify',
     'raiola:verify-shell',
     'raiola:verify-work',
   ],
   core: [
+    'raiola:audit',
+    'raiola:audit-repo',
+    'raiola:repo-proof',
+    'raiola:fix',
     'raiola:on',
     'raiola:approval',
     'raiola:approvals',
     'raiola:assumptions',
     'raiola:automation',
+    'raiola:autopilot',
     'raiola:backlog',
     'raiola:benchmark',
     'raiola:checkpoint',
+    'raiola:repo-config',
+    'raiola:repo-control',
+    'raiola:workspace-impact',
+    'raiola:monorepo-control',
+    'raiola:frontend-control',
+    'raiola:safety-control',
     'raiola:claims',
     'raiola:codex',
     'raiola:complete-milestone',
     'raiola:contextpack',
+    'raiola:trust',
+    'raiola:release-control',
+    'raiola:control-plane-publish',
+    'raiola:handoff',
     'raiola:control',
     'raiola:dashboard',
     'raiola:delegation-plan',
     'raiola:discuss',
     'raiola:do',
+    'raiola:start',
     'raiola:doctor',
     'raiola:ensure-isolation',
     'raiola:evidence',
@@ -238,6 +286,7 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:monorepo',
     'raiola:monorepo-mode',
     'raiola:milestone',
+    'raiola:milestone-edit',
     'raiola:next',
     'raiola:next-prompt',
     'raiola:note',
@@ -245,6 +294,10 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:plan',
     'raiola:plan-check',
     'raiola:profile',
+    'raiola:measure',
+    'raiola:explain',
+    'raiola:lifecycle',
+    'raiola:team-control',
     'raiola:quick',
     'raiola:review',
     'raiola:review-mode',
@@ -268,6 +321,7 @@ const WORKFLOW_SCRIPT_PROFILES = Object.freeze({
     'raiola:ui-spec',
     'raiola:uninstall',
     'raiola:update',
+    'raiola:verify',
     'raiola:verify-browser',
     'raiola:verify-shell',
     'raiola:verify-work',
@@ -387,6 +441,7 @@ function writeProductManifest(targetRepo, options = {}) {
     sourceLayout: productSource,
   });
   const manifest = {
+    ...contractPayload('productManifest'),
     installedVersion,
     sourcePackageName: sourcePackageName(),
     sourcePackageVersion: sourcePackageVersion(),
@@ -404,6 +459,9 @@ function writeProductManifest(targetRepo, options = {}) {
     runtimeFileCount: runtimeFiles.length,
     runtimeFiles,
     recommendedGitignoreEntries: [...WORKFLOW_GITIGNORE_ENTRIES],
+    cliContractVersion: CLI_CONTRACT_VERSION,
+    artifactSchemas: manifestSchemaMap(),
+    generatedArtifacts: buildGeneratedArtifactsManifest(),
   };
 
   ensureDir(path.dirname(manifestPath));
@@ -472,11 +530,9 @@ function copyDirectoryTracked(sourceDir, targetDir, options = {}) {
   return bucket;
 }
 
-function loadTargetRuntimeScripts(profile = 'full', options = {}) {
-  const source = options.sourceLayout || productSourceLayout(options.targetRepo || null);
-  const sourcePackage = readJson(source.packageJson);
+function loadTargetRuntimeScripts(profile = 'full') {
   const normalizedProfile = normalizeScriptProfile(profile, 'full');
-  const allScripts = Object.entries(sourcePackage.scripts || {}).filter(([name]) => name.startsWith('raiola:'));
+  const allScripts = Object.entries(readRuntimeScriptCatalog());
   if (normalizedProfile === 'full') {
     return Object.fromEntries(allScripts);
   }
@@ -598,6 +654,37 @@ function runtimeFilesForScriptProfile(profile = 'full', options = {}) {
         return `.agents/skills/${relativeSkillPath}`;
       }),
     );
+  }
+
+  if (fs.existsSync(source.codexDir)) {
+    runtimeFiles.push(...walkFiles(source.codexDir).map((filePath) => relativePath(source.repoRoot, filePath)));
+  }
+  if (fs.existsSync(source.agentsPluginsDir)) {
+    runtimeFiles.push(...walkFiles(source.agentsPluginsDir).map((filePath) => relativePath(source.repoRoot, filePath)));
+  }
+  if (fs.existsSync(source.pluginsDir)) {
+    runtimeFiles.push(...walkFiles(source.pluginsDir).map((filePath) => relativePath(source.repoRoot, filePath)));
+  }
+  if (fs.existsSync(source.githubCodexDir)) {
+    runtimeFiles.push(...walkFiles(source.githubCodexDir).map((filePath) => relativePath(source.repoRoot, filePath)));
+  }
+  if (fs.existsSync(source.codexWorkflowFile)) {
+    runtimeFiles.push(relativePath(source.repoRoot, source.codexWorkflowFile));
+  }
+  for (const optionalAgentsFile of [
+    source.scriptsAgentsFile,
+    source.workflowAgentsFile,
+    source.githubAgentsFile,
+    source.docsAgentsFile,
+    source.docsWorkflowAgentsFile,
+    source.skillsAgentsFile,
+    source.githubCodexAgentsFile,
+    source.pluginsAgentsFile,
+    source.pluginPackageAgentsFile,
+  ]) {
+    if (optionalAgentsFile && fs.existsSync(optionalAgentsFile)) {
+      runtimeFiles.push(relativePath(source.repoRoot, optionalAgentsFile));
+    }
   }
 
   if (normalizedProfile === 'full') {
@@ -1060,6 +1147,7 @@ function installWorkflowSurface(targetRepo, options = {}) {
   const aliasBinTargets = [
     path.join(targetRepo, 'bin', 'raiola.js'),
     path.join(targetRepo, 'bin', 'raiola-on.js'),
+    path.join(targetRepo, 'bin', 'raiola-mcp.js'),
   ];
   const compareTarget = path.join(targetRepo, 'scripts', 'compare_golden_snapshots.ts');
   const skillTarget = path.join(targetRepo, '.agents', 'skills', 'raiola', 'SKILL.md');
@@ -1089,6 +1177,10 @@ function installWorkflowSurface(targetRepo, options = {}) {
     docs: { created: [], updated: [], skipped: [] },
     scripts: { created: [], updated: [], skipped: [] },
     cli: { created: [], updated: [], skipped: [] },
+    nativeCodex: { created: [], updated: [], skipped: [] },
+    nativePlugins: { created: [], updated: [], skipped: [] },
+    nativeGithub: { created: [], updated: [], skipped: [] },
+    layeredAgents: [],
     bin: null,
     binAliases: [],
     compareScript: null,
@@ -1105,6 +1197,7 @@ function installWorkflowSurface(targetRepo, options = {}) {
     runtimeFileCount: selectedRuntimeFiles.length,
     prunedRuntimeFiles: [],
     sync: null,
+    codexSetup: null,
     hudState: null,
   };
 
@@ -1135,6 +1228,47 @@ function installWorkflowSurface(targetRepo, options = {}) {
     });
   }
   report.skill = copyFileTracked(source.skillFile, skillTarget, { overwrite: true });
+  if (fs.existsSync(source.codexDir)) {
+    copyDirectoryTracked(source.codexDir, path.join(targetRepo, '.codex'), {
+      overwrite: true,
+      bucket: report.nativeCodex,
+      filter: (filePath) => relativePath(source.codexDir, filePath) !== 'hooks.json',
+    });
+  }
+  if (fs.existsSync(source.agentsPluginsDir)) {
+    copyDirectoryTracked(source.agentsPluginsDir, path.join(targetRepo, '.agents', 'plugins'), {
+      overwrite: true,
+      bucket: report.nativePlugins,
+    });
+  }
+  if (fs.existsSync(source.pluginsDir)) {
+    copyDirectoryTracked(source.pluginsDir, path.join(targetRepo, 'plugins'), {
+      overwrite: true,
+      bucket: report.nativePlugins,
+    });
+  }
+  if (fs.existsSync(source.githubCodexDir)) {
+    copyDirectoryTracked(source.githubCodexDir, path.join(targetRepo, '.github', 'codex'), {
+      overwrite: true,
+      bucket: report.nativeGithub,
+    });
+  }
+  if (fs.existsSync(source.codexWorkflowFile)) {
+    copyFileTracked(source.codexWorkflowFile, path.join(targetRepo, '.github', 'workflows', 'codex-review.yml'), { overwrite: true });
+  }
+  for (const [sourceFile, targetFile] of [
+    [source.scriptsAgentsFile, path.join(targetRepo, 'scripts', 'AGENTS.md')],
+    [source.workflowAgentsFile, path.join(targetRepo, 'scripts', 'workflow', 'AGENTS.md')],
+    [source.githubAgentsFile, path.join(targetRepo, '.github', 'AGENTS.md')],
+    [source.docsAgentsFile, path.join(targetRepo, 'docs', 'AGENTS.md')],
+    [source.docsWorkflowAgentsFile, path.join(targetRepo, 'docs', 'workflow', 'AGENTS.md')],
+    [source.skillsAgentsFile, path.join(targetRepo, 'skills', 'AGENTS.md')],
+  ]) {
+    if (!sourceFile || !fs.existsSync(sourceFile)) {
+      continue;
+    }
+    report.layeredAgents.push(copyFileTracked(sourceFile, targetFile, { overwrite: true }));
+  }
   report.workflowIgnore = copyFileTracked(source.workflowIgnore, workflowIgnoreTarget, { overwrite: false });
   if (manageGitignore) {
     report.gitignore = patchGitignore(targetRepo);
@@ -1166,6 +1300,7 @@ function installWorkflowSurface(targetRepo, options = {}) {
     report.legacyArtifactsRemoved.push(legacyPath);
   }
   report.sync = syncDefaultWorkflowSurface(targetRepo, { setAsActive: mode === 'init' });
+  report.codexSetup = seedCodexControl(targetRepo, { repo: true, _: ['setup'] });
   if (verify) {
     report.hudState = verifyInstalledSurface(targetRepo);
   }

@@ -12,6 +12,7 @@ Options:
   --root <path>       Workflow root. Defaults to active workstream root
   --status <value>    auto|pass|warn|fail for manual override
   --checks <a;b;c>    Semicolon-separated manual verification checks
+  --mode <value>      auto|review|audit-only
   --json              Print machine-readable output
   `);
 }
@@ -35,8 +36,11 @@ function main() {
   console.log('# VERIFY WORK\n');
   console.log(`- Verdict: \`${payload.verdict}\``);
   console.log(`- Confidence: \`${payload.confidence}\``);
+  console.log(`- Trust mode: \`${payload.trustMode}\``);
   console.log(`- Output: \`${payload.outputPathRelative}\``);
+  console.log(`- Release control: \`${payload.releaseControl?.artifacts?.markdown || 'n/a'}\``);
   console.log(`- Fix plan items: \`${payload.fixPlan.length}\``);
+  console.log(`- Queued for verify: \`${payload.releaseControl?.verifyStatusBoard?.queuedForVerifyCount || 0}\``);
   if (payload.reasons.length > 0) {
     console.log('\n## Reasons\n');
     for (const reason of payload.reasons) {

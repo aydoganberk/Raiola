@@ -3,8 +3,8 @@ const os = require('node:os');
 const path = require('node:path');
 const {
   ensureDir,
-  readIfExists,
-} = require('./common');
+  readTextIfExists: readIfExists,
+} = require('./io/files');
 const {
   deriveRepoRoles,
   lineDiff,
@@ -15,9 +15,17 @@ const {
   readJsonFile,
   relativePath,
   removeFileIfExists,
-  renderSimpleToml,
   writeJsonFile,
 } = require('./roadmap_os');
+const {
+  buildConfigSpec,
+  renderConfigToml,
+  resolveCodexHooksEnabled,
+  writeAgentAssets,
+  writeHookAssets,
+  writeOperatorAssets,
+  writePolicySnapshot,
+} = require('./codex_native');
 
 const PROMPT_CATALOG = Object.freeze([
   {
@@ -55,11 +63,7 @@ function desiredCodexRoot(cwd, args) {
 }
 
 function codexRoot(cwd, args) {
-  const desiredRoot = desiredCodexRoot(cwd, args);
-  if (path.basename(desiredRoot) === '.codex') {
-    return path.join(cwd, '.workflow', 'runtime', 'codex-control', `${scopeName(args)}-codex`);
-  }
-  return desiredRoot;
+  return desiredCodexRoot(cwd, args);
 }
 
 function runtimeDir(cwd) {
@@ -74,28 +78,8 @@ function backupsDir(cwd) {
   return path.join(runtimeDir(cwd), 'backups');
 }
 
-function desiredConfig(cwd) {
-  const roles = deriveRepoRoles(cwd).map((entry) => entry.name);
-  return {
-    raiola: {
-      repo_root: cwd,
-      workflow_root: path.join(cwd, 'docs', 'workflow'),
-      runtime_root: path.join(cwd, '.workflow', 'runtime'),
-      control_mode: 'safe',
-      roles,
-    },
-    routing: {
-      default_entry: 'rai codex',
-      daily_entry: 'rai do',
-      verify_entry: 'rai verify-shell',
-      packet_entry: 'rai packet compile',
-    },
-    safety: {
-      preview_first: true,
-      backup_journal: true,
-      rollback_enabled: true,
-    },
-  };
+function desiredConfig(cwd, args = {}) {
+  return buildConfigSpec(cwd, args);
 }
 
 function roleFilePath(rootDir, role) {
@@ -118,6 +102,14 @@ function catalogPath(rootDir) {
   return path.join(rootDir, 'catalog.json');
 }
 
+function hookConfigPath(rootDir) {
+  return path.join(rootDir, 'hooks.json');
+}
+
+function policyPath(rootDir) {
+  return path.join(rootDir, 'raiola-policy.json');
+}
+
 function copyFileIfExists(sourcePath, targetPath) {
   if (!fs.existsSync(sourcePath)) {
     return false;
@@ -125,6 +117,12 @@ function copyFileIfExists(sourcePath, targetPath) {
   ensureDir(path.dirname(targetPath));
   fs.copyFileSync(sourcePath, targetPath);
   return true;
+}
+
+function virtualRootForPayload(cwd, args) {
+  const desiredRoot = desiredCodexRoot(cwd, args);
+  const actualRoot = codexRoot(cwd, args);
+  return desiredRoot === actualRoot ? null : desiredRoot;
 }
 
 function snapshotCurrentState(cwd, rootDir, action) {
@@ -138,12 +136,19 @@ function snapshotCurrentState(cwd, rootDir, action) {
   const files = [
     ['config.toml', configPath(rootDir)],
     ['catalog.json', catalogPath(rootDir)],
+    ['hooks.json', hookConfigPath(rootDir)],
+    ['raiola-policy.json', policyPath(rootDir)],
+    ['AGENTS.md', path.join(rootDir, 'AGENTS.md')],
   ];
 
   const directories = [
     ['roles', path.join(rootDir, 'roles')],
     ['prompts', path.join(rootDir, 'prompts')],
     ['skills', path.join(rootDir, 'skills')],
+    ['hooks', path.join(rootDir, 'hooks')],
+    ['agents', path.join(rootDir, 'agents')],
+    ['operator', path.join(rootDir, 'operator')],
+    ['managed', path.join(rootDir, 'managed')],
   ];
 
   for (const [relativeName, sourcePath] of files) {
@@ -153,10 +158,9 @@ function snapshotCurrentState(cwd, rootDir, action) {
     if (!fs.existsSync(sourceDir)) {
       continue;
     }
-    ensureDir(path.join(backupRoot, relativeName));
-    for (const entry of listEntries(sourceDir, { filesOnly: true })) {
-      fs.copyFileSync(entry.fullPath, path.join(backupRoot, relativeName, entry.name));
-    }
+    const targetDir = path.join(backupRoot, relativeName);
+    removeFileIfExists(targetDir);
+    fs.cpSync(sourceDir, targetDir, { recursive: true });
   }
 
   const payload = {
@@ -194,7 +198,7 @@ function writeRoleFiles(cwd, rootDir, roles) {
   ensureDir(path.join(rootDir, 'roles'));
   for (const role of roles) {
     const filePath = roleFilePath(rootDir, role.name);
-    const content = `# ${role.name}\n\n- Summary: \`${role.summary}\`\n- Generated from: \`repo-profile\`\n- Repo root: \`${cwd}\`\n\n## Responsibilities\n\n- \`${role.summary}\`\n- \`Use packet compile output before taking action\`\n- \`Keep evidence and verification visible in closeout\`\n`;
+    const content = `# ${role.name}\n\n- Summary: \`${role.summary}\`\n- Generated from: \`repo-profile\`\n- Repo root: \`.\`\n\n## Responsibilities\n\n- \`${role.summary}\`\n- \`Use packet compile output before taking action\`\n- \`Keep evidence and verification visible in closeout\`\n`;
     fs.writeFileSync(filePath, content);
     created.push(relativePath(cwd, filePath));
   }
@@ -231,8 +235,14 @@ function doSetup(cwd, args) {
   const backup = snapshotCurrentState(cwd, rootDir, 'setup');
   const roles = deriveRepoRoles(cwd);
   const prompts = [...PROMPT_CATALOG];
+  const hooksEnabled = resolveCodexHooksEnabled(cwd, args);
+  const spec = desiredConfig(cwd, { ...args, hooksEnabled });
   ensureDir(rootDir);
-  fs.writeFileSync(configPath(rootDir), `${renderSimpleToml(desiredConfig(cwd))}\n`);
+  fs.writeFileSync(configPath(rootDir), renderConfigToml(spec));
+  const writtenHooks = writeHookAssets(rootDir, { register: hooksEnabled }).map((filePath) => relativePath(cwd, filePath));
+  const writtenAgents = writeAgentAssets(rootDir).map((filePath) => relativePath(cwd, filePath));
+  const operatorAssets = writeOperatorAssets(rootDir, spec).map((filePath) => relativePath(cwd, filePath));
+  const policyFile = relativePath(cwd, writePolicySnapshot(rootDir, spec.policy));
   const writtenRoles = writeRoleFiles(cwd, rootDir, roles);
   const writtenPrompts = writePromptFiles(cwd, rootDir);
   writeCatalog(rootDir, {
@@ -240,32 +250,55 @@ function doSetup(cwd, args) {
     scope: scopeName(args),
     roles,
     prompts,
+    nativeProfile: spec.policy.selectedProfile,
   });
   return {
     action: 'setup',
     scope: scopeName(args),
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     configFile: relativePath(cwd, configPath(rootDir)),
     backup: backup ? relativePath(cwd, backup.backupRoot) : null,
+    nativeProfile: spec.policy.selectedProfile,
+    approvalPolicy: spec.policy.approvalPolicy,
+    sandboxMode: spec.policy.sandboxMode,
+    hooksEnabled,
+    registrationPresent: hooksEnabled,
     roles: writtenRoles,
     prompts: writtenPrompts,
+    hooks: writtenHooks,
+    agents: writtenAgents,
+    operatorAssets,
+    policyFile,
   };
 }
 
 function doDiff(cwd, args) {
   const rootDir = codexRoot(cwd, args);
   const current = readIfExists(configPath(rootDir)) || '';
-  const target = `${renderSimpleToml(desiredConfig(cwd))}\n`;
+  const target = renderConfigToml(desiredConfig(cwd, args));
   return {
     action: 'diff-config',
     scope: scopeName(args),
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     configExists: Boolean(current),
     changed: current !== target,
     diffLines: lineDiff(current, target),
   };
+}
+
+function validateJsonFile(filePath) {
+  const content = readIfExists(filePath);
+  if (!content) {
+    return { present: false, valid: false, message: 'missing' };
+  }
+  try {
+    JSON.parse(content);
+    return { present: true, valid: true, message: 'ok' };
+  } catch (error) {
+    return { present: true, valid: false, message: error.message };
+  }
 }
 
 function doDoctor(cwd, args) {
@@ -299,6 +332,59 @@ function doDoctor(cwd, args) {
     });
   }
 
+  const hooksEnabled = resolveCodexHooksEnabled(cwd, args);
+  const hooksJson = validateJsonFile(hookConfigPath(rootDir));
+  if (hooksEnabled && !hooksJson.present) {
+    issues.push({
+      status: 'fail',
+      message: 'hooks.json is missing while Codex hooks are enabled',
+      fix: 'rai hooks enable or rai codex sync --repo --enable-hooks',
+    });
+  } else if (hooksJson.present && !hooksJson.valid) {
+    issues.push({
+      status: 'fail',
+      message: `hooks.json is invalid -> ${hooksJson.message}`,
+      fix: 'rai codex repair --repo',
+    });
+  }
+
+  for (const fileName of ['common.js', 'session_start.js', 'pre_tool_use_policy.js', 'post_tool_use_review.js', 'user_prompt_submit.js', 'stop_continue.js']) {
+    const filePath = path.join(rootDir, 'hooks', fileName);
+    if (!fs.existsSync(filePath)) {
+      issues.push({
+        status: 'warn',
+        message: `Hook script missing -> ${fileName}`,
+        fix: 'rai codex sync --repo',
+      });
+    }
+  }
+
+  const policyJson = validateJsonFile(policyPath(rootDir));
+  if (!policyJson.present) {
+    issues.push({
+      status: 'warn',
+      message: 'raiola-policy.json is missing',
+      fix: 'rai codex sync --repo',
+    });
+  } else if (!policyJson.valid) {
+    issues.push({
+      status: 'fail',
+      message: `raiola-policy.json is invalid -> ${policyJson.message}`,
+      fix: 'rai codex repair --repo',
+    });
+  }
+
+  for (const fileName of ['pr-explorer.toml', 'reviewer.toml', 'docs-researcher.toml', 'monorepo-planner.toml', 'code-mapper.toml', 'browser-debugger.toml', 'ui-fixer.toml', 'operator-supervisor.toml', 'trust-analyst.toml', 'release-gatekeeper.toml', 'automation-curator.toml']) {
+    const filePath = path.join(rootDir, 'agents', fileName);
+    if (!fs.existsSync(filePath)) {
+      issues.push({
+        status: 'warn',
+        message: `Subagent file missing -> ${fileName}`,
+        fix: 'rai codex sync --repo',
+      });
+    }
+  }
+
   const catalog = readCatalog(rootDir);
   if ((catalog.roles || []).length === 0) {
     issues.push({
@@ -327,11 +413,22 @@ function doDoctor(cwd, args) {
     }
   }
 
+  for (const relativeFile of ['AGENTS.md', 'hooks/AGENTS.md', 'operator/README.md', 'operator/cockpit/README.md', 'operator/telemetry/README.md', 'operator/agents-sdk/README.md', 'operator/agents-sdk/codex_operator_pipeline.py', 'operator/evals/README.md', 'operator/evals/run_skill_evals.mjs', 'operator/runbooks/large-repo.md', 'operator/runbooks/release-gate.md', 'managed/README.md']) {
+    const filePath = path.join(rootDir, ...relativeFile.split('/'));
+    if (!fs.existsSync(filePath)) {
+      issues.push({
+        status: 'warn',
+        message: `Operator asset missing -> ${relativeFile}`,
+        fix: 'rai codex sync --repo',
+      });
+    }
+  }
+
   return {
     action: 'doctor',
     scope: scopeName(args),
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     verdict: issues.some((issue) => issue.status === 'fail')
       ? 'fail'
       : issues.length > 0
@@ -349,11 +446,20 @@ function doSync(cwd, args) {
     action: 'sync',
     scope: payload.scope,
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     configFile: payload.configFile,
     backup: backup ? relativePath(cwd, backup.backupRoot) : payload.backup,
+    nativeProfile: payload.nativeProfile,
+    approvalPolicy: payload.approvalPolicy,
+    sandboxMode: payload.sandboxMode,
+    hooksEnabled: payload.hooksEnabled,
+    registrationPresent: payload.registrationPresent,
     roles: payload.roles,
     prompts: payload.prompts,
+    hooks: payload.hooks,
+    agents: payload.agents,
+    operatorAssets: payload.operatorAssets,
+    policyFile: payload.policyFile,
   };
 }
 
@@ -365,7 +471,7 @@ function doRollback(cwd, args) {
       action: 'rollback',
       scope: scopeName(args),
       rootDir,
-      virtualRoot: desiredCodexRoot(cwd, args),
+      virtualRoot: virtualRootForPayload(cwd, args),
       restored: false,
       message: 'No journal backup exists yet.',
     };
@@ -374,24 +480,26 @@ function doRollback(cwd, args) {
   ensureDir(rootDir);
   copyFileIfExists(path.join(backup.backupRoot, 'config.toml'), configPath(rootDir));
   copyFileIfExists(path.join(backup.backupRoot, 'catalog.json'), catalogPath(rootDir));
-  for (const bucket of ['roles', 'prompts', 'skills']) {
+  if (!copyFileIfExists(path.join(backup.backupRoot, 'hooks.json'), hookConfigPath(rootDir))) {
+    removeFileIfExists(hookConfigPath(rootDir));
+  }
+  copyFileIfExists(path.join(backup.backupRoot, 'raiola-policy.json'), policyPath(rootDir));
+  copyFileIfExists(path.join(backup.backupRoot, 'AGENTS.md'), path.join(rootDir, 'AGENTS.md'));
+  for (const bucket of ['roles', 'prompts', 'skills', 'hooks', 'agents', 'operator', 'managed']) {
     const backupBucket = path.join(backup.backupRoot, bucket);
     const targetBucket = path.join(rootDir, bucket);
     removeFileIfExists(targetBucket);
     if (!fs.existsSync(backupBucket)) {
       continue;
     }
-    ensureDir(targetBucket);
-    for (const entry of listEntries(backupBucket, { filesOnly: true })) {
-      fs.copyFileSync(entry.fullPath, path.join(targetBucket, entry.name));
-    }
+    fs.cpSync(backupBucket, targetBucket, { recursive: true });
   }
 
   return {
     action: 'rollback',
     scope: scopeName(args),
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     restored: true,
     backupId: backup.id,
   };
@@ -405,7 +513,7 @@ function doUninstall(cwd, args) {
     action: 'uninstall',
     scope: scopeName(args),
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     removed: !fs.existsSync(rootDir),
     backup: backup ? relativePath(cwd, backup.backupRoot) : null,
   };
@@ -442,7 +550,7 @@ function doRoles(cwd, args) {
     action: 'roles',
     scope: scopeName(args),
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     roles: (catalog.roles || []).map((entry) => ({
       name: entry.name,
       summary: entry.summary,
@@ -458,7 +566,7 @@ function doPrompts(cwd, args) {
     action: 'prompts',
     scope: scopeName(args),
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     prompts: (catalog.prompts || []).map((entry) => {
       const name = entry.name || entry;
       return {
@@ -486,7 +594,7 @@ function doInstallSkill(cwd, args) {
     action: 'install-skill',
     scope: scopeName(args),
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     role,
     file: relativePath(cwd, targetPath),
   };
@@ -504,7 +612,7 @@ function doRemoveSkill(cwd, args) {
     action: 'remove-skill',
     scope: scopeName(args),
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     role,
     removed: !fs.existsSync(targetPath),
   };
@@ -530,7 +638,7 @@ function doScaffoldRole(cwd, args) {
     action: 'scaffold-role',
     scope: scopeName(args),
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     backup: backup ? relativePath(cwd, backup.backupRoot) : null,
     roles: writtenRoles,
   };
@@ -540,13 +648,21 @@ function doStatus(cwd, args) {
   const rootDir = codexRoot(cwd, args);
   const doctor = doDoctor(cwd, args);
   const catalog = readCatalog(rootDir);
+  const policy = readJsonFile(policyPath(rootDir), null);
   return {
     action: 'status',
     scope: scopeName(args),
     rootDir,
-    virtualRoot: desiredCodexRoot(cwd, args),
+    virtualRoot: virtualRootForPayload(cwd, args),
     configExists: fs.existsSync(configPath(rootDir)),
     catalogExists: fs.existsSync(catalogPath(rootDir)),
+    hooksEnabled: resolveCodexHooksEnabled(cwd, args),
+    hooksExists: fs.existsSync(hookConfigPath(rootDir)),
+    agentsExists: fs.existsSync(path.join(rootDir, 'agents')),
+    operatorGuideExists: fs.existsSync(path.join(rootDir, 'operator', 'README.md')),
+    nativeProfile: policy?.selectedProfile || null,
+    approvalPolicy: policy?.approvalPolicy || null,
+    sandboxMode: policy?.sandboxMode || null,
     roleCount: (catalog.roles || []).length,
     promptCount: (catalog.prompts || []).length,
     journalEntries: (readIfExists(journalFile(cwd)) || '').split('\n').filter(Boolean).length,

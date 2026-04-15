@@ -1,3 +1,5 @@
+const fs = require('node:fs');
+const path = require('node:path');
 const {
   assertWorkflowFiles,
   computeWindowStatus,
@@ -8,7 +10,6 @@ const {
   normalizeWorkflowText,
   parseArgs,
   parseTableSectionObjects,
-  read,
   renderMarkdownTable,
   replaceField,
   replaceOrAppendSection,
@@ -18,8 +19,91 @@ const {
   today,
   toList,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+} = require('./io/files');
+
+
+function checkpointsDir(paths) {
+  return path.join(paths.cwd, '.workflow', 'runtime', 'checkpoints');
+}
+
+function latestCheckpointFile(paths) {
+  return path.join(checkpointsDir(paths), 'latest.json');
+}
+
+function ensureCheckpointDirs(paths) {
+  fs.mkdirSync(path.join(checkpointsDir(paths), 'deltas'), { recursive: true });
+  fs.mkdirSync(path.join(checkpointsDir(paths), 'milestones'), { recursive: true });
+}
+
+function escapeJsonPointer(value) {
+  return String(value).replace(/~/g, '~0').replace(/\//g, '~1');
+}
+
+function diffJson(left, right, basePath = '') {
+  if (JSON.stringify(left) === JSON.stringify(right)) {
+    return [];
+  }
+  const leftObject = left && typeof left === 'object' && !Array.isArray(left);
+  const rightObject = right && typeof right === 'object' && !Array.isArray(right);
+  if (!leftObject || !rightObject) {
+    return [{ op: left === undefined ? 'add' : 'replace', path: basePath || '/', value: right }];
+  }
+  const ops = [];
+  const keys = new Set([...Object.keys(left || {}), ...Object.keys(right || {})]);
+  for (const key of [...keys].sort()) {
+    const nextPath = `${basePath}/${escapeJsonPointer(key)}`;
+    if (!(key in right)) {
+      ops.push({ op: 'remove', path: nextPath });
+      continue;
+    }
+    if (!(key in left)) {
+      ops.push({ op: 'add', path: nextPath, value: right[key] });
+      continue;
+    }
+    ops.push(...diffJson(left[key], right[key], nextPath));
+  }
+  return ops;
+}
+
+function writeCheckpointArtifacts(paths, checkpoint) {
+  ensureCheckpointDirs(paths);
+  const latestFile = latestCheckpointFile(paths);
+  let previous = null;
+  try {
+    previous = JSON.parse(fs.readFileSync(latestFile, 'utf8'));
+  } catch {}
+  const operations = diffJson(previous || {}, checkpoint, '');
+  const milestoneBoundary = !previous || previous.milestone !== checkpoint.milestone || previous.step !== checkpoint.step;
+  const checkpointId = new Date().toISOString().replace(/[:.]/g, '-');
+  const deltaPayload = {
+    checkpointId,
+    generatedAt: new Date().toISOString(),
+    baseMilestone: previous?.milestone || null,
+    nextMilestone: checkpoint.milestone,
+    baseStep: previous?.step || null,
+    nextStep: checkpoint.step,
+    operationCount: operations.length,
+    operations,
+  };
+  const deltaFile = path.join(checkpointsDir(paths), 'deltas', `${checkpointId}.json`);
+  fs.writeFileSync(deltaFile, `${JSON.stringify(deltaPayload, null, 2)}\n`);
+  fs.writeFileSync(latestFile, `${JSON.stringify(checkpoint, null, 2)}\n`);
+  let snapshotFile = null;
+  if (milestoneBoundary) {
+    snapshotFile = path.join(checkpointsDir(paths), 'milestones', `${checkpointId}.json`);
+    fs.writeFileSync(snapshotFile, `${JSON.stringify(checkpoint, null, 2)}\n`);
+  }
+  return {
+    deltaFile: path.relative(paths.cwd, deltaFile).replace(/\\/g, '/'),
+    milestoneSnapshotFile: snapshotFile ? path.relative(paths.cwd, snapshotFile).replace(/\\/g, '/') : null,
+    deltaOperationCount: operations.length,
+    checkpointStrategy: milestoneBoundary ? 'milestone-snapshot+delta' : 'delta-only',
+  };
+}
 
 function printHelp() {
   console.log(`
@@ -149,9 +233,11 @@ function applyContinuityCheckpoint(paths, options = {}) {
     checkpointReason: 'Continuity checkpoint matches the current continuity core',
   });
   const refreshedWindow = syncWindowDocument(paths, computeWindowStatus(paths));
+  const deltaArtifacts = writeCheckpointArtifacts(paths, checkpoint);
 
   return {
     ...checkpoint,
+    ...deltaArtifacts,
     checkpointFreshness: refreshedWindow.checkpointFreshness,
     recommendedAction: refreshedWindow.recommendedAction,
   };

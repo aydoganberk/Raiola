@@ -1,8 +1,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { listGitChangesCached, safeExecCached } = require('./perf/runtime_cache');
-const { ensureDir, writeTextIfChanged } = require('./io/files');
+const { ensureDir } = require('./io/files');
 const { readWorkflowIgnore, shouldIgnoreFile } = require('./fs_index');
+const { buildImportGraph } = require('./import_graph');
+const { detectRepoTruth } = require('./repo_truth');
+const { readJsonIfExists, writeJsonIfChanged } = require('./io/json');
+const { parseArgs } = require('./common');
 
 const WALK_IGNORES = new Set([
   '.git',
@@ -24,14 +28,7 @@ function packageGraphPath(cwd) {
 }
 
 function readJson(filePath, fallback = null) {
-  if (!fs.existsSync(filePath)) {
-    return fallback;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return fallback;
-  }
+  return readJsonIfExists(filePath, fallback);
 }
 
 function listRepoFiles(cwd) {
@@ -295,17 +292,23 @@ function expandImpactedPackages(changedPackageIds, packages, packageNameMap) {
 }
 
 function buildPackageGraph(cwd, options = {}) {
-  const rootPkg = readJson(path.join(cwd, 'package.json'), {});
-  const workspaceInfo = workspaceRoots(cwd, rootPkg);
-  const workspaceDirs = workspaceInfo.directories || [];
+  const repoTruth = detectRepoTruth(cwd, { maxDepth: 6 });
+  const workspaceDirs = (repoTruth.directories || []).map((relativeDir) => path.join(cwd, relativeDir));
+  const workspaceMetaByPath = new Map((repoTruth.workspaces || []).map((entry) => [entry.root, entry]));
   const packageDirs = [cwd, ...workspaceDirs];
   const packages = packageDirs.map((packageDir) => {
+    const packageId = relativePath(cwd, packageDir) || '.';
     const pkg = readJson(path.join(packageDir, 'package.json'), {}) || {};
+    const workspaceMeta = workspaceMetaByPath.get(packageId) || null;
     return {
-      id: relativePath(cwd, packageDir) || '.',
-      name: pkg.name || relativePath(cwd, packageDir) || 'root',
-      path: relativePath(cwd, packageDir) || '.',
-      private: Boolean(pkg.private),
+      id: packageId,
+      name: pkg.name || workspaceMeta?.name || packageId || 'root',
+      path: packageId,
+      private: packageId === '.' ? Boolean(pkg.private) : Boolean(pkg.private || workspaceMeta?.ecosystem !== 'node'),
+      ecosystem: workspaceMeta?.ecosystem || (packageId === '.' ? 'repo' : 'node'),
+      manifest: workspaceMeta?.manifest || (fs.existsSync(path.join(packageDir, 'package.json')) ? 'package.json' : null),
+      truthSources: workspaceMeta?.sources || [],
+      owners: workspaceMeta?.owners || [],
       dependencies: dependencyNames(pkg),
       internalDependencies: [],
       dependents: [],
@@ -346,10 +349,21 @@ function buildPackageGraph(cwd, options = {}) {
     .map((filePath) => String(filePath || '').trim())
     .filter(Boolean)
     .filter((filePath) => !shouldIgnoreFile(cwd, filePath)));
+  const importGraph = buildImportGraph(cwd, {
+    changedFiles,
+    refreshMode: options.refreshMode || 'incremental',
+    writeFiles: options.writeFiles,
+  });
   const changedPackages = uniqueSorted(changedFiles
     .map((filePath) => ownerForFile(filePath, packages)?.id)
     .filter(Boolean));
-  const impactedPackages = expandImpactedPackages(changedPackages, packages, packageNameMap);
+  const importImpactedPackages = uniqueSorted((importGraph.impactedFiles || [])
+    .map((filePath) => ownerForFile(filePath, packages)?.id)
+    .filter(Boolean));
+  const impactedPackages = uniqueSorted([
+    ...expandImpactedPackages(changedPackages, packages, packageNameMap),
+    ...importImpactedPackages,
+  ]);
   const testsByPackage = packages.reduce((accumulator, pkg) => {
     accumulator[pkg.id] = [];
     return accumulator;
@@ -390,16 +404,27 @@ function buildPackageGraph(cwd, options = {}) {
     changedPackages,
     impactedPackages,
     impactedTests,
+    importGraph: {
+      graphPath: importGraph.graphPath,
+      edgeCount: importGraph.edgeCount,
+      entryCount: importGraph.entryCount,
+      impactedFiles: importGraph.impactedFiles,
+      reverseEdges: importGraph.reverseEdges,
+    },
     workspaceDiscovery: {
-      patterns: workspaceInfo.patterns || [],
-      directories: workspaceDirs.map((dir) => relativePath(cwd, dir)),
-      sources: workspaceInfo.sources || [],
+      patterns: [],
+      directories: repoTruth.directories || [],
+      sources: repoTruth.sources || [],
+      ecosystems: repoTruth.ecosystems || [],
+      markers: repoTruth.markers || {},
+      ownershipSource: repoTruth.ownership?.source || null,
+      workspaces: repoTruth.workspaces || [],
     },
   };
 
   if (options.writeFiles !== false) {
     ensureDir(path.dirname(packageGraphPath(cwd)));
-    writeTextIfChanged(packageGraphPath(cwd), `${JSON.stringify(payload, null, 2)}\n`);
+    writeJsonIfChanged(packageGraphPath(cwd), payload);
   }
 
   return {
@@ -408,7 +433,52 @@ function buildPackageGraph(cwd, options = {}) {
   };
 }
 
+
+function printHelp() {
+  console.log(`
+package_graph
+
+Usage:
+  node scripts/workflow/package_graph.js
+
+Options:
+  --json            Print machine-readable output
+  `);
+}
+
+function main(argv = process.argv.slice(2)) {
+  const args = parseArgs(argv);
+  if (args.help || args._.includes('help')) {
+    printHelp();
+    return;
+  }
+
+  const payload = buildPackageGraph(process.cwd(), { writeFiles: args.write !== false });
+  if (args.json) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  console.log('# PACKAGE GRAPH\n');
+  console.log(`- Repo shape: \`${payload.repoShape}\``);
+  console.log(`- Packages: \`${payload.packageCount}\``);
+  if ((payload.workspaceDiscovery?.sources || []).length > 0) {
+    console.log(`- Sources: \`${payload.workspaceDiscovery.sources.join(', ')}\``);
+  }
+  if ((payload.workspaceDiscovery?.ecosystems || []).length > 0) {
+    console.log(`- Ecosystems: \`${payload.workspaceDiscovery.ecosystems.join(', ')}\``);
+  }
+  console.log('\n## Packages\n');
+  for (const pkg of payload.packages) {
+    console.log(`- \`${pkg.id}\` -> ecosystem=\`${pkg.ecosystem || 'unknown'}\`, owners=\`${(pkg.owners || []).join(', ') || 'unowned'}\`, deps=\`${(pkg.internalDependencies || []).join(', ') || 'none'}\``);
+  }
+}
+
 module.exports = {
   buildPackageGraph,
   packageGraphPath,
 };
+
+if (require.main === module) {
+  main();
+}

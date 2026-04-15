@@ -6,14 +6,12 @@ const {
   buildPacketSnapshot,
   computeWindowStatus,
   controlPaths,
-  ensureDir,
   escapeRegex,
   slugify,
   getFieldValue,
   loadPreferences,
   parseArgs,
   parseWorkstreamTable,
-  read,
   renderWorkstreamTable,
   replaceField,
   replaceSection,
@@ -21,8 +19,12 @@ const {
   today,
   tryExtractSection,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  ensureDir,
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 
 const WORKSTREAM_DOC_FILES = [
   'PROJECT.md',

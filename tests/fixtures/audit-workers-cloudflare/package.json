@@ -1,0 +1,7 @@
+{
+  "name": "audit-workers-cloudflare-fixture",
+  "private": true,
+  "dependencies": {
+    "wrangler": "4.0.0"
+  }
+}

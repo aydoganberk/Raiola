@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { ensureDir } = require('./common');
+const { ensureDir } = require('./io/files');
+const { readJsonIfExists } = require('./io/json');
 
 const RECENT_LIMITS = Object.freeze({
   mailbox: 20,
@@ -36,16 +37,6 @@ function emptyLogIndex() {
   };
 }
 
-function readJsonIfExists(filePath, fallback = null) {
-  if (!fs.existsSync(filePath)) {
-    return fallback;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return fallback;
-  }
-}
 
 function fileSignature(filePath) {
   if (!fs.existsSync(filePath)) {

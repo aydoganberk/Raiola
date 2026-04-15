@@ -1,10 +1,12 @@
 const path = require('node:path');
 const {
   parseArgs,
-  readIfExists,
   replaceOrAppendSection,
-  writeIfChanged,
 } = require('./common');
+const {
+  readTextIfExists: readIfExists,
+  writeTextIfChanged: writeIfChanged,
+} = require('./io/files');
 const {
   appendMarkdownListItem,
   ensureMarkdownDocument,

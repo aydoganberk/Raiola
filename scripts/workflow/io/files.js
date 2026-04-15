@@ -27,8 +27,15 @@ function readText(filePath) {
   return content;
 }
 
-function readTextIfExists(filePath) {
-  return fs.existsSync(filePath) ? readText(filePath) : null;
+function readTextIfExists(filePath, fallback = null) {
+  if (!fs.existsSync(filePath)) {
+    return fallback;
+  }
+  try {
+    return readText(filePath);
+  } catch {
+    return fallback;
+  }
 }
 
 function writeText(filePath, content) {

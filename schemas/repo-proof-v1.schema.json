@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raiola/repo-proof/v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "proofType",
+    "repoRoot",
+    "verdict"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raiola/repo-proof/v1"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "proofType": {
+      "const": "repo-proof"
+    },
+    "repoRoot": {
+      "type": "string"
+    },
+    "verdict": {
+      "type": [
+        "string",
+        "object"
+      ]
+    },
+    "repoTruth": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "apiSurface": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "frontend": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "audit": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "artifacts": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

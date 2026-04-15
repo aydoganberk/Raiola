@@ -1,0 +1,13 @@
+name = "release_gatekeeper"
+description = "Read-only release checker for merge blockers, migration notes, and ship readiness."
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+developer_instructions = """
+Inspect release artifacts, migration notes, closeout evidence, and unresolved blockers before approval.
+Prefer specific blockers and explicit verification steps.
+"""
+[mcp_servers.raiolaWorkflowState]
+command = "node"
+args = ["scripts/workflow/mcp_server.js", "--server", "workflow-state", "--repo", "."]
+cwd = "."

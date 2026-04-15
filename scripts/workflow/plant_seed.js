@@ -3,7 +3,6 @@ const {
   extractSection,
   parseArgs,
   parseSeedEntries,
-  read,
   renderSeedSection,
   replaceField,
   replaceSection,
@@ -11,8 +10,11 @@ const {
   today,
   toList,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 
 function printHelp() {
   console.log(`

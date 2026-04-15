@@ -4,12 +4,12 @@ const {
   buildPacketSnapshot,
   extractBulletItems,
   parseArgs,
-  readIfExists,
   resolveWorkflowRoot,
   syncPacketHash,
   tryExtractSection,
   workflowPaths,
 } = require('./common');
+const { readTextIfExists: readIfExists } = require('./io/files');
 const { baseLifecycleContext } = require('./lifecycle_common');
 const { buildPackageGraph } = require('./package_graph');
 const { latestReviewData, latestVerifyWork, readAssumptions } = require('./trust_os');
@@ -103,6 +103,8 @@ function buildCompilerSummary(cwd, rootDir, packet, role) {
     || readJsonFile(path.join(cwd, '.workflow', 'runtime', 'do-latest.json'), null);
   const verifyWork = latestVerifyWork(cwd);
   const shipReadiness = readJsonFile(path.join(cwd, '.workflow', 'reports', 'ship-readiness.json'), null);
+  const releaseControl = readJsonFile(path.join(cwd, '.workflow', 'reports', 'change-control.json'), null)
+    || readJsonFile(path.join(cwd, '.workflow', 'reports', 'release-control.json'), null);
   const review = latestReviewData(cwd);
   const frontendReview = readJsonFile(path.join(cwd, '.workflow', 'runtime', 'frontend-review.json'), null);
   const frontendSpec = readJsonFile(path.join(cwd, '.workflow', 'runtime', 'frontend-spec.json'), null);
@@ -184,8 +186,10 @@ function buildCompilerSummary(cwd, rootDir, packet, role) {
     trust: {
       verifyWorkVerdict: verifyWork?.verdict || 'n/a',
       verifyWorkReasons: (verifyWork?.reasons || []).slice(0, 6),
-      shipVerdict: shipReadiness?.verdict || 'n/a',
-      pendingApprovalCount: shipReadiness?.approvalPlan?.pending?.length || 0,
+      verifyQueueCount: releaseControl?.verifyStatusBoard?.queuedForVerifyCount || 0,
+      shipVerdict: shipReadiness?.verdict || releaseControl?.shipReadinessBoard?.verdict || 'n/a',
+      shipBlockerCount: releaseControl?.shipReadinessBoard?.shipBlockerCount || 0,
+      pendingApprovalCount: shipReadiness?.approvalPlan?.pending?.length || releaseControl?.shipReadinessBoard?.pendingApprovalCount || 0,
     },
   };
 }

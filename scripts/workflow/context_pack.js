@@ -3,11 +3,13 @@ const path = require('node:path');
 const {
   listGitChanges,
   parseArgs,
-  readIfExists,
   resolveWorkflowRoot,
-  writeIfChanged,
   workflowPaths,
 } = require('./common');
+const {
+  readTextIfExists: readIfExists,
+  writeTextIfChanged: writeIfChanged,
+} = require('./io/files');
 const { buildCodebaseMap } = require('./map_codebase');
 const { buildComponentInventoryDoc } = require('./component_inventory');
 const { buildDesignDnaDoc, buildStateAtlasDoc } = require('./design_contracts');

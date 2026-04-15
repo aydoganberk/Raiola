@@ -1,109 +1,25 @@
-name: Release
+name: release
 
 on:
   push:
     tags:
-      - 'v*.*.*'
-  workflow_dispatch:
-    inputs:
-      publish:
-        description: Publish to npm after smoke checks
-        required: true
-        default: false
-        type: boolean
+      - 'v*'
 
 permissions:
-  contents: read
-
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
+  contents: write
+  id-token: write
 
 jobs:
-  pack-smoke:
-    name: Release Smoke (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          package-manager-cache: false
-      - run: npm test
-      - run: node scripts/smoke_pack_install.js --pack --json > smoke-pack-report.json
-      - uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: release-smoke-${{ matrix.os }}
-          path: smoke-pack-report.json
-
   publish:
-    name: Publish npm package
     runs-on: ubuntu-latest
-    needs: pack-smoke
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish)
-    permissions:
-      contents: read
-      id-token: write
-    env:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
-          package-manager-cache: false
+          node-version: 20
           registry-url: https://registry.npmjs.org
-      - name: Verify trusted-publishing npm CLI
-        run: npx --yes npm@11.5.1 --version
-      - name: Verify tag matches package version
-        if: github.event_name == 'push'
-        run: |
-          node <<'EOF'
-          const version = require('./package.json').version;
-          const tag = process.env.GITHUB_REF_NAME;
-          if (tag !== `v${version}`) {
-            throw new Error(`Tag ${tag} does not match package.json version v${version}`);
-          }
-          EOF
-      - name: Publish with trusted publishing
-        if: ${{ env.NPM_TOKEN == '' }}
-        run: npx --yes npm@11.5.1 publish --access public
-      - name: Publish with npm token fallback
-        if: ${{ env.NPM_TOKEN != '' }}
-        run: npx --yes npm@11.5.1 publish --access public
+      - run: npm ci
+      - run: node scripts/workflow/doctor.js --strict
+      - run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
-
-  github-release:
-    name: Create GitHub release
-    runs-on: ubuntu-latest
-    needs: publish
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          package-manager-cache: false
-      - name: Generate release notes from CHANGELOG
-        run: node scripts/release/release_notes_from_changelog.js --tag "${GITHUB_REF_NAME}" --output release-notes.md
-      - name: Create or update GitHub release
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release edit "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-notes.md
-          else
-            gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-notes.md
-          fi
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

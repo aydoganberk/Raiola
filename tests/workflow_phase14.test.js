@@ -150,7 +150,7 @@ test('doctor and health repair flows detect and apply safe runtime fixes', () =>
   assert.ok(doctorRepair.repair.safeActionCount >= 2);
   assert.equal(JSON.parse(readFile(targetRepo, 'package.json')).scripts['raiola:launch'], 'node scripts/workflow/launch.js');
   assert.match(readFile(targetRepo, '.gitignore'), /\.workflow\//);
-  assert.match(readFile(targetRepo, '.gitignore'), /\.agents\//);
+  assert.doesNotMatch(readFile(targetRepo, '.gitignore'), /\.agents\//);
   assert.ok(fs.existsSync(path.join(targetRepo, '.workflow', 'VERSION.md')));
   assert.ok(healthRepair.repair.safeActionCount >= 1);
   assert.doesNotThrow(() => JSON.parse(readFile(targetRepo, '.workflow/fs-index.json')));

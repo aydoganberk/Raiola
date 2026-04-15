@@ -1,10 +1,10 @@
-const fs = require('node:fs');
 const path = require('node:path');
+const { readJsonIfExists } = require('./io/json');
 
 const EMBEDDED_PRODUCT = Object.freeze({
   name: 'raiola',
   legacyNames: Object.freeze(['codex-workflow-kit']),
-  version: '0.4.6',
+  version: '0.4.8',
   primaryCommand: 'rai',
   commandAliases: Object.freeze(['raiola', 'raiola-on']),
   primarySkillName: 'raiola',
@@ -15,16 +15,6 @@ function repoPackagePath() {
   return path.join(__dirname, '..', '..', 'package.json');
 }
 
-function readJsonIfExists(filePath) {
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return null;
-  }
-}
 
 function embeddedProductMeta() {
   return { ...EMBEDDED_PRODUCT };

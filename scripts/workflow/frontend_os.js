@@ -3,6 +3,7 @@ const path = require('node:path');
 const { listIndexedRepoFiles } = require('./fs_index');
 const { buildFrontendProfile } = require('./map_frontend');
 const { listLatestEntries, readJsonIfExists } = require('./runtime_helpers');
+const { collectComponentInventory } = require('./frontend_component_intelligence');
 
 function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
@@ -14,24 +15,12 @@ function writeDoc(filePath, title, body) {
   return filePath;
 }
 
-function collectComponentInventory(cwd) {
-  const repo = listIndexedRepoFiles(cwd, { refreshMode: 'incremental' });
-  const files = repo.files.filter((filePath) => (
-    /(^|\/)(components|ui|app\/components|src\/components)\//.test(filePath)
-      || /[A-Z][A-Za-z0-9_-]+\.(tsx|jsx|ts|js)$/.test(path.basename(filePath))
-  ));
-
-  return files.slice(0, 60).map((filePath) => {
-    const base = path.basename(filePath, path.extname(filePath));
-    const kind = /\.(tsx|jsx)$/.test(filePath) ? 'component' : 'module';
-    return {
-      name: base,
-      file: filePath,
-      kind,
-      shared: /(components|ui)\//.test(filePath),
-      responsiveHint: /(grid|layout|container|hero|page)/i.test(base),
-    };
-  });
+function readText(cwd, relativeFile) {
+  try {
+    return fs.readFileSync(path.join(cwd, relativeFile), 'utf8');
+  } catch {
+    return '';
+  }
 }
 
 function collectUiFiles(cwd) {
@@ -40,14 +29,6 @@ function collectUiFiles(cwd) {
     /\.(tsx|jsx|ts|js|css|scss|sass)$/.test(filePath)
       && /(^|\/)(app|pages|components|src|ui)\//.test(filePath)
   )).slice(0, 80);
-}
-
-function readText(cwd, relativeFile) {
-  try {
-    return fs.readFileSync(path.join(cwd, relativeFile), 'utf8');
-  } catch {
-    return '';
-  }
 }
 
 function collectAuditFiles(cwd, inventory = collectComponentInventory(cwd)) {

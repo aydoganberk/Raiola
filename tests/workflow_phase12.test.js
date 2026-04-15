@@ -9,7 +9,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const fixtureRoot = path.join(repoRoot, 'tests', 'fixtures', 'blank-repo');
 const setupScript = path.join(repoRoot, 'scripts', 'workflow', 'setup.js');
 const initScript = path.join(repoRoot, 'scripts', 'workflow', 'init.js');
-const cwfBin = path.join(repoRoot, 'bin', 'rai.js');
+const raiBin = path.join(repoRoot, 'bin', 'rai.js');
 const helpGolden = path.join(repoRoot, 'tests', 'golden', 'workflow', 'rai-help.txt');
 
 function makeTempRepo() {
@@ -44,25 +44,29 @@ function writeFile(targetRepo, relativePath, content) {
 
 test('rai help and setup expose the product shell while uninstall keeps canonical docs safe', () => {
   const targetRepo = makeTempRepo();
-  const helpOutput = run('node', [cwfBin, 'help'], repoRoot);
-  const lifecycleHelp = run('node', [cwfBin, 'help', 'lifecycle'], repoRoot);
-  const reviewHelp = run('node', [cwfBin, 'help', 'review'], repoRoot);
-  const categoriesHelp = run('node', [cwfBin, 'help', 'categories'], repoRoot);
-  const fullHelp = run('node', [cwfBin, 'help', 'all'], repoRoot);
+  const helpOutput = run('node', [raiBin, 'help'], repoRoot);
+  const lifecycleHelp = run('node', [raiBin, 'help', 'lifecycle'], repoRoot);
+  const quickstartHelp = run('node', [raiBin, 'help', 'quickstart'], repoRoot);
+  const reviewHelp = run('node', [raiBin, 'help', 'review'], repoRoot);
+  const categoriesHelp = run('node', [raiBin, 'help', 'categories'], repoRoot);
+  const fullHelp = run('node', [raiBin, 'help', 'all'], repoRoot);
   const expectedHelp = fs.readFileSync(helpGolden, 'utf8');
 
   assert.equal(normalizeText(helpOutput).trim(), normalizeText(expectedHelp).trim());
   assert.match(lifecycleHelp, /raiola Lifecycle/);
   assert.match(lifecycleHelp, /rai simplify/);
+  assert.match(helpOutput, /rai help quickstart/);
+  assert.match(quickstartHelp, /Starter surface/);
+  assert.match(quickstartHelp, /Existing repo/);
   assert.match(reviewHelp, /raiola Deep Review/);
-  assert.match(reviewHelp, /rai review --heatmap/);
+  assert.match(reviewHelp, /rai audit --goal "review the current diff"/);
   assert.match(categoriesHelp, /solo/);
   assert.match(categoriesHelp, /runtime/);
   assert.match(fullHelp, /raiola Full Command Reference/);
   assert.match(fullHelp, /rai milestone/);
   assert.match(fullHelp, /## Lifecycle/);
 
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
 
   const packageJson = JSON.parse(readFile(targetRepo, 'package.json'));
   const manifest = JSON.parse(readFile(targetRepo, '.workflow/product-manifest.json'));
@@ -70,6 +74,9 @@ test('rai help and setup expose the product shell while uninstall keeps canonica
   assert.equal(manifest.scriptProfile, 'pilot');
   assert.equal(manifest.runtimeSurfaceProfile, 'pilot');
   assert.ok(manifest.skillPackPaths.includes('.agents/skills/using-raiola/SKILL.md'));
+  assert.equal(packageJson.scripts['raiola:audit'], 'node scripts/workflow/audit.js');
+  assert.equal(packageJson.scripts['raiola:fix'], 'node scripts/workflow/fix.js');
+  assert.equal(packageJson.scripts['raiola:start'], 'node scripts/workflow/start.js');
   assert.equal(packageJson.scripts['raiola:quick'], 'node scripts/workflow/quick.js');
   assert.equal(packageJson.scripts['raiola:review'], 'node scripts/workflow/review.js');
   assert.equal(packageJson.scripts['raiola:setup'], 'node scripts/workflow/setup.js');
@@ -80,13 +87,15 @@ test('rai help and setup expose the product shell while uninstall keeps canonica
   assert.equal(packageJson.scripts['raiola:simplify'], 'node scripts/workflow/simplify.js');
   assert.equal(packageJson.scripts['raiola:update'], 'node scripts/workflow/update.js');
   assert.equal(packageJson.scripts['raiola:uninstall'], 'node scripts/workflow/uninstall.js');
+  assert.equal(packageJson.scripts['raiola:verify'], 'node scripts/workflow/verify.js');
   assert.equal(packageJson.scripts['raiola:notify'], undefined);
   assert.equal(packageJson.scripts['raiola:assumptions'], undefined);
   assert.equal(packageJson.scripts.rai, 'node bin/rai.js');
   assert.equal(packageJson.scripts['raiola-on'], 'node bin/raiola-on.js');
   assert.match(gitignore, /\.workflow\//);
-  assert.match(gitignore, /\.agents\//);
+  assert.doesNotMatch(gitignore, /\.agents\//);
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'quick.js')));
+  assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'start.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'setup.js')));
   assert.ok(fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'spec.js')));
   assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'notify.js')));
@@ -103,6 +112,9 @@ test('rai help and setup expose the product shell while uninstall keeps canonica
   assert.match(pilotHelp, /Focused install/i);
   assert.match(pilotHelp, /pilot/);
   assert.match(pilotHelp, /rai help lifecycle/);
+  assert.match(pilotHelp, /rai help quickstart/);
+  assert.match(pilotHelp, /rai start --goal/);
+  assert.match(pilotHelp, /audit\s+Intent-level audit facade/);
   assert.match(pilotHelp, /simplify\s+Simplify code without changing behavior/);
   assert.doesNotMatch(pilotHelp, /rai help review/);
   const filteredHelp = run('node', [path.join(targetRepo, 'bin', 'rai.js'), 'help', 'all'], targetRepo);
@@ -133,7 +145,7 @@ test('rai help and setup expose the product shell while uninstall keeps canonica
   assert.match(unavailable.stderr, /not installed in this repo's current shell/i);
   assert.match(unavailable.stderr, /rai update --script-profile core/);
 
-  const uninstallPayload = JSON.parse(run('node', [cwfBin, 'uninstall', '--target', targetRepo, '--json'], repoRoot));
+  const uninstallPayload = JSON.parse(run('node', [raiBin, 'uninstall', '--target', targetRepo, '--json'], repoRoot));
   assert.ok(fs.existsSync(path.join(targetRepo, 'docs', 'workflow', 'STATUS.md')));
   assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'quick.js')));
   assert.ok(!fs.existsSync(path.join(targetRepo, 'scripts', 'workflow', 'setup.js')));
@@ -149,7 +161,7 @@ test('rai help and setup expose the product shell while uninstall keeps canonica
   assert.equal(packageJsonAfter.scripts['raiola:setup'], undefined);
   assert.equal(packageJsonAfter.scripts['raiola:spec'], undefined);
 
-  run('node', [cwfBin, 'uninstall', '--target', targetRepo], repoRoot);
+  run('node', [raiBin, 'uninstall', '--target', targetRepo], repoRoot);
 });
 
 test('raiola:update can contract a full install down to the pilot surface', () => {
@@ -179,11 +191,11 @@ test('raiola:update can contract a full install down to the pilot surface', () =
 
 test('rai milestone opens a full-workflow milestone without npm script indirection', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
 
   run(
     'node',
-    [cwfBin, 'milestone', '--id', 'M14', '--name', 'CLI milestone', '--goal', 'Open milestone from the product shell'],
+    [raiBin, 'milestone', '--id', 'M14', '--name', 'CLI milestone', '--goal', 'Open milestone from the product shell'],
     targetRepo,
   );
 
@@ -196,7 +208,7 @@ test('rai milestone opens a full-workflow milestone without npm script indirecti
 
 test('raiola:doctor audits install-surface drift and suggests fix commands', () => {
   const targetRepo = makeTempRepo();
-  run('node', [cwfBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
+  run('node', [raiBin, 'setup', '--target', targetRepo, '--skip-verify'], repoRoot);
 
   const packageJsonPath = path.join(targetRepo, 'package.json');
   const packageJson = JSON.parse(readFile(targetRepo, 'package.json'));
@@ -219,7 +231,7 @@ test('raiola:doctor audits install-surface drift and suggests fix commands', () 
   assert.equal(result.status, 1);
   assert.match(result.stdout, /Package scripts -> missing=raiola:quick/);
   assert.match(result.stdout, /fix: `rai update --overwrite-scripts`/);
-  assert.match(result.stdout, /Gitignore hygiene -> missing \.workflow\/, \.agents\//);
+  assert.match(result.stdout, /Gitignore hygiene -> missing \.workflow\//);
   assert.match(result.stdout, /Skill surface -> \.agents\/skills\/raiola\/SKILL\.md is missing/);
   assert.match(result.stdout, /Product version marker -> \.workflow\/VERSION\.md is missing/);
   assert.match(result.stdout, /fix: `rai update`/);

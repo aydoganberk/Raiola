@@ -199,11 +199,13 @@ Rule:
 ## 2026-04-01 - Discuss mode is selected at the preference level
 
 - Decision:
-  - The `Discuss mode` field in `PREFERENCES.md` chooses between `assumptions` and `interview`.
+  - The `Discuss mode` field in `PREFERENCES.md` chooses between `assumptions`, `interview`, and `proposal_first`.
 - Why:
   - Some codebases benefit from scanning first; some tasks benefit from clarifying the target first.
+  - Frontend-heavy work sometimes needs a short approval gate before the packet deepens.
 - Consequence:
   - `CONTEXT.md`, `MILESTONES.md`, and `raiola:next` explain discuss behavior based on this preference.
+  - `proposal_first` stores the selected option and approval note in `CONTEXT.md` before the discuss packet expands.
 
 ## 2026-04-01 - `raiola:next` becomes the operational navigator for the active step
 

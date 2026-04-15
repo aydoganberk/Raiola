@@ -2,11 +2,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { parseArgs } = require('./common');
 const {
+  readProductManifest,
   sourceLayout,
   loadTargetRuntimeScripts,
   productManifestPath,
   versionMarkerPath,
 } = require('./install_common');
+const { contractPayload } = require('./contract_versions');
+const { generatedArtifactPaths } = require('./generated_artifacts');
 
 function printHelp() {
   console.log(`
@@ -24,6 +27,9 @@ Options:
 }
 
 function walkFiles(dirPath, files = []) {
+  if (!fs.existsSync(dirPath)) {
+    return files;
+  }
   for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
     const fullPath = path.join(dirPath, entry.name);
     if (entry.isDirectory()) {
@@ -153,6 +159,41 @@ function removePackageScripts(targetRepo, dryRun) {
   return report;
 }
 
+function generatedArtifactCleanupPlan(targetRepo) {
+  const manifest = readProductManifest(targetRepo);
+  const manifestGenerated = manifest?.generatedArtifacts || null;
+  const generatedRoots = manifestGenerated?.generatedArtifactRoots || [];
+  const generatedFiles = manifestGenerated?.generatedArtifactFiles || [];
+  const manifestPaths = generatedRoots.length > 0 || generatedFiles.length > 0
+    ? [...generatedRoots, ...generatedFiles]
+    : generatedArtifactPaths();
+  return {
+    manifest,
+    generatedPaths: [...new Set(manifestPaths)],
+  };
+}
+
+function buildReport(targetRepo, purgeDocs) {
+  const cleanupPlan = generatedArtifactCleanupPlan(targetRepo);
+  return {
+    ...contractPayload('uninstallReport'),
+    generatedAt: new Date().toISOString(),
+    targetRepo,
+    purgeDocs,
+    removed: [],
+    skipped: [],
+    preserved: [
+      'docs/workflow unless --purge-docs is explicitly requested',
+    ],
+    packageScripts: null,
+    generatedArtifacts: {
+      cleanupCoverage: cleanupPlan.generatedPaths,
+      source: cleanupPlan.manifest?.generatedArtifacts?.schema || 'raiola/generated-artifacts/v1',
+      manifestPresent: Boolean(cleanupPlan.manifest),
+    },
+  };
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help || args._.includes('help')) {
@@ -163,13 +204,8 @@ function main() {
   const targetRepo = path.resolve(process.cwd(), String(args.target || '.'));
   const dryRun = Boolean(args['dry-run']);
   const purgeDocs = Boolean(args['purge-docs']);
-  const report = {
-    targetRepo,
-    purgeDocs,
-    removed: [],
-    skipped: [],
-    packageScripts: null,
-  };
+  const cleanupPlan = generatedArtifactCleanupPlan(targetRepo);
+  const report = buildReport(targetRepo, purgeDocs);
 
   for (const relativeScript of runtimeScriptFiles()) {
     const targetPath = path.join(targetRepo, 'scripts', 'workflow', relativeScript);
@@ -191,23 +227,13 @@ function main() {
   }
 
   const runtimePaths = [
-    path.join(targetRepo, '.workflow', 'state.json'),
-    path.join(targetRepo, '.workflow', 'packet-state.json'),
-    path.join(targetRepo, '.workflow', 'frontend-profile.json'),
-    path.join(targetRepo, '.workflow', 'delegation-plan.json'),
-    path.join(targetRepo, '.workflow', 'delegation-plan.md'),
-    path.join(targetRepo, '.workflow', 'quick'),
-    path.join(targetRepo, '.workflow', 'orchestration'),
-    path.join(targetRepo, '.workflow', 'reports'),
-    path.join(targetRepo, '.workflow', 'cache'),
-    path.join(targetRepo, '.workflow', 'benchmarks'),
-    path.join(targetRepo, '.workflow', 'fs-index.json'),
+    ...cleanupPlan.generatedPaths,
     productManifestPath(targetRepo),
     versionMarkerPath(targetRepo),
   ];
 
   for (const runtimePath of runtimePaths) {
-    maybeRemove(runtimePath, report, dryRun);
+    maybeRemove(path.isAbsolute(runtimePath) ? runtimePath : path.join(targetRepo, runtimePath), report, dryRun);
   }
 
   if (purgeDocs) {
@@ -233,8 +259,10 @@ function main() {
   if (report.packageScripts.conflicts.length > 0) {
     console.log(`- Package script conflicts kept: \`${report.packageScripts.conflicts.length}\``);
   }
+  console.log(`- Generated artifact coverage: \`${report.generatedArtifacts.cleanupCoverage.length}\``);
   console.log('\n## Safety\n');
   console.log('- Canonical workflow markdown was preserved unless `--purge-docs` was explicitly requested.');
+  console.log('- Generated `.workflow/` runtime artifacts are cleaned using the installed manifest when available, with package defaults as fallback.');
   console.log('- Only runtime/product surfaces installed by raiola were targeted for removal.');
 }
 

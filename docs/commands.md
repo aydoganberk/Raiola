@@ -27,10 +27,16 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
   Open Raiola onboarding. `rai on next` is the clean blank-state entry and proposes a milestone to start.
 - `rai launch`
   Strong-start launcher that recommends the lane, first command, and minimal resume prompt.
+- `rai start`
+  Open the productized workflow bundle layer. This groups overlapping commands into one structured entry and writes `.workflow/runtime/start-plan.{json,md}`. Use `rai help bundles` to browse bundle families, `rai start recommend --goal "..."` to let the harness choose bundle/profile/add-ons, `rai start <bundle> --goal "..."` to pin a bundle explicitly, and `--profile speed|balanced|deep` to control bundle depth. Add-ons now include `trust|docs|handoff|parallel|browser|surface|design-system|state|ownership|regression|shard|repair|recommended`, so code review, code audit, repo review, large-repo review, frontend work, and correction waves can widen without leaving the start command.
 - `rai codex`
   Safe Codex control plane. Supports `setup`, `doctor`, `diff-config`, `rollback`, `sync`, role scaffolding, skill install/remove, `profile suggest`, `bootstrap`, `resume-card`, `promptpack`, and `plan-subagents`.
 - `rai do`
   Route a natural-language intent into `quick`, `full`, `review`, `frontend`, or `team` lanes with explainable capability and verify plans. English/Turkish persona framing and nearby typos are tolerated on the routing path.
+- `rai audit`
+  Intent-level audit facade that resolves broad repo audit, diff review, monorepo review, and correction-aware review work into the right deeper lane.
+- `rai fix`
+  Intent-level correction facade that turns findings and review output into the next bounded fix wave and syncs the shared review-correction control plane.
 - `rai note`
   Capture a runtime inbox note and optionally promote it into backlog, thread, or seeds.
 - `rai thread`
@@ -40,13 +46,47 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 - `rai manager`
   Single-screen operator view with health, next route, team runtime, verify queue, and repair hints.
 - `rai dashboard`
-  Generate `.workflow/runtime/dashboard/index.html`, a local HTML operator surface with command palette, context compiler, route/review/frontend boards, and screenshot state.
+  Generate `.workflow/runtime/dashboard/index.html`, a local HTML operator surface with command palette, context compiler, route/review/frontend boards, screenshot state, review-correction panels such as Review Control Room, Correction Board, and Large Repo Board, plus release-control panels such as Verify Status Board and Ship Readiness Board. The dashboard now also renders the Operating Center, Repo Config, Trust Center, Change Control, Autopilot, Handoff OS, Team Control Room, Measurement / ROI, Explainability, and Lifecycle Center. `--refresh-planes` refreshes the unified operating-center surface first.
+- `rai operate`
+  Open the unified engineering operating center, rank the current control planes, show the active question, and preserve publish/readiness context in one entry.
+- `rai repo-config`
+  Detect stack packs, write `.workflow/repo-config.json`, and publish repo-native defaults for bundle selection, trust level, required verifications, handoff standard, automation, and external exports.
+- `rai repo-control`
+  Open `.workflow/reports/repo-control-room.{json,md}` with package graph ranking, workspace posture, repo hotspots, and Codex follow-through guidance.
+- `rai workspace-impact`
+  Open `.workflow/reports/workspace-impact.{json,md}` with changed/impacted package mapping, blast radius, development waves, and verification order for the current monorepo slice.
+- `rai monorepo-control`
+  Open `.workflow/reports/monorepo-control-room.{json,md}` with dependency hubs, workspace coordination, impact waves, and Codex follow-through for large monorepos.
+- `rai frontend-control`
+  Open `.workflow/reports/frontend-control-room.{json,md}` with framework/routing detection, browser evidence, missing states, design debt, and scorecard posture.
+- `rai safety-control`
+  Open `.workflow/reports/safety-control-room.{json,md}` with secure-phase findings, failure forecasts, self-healing repair actions, and verification exposure.
+- `rai trust`
+  Open Trust Center and answer whether the current work is safe to start, merge, and ship.
+- `rai release-control`
+  Open Change Control, combine trust/release signals, materialize the supporting ship surfaces, refresh closeout artifacts, and export GitHub/CI/Slack/issue-tracker-friendly status files.
+- `rai control-plane-publish`
+  Regenerate the GitHub / CI / Slack bridge exports from the current Change Control artifact, keeping repo-status/export-manifest paths stable, and optionally append them to GitHub Actions environment files.
+- `rai autopilot`
+  Build the routine automation layer: morning summary, branch-aware start, correction-lane recovery, drift alerts, and inactive-thread recovery.
+- `rai handoff`
+  Publish the Handoff OS with compact handoff, PR brief, session report, open decisions, unresolved risks, resume anchor, and a machine-readable continuity bundle.
+- `rai team-control`
+  Open the multi-agent Team Control Room with ownership, parallel lanes, merge queue visibility, mailbox/timeline activity, handoff queue, conflicts, quality, and escalation hints.
+- `rai measure`
+  Publish findings/closure/verification ROI metrics, export coverage, continuity/team activity, history, and trend deltas.
+- `rai explain`
+  Explain why a lane and bundle were chosen, which signals mattered, which surfaces were or were not surveyed, how confidence breaks down, and what deep mode would add.
+- `rai lifecycle`
+  Unify installation, upgrade drift, repo-config drift, export drift, doctor, health, self-healing, and rollback hints in one lifecycle surface.
 - `rai setup`
   Install or refresh the workflow product in the current repo.
 - `rai init`
   Bootstrap workflow control-plane files in the current repo.
 - `rai milestone`
   Open a new full-workflow milestone.
+- `rai milestone-edit`
+  Rename or reshape the active milestone without hand-patching the canonical docs.
 - `rai doctor`
   Verify install/runtime integrity and host prerequisites. Use `--repair` for a dry-run self-heal plan.
 - `rai health`
@@ -62,7 +102,7 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 - `rai simplify`
   Thin facade for behavior-preserving cleanup.
 - `rai discuss`
-  Generate a discuss brief from current workflow state, open questions, and active assumptions.
+  Generate a discuss brief from current workflow state, open questions, and active assumptions. In `proposal_first` mode it first emits 2-3 options and waits for an approved choice before deepening the packet.
 - `rai questions`
   Capture unresolved questions in `docs/workflow/QUESTIONS.md`.
 - `rai assumptions`
@@ -80,9 +120,11 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 - `rai verify-shell`
   Run a bounded shell verification command and store normalized evidence.
 - `rai verify-browser`
-  Run smoke browser verification, optional `--adapter playwright`, and simple selector assertions.
+  Run smoke browser verification or real Playwright proof. When the target repo has `playwright` or `@playwright/test` installed, `--adapter auto --require-proof` captures a real screenshot and accessibility tree.
+- `rai api-surface`
+  Scan backend routes, middleware chains, auth signals, and data-store surfaces for API-heavy repositories or external local snapshots.
 - `rai verify-work`
-  Run the trust-layer verification pass, summarize gaps, and emit a fix plan when needed.
+  Run the trust-layer verification pass, summarize gaps, sync the shared findings/status model, and emit a release-control verify board when needed.
 - `rai packet`
   Compile, explain, lock, diff, sync, and verify role-aware packets.
 - `rai evidence`
@@ -91,12 +133,18 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
   Roadmap-compatible wrapper for the validation contract surface.
 - `rai checkpoint`
   Write a continuity checkpoint.
+- `rai telemetry`
+  Inspect routing telemetry and capture route-feedback outcomes.
 - `rai next-prompt`
   Generate a minimal or full resume prompt for the next session.
+- `rai repair`
+  Generate or apply the bounded self-healing repair plan for runtime drift and corrupt workflow state.
 - `rai quick`
   Start, inspect, close, or escalate quick mode.
 - `rai team`
   Plan or operate Team Lite orchestration and the adapter runtime.
+- `rai supervisor`
+  Run the runtime supervisor and terminal control room.
 - `rai subagents`
   Roadmap-compatible wrapper for `rai codex plan-subagents`.
 - `rai policy`
@@ -113,8 +161,10 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
   Show the workflow/operator profile and budget defaults.
 - `rai workspaces`
   Show the workspace/workstream registry center.
+- `rai workspace-impact`
+  Generate the current changed/impacted workspace map, blast radius, development waves, and verification queue for the active monorepo slice.
 - `rai hooks`
-  Seed or inspect the disabled-by-default hooks surface.
+  Enable, disable, validate, or inspect the disabled-by-default hooks surface.
 - `rai mcp`
   Inspect the repo-local MCP manifest surface.
 - `rai notify`
@@ -136,9 +186,13 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 - `rai patch-rollback`
   Reverse an applied patch bundle with `git apply -R --3way`.
 - `rai review`
-  Run the multi-pass review engine and write `.workflow/reports/review.md` plus structured findings.
+  Run the multi-pass review engine and write `.workflow/reports/review.md` plus structured findings, the shared findings registry, and correction-control artifacts.
 - `rai review-mode`
-  Run the deep review engine explicitly.
+  Run the deep review engine explicitly and keep the review-correction control plane synchronized.
+- `rai audit-repo`
+  Run the explicit repo-wide audit surface when you want a broad codebase scan without intent routing, ranked packages, and correction-wave planning.
+- `rai repo-proof`
+  Generate a compact proof pack for the current repo or an external local snapshot so repo truth, API surface, frontend readiness, and audit health land in one pass.
 - `rai review-orchestrate`
   Build package/persona/wave-based review orchestration for large repos and monorepos.
 - `rai review-tasks`
@@ -162,7 +216,7 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 - `rai state-atlas`
   Generate `docs/workflow/STATE-ATLAS.md` with required UX states and review hooks.
 - `rai frontend-brief`
-  Generate `docs/workflow/FRONTEND-BRIEF.md` as a one-shot pack for external-site frontend work.
+  Generate `docs/workflow/FRONTEND-BRIEF.md` as the full frontend artifact pack; prefer `map-frontend` + `ui-direction` + `ui-spec` for the lean path.
 - `rai ui-recipe`
   Generate `docs/workflow/UI-RECIPE.md` with a semantic prototype, stack scaffold, and translation notes.
 - `rai ui-spec`
@@ -181,10 +235,12 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
   Generate `docs/workflow/DESIGN-DEBT.md`.
 - `rai monorepo`
   Generate package-aware monorepo execution, review shards, and verify guidance.
+- `rai monorepo-control`
+  Generate the large-monorepo control room with dependency hubs, impact waves, workspace coordination, and verification sequencing.
 - `rai monorepo-mode`
-  Run the staged large-monorepo analysis mode, sync the root `AGENTS.md` monorepo layer, and emit `REPO_MAP`, `REVIEW_SCOPE`, `PATCH_PLAN`, and a prompt-rich report.
+  Run the staged large-monorepo analysis mode, sync the root `AGENTS.md` monorepo layer, emit `REPO_MAP`, `REVIEW_SCOPE`, `PATCH_PLAN`, and keep the large-repo board and correction planner synchronized.
 - `rai ship-readiness`
-  Score ship readiness from review, evidence, approvals, and verify-work results.
+  Score ship readiness from review, evidence, approvals, and verify-work results, then publish the release-control ship board.
 - `rai ship`
   Write `.workflow/reports/ship.md`.
 - `rai pr-brief`
@@ -218,7 +274,7 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 - `rai team supervise --cycles 3 --interval 5`
 - `rai team watch --interval 5`
 - `rai team conflicts`
-- `rai team merge-queue --apply-next|--apply-all`
+- `rai team merge-queue --apply-next|--apply-all` (validated worktree handoff; queued paths are verified in a fresh worktree and then exact file outputs are materialized)
 - `rai team quality`
 - `rai team pr-feedback import --file review-comments.json`
 - `rai team pr-feedback resolve --id comment-1`
@@ -238,17 +294,34 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 - `rai test` -> `.workflow/reports/test-guide.md`
 - `rai simplify` -> `.workflow/reports/simplify-guide.md`
 - `rai launch` -> `.workflow/runtime/launch.json`
+- `rai api-surface` -> `.workflow/runtime/api-surface.{json,md}` plus `.workflow/reports/api-surface.{json,md}` when write mode is enabled
+- `rai start` -> `.workflow/runtime/start-plan.{json,md}` including selected bundle, profile, add-ons, candidate bundles, operator tips, and the structured phase plan
+- `rai operate` -> `.workflow/reports/operating-center.{json,md}` plus `.workflow/runtime/operating-center.{json,md}`
+- `rai repo-config` -> `.workflow/repo-config.json` plus `.workflow/runtime/repo-config.{json,md}`
+- `rai trust` -> `.workflow/reports/trust-center.{json,md}` plus `.workflow/runtime/trust-center.{json,md}`
+- `rai release-control` -> `.workflow/reports/change-control.{json,md}`, refreshed closeout docs, and `.workflow/exports/{github-pr-comment.{md,json},github-check-summary.{md,json},github-actions-step-summary.md,github-actions-output.json,ci-gate.json,repo-status.json,status-badge.json,issue-tracker.json,slack-summary.{txt,json},export-manifest.json,control-plane-packet.json}`
+- `rai control-plane-publish` -> refresh `.workflow/exports/*` from the latest change-control artifact, including `control-plane-packet.json`, and optionally append summaries / outputs to GitHub Actions env files
+- `rai autopilot` -> `.workflow/reports/autopilot.{json,md}` plus `.workflow/runtime/autopilot.{json,md}`
+- `rai handoff` -> `.workflow/reports/handoff-os.{json,md}` plus `.workflow/reports/{handoff-compact.md,continuity-bundle.json}` with linked trust/release/explainability decision basis and runtime mirrors
+- `rai team-control` -> `.workflow/reports/team-control-room.{json,md}` plus runtime mirrors
+- `rai supervisor` -> `.workflow/orchestration/runtime/supervisor.json`
+- `rai measure` -> `.workflow/reports/measurement.{json,md}` plus `.workflow/reports/measurement-history.json` and control-plane integrity metrics
+- `rai explain` -> `.workflow/reports/explainability.{json,md}` plus runtime mirrors
+- `rai lifecycle` -> `.workflow/reports/lifecycle-center.{json,md}` plus runtime mirrors
+- `rai repair` -> `.workflow/runtime/repair-plan.json` when a bounded repair plan is generated
+- `rai review` / `rai review-mode` / `rai audit-repo` / `rai monorepo-mode` / `rai fix` -> `.workflow/reports/findings-registry.json` plus `.workflow/reports/correction-control.{json,md}` when the review-correction control plane is active
 - `rai hud` -> `.workflow/runtime/hud.json`
 - `rai manager` -> `.workflow/runtime/manager.json`
+- `rai telemetry` -> `.workflow/runtime/telemetry.json`
 - `rai next-prompt` -> `.workflow/runtime/next-prompt.md`
 - `rai verify-shell` -> `.workflow/verifications/shell/*`
 - `rai verify-browser` -> `.workflow/verifications/browser/*`
-- `rai verify-work` -> `.workflow/reports/verify-work.{md,json}`
+- `rai verify-work` -> `.workflow/reports/verify-work.{md,json}` plus `.workflow/reports/release-control.{md,json}`
 - `rai packet` -> `.workflow/packets/*` and `.workflow/cache/packet-locks.json`
 - `rai evidence` -> `.workflow/evidence-graph/latest.json`
-- `rai ship-readiness` -> `.workflow/reports/ship-readiness.{md,json}`
+- `rai ship-readiness` -> `.workflow/reports/ship-readiness.{md,json}` plus `.workflow/reports/release-control.{md,json}`
 - `rai review-orchestrate` -> `.workflow/reports/review-orchestration.{md,json}`
-- `rai codex` -> `.workflow/runtime/codex-control/*` with a virtual repo-local `.codex` root
+- `rai codex` -> native `.codex/*` plus backup journal and rollback metadata under `.workflow/runtime/codex-control/*`
 - `rai team mailbox` -> `.workflow/orchestration/runtime/mailbox.jsonl`
 - `rai team timeline` -> `.workflow/orchestration/runtime/timeline.jsonl`
 - `rai team supervise` / `rai team watch` -> `.workflow/orchestration/runtime/supervisor.json`
@@ -280,128 +353,45 @@ Use `rai help` for the starter flows, `rai help <topic>` for focused categories,
 - `rai design-debt` -> `docs/workflow/DESIGN-DEBT.md`
 - `rai policy` / `rai approvals` -> canonical `docs/workflow/POLICY.md` plus derived `.workflow/runtime/policy.json` and `.workflow/runtime/approvals.json`
 - `rai discuss` -> `.workflow/runtime/discuss.{json,md}`
-- `rai codex promptpack` -> `.workflow/runtime/codex-control/promptpack.{md,json}`
+- `rai codex promptpack` -> `.workflow/runtime/codex-control/promptpack.{md,json}` together with native `.codex/` profiles, hooks, and subagent context
 
 ## Backward-compatible scripts
 
-Fresh `rai setup` installs the focused `pilot` profile by default so package.json and the repo-local shell stay smaller on day one. Use `rai update --script-profile core` for the full shell with curated npm aliases, or `rai update --script-profile full` when you want the full `raiola:*` fallback surface restored.
+Fresh `rai setup` installs the focused `pilot` profile by default so package.json and the repo-local shell stay smaller on day one. The source package also keeps a compact npm script surface.
 
-- `npm run raiola:launch`
-- `npm run raiola:codex`
-- `npm run raiola:do`
-- `npm run raiola:note`
-- `npm run raiola:thread`
-- `npm run raiola:backlog`
-- `npm run raiola:manager`
-- `npm run raiola:dashboard`
-- `npm run raiola:setup`
-- `npm run raiola:init`
-- `npm run raiola:hud`
-- `npm run raiola:next`
-- `npm run raiola:doctor`
-- `npm run raiola:health`
-- `npm run raiola:discuss`
-- `npm run raiola:repair`
-- `npm run raiola:questions`
-- `npm run raiola:assumptions`
-- `npm run raiola:claims`
-- `npm run raiola:secure`
-- `npm run raiola:explore`
-- `npm run raiola:verify-shell`
-- `npm run raiola:verify-browser`
-- `npm run raiola:verify-work`
-- `npm run raiola:packet-os`
-- `npm run raiola:evidence`
-- `npm run raiola:validation-map`
-- `npm run raiola:next-prompt`
-- `npm run raiola:route`
-- `npm run raiola:stats`
-- `npm run raiola:profile`
-- `npm run raiola:workspaces`
-- `npm run raiola:checkpoint`
-- `npm run raiola:quick`
-- `npm run raiola:team`
-- `npm run raiola:team-runtime`
-- `npm run raiola:subagents`
-- `npm run raiola:policy`
-- `npm run raiola:approval`
-- `npm run raiola:approvals`
-- `npm run raiola:hooks`
-- `npm run raiola:mcp`
-- `npm run raiola:notify`
-- `npm run raiola:daemon`
-- `npm run raiola:gc`
-- `npm run raiola:incident`
-- `npm run raiola:fleet`
-- `npm run raiola:sessions`
-- `npm run raiola:patch-review`
-- `npm run raiola:patch-apply`
-- `npm run raiola:patch-rollback`
-- `npm run raiola:spec`
-- `npm run raiola:plan`
-- `npm run raiola:build`
-- `npm run raiola:test`
-- `npm run raiola:simplify`
-- `npm run raiola:review`
-- `npm run raiola:review-mode`
-- `npm run raiola:monorepo-mode`
-- `npm run raiola:review-orchestrate`
-- `npm run raiola:pr-review`
-- `npm run raiola:re-review`
-- `npm run raiola:ui-direction`
-- `npm run raiola:design-dna`
-- `npm run raiola:page-blueprint`
-- `npm run raiola:design-md`
-- `npm run raiola:component-strategy`
-- `npm run raiola:design-benchmark`
-- `npm run raiola:state-atlas`
-- `npm run raiola:frontend-brief`
-- `npm run raiola:ui-recipe`
-- `npm run raiola:ui-spec`
-- `npm run raiola:ui-plan`
-- `npm run raiola:ui-review`
-- `npm run raiola:preview`
-- `npm run raiola:component-map`
-- `npm run raiola:responsive-matrix`
-- `npm run raiola:design-debt`
-- `npm run raiola:monorepo`
-- `npm run raiola:ship-readiness`
-- `npm run raiola:ship`
-- `npm run raiola:pr-brief`
-- `npm run raiola:release-notes`
-- `npm run raiola:session-report`
-- `npm run raiola:update`
-- `npm run raiola:uninstall`
-- `npm run raiola:benchmark`
+Use the universal npm entry everywhere:
+
+- `npm run rai -- help quickstart`
+- `npm run rai -- start --goal "land the next safe slice"`
+- `npm run rai -- repo-proof -- --repo ../candidate-repo --json`
+- `npm run rai -- verify --goal "ship readiness kontrolu"`
+
+When you explicitly want repo-local fallback aliases inside an installed repository, upgrade the install surface:
+
+- `rai update --script-profile core`
+- `rai update --script-profile full`
+
+The `full` profile restores the `raiola:*` compatibility namespace from `runtime_script_catalog.js`, so older automation and notes can keep working without forcing the source package itself to carry a giant npm script catalog.
 
 ## Command mapping examples
 
-- `rai launch` -> `npm run raiola:launch`
-- `rai codex` -> `npm run raiola:codex`
-- `rai do` -> `npm run raiola:do -- "..." `
-- `rai note` -> `npm run raiola:note -- "..." `
-- `rai manager` -> `npm run raiola:manager`
-- `rai doctor` -> `npm run raiola:doctor -- --strict`
-- `rai health` -> `npm run raiola:health -- --strict`
-- `rai hud` -> `npm run raiola:hud -- --compact`
-- `rai next` -> `npm run raiola:next`
-- `rai explore` -> `npm run raiola:explore -- "query"`
-- `rai verify-shell` -> `npm run raiola:verify-shell -- --cmd "npm test"`
-- `rai verify-browser` -> `npm run raiola:verify-browser -- --url http://localhost:3000`
-- `rai packet` -> `npm run raiola:packet-os -- compile --step plan`
-- `rai checkpoint` -> `npm run raiola:checkpoint -- --next "Resume here"`
-- `rai review-orchestrate` -> `npm run raiola:review-orchestrate`
-- `rai ui-direction` -> `npm run raiola:ui-direction`
-- `rai design-dna` -> `npm run raiola:design-dna`
-- `rai page-blueprint` -> `npm run raiola:page-blueprint`
-- `rai design-md` -> `npm run raiola:design-md`
-- `rai component-strategy` -> `npm run raiola:component-strategy`
-- `rai design-benchmark` -> `npm run raiola:design-benchmark`
-- `rai state-atlas` -> `npm run raiola:state-atlas`
-- `rai frontend-brief` -> `npm run raiola:frontend-brief`
-- `rai ui-recipe` -> `npm run raiola:ui-recipe`
-- `rai ui-spec` -> `npm run raiola:ui-spec`
-- `rai ui-review` -> `npm run raiola:ui-review -- --url ./preview.html`
-- `rai monorepo` -> `npm run raiola:monorepo`
-- `rai codex promptpack` -> `npm run raiola:codex -- promptpack --goal "review the diff"`
-- `rai ship-readiness` -> `npm run raiola:ship-readiness`
+- `rai launch` -> `npm run rai -- launch`
+- `rai codex` -> `npm run rai -- codex`
+- `rai do "..."` -> `npm run rai -- do "..."`
+- `rai doctor --strict` -> `npm run rai -- doctor --strict`
+- `rai verify-shell --cmd "npm test"` -> `npm run rai -- verify-shell --cmd "npm test"`
+- `rai repo-proof --repo ../candidate-repo --json` -> `npm run rai -- repo-proof -- --repo ../candidate-repo --json`
+- `rai start recommend --goal "ship the premium dashboard surface"` -> `npm run rai -- start recommend --goal "ship the premium dashboard surface"`
+- `rai start frontend-ship --goal "run UI release signoff with browser proof" --with recommended` -> `npm run rai -- start frontend-ship --goal "run UI release signoff with browser proof" --with recommended`
+- `rai ship-readiness` -> `npm run rai -- ship-readiness`
+
+### Codex operator extras
+
+- `rai codex operator --goal "..."`
+  Build a native Codex operator packet with repo-local `CODEX_HOME`, profile, slash flow, subagent recommendations, app-server/MCP entrypoints, and automation/worktree posture.
+- `rai codex cockpit --goal "..." --json`
+  Materialize a runnable launch kit with launcher scripts, prompt/context packs, resume files, and an explicit preferred entrypoint.
+- `rai codex telemetry --json`
+  Summarize native hook telemetry so warnings, denials, interruptions, and user steering become a reusable operator signal.
+- `rai codex managed-export --json`
+  Export a Trust-aware `requirements.toml` template for managed Codex deployment.

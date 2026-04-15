@@ -1,5 +1,10 @@
 const path = require('node:path');
 const {
+  defaultDiscussProposalState,
+  discussBreakdownLines,
+  renderDiscussProposalSection,
+  } = require('./discuss_proposals');
+const {
   renderAcceptanceCriteriaTable,
   renderAlternativesTable,
   renderAssumptionsTable,
@@ -21,7 +26,7 @@ const {
   renderValidationContract,
   renderWaveExecutionPolicy,
   renderWaveStructureTable,
-} = require('./new_milestone_content');
+  } = require('./new_milestone_content');
 const {
   assertWorkflowFiles,
   computeWindowStatus,
@@ -40,7 +45,6 @@ const {
   parseSeedEntries,
   parseWorkstreamTable,
   profileDefaultsFor,
-  read,
   renderMarkdownTable,
   renderMilestoneTable,
   renderRefTable,
@@ -56,8 +60,11 @@ const {
   today,
   warnAgentsSize,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 
 function printHelp() {
   console.log(`
@@ -137,6 +144,16 @@ function main() {
   const automationMode = automationModeRaw
     ? normalizeAutomationMode(automationModeRaw, '')
     : preferences.repoAutomationMode;
+  const discussMode = preferences.discussMode;
+  const discussBreakdown = discussBreakdownLines(discussMode);
+  const proposalState = defaultDiscussProposalState(discussMode);
+  const discussNeedsApproval = discussMode === 'proposal_first';
+  const discussNextAction = discussNeedsApproval
+    ? 'Generate 2-3 discuss proposals and record approval before expanding the packet'
+    : 'Fill User Intent and Requirement List first';
+  const discussRemainingItems = discussNeedsApproval
+    ? 'Discuss proposal approval -> research -> packet refresh'
+    : 'Discuss -> research -> packet refresh';
 
   if (profileOverrideRaw && !profileOverride) {
     throw new Error('--profile must be one of: lite, standard, full');
@@ -231,11 +248,9 @@ function main() {
 - Automation status:
   - \`${automationStatus}\`
 - Discuss mode:
-  - \`${preferences.discussMode}\`
+  - \`${discussMode}\`
 - Discuss breakdown:
-  - \`intent capture -> user intent + requirement list\`
-  - \`constraint extraction -> explicit constraints + unanswered high-leverage questions\`
-  - \`execution shaping -> alternatives considered + success rubric\`
+${discussBreakdown.map((line) => `  ${line}`).join('\n')}
 - Clarifying questions / assumptions:
   - \`Write these into the assumptions table in CONTEXT.md\`
 - Seed intake:
@@ -276,7 +291,10 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   status = replaceSection(status, 'Inferred', '- `Run chunk planning will become clear after research`');
   status = replaceSection(status, 'Unknown', '- `Full file scope is not known until discuss completes`');
   status = replaceSection(status, 'Next', [
-    '- `Start intent capture, then move through constraint extraction and execution shaping`',
+    `- \`${discussNextAction}\``,
+    discussNeedsApproval
+      ? '- `Do not deepen the discuss packet until one proposal option is approved`'
+      : '- `Move through intent capture, constraint extraction, and execution shaping`',
     '- `Use raiola:packet and raiola:next to inspect packet/budget state`',
     automationMode === 'manual'
       ? '- `Move phase boundaries only when the user asks for the next workflow step`'
@@ -285,7 +303,9 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   status = replaceSection(status, 'Risks', '- `Do not move to planning before discuss and research are complete`');
   status = replaceOrAppendSection(status, 'At-Risk Requirements', '- `No at-risk requirements identified yet`');
   status = replaceSection(status, 'Tests Run', '- `Milestone seeded; verify commands will be narrowed after research`');
-  status = replaceSection(status, 'Suggested Next Step', '- `Fill User Intent and Requirement List first, then capture constraints and success rubric in CONTEXT.md`');
+  status = replaceSection(status, 'Suggested Next Step', `- \`${discussNeedsApproval
+    ? 'Review the discuss proposal shortlist first, then approve one option in CONTEXT.md'
+    : 'Fill User Intent and Requirement List first, then capture constraints and success rubric in CONTEXT.md'}\``);
 
   execplan = replaceOrAppendField(execplan, 'Last updated', today());
   execplan = replaceField(execplan, 'Packet version', '5');
@@ -312,8 +332,8 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
 - Commit granularity default: \`${effectivePreferences.commitGranularity}\`
 - Atomic commit mode: \`off\`
 - Completed items: \`None\`
-- Remaining items: \`Discuss -> research -> packet refresh\`
-- Resume from item: \`Discuss start\`
+- Remaining items: \`${discussRemainingItems}\`
+- Resume from item: \`${discussNeedsApproval ? 'Discuss proposal approval' : 'Discuss start'}\`
 - Estimated packet tokens: \`0\`
 - Estimated execution overhead: \`2000\`
 - Estimated verify overhead: \`1000\`
@@ -336,7 +356,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
 - Finished since last checkpoint: \`None\`
 - Remaining scope: \`Discuss -> research -> plan -> execute -> audit -> complete\`
 - Drift from plan: \`none_noted\`
-- Next one action: \`Fill User Intent and Requirement List first\`
+- Next one action: \`${discussNextAction}\`
 - Current run chunk: \`NONE\`
 - Completed items: \`None\`
 - Touched files: \`Still unknown until discuss/research completes\`
@@ -384,7 +404,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   context = replaceOrAppendField(context, 'Current step mode', 'explicit');
   context = replaceOrAppendField(context, 'Step fulfillment state', 'pending_explicit');
   context = replaceOrAppendField(context, 'Last control intent', 'none');
-  context = replaceField(context, 'Context status', 'initial_from_discuss');
+  context = replaceField(context, 'Context status', discussNeedsApproval ? 'awaiting_proposal_approval' : 'initial_from_discuss');
   context = replaceField(context, 'Discuss subphase', 'intent_capture');
   context = replaceField(context, 'Automation mode', automationMode);
   context = replaceField(context, 'Automation status', automationStatus);
@@ -396,7 +416,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   context = replaceField(context, 'Hard cap tokens', String(effectivePreferences.discussBudget + effectivePreferences.tokenReserve));
   context = replaceField(context, 'Reasoning profile', 'balanced');
   context = replaceField(context, 'Confidence summary', 'initial_discuss_unknowns');
-  context = replaceField(context, 'Discuss mode', preferences.discussMode);
+  context = replaceField(context, 'Discuss mode', discussMode);
   context = replaceSection(context, 'Canonical Refs', renderRefTable([
     { class: 'source_of_truth', ref: 'AGENTS.md', why: 'Root workflow protocol' },
     { class: 'source_of_truth', ref: path.relative(process.cwd(), paths.preferences).replace(/\\/g, '/'), why: 'Discuss and budget defaults' },
@@ -425,11 +445,11 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
     '- Critical decisions: `Workflow remains markdown-first and explicit opt-in`',
     '- Current capability slice: `Discuss packet for the active milestone`',
   ].join('\n'));
-  context = replaceSection(context, 'Discuss Breakdown', [
-    '- `Intent capture -> turn the user request into concrete intent and requirements`',
-    '- `Constraint extraction -> capture explicit constraints and unanswered high-leverage questions`',
-    '- `Execution shaping -> compare approaches and define an observable success rubric`',
-  ].join('\n'));
+  context = replaceSection(context, 'Discuss Breakdown', discussBreakdown.join('\n'));
+  context = replaceOrAppendSection(context, 'Discuss Proposal', renderDiscussProposalSection({
+    mode: discussMode,
+    ...proposalState,
+  }));
   context = replaceSection(context, 'User Intent', `
 - Primary request:
   - \`${milestoneGoal}\`
@@ -520,17 +540,21 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
   handoff = replaceField(handoff, 'Step', 'discuss');
   handoff = replaceField(handoff, 'Automation mode', automationMode);
   handoff = replaceField(handoff, 'Automation status', automationStatus);
-  handoff = replaceField(handoff, 'Resume anchor', 'Discuss start');
+  handoff = replaceField(handoff, 'Resume anchor', discussNeedsApproval ? 'Discuss proposal approval' : 'Discuss start');
   handoff = replaceField(handoff, 'Packet hash', 'pending_sync');
   handoff = replaceField(handoff, 'Current chunk cursor', '0/0');
   handoff = replaceField(handoff, 'Expected first command', 'npm run raiola:health -- --strict');
   handoff = replaceSection(handoff, 'Snapshot', '- `Milestone opened; ready to begin the discuss step`');
   handoff = replaceSection(handoff, 'Immediate Next Action', `
-- \`${preferences.discussMode === 'assumptions' ? 'Start the codebase-first assumptions discuss flow' : 'Start the discuss questions'}\`
+- \`${discussNeedsApproval
+    ? 'Generate the discuss proposal shortlist and record approval'
+    : preferences.discussMode === 'assumptions'
+      ? 'Start the codebase-first assumptions discuss flow'
+      : 'Start the discuss questions'}\`
 `);
   handoff = replaceSection(handoff, 'Execution Cursor', `
 - \`Completed checklist items: None\`
-- \`Remaining items: Discuss -> research -> packet refresh\`
+- \`Remaining items: ${discussRemainingItems}\`
 - \`Next unread canonical refs: ${path.relative(process.cwd(), paths.context)}; ${path.relative(process.cwd(), paths.execplan)}; ${path.relative(process.cwd(), paths.validation)}\`
 `);
   handoff = replaceSection(handoff, 'Packet Snapshot', `
@@ -543,7 +567,7 @@ ${renderMinimumDoneChecklist(effectiveProfile)}
 - Finished since last checkpoint: \`None\`
 - Remaining scope: \`Discuss -> research -> plan -> execute -> audit -> complete\`
 - Drift from plan: \`none_noted\`
-- Next one action: \`Fill User Intent and Requirement List first\`
+- Next one action: \`${discussNextAction}\`
 - Affected files: \`${path.relative(process.cwd(), paths.context)}; ${path.relative(process.cwd(), paths.execplan)}; ${path.relative(process.cwd(), paths.validation)}; ${path.relative(process.cwd(), paths.window)}\`
 - Open requirement IDs: \`R1\`
 - Active validation IDs: \`AC1\`

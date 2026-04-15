@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raiola/install-compatibility/v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "targetRepo",
+    "verdict",
+    "risks"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raiola/install-compatibility/v1"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "targetRepo": {
+      "type": "string"
+    },
+    "verdict": {
+      "type": "string"
+    },
+    "detectedTooling": {
+      "type": "object"
+    },
+    "plannedMutations": {
+      "type": "object"
+    },
+    "risks": {
+      "type": "array"
+    },
+    "conflicts": {
+      "type": "object"
+    },
+    "rollback": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

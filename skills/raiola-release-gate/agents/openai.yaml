@@ -1,0 +1,4 @@
+name: raiola-release-gate
+description: Release and merge gate skill for trust posture, blockers, migration notes, and ship-readiness closure.
+version: 0.4.7
+entrypoint: SKILL.md

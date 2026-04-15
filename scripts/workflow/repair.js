@@ -2,10 +2,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const {
-  ensureDir,
   parseArgs,
   resolveWorkflowRoot,
 } = require('./common');
+const { ensureDir } = require('./io/files');
 const {
   loadTargetRuntimeScripts,
   missingGitignoreEntries,
@@ -17,6 +17,7 @@ const {
   writeVersionMarker,
 } = require('./install_common');
 const { readJsonIfExists } = require('./runtime_helpers');
+const { listIndexedRepoFiles } = require('./fs_index');
 
 function printHelp() {
   console.log(`
@@ -35,6 +36,21 @@ Options:
 
 function relativePath(fromDir, targetPath) {
   return path.relative(fromDir, targetPath).replace(/\\/g, '/');
+}
+
+function walkFiles(dirPath, files = []) {
+  if (!fs.existsSync(dirPath)) {
+    return files;
+  }
+  for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      walkFiles(fullPath, files);
+    } else if (entry.isFile()) {
+      files.push(fullPath);
+    }
+  }
+  return files;
 }
 
 function readJsonValidity(filePath) {
@@ -124,10 +140,31 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
   const hudRuntimePath = path.join(cwd, '.workflow', 'runtime', 'hud.json');
   const launchRuntimePath = path.join(cwd, '.workflow', 'runtime', 'launch.json');
   const managerRuntimePath = path.join(cwd, '.workflow', 'runtime', 'manager.json');
+  const securePhaseRuntimePath = path.join(cwd, '.workflow', 'runtime', 'secure-phase.json');
+  const runtimePolicyPath = path.join(cwd, '.workflow', 'runtime', 'policy.json');
+  const runtimeApprovalsPath = path.join(cwd, '.workflow', 'runtime', 'approvals.json');
+  const safetyControlRuntimePath = path.join(cwd, '.workflow', 'runtime', 'safety-control-room.json');
+  const telemetryRuntimePath = path.join(cwd, '.workflow', 'runtime', 'codex-control', 'telemetry.json');
+  const latestSessionRuntimePath = path.join(cwd, '.workflow', 'runtime', 'codex-control', 'telemetry', 'latest-session.json');
+  const operatorRuntimePath = path.join(cwd, '.workflow', 'runtime', 'codex-control', 'operator.json');
   const manifestPath = path.join(cwd, '.workflow', 'product-manifest.json');
   const versionPath = path.join(cwd, '.workflow', 'VERSION.md');
 
-  for (const filePath of [statePath, fsIndexPath, packetCachePath, hudRuntimePath, launchRuntimePath, managerRuntimePath]) {
+  for (const filePath of [
+    statePath,
+    fsIndexPath,
+    packetCachePath,
+    hudRuntimePath,
+    launchRuntimePath,
+    managerRuntimePath,
+    securePhaseRuntimePath,
+    runtimePolicyPath,
+    runtimeApprovalsPath,
+    safetyControlRuntimePath,
+    telemetryRuntimePath,
+    latestSessionRuntimePath,
+    operatorRuntimePath,
+  ]) {
     const status = readJsonValidity(filePath);
     if (status.exists && !status.valid) {
       runtimeIssues.push({
@@ -198,7 +235,7 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
       if (check.status === 'pass') {
         continue;
       }
-      if (String(check.message).includes('packet hash must not be stale') || String(check.message).includes('input hash must be present')) {
+      if (check.category === 'runtime-sync' || String(check.message).includes('runtime packet hash drift detected') || String(check.message).includes('runtime packet input hash must be present')) {
         manualIssues.push({
           type: 'packet_sync_needed',
           command: 'node scripts/workflow/build_packet.js --all --sync',
@@ -219,9 +256,13 @@ function buildRepairPlan(cwd, rootDir, options = {}) {
     if (issue.type === 'corrupt_json') {
       actions.push({
         safe: true,
-        label: `Remove corrupt runtime JSON -> ${issue.filePath}`,
+        label: `Repair corrupt runtime JSON -> ${issue.filePath}`,
         apply() {
-          fs.rmSync(path.join(cwd, issue.filePath), { force: true });
+          const absolutePath = path.join(cwd, issue.filePath);
+          fs.rmSync(absolutePath, { force: true });
+          if (issue.filePath === '.workflow/fs-index.json') {
+            listIndexedRepoFiles(cwd, { refreshMode: 'full' });
+          }
         },
       });
     }

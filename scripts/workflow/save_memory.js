@@ -7,7 +7,6 @@ const {
   parseArgs,
   parseMemoryEntries,
   parseMemoryEntry,
-  read,
   renderMemorySection,
   replaceField,
   replaceSection,
@@ -15,8 +14,11 @@ const {
   toList,
   warnAgentsSize,
   workflowPaths,
-  write,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 
 function printHelp() {
   console.log(`

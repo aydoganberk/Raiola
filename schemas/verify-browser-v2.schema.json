@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "raiola/verify-browser/v2",
+  "type": "object",
+  "required": [
+    "schema",
+    "contractVersion",
+    "url",
+    "verdict",
+    "proofStatus",
+    "execution"
+  ],
+  "properties": {
+    "schema": {
+      "const": "raiola/verify-browser/v2"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "verdict": {
+      "type": "string"
+    },
+    "proofStatus": {
+      "type": "string"
+    },
+    "execution": {
+      "type": "object"
+    },
+    "artifacts": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

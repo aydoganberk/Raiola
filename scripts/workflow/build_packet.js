@@ -9,9 +9,11 @@ const {
   resolveWorkflowRoot,
   syncPacketHash,
   workflowPaths,
-  read,
-  write,
 } = require('./common');
+const {
+  readText: read,
+  writeText: write,
+} = require('./io/files');
 
 function printHelp() {
   console.log(`

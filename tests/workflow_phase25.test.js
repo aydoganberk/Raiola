@@ -15,17 +15,23 @@ function run(command, args, cwd) {
 }
 
 test('source repo ships portable agent packaging, lifecycle commands, and session-start hook assets', () => {
-  const plugin = JSON.parse(fs.readFileSync(path.join(repoRoot, '.claude-plugin', 'plugin.json'), 'utf8'));
-  const marketplace = JSON.parse(fs.readFileSync(path.join(repoRoot, '.claude-plugin', 'marketplace.json'), 'utf8'));
+  const plugin = JSON.parse(fs.readFileSync(path.join(repoRoot, 'plugins', 'raiola-codex-optimizer', '.codex-plugin', 'plugin.json'), 'utf8'));
+  const marketplace = JSON.parse(fs.readFileSync(path.join(repoRoot, '.agents', 'plugins', 'marketplace.json'), 'utf8'));
   const hooks = JSON.parse(run('node', [path.join(repoRoot, 'scripts', 'workflow', 'hooks.js'), 'validate', '--json'], repoRoot));
 
-  assert.equal(plugin.commands, './.claude/commands');
-  assert.equal(marketplace.plugins[0].name, 'raiola');
+  assert.equal(plugin.name, 'raiola-codex-optimizer');
+  assert.equal(marketplace.plugins[0].name, 'raiola-codex-optimizer');
+  assert.equal(hooks.verdict, 'pass');
+  assert.equal(hooks.registrationRequired, false);
+  assert.equal(hooks.registrationPresent, false);
   assert.equal(hooks.shippedHookAssets.present, true);
-  assert.equal(hooks.shippedHookAssets.hookConfig, 'hooks/hooks.json');
-  assert.equal(hooks.shippedHookAssets.sessionStart, 'hooks/session-start.sh');
+  assert.equal(hooks.shippedHookAssets.hookConfig, '.codex/hooks.json');
+  assert.equal(hooks.shippedHookAssets.sessionStart, '.codex/hooks/session_start.js');
+  assert.equal(hooks.shippedHookAssets.preTool, '.codex/hooks/pre_tool_use_policy.js');
   assert.equal(hooks.shippedHookAssets.metaSkill, 'skills/using-raiola/SKILL.md');
-  assert.ok(fs.existsSync(path.join(repoRoot, 'agents', 'code-reviewer.md')));
+  assert.ok(fs.existsSync(path.join(repoRoot, '.codex', 'config.toml')));
+  assert.ok(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'reviewer.toml')));
+  assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'codex', 'prompts', 'review.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'references', 'ship-readiness-checklist.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'skills', 'using-raiola', 'SKILL.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.claude', 'commands', 'code-simplify.md')));

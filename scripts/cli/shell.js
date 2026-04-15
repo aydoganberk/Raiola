@@ -4,22 +4,32 @@ const fs = require('node:fs');
 const path = require('node:path');
 const childProcess = require('node:child_process');
 const { readProductManifest } = require('../workflow/product_manifest');
+const { listWorkflowBundles, findWorkflowBundle } = require('../workflow/workflow_bundle_catalog');
+const { listStartAddOns, listStartProfiles } = require('../workflow/workflow_start_intelligence');
 
 const CLI_COMMANDS = {
   on: { script: 'onboarding.js', description: 'Open Raiola onboarding and propose the next milestone from a blank state.' },
   launch: { script: 'launch.js', description: 'Strong-start launcher for the current Codex session.' },
   codex: { script: 'codex_control.js', description: 'Operate the safe Codex control plane.' },
+  start: { script: 'start.js', description: 'Open a productized workflow bundle that groups overlapping commands under one structured entry.' },
   do: { script: 'do.js', description: 'Route a natural-language intent into the right workflow lane.' },
+  audit: { script: 'audit.js', description: 'Intent-level audit facade that resolves into repo-audit, review-mode, monorepo-mode, or ui-review.' },
+  fix: { script: 'fix.js', description: 'Intent-level correction facade that turns audit or review output into the next bounded fix workflow.' },
+  verify: { script: 'verify.js', description: 'Intent-level verification facade that resolves into verify-work or ship-readiness with audit-aware trust gates.' },
   note: { script: 'note.js', description: 'Capture a low-friction workflow note and optionally promote it.' },
   thread: { script: 'thread.js', description: 'Open, list, and resume named workflow threads.' },
   backlog: { script: 'backlog.js', description: 'Capture and review workflow backlog items.' },
   manager: { script: 'manager.js', description: 'Show the operator manager surface.' },
   dashboard: { script: 'dashboard.js', description: 'Generate the local operator dashboard HTML surface.' },
+  supervisor: { script: 'runtime_supervisor.js', description: 'Run the runtime supervisor and terminal control room.' },
+  telemetry: { script: 'telemetry.js', description: 'Inspect routing telemetry and capture route-feedback outcomes.' },
   setup: { script: 'setup.js', description: 'Install or refresh the workflow product in the current repo.' },
   init: { script: 'init.js', description: 'Bootstrap workflow control-plane files in the current repo.' },
   milestone: { script: 'new_milestone.js', description: 'Open a new full-workflow milestone.' },
+  'milestone-edit': { script: 'milestone_edit.js', description: 'Rename or reshape the active milestone without manual patching.' },
   doctor: { script: 'doctor.js', description: 'Check install health and workflow contract integrity.' },
   health: { script: 'health.js', description: 'Check runtime health and validation integrity.' },
+  repair: { script: 'repair.js', description: 'Generate or apply the bounded self-healing repair plan for runtime drift and corrupt workflow state.' },
   spec: { script: 'spec.js', description: 'Define the next slice before coding through the lifecycle facade.' },
   plan: { script: 'plan.js', description: 'Break the current slice into explicit plan chunks and gates.' },
   build: { script: 'build.js', description: 'Translate the active plan into the next safe execution slice.' },
@@ -62,6 +72,9 @@ const CLI_COMMANDS = {
   'patch-review': { script: 'patch_review.js', description: 'Review collected patch bundles.' },
   'patch-apply': { script: 'patch_apply.js', description: 'Apply a collected patch bundle.' },
   'patch-rollback': { script: 'patch_rollback.js', description: 'Rollback an applied patch bundle.' },
+  'audit-repo': { script: 'audit_repo.js', description: 'Run a repo-native full repository health audit with findings, heatmap, and prompt pack outputs.' },
+  'repo-proof': { script: 'repo_proof.js', description: 'Generate a compact proof pack for the current repo or an external local snapshot.' },
+  'api-surface': { script: 'api_surface.js', description: 'Scan route, middleware, auth, and data-store surfaces for backend/API work.' },
   review: { script: 'review.js', description: 'Generate a review-ready closeout package.' },
   'review-mode': { script: 'review_mode.js', description: 'Run the deep multi-pass review engine.' },
   'review-orchestrate': { script: 'review_orchestrate.js', description: 'Build package/persona/wave-based review orchestration.' },
@@ -75,7 +88,7 @@ const CLI_COMMANDS = {
   'component-strategy': { script: 'component_strategy.js', description: 'Generate reuse/extract/build guidance for the current frontend target.' },
   'design-benchmark': { script: 'design_benchmark.js', description: 'Generate differentiation plays and commodity-risk checks from the selected design blend.' },
   'state-atlas': { script: 'state_atlas.js', description: 'Generate the required UX state atlas for the current frontend slice.' },
-  'frontend-brief': { script: 'frontend_brief.js', description: 'Generate a one-shot external-site frontend brief pack.' },
+  'frontend-brief': { script: 'frontend_brief.js', description: 'Generate the full frontend brief pack after lean surface detection is no longer enough.' },
   'ui-recipe': { script: 'ui_recipe.js', description: 'Generate a framework-aware UI recipe scaffold.' },
   'ui-spec': { script: 'ui_spec.js', description: 'Generate the canonical UI specification.' },
   'ui-plan': { script: 'ui_plan.js', description: 'Generate the UI execution plan.' },
@@ -87,6 +100,22 @@ const CLI_COMMANDS = {
   monorepo: { script: 'monorepo.js', description: 'Generate package-aware monorepo execution and verify guidance.' },
   'monorepo-mode': { script: 'monorepo_mode.js', description: 'Run the staged large-monorepo analysis, review, patch-plan, and verify flow.' },
   'ship-readiness': { script: 'ship_readiness.js', description: 'Score ship readiness from review, evidence, approvals, and verify-work.' },
+  trust: { script: 'trust_center.js', description: 'Open the trust and governance center that answers whether it is safe to start, merge, or ship.' },
+  'release-control': { script: 'release_control.js', description: 'Open the release/change control plane with exports, rollback visibility, and closeout artifacts.' },
+  operate: { script: 'operate.js', description: 'Open the unified engineering operating center that refreshes and ranks the core control planes.' },
+  'control-plane-publish': { script: 'control_plane_publish.js', description: 'Regenerate GitHub / CI / Slack export bridge artifacts from the current change-control state.' },
+  autopilot: { script: 'autopilot.js', description: 'Suggest routine automation lanes, recovery flows, and branch-aware operator routines.' },
+  handoff: { script: 'handoff.js', description: 'Compile the knowledge continuity / handoff OS surface for the current work.' },
+  'team-control': { script: 'team_control_room.js', description: 'Open the multi-agent / team control room with ownership, waves, and escalations.' },
+  'repo-config': { script: 'repo_config.js', description: 'Inspect or materialize the repo-native control-plane configuration and stack profile defaults.' },
+  'repo-control': { script: 'repo_control.js', description: 'Open the repo-wide control room with package graph, hotspots, workspaces, and Codex follow-through.' },
+  'workspace-impact': { script: 'workspace_impact.js', description: 'Map changed and impacted workspaces, blast radius, and development waves for the current monorepo surface.' },
+  'monorepo-control': { script: 'monorepo_control.js', description: 'Open the large-monorepo control room with impact waves, workspace ownership, and verification sequencing.' },
+  'frontend-control': { script: 'frontend_control.js', description: 'Open the frontend control room with evidence, state coverage, design debt, and reuse signals.' },
+  'safety-control': { script: 'safety_control.js', description: 'Open the safety control room with security posture, failure forecasts, and self-healing repair guidance.' },
+  measure: { script: 'measure.js', description: 'Show ROI, throughput, verification, and debt metrics for the workflow product.' },
+  explain: { script: 'explain.js', description: 'Explain why the current lane, bundle, and confidence were chosen and what deep mode would add.' },
+  lifecycle: { script: 'lifecycle_center.js', description: 'Open install, upgrade, repair, drift, and self-healing lifecycle status in one surface.' },
   ship: { script: 'ship.js', description: 'Generate a ship-ready package.' },
   'pr-brief': { script: 'pr_brief.js', description: 'Generate a PR brief draft.' },
   'release-notes': { script: 'release_notes.js', description: 'Generate release notes.' },
@@ -102,6 +131,10 @@ const CLI_COMMAND_PROFILES = Object.freeze({
     'launch',
     'codex',
     'do',
+    'audit',
+    'repo-proof',
+    'fix',
+    'verify',
     'note',
     'thread',
     'backlog',
@@ -112,6 +145,7 @@ const CLI_COMMAND_PROFILES = Object.freeze({
     'milestone',
     'doctor',
     'health',
+    'repair',
     'spec',
     'plan',
     'build',
@@ -139,8 +173,8 @@ const COMMAND_GROUPS = Object.freeze([
     title: 'Solo Daily Loop',
     description: 'Single-operator setup, routing, continuity, and daily execution surfaces.',
     commands: [
-      'setup', 'init', 'doctor', 'health', 'on', 'launch', 'do', 'note', 'thread', 'backlog',
-      'hud', 'manager', 'next', 'explore', 'checkpoint', 'next-prompt', 'quick', 'milestone',
+      'setup', 'init', 'doctor', 'health', 'repair', 'on', 'launch', 'start', 'do', 'audit', 'fix', 'verify', 'note', 'thread', 'backlog',
+      'hud', 'manager', 'next', 'explore', 'checkpoint', 'next-prompt', 'quick', 'milestone', 'milestone-edit',
     ],
   },
   {
@@ -148,9 +182,17 @@ const COMMAND_GROUPS = Object.freeze([
     title: 'Deep Review',
     description: 'Route risk, run review passes, collect evidence, and clear ship gates.',
     commands: [
-      'route', 'review', 'review-mode', 'monorepo-mode', 'review-orchestrate', 'review-tasks', 'pr-review', 're-review',
-      'verify-shell', 'verify-browser', 'verify-work', 'packet', 'evidence', 'validation-map',
+      'route', 'audit-repo', 'repo-proof', 'review', 'review-mode', 'monorepo-mode', 'review-orchestrate', 'review-tasks', 'pr-review', 're-review',
+      'verify-shell', 'verify-browser', 'verify-work', 'packet', 'evidence', 'validation-map', 'api-surface',
       'ship-readiness',
+    ],
+  },
+  {
+    id: 'planes',
+    title: 'Product Control Planes',
+    description: 'Repo-native control planes that compress many capabilities into a few operator surfaces.',
+    commands: [
+      'repo-config', 'repo-control', 'monorepo-control', 'frontend-control', 'safety-control', 'trust', 'release-control', 'operate', 'control-plane-publish', 'autopilot', 'handoff', 'team-control', 'measure', 'explain', 'lifecycle',
     ],
   },
   {
@@ -158,7 +200,7 @@ const COMMAND_GROUPS = Object.freeze([
     title: 'Team Parallel',
     description: 'Plan bounded parallel work, collect patches, and operate at package scope.',
     commands: [
-      'team', 'subagents', 'workspaces', 'sessions', 'patch-review', 'patch-apply', 'patch-rollback', 'monorepo',
+      'team', 'subagents', 'workspaces', 'workspace-impact', 'sessions', 'patch-review', 'patch-apply', 'patch-rollback', 'monorepo',
     ],
   },
   {
@@ -182,7 +224,7 @@ const COMMAND_GROUPS = Object.freeze([
     title: 'Runtime And Operator Center',
     description: 'Dashboard, telemetry, hooks, daemon, incident memory, and cleanup surfaces.',
     commands: [
-      'dashboard', 'stats', 'profile', 'hooks', 'mcp', 'notify', 'daemon', 'gc', 'incident', 'fleet',
+      'dashboard', 'supervisor', 'stats', 'profile', 'hooks', 'mcp', 'notify', 'daemon', 'gc', 'incident', 'fleet',
     ],
   },
   {
@@ -200,12 +242,13 @@ const GOLDEN_FLOWS = Object.freeze([
     id: 'solo',
     title: 'Solo Daily Loop',
     summary: 'Best default for a single operator moving one safe slice at a time.',
-    commands: ['on', 'do', 'next', 'verify-shell', 'checkpoint', 'next-prompt', 'quick', 'milestone'],
+    commands: ['on', 'start', 'do', 'next', 'verify-shell', 'checkpoint', 'next-prompt', 'quick', 'milestone'],
     sequence: [
       'rai setup',
       'rai on next',
       'rai doctor --strict',
       'rai milestone --id M1 --name "Initial slice" --goal "Land the next safe slice"',
+      'rai start slice --goal "land the next safe slice"',
       'rai do "land the next safe slice"',
       'rai next',
       'rai checkpoint --next "Resume here"',
@@ -216,38 +259,84 @@ const GOLDEN_FLOWS = Object.freeze([
     id: 'review',
     title: 'Deep Review',
     summary: 'Use when the main job is understanding risk, regressions, or readiness to ship.',
-    commands: ['route', 'review', 'review-tasks', 'ui-review', 'verify-work', 'ship-readiness', 'ship'],
+    commands: ['audit', 'fix', 'verify', 'review', 'review-tasks', 'ui-review', 'ship-readiness', 'ship'],
     sequence: [
-      'rai route --goal "review the current diff" --why',
-      'rai review --heatmap',
+      'rai audit --goal "review the current diff"',
+      'rai fix --goal "address the top verified finding"',
+      'rai verify --goal "verify the current review wave"',
       'rai review-tasks --json',
       'rai ui-review --url ./preview.html',
-      'rai verify-work',
       'rai ship-readiness',
     ],
     relatedGroup: 'review',
+  },
+  {
+    id: 'frontend-flow',
+    title: 'Frontend Product Flow',
+    summary: 'Use when UI work should feel productized instead of spread across many overlapping commands.',
+    commands: ['start', 'do', 'frontend-control', 'ui-direction', 'ui-spec', 'state-atlas', 'component-strategy', 'ui-review'],
+    sequence: [
+      'rai start frontend --goal "ship the premium dashboard surface"',
+      'rai map-frontend --json',
+      'rai frontend-control --json',
+      'rai ui-direction --goal "ship the premium dashboard surface" --json',
+      'rai state-atlas --goal "ship the premium dashboard surface" --json',
+      'rai component-strategy --goal "ship the premium dashboard surface" --json',
+      'rai ui-review --goal "ship the premium dashboard surface" --json',
+    ],
+    relatedGroup: 'frontend',
   },
   {
     id: 'monorepo',
     title: 'Large Monorepo',
     summary: 'Use when a large repo needs staged repo mapping, risk ranking, subsystem review, patch planning, and verify discipline.',
-    commands: ['monorepo', 'monorepo-mode', 'review-mode', 'review-tasks', 'verify-work', 'ship-readiness'],
+    commands: ['audit', 'fix', 'verify', 'workspace-impact', 'monorepo-control', 'monorepo', 'monorepo-mode', 'review-mode', 'review-tasks', 'ship-readiness'],
     sequence: [
-      'rai monorepo',
-      'rai monorepo-mode --goal "review and patch the top-risk monorepo subsystem"',
+      'rai audit --goal "full repo audit et ve en riskli alanlari sirala"',
+      'rai workspace-impact --json',
+      'rai monorepo-control --json',
+      'rai fix --goal "review and patch the top-risk monorepo subsystem"',
       'rai review-mode --goal "deep review the selected subsystem"',
       'rai review-tasks --json',
-      'rai verify-work',
+      'rai verify --goal "verify the monorepo correction wave"',
       'rai ship-readiness',
     ],
     relatedGroup: 'review',
   },
   {
+    id: 'planes',
+    title: 'Product Control Planes',
+    summary: 'Use when the repo should feel like a small operating product instead of a bag of separate commands.',
+    commands: [
+      'operate', 'repo-config', 'repo-control', 'monorepo-control', 'frontend-control', 'safety-control', 'trust', 'release-control', 'control-plane-publish', 'autopilot', 'handoff', 'team-control', 'measure', 'explain', 'lifecycle', 'telemetry',
+    ],
+    sequence: [
+      'rai operate --refresh --json',
+      'rai repo-config --write --json',
+      'rai repo-control --json',
+      'rai monorepo-control --json',
+      'rai frontend-control --json',
+      'rai safety-control --json',
+      'rai trust --json',
+      'rai release-control --json',
+      'rai control-plane-publish --json',
+      'rai autopilot --json',
+      'rai handoff --json',
+      'rai team-control --json',
+      'rai measure --json',
+      'rai explain --json',
+      'rai lifecycle --json',
+      'rai telemetry routing --json',
+    ],
+    relatedGroup: 'planes',
+  },
+  {
     id: 'team',
     title: 'Team Parallel',
     summary: 'Use when the user explicitly wants parallel work with bounded write scopes.',
-    commands: ['monorepo', 'team', 'subagents', 'patch-review', 'sessions'],
+    commands: ['workspace-impact', 'monorepo', 'team', 'subagents', 'patch-review', 'sessions'],
     sequence: [
+      'rai workspace-impact --json',
       'rai monorepo',
       'rai team run --adapter hybrid --activation-text "parallel yap" --write-scope src,tests',
       'rai team collect --patch-first',
@@ -258,14 +347,15 @@ const GOLDEN_FLOWS = Object.freeze([
   },
 ]);
 
-const CORE_COMMANDS = ['setup', 'on', 'doctor', 'do', 'next', 'review', 'team'];
-const LIFECYCLE_COMMANDS = ['spec', 'plan', 'build', 'test', 'simplify', 'review', 'ship'];
+const CORE_COMMANDS = ['setup', 'on', 'doctor', 'start', 'do', 'audit', 'fix', 'verify', 'trust', 'release-control', 'operate', 'next', 'review', 'team'];
+const LIFECYCLE_COMMANDS = ['spec', 'plan', 'build', 'test', 'simplify', 'review', 'ship', 'telemetry'];
 
 const LEGACY_EQUIVALENTS = [
   ['rai on', 'npm run raiola:on -- next'],
   ['rai milestone', 'npm run raiola:milestone -- --id Mx --name "..." --goal "..."'],
   ['rai doctor', 'npm run raiola:doctor -- --strict'],
   ['rai health', 'npm run raiola:health -- --strict'],
+  ['rai repair', 'npm run raiola:repair -- --kind health'],
   ['rai discuss', 'npm run raiola:discuss'],
   ['rai assumptions', 'npm run raiola:assumptions'],
   ['rai hud', 'npm run raiola:hud -- --compact'],
@@ -274,6 +364,10 @@ const LEGACY_EQUIVALENTS = [
   ['rai manager', 'npm run raiola:manager'],
   ['rai dashboard', 'npm run raiola:dashboard'],
   ['rai do', 'npm run raiola:do -- "..."'],
+  ['rai audit', 'npm run raiola:audit -- --goal "..."'],
+  ['rai repo-proof', 'npm run rai -- repo-proof -- --repo ../candidate-repo --json'],
+  ['rai fix', 'npm run raiola:fix -- --goal "..."'],
+  ['rai verify', 'npm run raiola:verify -- --goal "..."'],
   ['rai note', 'npm run raiola:note -- "..."'],
   ['rai packet', 'npm run raiola:packet -- --step plan'],
   ['rai explore', 'npm run raiola:explore -- "query"'],
@@ -312,6 +406,19 @@ const LEGACY_EQUIVALENTS = [
   ['rai component-map', 'npm run raiola:component-map'],
   ['rai responsive-matrix', 'npm run raiola:responsive-matrix'],
   ['rai design-debt', 'npm run raiola:design-debt'],
+  ['rai operate', 'npm run raiola:operate'],
+  ['rai repo-config', 'npm run raiola:repo-config'],
+  ['rai repo-control', 'npm run raiola:repo-control'],
+  ['rai frontend-control', 'npm run raiola:frontend-control'],
+  ['rai control-plane-publish', 'npm run raiola:control-plane-publish'],
+  ['rai trust', 'npm run raiola:trust'],
+  ['rai release-control', 'npm run raiola:release-control'],
+  ['rai autopilot', 'npm run raiola:autopilot'],
+  ['rai handoff', 'npm run raiola:handoff'],
+  ['rai team-control', 'npm run raiola:team-control'],
+  ['rai measure', 'npm run raiola:measure'],
+  ['rai explain', 'npm run raiola:explain'],
+  ['rai lifecycle', 'npm run raiola:lifecycle'],
   ['rai ship-readiness', 'npm run raiola:ship-readiness'],
   ['rai ship', 'npm run raiola:ship'],
   ['rai pr-brief', 'npm run raiola:pr-brief'],
@@ -418,10 +525,18 @@ Usage:
 
 Start here:
   rai on next        First-run onboarding that proposes a milestone to start
+  rai start --goal "..." Productized workflow bundle that groups overlapping commands
+  rai audit "..."    Intent-level audit surface for repo, diff, or UI review
+  rai fix "..."      Intent-level correction surface for the next bounded wave
+  rai verify "..."   Intent-level verify surface with audit-aware trust gates
+  rai help quickstart  Five-minute path for blank repos, existing repos, UI work, and monorepos
   rai help solo      Single-operator daily loop for most repos
   rai help review    Deep review, risk triage, and closeout
-  rai help monorepo  Large-repo staged analysis, patch planning, and verify flow
+  rai help monorepo  Large-repo staged analysis, impact mapping, patch planning, and verify flow
   rai help team      Parallel Team Lite flow with bounded scopes
+  rai trust          Trust center for start / merge / ship safety
+  rai release-control Release / change control with exports and rollback
+  rai operate        Unified engineering operating center over the core planes
 
 Core commands:
 ${formatCommandRows(CORE_COMMANDS)}
@@ -430,25 +545,40 @@ Lifecycle facade:
 ${formatCommandRows(LIFECYCLE_COMMANDS)}
 
 Golden flows:
-  solo    -> rai on, rai do, rai next, rai verify-shell, rai checkpoint, rai next-prompt
-  review  -> rai route, rai review, rai ui-review, rai verify-work, rai ship-readiness
-  monorepo -> rai monorepo, rai monorepo-mode, rai review-mode, rai review-tasks, rai verify-work
-  team    -> rai monorepo, rai team run, rai team collect, rai patch-review, rai sessions
+  solo         -> rai start, rai do, rai next, rai verify-shell, rai checkpoint, rai next-prompt
+  review       -> rai audit, rai fix, rai verify, rai ui-review, rai ship-readiness
+  planes       -> rai operate, rai repo-config, rai trust, rai release-control, rai handoff
+  frontend-flow -> rai start frontend, rai map-frontend, rai ui-direction, rai ui-review
+  monorepo     -> rai audit, rai fix, rai review-mode, rai review-tasks, rai verify
+  team         -> rai monorepo, rai team run, rai patch-review, rai sessions
 
 More help:
+  rai help quickstart   Five-minute path for blank repos, existing repos, UI work, and monorepos
   rai help lifecycle    Thin spec -> ship facade over the deeper workflow engine
+  rai help bundles      Browse packaged workflow bundles for rai start
   rai help categories   Browse command groups
   rai help frontend     UI direction, spec, review, and preview surfaces
   rai help trust        Discuss, claims, approvals, and policy surfaces
   rai help runtime      Dashboard, telemetry, daemon, and fleet surfaces
   rai help codex        Codex control plane and closeout packages
   rai help all          Full command reference
+  rai help planes       Repo-native repo/monorepo/trust/release/autopilot/handoff planes
+  rai operate --refresh Unified operator entry that refreshes the planes
 
 Examples:
   rai setup
   rai on next
+  rai start --goal "land the next safe slice"
+  rai audit "full repo audit yap"
+  rai fix "top verified findingi kapat"
+  rai verify "ship readiness kontrolu"
+  rai trust
+  rai release-control
+  rai operate --refresh
+  rai control-plane-publish --json
   rai help solo
   rai help review
+  rai help bundles
   rai help monorepo
   rai help team
 `);
@@ -485,7 +615,9 @@ Lifecycle facade:
 ${formatCommandRows(filterCommands(LIFECYCLE_COMMANDS, surface))}
 
 More help:
+  rai help quickstart   Five-minute path for blank repos, existing repos, UI work, and monorepos
   rai help lifecycle    Thin spec -> ship facade over the deeper workflow engine
+  rai help bundles      Browse packaged workflow bundles for rai start
   rai help categories   Browse command groups`);
   for (const group of visibleAdvancedGroups) {
     console.log(`  rai help ${group.id.padEnd(12)} ${group.description}`);
@@ -493,6 +625,7 @@ More help:
   console.log(`
 Examples:
   rai on next
+  rai start --goal "land the next safe slice"
   rai help solo
   rai do "land the next safe slice"
   rai next
@@ -516,14 +649,72 @@ function printCategoriesHelp(surface) {
   console.log('\nUse `rai help <category>` for the commands inside a category, or `rai help all` for the full shell.');
 }
 
+function printBundlesHelp() {
+  console.log('# raiola Workflow Bundles\n');
+  console.log('- `rai start` is the productized operator entry that groups overlapping commands into structured bundles.\n');
+  for (const bundle of listWorkflowBundles()) {
+    console.log(`- \`${bundle.id}\` -> ${bundle.summary} (shortcut: \`rai start ${bundle.shorthand || bundle.id} --goal "..."\`)`);
+    if ((bundle.supportedProfiles || []).length > 0) {
+      console.log(`  - profiles: \`${bundle.supportedProfiles.join(', ')}\``);
+    }
+    if ((bundle.supportedAddOns || []).length > 0) {
+      console.log(`  - add-ons: \`${bundle.supportedAddOns.join(', ')}\``);
+    }
+  }
+  console.log('\n## Start Profiles\n');
+  for (const profile of listStartProfiles()) {
+    console.log(`- \`${profile.id}\` -> ${profile.summary}`);
+  }
+  console.log('\n## Start Add-ons\n');
+  for (const addOn of listStartAddOns()) {
+    console.log(`- \`${addOn.id}\` -> ${addOn.summary}`);
+  }
+  console.log('\nUse `rai help <bundle-id>` for bundle details, or run `rai help start` for the command surface itself.');
+}
+
+function printBundleHelp(bundle) {
+  console.log(`# raiola ${bundle.label}\n`);
+  console.log(`- ${bundle.summary}`);
+  console.log(`- Starter command: \`${bundle.starterCommand}\``);
+  if ((bundle.aliases || []).length > 0) {
+    console.log(`- Aliases: \`${bundle.aliases.join(', ')}\``);
+  }
+  if ((bundle.supportedProfiles || []).length > 0) {
+    console.log(`- Profiles: \`${bundle.supportedProfiles.join(', ')}\``);
+  }
+  if ((bundle.supportedAddOns || []).length > 0) {
+    console.log(`- Add-ons: \`${bundle.supportedAddOns.join(', ')}\``);
+  }
+  if ((bundle.relatedBundles || []).length > 0) {
+    console.log(`- Related bundles: \`${bundle.relatedBundles.join(', ')}\``);
+  }
+  if ((bundle.useWhen || []).length > 0) {
+    console.log('\n## Use When\n');
+    for (const entry of bundle.useWhen) {
+      console.log(`- ${entry}`);
+    }
+  }
+  if ((bundle.outcomes || []).length > 0) {
+    console.log('\n## Outcomes\n');
+    for (const entry of bundle.outcomes) {
+      console.log(`- ${entry}`);
+    }
+  }
+}
+
 function printFlowHelp(flow) {
   const relatedGroup = groupById(flow.relatedGroup);
+  const summary = flow.summary || flow.description || 'No summary provided.';
+  const sequence = Array.isArray(flow.sequence) ? flow.sequence : [];
   console.log(`# raiola ${flow.title}\n`);
-  console.log(`- Summary: \`${flow.summary}\``);
+  console.log(`- Summary: \`${summary}\``);
   console.log('\n## Starter Commands\n');
   console.log(formatCommandRows(flow.commands));
   console.log('\n## Suggested Sequence\n');
-  for (const command of flow.sequence) {
+  if (sequence.length === 0) {
+    console.log('- `No suggested sequence was recorded.`');
+  }
+  for (const command of sequence) {
     console.log(`- \`${command}\``);
   }
   if (relatedGroup) {
@@ -558,6 +749,46 @@ function printAdvancedHelp(surface) {
     console.log(`- \`${group.id}\` -> ${group.description}`);
   }
   console.log('\nOpen any of them with `rai help <topic>` or use `rai help all` for the full command reference.');
+}
+
+function printQuickstartHelp(surface) {
+  const starterSurface = ['start', 'do', 'next', 'verify']
+    .filter((command) => !surface.isFiltered || surface.availableCommands.has(command));
+  const upgradeHint = surface.isFiltered
+    ? `- Advanced surfaces stay hidden in the \`pilot\` shell until you ask for them. ${upgradeHintForSurface(surface)}`
+    : '- Advanced surfaces are optional. Stay on the starter surface until the repo shape forces a deeper lane.';
+
+  console.log('# raiola Quickstart\n');
+  console.log('- Goal: get useful in the first five minutes without learning the whole product.');
+  console.log(`- Starter surface: \`${starterSurface.join(', ')}\``);
+  console.log(upgradeHint);
+  console.log('\n## Existing repo\n');
+  console.log('- `rai setup`');
+  console.log('- `rai doctor --strict`');
+  console.log('- `rai start recommend --goal "fix the next safe slice and verify it"`');
+  console.log('- `rai next`');
+  console.log('\n## Blank repo\n');
+  console.log('- `rai on next`');
+  console.log('- `rai milestone --id M1 --name "Initial slice" --goal "Land the first safe slice"`');
+  console.log('- `rai start --goal "land the first safe slice"`');
+  console.log('- `rai checkpoint --next "Resume from the next recommended step"`');
+  console.log('\n## Frontend repo\n');
+  console.log('- `rai start recommend --goal "ship the dashboard surface"`');
+  console.log('- `rai start frontend --goal "ship the dashboard surface" --with browser|docs`');
+  console.log('- `rai verify-browser --url http://localhost:3000`');
+  console.log('\n## Large monorepo\n');
+  console.log('- `rai start monorepo --goal "review and patch the top-risk subsystem"`');
+  console.log('- `rai workspace-impact --json`');
+  console.log('- `rai verify --goal "verify the correction wave"`');
+  console.log('\n## External repo snapshot\n');
+  console.log('- `rai repo-proof --repo ../candidate-repo --json`');
+  console.log('- `rai api-surface --repo ../candidate-repo --json`');
+  console.log('- `rai audit-repo --repo ../candidate-repo --goal "audit the snapshot" --json`');
+  console.log('\n## Stop here by default\n');
+  console.log('- `rai start` -> choose the lane');
+  console.log('- `rai do` -> route a natural-language request');
+  console.log('- `rai next` -> continue from live state');
+  console.log('- `rai verify` -> ask whether the slice is safe to merge or ship');
 }
 
 function printLifecycleHelp(surface) {
@@ -629,8 +860,16 @@ function printHelp(topic, surface) {
     printCategoriesHelp(surface);
     return;
   }
+  if (normalized === 'bundles') {
+    printBundlesHelp(surface);
+    return;
+  }
   if (normalized === 'advanced') {
     printAdvancedHelp(surface);
+    return;
+  }
+  if (['quickstart', 'start-here', '5min', '5-minute'].includes(normalized)) {
+    printQuickstartHelp(surface);
     return;
   }
   if (normalized === 'lifecycle') {
@@ -651,7 +890,29 @@ function printHelp(topic, surface) {
   }
 
   if (flow || groupById(normalized)) {
+    const missingCommands = (flow?.commands || groupById(normalized)?.commands || []).filter((command) => !surface.availableCommands.has(command));
+    printUnavailableSurface(missingCommands[0] || normalized, surface);
+    return;
+  }
+
+  const bundle = findWorkflowBundle(normalized);
+  if (bundle) {
+    if (surface.isFiltered && !surface.availableCommands.has('start')) {
+      printUnavailableSurface('start', surface);
+      return;
+    }
+    printBundleHelp(bundle);
+    return;
+  }
+
+  if (groupById(normalized)) {
     printUnavailableSurface(normalized, surface);
+    return;
+  }
+
+  const commandHelp = CLI_COMMANDS[normalized];
+  if (commandHelp) {
+    runScript(normalized, commandHelp.script, ['--help'], surface);
     return;
   }
 

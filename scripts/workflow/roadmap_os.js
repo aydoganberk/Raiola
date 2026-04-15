@@ -2,17 +2,19 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const {
-  ensureDir,
   parseMarkdownTable,
-  read,
-  readIfExists,
   renderMarkdownTable,
   replaceOrAppendSection,
   slugify,
   tryExtractSection,
-  write,
-  writeIfChanged,
 } = require('./common');
+const {
+  ensureDir,
+  readText: read,
+  readTextIfExists: readIfExists,
+  writeText: write,
+  writeTextIfChanged: writeIfChanged,
+} = require('./io/files');
 const {
   readJsonIfExists,
   runtimePath,

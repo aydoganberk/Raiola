@@ -1,0 +1,7 @@
+{
+  "name": "audit-supabase-pg-fixture",
+  "private": true,
+  "dependencies": {
+    "@supabase/supabase-js": "2.49.0"
+  }
+}
